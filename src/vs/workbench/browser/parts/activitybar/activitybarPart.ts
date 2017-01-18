@@ -92,7 +92,7 @@ export class ActivitybarPart extends Part implements IActivityBarService {
 		}
 
 		// Update viewlet switcher when external viewlets become ready
-		this.extensionService.onReady().then(() => this.updateViewletSwitcher());
+		// this.extensionService.onReady().then(() => this.updateViewletSwitcher());
 
 		this.registerListeners();
 	}

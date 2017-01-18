@@ -41,6 +41,13 @@ export interface IWorkspaceContextService {
 	 * Given a workspace relative path, returns the resource with the absolute path.
 	 */
 	toResource: (workspaceRelativePath: string) => URI;
+
+	/**
+	 * Sets the workspace object. This may happen to e.g. handle cross-repo j2d.
+	 */
+	setWorkspace(workspace: IWorkspace): void;
+
+	onWorkspaceUpdated(listener: (workspace: IWorkspace) => void): void;
 }
 
 export interface IWorkspace {
@@ -69,9 +76,11 @@ export class WorkspaceContextService implements IWorkspaceContextService {
 	public _serviceBrand: any;
 
 	private workspace: IWorkspace;
+	private listeners: ((IWorkspace) => void)[];
 
 	constructor(workspace: IWorkspace) {
 		this.workspace = workspace;
+		this.listeners = [];
 	}
 
 	public getWorkspace(): IWorkspace {
@@ -104,5 +113,14 @@ export class WorkspaceContextService implements IWorkspaceContextService {
 		}
 
 		return null;
+	}
+
+	public setWorkspace(workspace: IWorkspace): void {
+		this.workspace = workspace;
+		this.listeners.forEach(listener => listener(workspace));
+	}
+
+	public onWorkspaceUpdated(listener: (workspace: IWorkspace) => void): void {
+		this.listeners.push(listener);
 	}
 }
