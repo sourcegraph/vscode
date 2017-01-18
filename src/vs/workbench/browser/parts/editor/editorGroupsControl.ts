@@ -210,7 +210,7 @@ export class EditorGroupsControl implements IEditorGroupsControl, IVerticalSashL
 
 	private registerListeners(): void {
 		this.toDispose.push(this.stacks.onModelChanged(e => this.onStacksChanged(e)));
-		this.toDispose.push(this.configurationService.onDidUpdateConfiguration(e => this.onConfigurationUpdated(e.config, true)));
+		this.toDispose.push(this.configurationService.onDidUpdateConfiguration(e => this.onConfigurationUpdated(e.config, false)));
 		this.extensionService.onReady().then(() => this.onExtensionsReady());
 	}
 

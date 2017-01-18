@@ -76,6 +76,14 @@ export class TestContextService implements IWorkspaceContextService {
 		return this.workspace;
 	}
 
+	public setWorkspace(workspace: IWorkspace): void {
+		throw new Error('not implemented');
+	}
+
+	public onWorkspaceUpdated(listener: (workspace: IWorkspace) => void): void {
+		throw new Error('not implemented');
+	}
+
 	public getOptions() {
 		return this.options;
 	}
