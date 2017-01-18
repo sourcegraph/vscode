@@ -61,11 +61,13 @@ let lastStart: number, lastEnd: number;
 function _findClassName(node: HTMLElement, className: string): void {
 
 	let classes = node.className;
+	if (<any>classes instanceof SVGAnimatedString) {
+		classes = (<any>classes).baseVal;
+	}
 	if (!classes) {
 		lastStart = -1;
 		return;
 	}
-
 	className = className.trim();
 
 	let classesLen = classes.length,

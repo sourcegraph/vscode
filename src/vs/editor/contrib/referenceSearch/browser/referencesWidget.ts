@@ -8,7 +8,6 @@ import 'vs/css!./referencesWidget';
 import * as nls from 'vs/nls';
 import * as collections from 'vs/base/common/collections';
 import { onUnexpectedError } from 'vs/base/common/errors';
-import { getPathLabel } from 'vs/base/common/labels';
 import Event, { Emitter } from 'vs/base/common/event';
 import { IDisposable, dispose, Disposables, empty as EmptyDisposable } from 'vs/base/common/lifecycle';
 import { Schemas } from 'vs/base/common/network';
@@ -162,7 +161,7 @@ class DecorationsManager implements IDisposable {
 	}
 }
 
-class DataSource implements tree.IDataSource {
+export class DataSource implements tree.IDataSource {
 
 	constructor(
 		@ITextModelResolverService private _textModelResolverService: ITextModelResolverService
@@ -217,7 +216,7 @@ class DataSource implements tree.IDataSource {
 	}
 }
 
-class Controller extends DefaultController {
+export class Controller extends DefaultController {
 
 	static Events = {
 		FOCUSED: 'events/custom/focused',
@@ -341,7 +340,7 @@ class Controller extends DefaultController {
 	}
 }
 
-class Renderer extends LegacyRenderer {
+export class Renderer extends LegacyRenderer {
 	private _contextService: IWorkspaceContextService;
 
 	constructor( @IWorkspaceContextService contextService: IWorkspaceContextService) {
@@ -710,7 +709,12 @@ export class ReferenceWidget extends PeekViewWidget {
 
 		// Update widget header
 		if (reference.uri.scheme !== Schemas.inMemory) {
-			this.setTitle(reference.name, getPathLabel(reference.directory, this._contextService));
+			const file = reference.uri;
+			const path = file.path + '/' + file.fragment;
+			const dirs = path.split('/');
+			dirs.splice(0, 1);
+			const base = dirs.pop();
+			this.setTitle(base, dirs.join('/'));
 		} else {
 			this.setTitle(nls.localize('peekView.alternateTitle', "References"));
 		}

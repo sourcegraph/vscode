@@ -13,7 +13,7 @@ import { IMonarchLanguage } from 'vs/editor/common/modes/monarch/monarchTypes';
 import { ILanguageExtensionPoint } from 'vs/editor/common/services/modeService';
 import { StaticServices } from 'vs/editor/browser/standalone/standaloneServices';
 import * as modes from 'vs/editor/common/modes';
-import { LanguageConfiguration, IndentAction } from 'vs/editor/common/modes/languageConfiguration';
+import { LanguageConfiguration } from 'vs/editor/common/modes/languageConfiguration';
 import * as editorCommon from 'vs/editor/common/editorCommon';
 import { Position } from 'vs/editor/common/core/position';
 import { Range } from 'vs/editor/common/core/range';
@@ -479,40 +479,4 @@ class SuggestAdapter {
 			return SuggestAdapter.from(resolvedItem);
 		});
 	}
-}
-
-/**
- * @internal
- */
-export function createMonacoLanguagesAPI(): typeof monaco.languages {
-	return {
-		register: register,
-		getLanguages: getLanguages,
-		onLanguage: onLanguage,
-
-		// provider methods
-		setLanguageConfiguration: setLanguageConfiguration,
-		setTokensProvider: setTokensProvider,
-		setMonarchTokensProvider: setMonarchTokensProvider,
-		registerReferenceProvider: registerReferenceProvider,
-		registerRenameProvider: registerRenameProvider,
-		registerCompletionItemProvider: registerCompletionItemProvider,
-		registerSignatureHelpProvider: registerSignatureHelpProvider,
-		registerHoverProvider: registerHoverProvider,
-		registerDocumentSymbolProvider: registerDocumentSymbolProvider,
-		registerDocumentHighlightProvider: registerDocumentHighlightProvider,
-		registerDefinitionProvider: registerDefinitionProvider,
-		registerCodeLensProvider: registerCodeLensProvider,
-		registerCodeActionProvider: registerCodeActionProvider,
-		registerDocumentFormattingEditProvider: registerDocumentFormattingEditProvider,
-		registerDocumentRangeFormattingEditProvider: registerDocumentRangeFormattingEditProvider,
-		registerOnTypeFormattingEditProvider: registerOnTypeFormattingEditProvider,
-		registerLinkProvider: registerLinkProvider,
-
-		// enums
-		DocumentHighlightKind: modes.DocumentHighlightKind,
-		CompletionItemKind: CompletionItemKind,
-		SymbolKind: modes.SymbolKind,
-		IndentAction: IndentAction
-	};
 }

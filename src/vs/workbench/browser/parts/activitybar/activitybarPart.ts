@@ -74,7 +74,7 @@ export class ActivitybarPart extends Part implements IActivityBarService {
 		this.pinnedViewlets = this.memento[ActivitybarPart.PINNED_VIEWLETS] || this.viewletService.getViewlets().map(v => v.id);
 
 		// Update viewlet switcher when external viewlets become ready
-		this.extensionService.onReady().then(() => this.updateViewletSwitcher());
+		// this.extensionService.onReady().then(() => this.updateViewletSwitcher());
 
 		this.registerListeners();
 	}

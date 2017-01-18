@@ -6,20 +6,12 @@
 (function () {
 	'use strict';
 
-	let MonacoEnvironment = (<any>self).MonacoEnvironment;
-	let monacoBaseUrl = MonacoEnvironment && MonacoEnvironment.baseUrl ? MonacoEnvironment.baseUrl : '../../../';
-
-	if (typeof (<any>self).define !== 'function' || !(<any>self).define.amd) {
-		importScripts(monacoBaseUrl + 'vs/loader.js');
-	}
-
-	require.config({
-		baseUrl: monacoBaseUrl,
-		catchError: true
-	});
-
 	let loadCode = function (moduleId) {
-		require([moduleId], function (ws) {
+		// HACK: webpack doesn't support completely dynamic requires, so constrain this and make it be known if anything else is ever passed to it.
+		if (moduleId !== 'vs/base/common/worker/simpleWorker') {
+			throw new Error('can\'t dynamically load module ' + moduleId);
+		}
+		require(['vs/base/common/worker/simpleWorker'], function (ws) {
 			setTimeout(function () {
 				let messageHandler = ws.create((msg: any) => {
 					(<any>self).postMessage(msg);

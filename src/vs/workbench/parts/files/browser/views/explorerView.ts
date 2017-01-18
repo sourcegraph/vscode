@@ -101,6 +101,10 @@ export class ExplorerView extends CollapsibleViewletView {
 
 		this.resourceContext = instantiationService.createInstance(ResourceContextKey);
 		this.folderContext = new RawContextKey<boolean>('explorerResourceIsFolder', undefined).bindTo(contextKeyService);
+
+		contextService.onWorkspaceUpdated((workspace) => {
+			this.workspace = workspace;
+		});
 	}
 
 	public renderHeader(container: HTMLElement): void {
@@ -618,7 +622,7 @@ export class ExplorerView extends CollapsibleViewletView {
 	/**
 	 * Refresh the contents of the explorer to get up to date data from the disk about the file structure.
 	 */
-	public refresh(): TPromise<void> {
+	public refresh(workspaceUpdated?: boolean): TPromise<void> {
 		if (!this.explorerViewer || this.explorerViewer.getHighlight()) {
 			return TPromise.as(null);
 		}
@@ -638,7 +642,7 @@ export class ExplorerView extends CollapsibleViewletView {
 			}
 		}
 
-		return this.doRefresh().then(() => {
+		return this.doRefresh(workspaceUpdated).then(() => {
 			if (resourceToFocus) {
 				return this.select(resourceToFocus, true);
 			}
@@ -647,7 +651,7 @@ export class ExplorerView extends CollapsibleViewletView {
 		});
 	}
 
-	private doRefresh(): TPromise<void> {
+	private doRefresh(workspaceUpdated?: boolean): TPromise<void> {
 		const root = this.getInput();
 		const targetsToResolve: URI[] = [];
 		let targetsToExpand: URI[] = [];
@@ -657,7 +661,7 @@ export class ExplorerView extends CollapsibleViewletView {
 		}
 
 		// First time refresh: Receive target through active editor input or selection and also include settings from previous session
-		if (!root) {
+		if (!root || workspaceUpdated) {
 			const activeResource = this.getActiveEditorInputResource();
 			if (activeResource) {
 				targetsToResolve.push(activeResource);
@@ -682,7 +686,7 @@ export class ExplorerView extends CollapsibleViewletView {
 			const modelStat = FileStat.create(stat, options.resolveTo);
 
 			// First time refresh: The stat becomes the input of the viewer
-			if (!root) {
+			if (!root || workspaceUpdated) {
 				explorerPromise = this.explorerViewer.setInput(modelStat).then(() => {
 
 					// Make sure to expand all folders that where expanded in the previous session

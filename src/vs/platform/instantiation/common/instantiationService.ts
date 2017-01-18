@@ -5,7 +5,7 @@
 'use strict';
 
 import { TPromise } from 'vs/base/common/winjs.base';
-import { illegalArgument, illegalState, canceled } from 'vs/base/common/errors';
+import { illegalState } from 'vs/base/common/errors';
 import { create } from 'vs/base/common/types';
 import * as assert from 'vs/base/common/assert';
 import { Graph } from 'vs/base/common/graph';
@@ -80,40 +80,9 @@ export class InstantiationService implements IInstantiationService {
 	}
 
 	private _createInstanceAsync<T>(descriptor: AsyncDescriptor<T>, args: any[]): TPromise<T> {
-
-		let canceledError: Error;
-
-		return new TPromise((c, e, p) => {
-			require([descriptor.moduleName], (_module?: any) => {
-				if (canceledError) {
-					e(canceledError);
-				}
-
-				if (!_module) {
-					return e(illegalArgument('module not found: ' + descriptor.moduleName));
-				}
-
-				let ctor: Function;
-				if (!descriptor.ctorName) {
-					ctor = _module;
-				} else {
-					ctor = _module[descriptor.ctorName];
-				}
-
-				if (typeof ctor !== 'function') {
-					return e(illegalArgument('not a function: ' + descriptor.ctorName || descriptor.moduleName));
-				}
-
-				try {
-					args.unshift.apply(args, descriptor.staticArguments()); // instead of spread in ctor call
-					c(this._createInstance(new SyncDescriptor<T>(ctor), args));
-				} catch (error) {
-					return e(error);
-				}
-			}, e);
-		}, () => {
-			canceledError = canceled();
-		});
+		// HACK: Remove an unused dynamic import that Webpack
+		// complains about.
+		throw new Error('require call is incompatible with webpack');
 	}
 
 	private _createInstance<T>(desc: SyncDescriptor<T>, args: any[]): T {
@@ -126,7 +95,7 @@ export class InstantiationService implements IInstantiationService {
 		let serviceArgs = serviceDependencies.map(dependency => {
 			let service = this._getOrCreateServiceInstance(dependency.id);
 			if (!service && this._strict && !dependency.optional) {
-				throw new Error(`[createInstance] ${desc.ctor.name} depends on UNKNOWN service ${dependency.id}.`);
+				console.warn(`[createInstance] ${desc.ctor.name} depends on UNKNOWN service ${dependency.id}.`);
 			}
 			return service;
 		});

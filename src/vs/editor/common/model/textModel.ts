@@ -893,12 +893,7 @@ export class TextModel extends OrderGuaranteeEventEmitter implements editorCommo
 			return [];
 		}
 
-		let searchRange: Range;
-		if (Range.isIRange(rawSearchScope)) {
-			searchRange = this.validateRange(rawSearchScope);
-		} else {
-			searchRange = this.getFullModelRange();
-		}
+		const searchRange = this.getFullModelRange();
 
 		if (regex.multiline) {
 			return this._doFindMatchesMultiline(searchRange, regex, limitResultCount);
