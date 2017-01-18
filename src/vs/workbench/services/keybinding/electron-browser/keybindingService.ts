@@ -106,22 +106,12 @@ let keybindingType: IJSONSchema = {
 	}
 };
 
-let keybindingsExtPoint = ExtensionsRegistry.registerExtensionPoint<ContributedKeyBinding | ContributedKeyBinding[]>('keybindings', [], {
-	description: nls.localize('vscode.extension.contributes.keybindings', "Contributes keybindings."),
-	oneOf: [
-		keybindingType,
-		{
-			type: 'array',
-			items: keybindingType
-		}
-	]
-});
-
 export class WorkbenchKeybindingService extends AbstractKeybindingService {
 
 	private _cachedResolver: KeybindingResolver;
 	private _firstTimeComputingResolver: boolean;
 	private userKeybindings: ConfigWatcher<IUserFriendlyKeybinding[]>;
+	private readonly name: string = 'keybindings';
 
 	constructor(
 		windowElement: Window,
@@ -139,18 +129,7 @@ export class WorkbenchKeybindingService extends AbstractKeybindingService {
 
 		this.userKeybindings = new ConfigWatcher(environmentService.appKeybindingsPath, { defaultConfig: [] });
 		this.toDispose.push(toDisposable(() => this.userKeybindings.dispose()));
-
-		keybindingsExtPoint.setHandler((extensions) => {
-			let commandAdded = false;
-
-			for (let extension of extensions) {
-				commandAdded = this._handleKeybindingsExtensionPointUser(extension.description.isBuiltin, extension.value, extension.collector) || commandAdded;
-			}
-
-			if (commandAdded) {
-				this.updateResolver({ source: KeybindingSource.Default });
-			}
-		});
+		this.registerHandler();
 
 		this.toDispose.push(this.userKeybindings.onDidUpdateConfiguration(event => this.updateResolver({
 			source: KeybindingSource.User,
@@ -166,6 +145,36 @@ export class WorkbenchKeybindingService extends AbstractKeybindingService {
 		}));
 
 		keybindingsTelemetry(telemetryService, this);
+	}
+
+	private registerHandler(): void {
+		let points = ExtensionsRegistry.getExtensionPoints();
+		if (points.some(point => point.name === this.name)) {
+			return;
+		}
+
+		let keybindingsExtPoint = ExtensionsRegistry.registerExtensionPoint<ContributedKeyBinding | ContributedKeyBinding[]>('keybindings', [], {
+			description: nls.localize('vscode.extension.contributes.keybindings', "Contributes keybindings."),
+			oneOf: [
+				keybindingType,
+				{
+					type: 'array',
+					items: keybindingType
+				}
+			]
+		});
+
+		keybindingsExtPoint.setHandler((extensions) => {
+			let commandAdded = false;
+
+			for (let extension of extensions) {
+				commandAdded = this._handleKeybindingsExtensionPointUser(extension.description.isBuiltin, extension.value, extension.collector) || commandAdded;
+			}
+
+			if (commandAdded) {
+				this.updateResolver({ source: KeybindingSource.Default });
+			}
+		});
 	}
 
 	private _safeGetConfig(): IUserFriendlyKeybinding[] {
@@ -266,7 +275,7 @@ export class WorkbenchKeybindingService extends AbstractKeybindingService {
 			collector.error(nls.localize(
 				'invalid.keybindings',
 				"Invalid `contributes.{0}`: {1}",
-				keybindingsExtPoint.name,
+				this.name,
 				rejects.join('\n')
 			));
 		}

@@ -255,7 +255,7 @@ export class FileStat implements IFileStat {
 				return child;
 			}
 
-			if (child.isDirectory && isParent(resource.fsPath, child.resource.fsPath)) {
+			if (child.isDirectory && isParent(resource.fragment, child.resource.fragment)) {
 				return child.find(resource);
 			}
 		}

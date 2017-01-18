@@ -455,6 +455,7 @@ export class Workbench implements IPartService {
 		serviceCollection.set(IContextKeyService, this.contextKeyService);
 
 		this.keybindingService = this.instantiationService.createInstance(WorkbenchKeybindingService, window);
+		this.toDispose.push(this.keybindingService);
 		serviceCollection.set(IKeybindingService, this.keybindingService);
 
 		// List

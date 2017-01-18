@@ -566,7 +566,7 @@ class GotoDefinitionWithMouseEditorContribution implements editorCommon.IEditorC
 							source += '\n\u2026';
 						}
 
-						const language = this.modeService.getModeIdByFilenameOrFirstLine(editorModel.uri.fsPath);
+						const language = this.modeService.getModeIdByFilenameOrFirstLine(editorModel.uri.fragment);
 						hoverMessage = {
 							language,
 							value: source

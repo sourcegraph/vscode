@@ -448,11 +448,11 @@ export interface IContextKey<T> {
 }
 
 export interface IContextKeyServiceTarget {
-	parentElement: IContextKeyServiceTarget;
+	parentElement: IContextKeyServiceTarget | null;
 	setAttribute(attr: string, value: string): void;
 	removeAttribute(attr: string): void;
 	hasAttribute(attr: string): boolean;
-	getAttribute(attr: string): string;
+	getAttribute(attr: string): string | null;
 }
 
 export let IContextKeyService = createDecorator<IContextKeyService>('contextKeyService');

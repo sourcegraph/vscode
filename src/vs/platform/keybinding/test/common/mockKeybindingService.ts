@@ -99,4 +99,8 @@ export class MockKeybindingService2 implements IKeybindingService {
 	public resolve(keybinding: Keybinding, target: IContextKeyServiceTarget): IResolveResult {
 		return null;
 	}
+
+	public dispose() {
+
+	}
 }

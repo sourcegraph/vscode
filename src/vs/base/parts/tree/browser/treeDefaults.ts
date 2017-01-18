@@ -391,7 +391,7 @@ export class DefaultController implements _.IController {
 		if (focus) {
 			tree.setSelection([focus], payload);
 		}
-		return true;
+		return this.onLeftClick(tree, focus, event, 'keyboard');
 	}
 
 	protected onSpace(tree: _.ITree, event: IKeyboardEvent): boolean {

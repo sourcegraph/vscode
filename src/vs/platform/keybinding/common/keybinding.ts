@@ -70,5 +70,6 @@ export interface IKeybindingService {
 	lookupKeybindings(commandId: string): Keybinding[];
 	customKeybindingsCount(): number;
 	resolve(keybinding: Keybinding, target: IContextKeyServiceTarget): IResolveResult;
+	dispose();
 }
 

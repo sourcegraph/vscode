@@ -11,7 +11,7 @@ import { IDisposable, dispose } from 'vs/base/common/lifecycle';
 import { TPromise } from 'vs/base/common/winjs.base';
 import * as dom from 'vs/base/browser/dom';
 import { IKeyboardEvent } from 'vs/base/browser/keyboardEvent';
-import { ActionItem, Separator } from 'vs/base/browser/ui/actionbar/actionbar';
+import { Separator } from 'vs/base/browser/ui/actionbar/actionbar';
 import { IContextMenuService, IContextViewService } from 'vs/platform/contextview/browser/contextView';
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
@@ -172,11 +172,6 @@ export class ContextMenuController implements IEditorContribution {
 			},
 
 			getActionItem: (action) => {
-				var keybinding = this._keybindingFor(action);
-				if (keybinding) {
-					return new ActionItem(action, action, { label: true, keybinding: this._keybindingService.getLabelFor(keybinding) });
-				}
-
 				var customActionItem = <any>action;
 				if (typeof customActionItem.getActionItem === 'function') {
 					return customActionItem.getActionItem();

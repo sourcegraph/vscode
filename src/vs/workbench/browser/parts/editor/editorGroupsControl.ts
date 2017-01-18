@@ -206,7 +206,7 @@ export class EditorGroupsControl implements IEditorGroupsControl, IVerticalSashL
 
 	private registerListeners(): void {
 		this.toDispose.push(this.stacks.onModelChanged(e => this.onStacksChanged(e)));
-		this.toDispose.push(this.editorGroupService.onTabOptionsChanged(options => this.updateTabOptions(options, true)));
+		this.toDispose.push(this.editorGroupService.onTabOptionsChanged(options => this.updateTabOptions(options, false)));
 		this.extensionService.onReady().then(() => this.onExtensionsReady());
 	}
 
