@@ -5,7 +5,7 @@
 'use strict';
 
 import { TPromise } from 'vs/base/common/winjs.base';
-import { illegalArgument, illegalState, canceled } from 'vs/base/common/errors';
+import { illegalState } from 'vs/base/common/errors';
 import { create } from 'vs/base/common/types';
 import * as assert from 'vs/base/common/assert';
 import { Graph } from 'vs/base/common/graph';
@@ -128,7 +128,7 @@ export class InstantiationService implements IInstantiationService {
 		let serviceArgs = serviceDependencies.map(dependency => {
 			let service = this._getOrCreateServiceInstance(dependency.id);
 			if (!service && this._strict && !dependency.optional) {
-				throw new Error(`[createInstance] ${desc.ctor.name} depends on UNKNOWN service ${dependency.id}.`);
+				console.warn(`[createInstance] ${desc.ctor.name} depends on UNKNOWN service ${dependency.id}.`);
 			}
 			return service;
 		});
