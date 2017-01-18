@@ -19,7 +19,13 @@ function environment(name: string, fallback: any = false): any {
 }
 
 function defaultGetWorkerUrl(workerId: string, label: string): string {
-	return require.toUrl('./' + workerId) + '#' + label;
+	// HACK: Disable the web worker, and remove the require call that would
+	// otherwise cause Webpack to process it. If we require using worker-loader,
+	// it tries to fetch the script from a URL "https://sourcegraph.com/myrepo/-/myfile.go function() { ..."
+	// for some reason. This is a bug in Webpack and/or worker-loader. But we
+	// can safely disable the web worker without loss of functionality, so
+	// we choose that approach instead of debugging it for now.
+	throw new Error('web worker disabled; this should be unreachable');
 }
 var getWorkerUrl = getCrossOriginWorkerScriptUrl || defaultGetWorkerUrl;
 

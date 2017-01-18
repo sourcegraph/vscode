@@ -19,7 +19,6 @@ import { IInplaceReplaceSupportResult, ILink, ISuggestResult, ISuggestion } from
 import { computeLinks } from 'vs/editor/common/modes/linkComputer';
 import { BasicInplaceReplace } from 'vs/editor/common/modes/supports/inplaceReplaceSupport';
 import { getWordAtText, ensureValidWordDefinition } from 'vs/editor/common/model/wordHelper';
-import { createMonacoBaseAPI } from 'vs/editor/common/standalone/standaloneBase';
 
 export interface IMirrorModel {
 	readonly uri: URI;
@@ -536,10 +535,4 @@ export class EditorSimpleWorkerImpl extends BaseEditorSimpleWorker implements IR
  */
 export function create(): IRequestHandler {
 	return new EditorSimpleWorkerImpl();
-}
-
-var global: any = self;
-let isWebWorker = (typeof global.importScripts === 'function');
-if (isWebWorker) {
-	global.monaco = createMonacoBaseAPI();
 }
