@@ -68,6 +68,7 @@ function _findClassName(node: HTMLElement, className: string): void {
 		lastStart = -1;
 		return;
 	}
+
 	className = className.trim();
 
 	let classesLen = classes.length,

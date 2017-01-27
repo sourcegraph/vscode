@@ -8,6 +8,7 @@ import { transformErrorForSerialization } from 'vs/base/common/errors';
 import { Disposable } from 'vs/base/common/lifecycle';
 import { ErrorCallback, TPromise, ValueCallback } from 'vs/base/common/winjs.base';
 import { ShallowCancelThenPromise } from 'vs/base/common/async';
+import { isWeb } from 'vs/base/common/platform';
 
 const INITIALIZE = '$initialize';
 
@@ -25,8 +26,17 @@ export interface IWorkerFactory {
 	create(moduleId: string, callback: IWorkerCallback, onErrorCallback: (err: any) => void): IWorker;
 }
 
+let webWorkerWarningLogged = false;
 export function logOnceWebWorkerWarning(err: any): void {
-	return;
+	if (!isWeb) {
+		// running tests
+		return;
+	}
+	if (!webWorkerWarningLogged) {
+		webWorkerWarningLogged = true;
+		console.warn('Could not create web worker(s). Falling back to loading web worker code in main thread, which might cause UI freezes. Please see https://github.com/Microsoft/monaco-editor#faq');
+	}
+	console.warn(err.message);
 }
 
 interface IMessage {
@@ -184,12 +194,7 @@ export class SimpleWorkerClient<T> extends Disposable {
 		super();
 
 		let lazyProxyFulfill: (v: T) => void = null;
-
-		// HACK: lazyProxyReject doesn't SEEM to do anything, but the
-		// call to it fails with 'Uncaught TypeError: lazyProxyReject
-		// is not a function' because the assignment to it doesn't get
-		// called for some reason. So, just make it a no-op.
-		let lazyProxyReject: (err: any) => void = () => (void 0);
+		let lazyProxyReject: (err: any) => void = null;
 
 		this._worker = this._register(workerFactory.create(
 			'vs/base/common/worker/simpleWorker',

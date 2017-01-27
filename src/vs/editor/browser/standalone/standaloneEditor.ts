@@ -9,7 +9,9 @@ import * as editorCommon from 'vs/editor/common/editorCommon';
 /* tslint:disable:duplicate-imports */
 import { IModel } from 'vs/editor/common/editorCommon';
 /* tslint:disable:duplicate-imports */
+import { ContentWidgetPositionPreference, OverlayWidgetPositionPreference } from 'vs/editor/browser/editorBrowser';
 import { StandaloneEditor, IStandaloneCodeEditor, StandaloneDiffEditor, IStandaloneDiffEditor, IEditorConstructionOptions, IDiffEditorConstructionOptions } from 'vs/editor/browser/standalone/standaloneCodeEditor';
+import { ScrollbarVisibility } from 'vs/base/common/scrollable';
 import { IEditorOverrideServices, DynamicStandaloneServices, StaticServices } from 'vs/editor/browser/standalone/standaloneServices';
 import { IDisposable } from 'vs/base/common/lifecycle';
 import URI from 'vs/base/common/uri';
@@ -251,4 +253,67 @@ export function colorize(text: string, languageId: string, options: IColorizerOp
  */
 export function colorizeModelLine(model: IModel, lineNumber: number, tabSize: number = 4): string {
 	return Colorizer.colorizeModelLine(model, lineNumber, tabSize);
+}
+
+/**
+ * @internal
+ */
+export function createMonacoEditorAPI(): typeof monaco.editor {
+	return {
+		// methods
+		create: <any>create,
+		createDiffEditor: createDiffEditor,
+		createDiffNavigator: createDiffNavigator,
+
+		createModel: createModel,
+		setModelLanguage: setModelLanguage,
+		setModelMarkers: setModelMarkers,
+		getModels: getModels,
+		getModel: getModel,
+		onDidCreateModel: onDidCreateModel,
+		onWillDisposeModel: onWillDisposeModel,
+		onDidChangeModelLanguage: onDidChangeModelLanguage,
+
+
+		createWebWorker: createWebWorker,
+		colorizeElement: colorizeElement,
+		colorize: colorize,
+		colorizeModelLine: colorizeModelLine,
+
+		// enums
+		ScrollbarVisibility: ScrollbarVisibility,
+		WrappingIndent: editorCommon.WrappingIndent,
+		OverviewRulerLane: editorCommon.OverviewRulerLane,
+		EndOfLinePreference: editorCommon.EndOfLinePreference,
+		DefaultEndOfLine: editorCommon.DefaultEndOfLine,
+		EndOfLineSequence: editorCommon.EndOfLineSequence,
+		TrackedRangeStickiness: editorCommon.TrackedRangeStickiness,
+		CursorChangeReason: editorCommon.CursorChangeReason,
+		MouseTargetType: editorCommon.MouseTargetType,
+		TextEditorCursorStyle: editorCommon.TextEditorCursorStyle,
+		TextEditorCursorBlinkingStyle: editorCommon.TextEditorCursorBlinkingStyle,
+		ContentWidgetPositionPreference: ContentWidgetPositionPreference,
+		OverlayWidgetPositionPreference: OverlayWidgetPositionPreference,
+
+		// classes
+		InternalEditorScrollbarOptions: <any>editorCommon.InternalEditorScrollbarOptions,
+		EditorWrappingInfo: <any>editorCommon.EditorWrappingInfo,
+		InternalEditorViewOptions: <any>editorCommon.InternalEditorViewOptions,
+		EditorContribOptions: <any>editorCommon.EditorContribOptions,
+		InternalEditorOptions: <any>editorCommon.InternalEditorOptions,
+		OverviewRulerPosition: <any>editorCommon.OverviewRulerPosition,
+		EditorLayoutInfo: <any>editorCommon.EditorLayoutInfo,
+		BareFontInfo: <any>editorCommon.BareFontInfo,
+		FontInfo: <any>editorCommon.FontInfo,
+		TextModelResolvedOptions: <any>editorCommon.TextModelResolvedOptions,
+
+		// vars
+		EditorType: editorCommon.EditorType,
+		CursorMoveByUnit: editorCommon.CursorMoveByUnit,
+		CursorMovePosition: editorCommon.CursorMovePosition,
+		EditorScrollDirection: editorCommon.EditorScrollDirection,
+		EditorScrollByUnit: editorCommon.EditorScrollByUnit,
+		RevealLineAtArgument: editorCommon.RevealLineAtArgument,
+		Handler: editorCommon.Handler,
+	};
 }
