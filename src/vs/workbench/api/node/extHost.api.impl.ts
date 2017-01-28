@@ -24,7 +24,6 @@ import { ExtHostHeapService } from 'vs/workbench/api/node/extHostHeapService';
 import { ExtHostStatusBar } from 'vs/workbench/api/node/extHostStatusBar';
 import { ExtHostCommands } from 'vs/workbench/api/node/extHostCommands';
 import { ExtHostOutputService } from 'vs/workbench/api/node/extHostOutputService';
-import { ExtHostTerminalService } from 'vs/workbench/api/node/extHostTerminalService';
 import { ExtHostMessageService } from 'vs/workbench/api/node/extHostMessageService';
 import { ExtHostEditors } from 'vs/workbench/api/node/extHostEditors';
 import { ExtHostLanguages } from 'vs/workbench/api/node/extHostLanguages';
@@ -77,7 +76,6 @@ export function createApiFactory(initData: IInitData, threadService: IThreadServ
 	const languageFeatures = col.define(ExtHostContext.ExtHostLanguageFeatures).set<ExtHostLanguageFeatures>(new ExtHostLanguageFeatures(threadService, extHostDocuments, extHostCommands, extHostHeapService, extHostDiagnostics));
 	const extHostFileSystemEvent = col.define(ExtHostContext.ExtHostFileSystemEventService).set<ExtHostFileSystemEventService>(new ExtHostFileSystemEventService());
 	const extHostQuickOpen = col.define(ExtHostContext.ExtHostQuickOpen).set<ExtHostQuickOpen>(new ExtHostQuickOpen(threadService));
-	const extHostTerminalService = col.define(ExtHostContext.ExtHostTerminalService).set<ExtHostTerminalService>(new ExtHostTerminalService(threadService));
 	col.define(ExtHostContext.ExtHostExtensionService).set(extensionService);
 	col.finish(false, threadService);
 
@@ -85,7 +83,7 @@ export function createApiFactory(initData: IInitData, threadService: IThreadServ
 	const extHostMessageService = new ExtHostMessageService(threadService);
 	const extHostStatusBar = new ExtHostStatusBar(threadService);
 	const extHostOutputService = new ExtHostOutputService(threadService);
-	const workspacePath = contextService.getWorkspace() ? contextService.getWorkspace().resource.fsPath : undefined;
+	const workspacePath = contextService.getWorkspace() ? contextService.getWorkspace().resource.toString() : undefined;
 	const extHostWorkspace = new ExtHostWorkspace(threadService, workspacePath);
 	const extHostLanguages = new ExtHostLanguages(threadService);
 
@@ -250,8 +248,8 @@ export function createApiFactory(initData: IInitData, threadService: IThreadServ
 			onDidChangeTextEditorViewColumn(listener, thisArg?, disposables?) {
 				return extHostEditors.onDidChangeTextEditorViewColumn(listener, thisArg, disposables);
 			},
-			onDidCloseTerminal(listener, thisArg?, disposables?) {
-				return extHostTerminalService.onDidCloseTerminal(listener, thisArg, disposables);
+			onDidCloseTerminal(listener, thisArg?, disposables?): any {
+				throw new Error('ExtHostTerminalService is not available');
 			},
 			showInformationMessage(message, ...items) {
 				return extHostMessageService.showMessage(Severity.Info, message, items);
@@ -278,7 +276,7 @@ export function createApiFactory(initData: IInitData, threadService: IThreadServ
 				return extHostOutputService.createOutputChannel(name);
 			},
 			createTerminal(name?: string, shellPath?: string, shellArgs?: string[]): vscode.Terminal {
-				return extHostTerminalService.createTerminal(name, shellPath, shellArgs);
+				throw new Error('ExtHostTerminalService is not available');
 			},
 			// proposed API
 			sampleFunction: proposedApiFunction(extension, () => {
