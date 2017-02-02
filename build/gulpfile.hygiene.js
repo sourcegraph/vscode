@@ -66,7 +66,8 @@ const indentationFilter = [
 	'!extensions/**/syntaxes/**',
 	'!extensions/**/themes/**',
 	'!extensions/**/colorize-fixtures/**',
-	'!extensions/vscode-api-tests/testWorkspace/**'
+	'!extensions/vscode-api-tests/testWorkspace/**',
+	'!extensions/vscode-extensiontest/**'
 ];
 
 const copyrightFilter = [
@@ -86,7 +87,8 @@ const copyrightFilter = [
 	'!**/*.disabled',
 	'!resources/win32/bin/code.js',
 	'!extensions/markdown/media/tomorrow.css',
-	'!extensions/html/server/src/modes/typescript/*'
+	'!extensions/html/server/src/modes/typescript/*',
+	'!extensions/vscode-extensiontest/**'
 ];
 
 const tslintFilter = [
@@ -98,7 +100,7 @@ const tslintFilter = [
 	'!**/node_modules/**',
 	'!extensions/typescript/test/colorize-fixtures/**',
 	'!extensions/vscode-api-tests/testWorkspace/**',
-	'!extensions/**/*.test.ts'
+	'!extensions/vscode-extensiontest/**'
 ];
 
 const copyrightHeader = [
