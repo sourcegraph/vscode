@@ -8,7 +8,7 @@ const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 
 function npmInstall(location) {
 	const result = cp.spawnSync(npm, ['install'], {
-		cwd: location ,
+		cwd: location,
 		stdio: 'inherit'
 	});
 
@@ -31,7 +31,8 @@ const extensions = [
 	'javascript',
 	'css',
 	'html',
-	'git'
+	'git',
+	'vscode-extensiontest'
 ];
 
 extensions.forEach(extension => npmInstall(`extensions/${extension}`));

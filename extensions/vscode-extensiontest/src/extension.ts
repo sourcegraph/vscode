@@ -6,17 +6,17 @@
 
 // import * as net from 'net';
 
-import { ExtensionContext, ReferenceProvider, ReferenceContext, TextDocument, CancellationToken, ProviderResult, Location, Position, languages } from 'vscode';
+// import { ExtensionContext, ReferenceProvider, ReferenceContext, TextDocument, CancellationToken, ProgressProviderResult, Location, Position, languages } from 'vscode';
+import { ExtensionContext, ReferenceProvider, ReferenceContext, TextDocument, CancellationToken, ProgressProviderResult, Location, Position, languages } from 'vscode';
 import * as client from 'vscode-languageclient';
 
 // import { Disposable, ExtensionContext, Uri, workspace } from 'vscode';
 // import { LanguageClient, LanguageClientOptions, SettingMonitor, ServerOptions, ErrorAction, ErrorHandler, CloseAction, TransportKind } from 'vscode-languageclient';
 
 export function activate(context: ExtensionContext) {
-	console.log('hi nick');
-
-
+	console.log('hi nick 2');
 	// client.LanguageClient()
+
 
 	const goReferenceProvider = new GoReferenceProvider();
 	languages.registerReferenceProvider("go", goReferenceProvider);
@@ -26,7 +26,7 @@ export function activate(context: ExtensionContext) {
 
 export class GoReferenceProvider implements ReferenceProvider {
 
-	provideReferences(document: TextDocument, position: Position, context: ReferenceContext, token: CancellationToken): ProviderResult<Location[]> {
+	provideReferences(document: TextDocument, position: Position, context: ReferenceContext, token: CancellationToken): ProgressProviderResult<Location[]> {
 		console.log("provide references");
 		return null;
 	}

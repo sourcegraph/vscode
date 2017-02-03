@@ -1521,6 +1521,11 @@ declare module 'vscode' {
 	export type ProviderResult<T> = T | undefined | null | Thenable<T | undefined | null>
 
 	/**
+	 * Similar to `ProviderResult<T>` except it may provide intermediate progress of type `P`.
+	 */
+	export type ProgressProviderResult<T, P> = ProviderResult<T> | ProgressThenable<T | undefined | null, P>;
+
+	/**
 	 * Contains additional diagnostic information about the context in which
 	 * a [code action](#CodeActionProvider.provideCodeActions) is run.
 	 */
@@ -1943,7 +1948,7 @@ declare module 'vscode' {
 		 * @return An array of locations or a thenable that resolves to such. The lack of a result can be
 		 * signaled by returning `undefined`, `null`, or an empty array.
 		 */
-		provideReferences(document: TextDocument, position: Position, context: ReferenceContext, token: CancellationToken): ProviderResult<Location[]>;
+		provideReferences(document: TextDocument, position: Position, context: ReferenceContext, token: CancellationToken): ProgressProviderResult<Location[], Location[]>;
 	}
 
 	/**
@@ -4404,4 +4409,15 @@ interface Thenable<T> {
 	*/
 	then<TResult>(onfulfilled?: (value: T) => TResult | Thenable<TResult>, onrejected?: (reason: any) => TResult | Thenable<TResult>): Thenable<TResult>;
 	then<TResult>(onfulfilled?: (value: T) => TResult | Thenable<TResult>, onrejected?: (reason: any) => void): Thenable<TResult>;
+}
+
+interface ProgressThenable<T, P> extends Thenable<T> {
+	/**
+	 * Attaches callbacks for the resolution and/or rejection of the Promise.
+	 * @param onfulfilled The callback to execute when the Promise is resolved.
+	 * @param onrejected The callback to execute when the Promise is rejected.
+	 * @param onprogress The callback to execute when some intermetiate data is available.
+	 * @returns A Promise for the completion of which ever callback is executed.
+	 */
+	then<TResult>(onfulfilled?: (value: T) => TResult | Thenable<TResult>, onrejected?: (reason: any) => TResult | Thenable<TResult> | void, onprogress?: (value: P) => void): Thenable<TResult>;
 }

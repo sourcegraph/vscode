@@ -1,5 +1,5 @@
 {
-  "name": "vscode-testextension",
+  "name": "vscode-extensiontest",
   "description": "nick's test vscode extension",
   "author": "Sourcegraph",
   "license": "MIT",
