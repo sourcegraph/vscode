@@ -7,6 +7,10 @@
 
 declare module 'vscode' {
 
+	export interface Nick {
+
+	}
+
 	/**
 	 * Defines a generalized way of reporing progress updates.
 	 */
