@@ -9,9 +9,11 @@ import Event, { Emitter } from 'vs/base/common/event';
 import { IDisposable } from 'vs/base/common/lifecycle';
 import { IReadOnlyModel } from 'vs/editor/common/editorCommon';
 import { LanguageSelector, score } from 'vs/editor/common/modes/languageSelector';
+import { IWorkspace } from 'vs/platform/workspace/common/workspace';
 
 interface Entry<T> {
 	selector: LanguageSelector;
+	workspace: IWorkspace;
 	provider: T;
 	_score: number;
 	_time: number;
@@ -30,10 +32,11 @@ export default class LanguageFeatureRegistry<T> {
 		return this._onDidChange.event;
 	}
 
-	register(selector: LanguageSelector, provider: T): IDisposable {
+	register(selector: LanguageSelector, provider: T, workspace?: IWorkspace): IDisposable {
 
 		let entry: Entry<T> = {
 			selector,
+			workspace: workspace ? workspace : null,
 			provider,
 			_score: -1,
 			_time: this._clock++
@@ -141,6 +144,13 @@ export default class LanguageFeatureRegistry<T> {
 
 		for (let entry of this._entries) {
 			entry._score = score(entry.selector, model.uri, model.getModeId());
+
+			// Ignore entries whose (non-empty) workspace doesn't match the currently requested resource.
+			// Prevents multiple requests from being made to extension host if multiple extension hosts have
+			// registered a provider.
+			if (entry.workspace !== null && model.uri.with({fragment: ""}).toString() !== entry.workspace.resource.toString()) {
+				entry._score = 0;
+			}
 		}
 
 		// needs sorting
