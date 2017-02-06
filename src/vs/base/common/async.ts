@@ -16,6 +16,10 @@ function isThenable<T>(obj: any): obj is Thenable<T> {
 	return obj && typeof (<Thenable<any>>obj).then === 'function';
 }
 
+function isProgressThenable<T>(obj: any): obj is ProgressThenable<T, any> {
+	return isThenable(obj) && obj.then.length === 3;
+}
+
 export function toThenable<T>(arg: T | Thenable<T>): Thenable<T> {
 	if (isThenable(arg)) {
 		return arg;
@@ -30,6 +34,12 @@ export function asWinJsPromise<T>(callback: (token: CancellationToken) => T | TP
 		let item = callback(source.token);
 		if (item instanceof TPromise) {
 			item.then(resolve, reject, progress);
+		} else if (isProgressThenable(item)) {
+			// item.then(resolve, reject, progress) does not compile.
+			// Typescript seems to think that item is `Thenable<T> | ProgressThenable<T, any>` in this case.
+			// However, if we assign it, the type information is passed correctly.
+			var pitem: ProgressThenable<T, any> = item;
+			pitem.then(resolve, reject, progress);
 		} else if (isThenable<T>(item)) {
 			item.then(resolve, reject);
 		} else {

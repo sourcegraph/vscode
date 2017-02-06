@@ -54,7 +54,7 @@ declare module monaco {
     /**
      * A Promise implementation that supports progress and cancelation.
      */
-    export class Promise<V> {
+    export class Promise<V> implements ProgressThenable<V, any> {
 
         constructor(init: (complete: TValueCallback<V>, error: (err: any) => void, progress: ProgressCallback) => void, oncancel?: any);
 

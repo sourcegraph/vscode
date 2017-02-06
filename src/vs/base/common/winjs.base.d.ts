@@ -58,7 +58,7 @@ export interface TProgressCallback<T> {
 /**
  * A Promise implementation that supports progress and cancelation.
  */
-export declare class TPromise<V> {
+export declare class TPromise<V> implements ProgressThenable<V, any> {
 
 	constructor(init: (complete: TValueCallback<V>, error: (err: any) => void, progress: ProgressCallback) => void, oncancel?: any);
 
@@ -98,7 +98,7 @@ export declare class TPromise<V> {
 }
 
 // --- Generic promise with generic progress value
-export declare class PPromise<C, P> extends TPromise<C> {
+export declare class PPromise<C, P> extends TPromise<C> implements ProgressThenable<C, P> {
 
 	constructor(init: (complete: TValueCallback<C>, error: (err: any) => void, progress: TProgressCallback<P>) => void, oncancel?: any);
 
