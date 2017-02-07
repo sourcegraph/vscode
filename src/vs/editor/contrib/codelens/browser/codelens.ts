@@ -486,12 +486,14 @@ export class CodeLensContribution implements editorCommon.IEditorContribution {
 	}
 
 	private _disposeAllLenses(decChangeAccessor: editorCommon.IModelDecorationsChangeAccessor, viewZoneChangeAccessor: editorBrowser.IViewZoneChangeAccessor): void {
+		let centeredRange = this._editor.getCenteredRangeInViewport();
 		let helper = new CodeLensHelper();
 		this._lenses.forEach((lens) => lens.dispose(helper, viewZoneChangeAccessor));
 		if (decChangeAccessor) {
 			helper.commit(decChangeAccessor);
 		}
 		this._lenses = [];
+		this._editor.revealRangeInCenter(centeredRange);
 	}
 
 	private renderCodeLensSymbols(symbols: ICodeLensData[]): void {
