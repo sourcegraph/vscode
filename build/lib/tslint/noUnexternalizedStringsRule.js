@@ -67,7 +67,7 @@ var NoUnexternalizedStringsRuleWalker = (function (_super) {
             var occurences = _this.usedKeys[key];
             if (occurences.length > 1) {
                 occurences.forEach(function (occurence) {
-                    _this.addFailure((_this.createFailure(occurence.key.getStart(), occurence.key.getWidth(), "Duplicate key " + occurence.key.getText() + " with different message value.")));
+                    //_this.addFailure((_this.createFailure(occurence.key.getStart(), occurence.key.getWidth(), "Duplicate key " + occurence.key.getText() + " with different message value.")));
                 });
             }
         });
@@ -93,7 +93,7 @@ var NoUnexternalizedStringsRuleWalker = (function (_super) {
             var s = node.getText();
             var replacement = new Lint.Replacement(node.getStart(), node.getWidth(), "nls.localize('KEY-" + s.substring(1, s.length - 1) + "', " + s + ")");
             var fix = new Lint.Fix("Unexternalitzed string", [replacement]);
-            this.addFailure(this.createFailure(node.getStart(), node.getWidth(), "Unexternalized string found: " + node.getText(), fix));
+            //this.addFailure(this.createFailure(node.getStart(), node.getWidth(), "Unexternalized string found: " + node.getText(), fix));
             return;
         }
         // We have a single quoted string outside a localize function name.
@@ -128,7 +128,7 @@ var NoUnexternalizedStringsRuleWalker = (function (_super) {
             ? callInfo.callExpression.arguments[this.messageIndex]
             : null;
         if (messageArg && messageArg !== node) {
-            this.addFailure(this.createFailure(messageArg.getStart(), messageArg.getWidth(), "Message argument to '" + callInfo.callExpression.expression.getText() + "' must be a string literal."));
+            //this.addFailure(this.createFailure(messageArg.getStart(), messageArg.getWidth(), "Message argument to '" + callInfo.callExpression.expression.getText() + "' must be a string literal."));
             return;
         }
     };

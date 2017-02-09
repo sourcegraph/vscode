@@ -1973,10 +1973,15 @@ declare module 'vscode' {
 		 * @param position The position at which the command was invoked.
 		 * @param context
 		 * @param token A cancellation token.
+		 * @param progress A callback that the implementation MAY call to send intermediate results.
+		 * This allows the UI to start showing these results to the user.
+		 * Calls to `progress` should only include results that have not been passed to previous calls to `progress`.
+		 * Calls to `progress` after the call to `provideReferences` has resolved will be ignored.
+		 * The order of data sent via `progress` does not matter. The results will be sorted before being displayed to the user.
 		 * @return An array of locations or a thenable that resolves to such. The lack of a result can be
 		 * signaled by returning `undefined`, `null`, or an empty array.
 		 */
-		provideReferences(document: TextDocument, position: Position, context: ReferenceContext, token: CancellationToken): ProviderResult<Location[]>;
+		provideReferences(document: TextDocument, position: Position, context: ReferenceContext, token: CancellationToken, progress: (locations: Location[]) => void): ProviderResult<Location[]>;
 	}
 
 	/**

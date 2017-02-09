@@ -1,0 +1,39 @@
+{
+  "name": "vscode-extensiontest",
+  "description": "nick's test vscode extension",
+  "author": "Sourcegraph",
+  "license": "MIT",
+  "version": "0.0.1",
+  "publisher": "sourcegraph",
+  "engines": {
+    "vscode": "^1.6.0"
+  },
+  "enableProposedApi": true,
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onLanguage:go"
+  ],
+  "main": "./out/extension",
+  "contributes": {
+    "languages": [
+      {
+        "id": "go",
+        "extensions": [
+          ".go"
+        ],
+        "aliases": [
+          "Go"
+        ]
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "gulp compile-extension:git",
+    "watch": "gulp watch-extension:git"
+  },
+  "devDependencies": {
+    "@types/node": "^7.0.4"
+  }
+}
