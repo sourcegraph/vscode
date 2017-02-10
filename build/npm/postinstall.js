@@ -32,7 +32,8 @@ const extensions = [
 	'css',
 	'html',
 	'git',
-	'vscode-extensiontest'
+	'vscode-extensiontest',
+	'vscode-go'
 ];
 
 extensions.forEach(extension => npmInstall(`extensions/${extension}`));
