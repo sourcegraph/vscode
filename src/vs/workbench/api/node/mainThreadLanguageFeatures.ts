@@ -179,7 +179,7 @@ export class MainThreadLanguageFeatures extends MainThreadLanguageFeaturesShape 
 
 	// --- navigate type
 
-	$registerNavigateTypeSupport(handle: number): TPromise<any> {
+	$registerNavigateTypeSupport(handle: number, workspace?: IWorkspace): TPromise<any> {
 		this._registrations[handle] = WorkspaceSymbolProviderRegistry.register(<IWorkspaceSymbolProvider>{
 			provideWorkspaceSymbols: (search: string): TPromise<IWorkspaceSymbol[]> => {
 				return this._heapService.trackRecursive(this._proxy.$provideWorkspaceSymbols(handle, search));
@@ -187,7 +187,7 @@ export class MainThreadLanguageFeatures extends MainThreadLanguageFeaturesShape 
 			resolveWorkspaceSymbol: (item: IWorkspaceSymbol): TPromise<IWorkspaceSymbol> => {
 				return this._proxy.$resolveWorkspaceSymbol(handle, item);
 			}
-		});
+		}, workspace);
 		return undefined;
 	}
 
