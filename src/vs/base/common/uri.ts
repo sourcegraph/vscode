@@ -134,7 +134,13 @@ export default class URI {
 				value = this._path[1].toLowerCase() + this._path.substr(2);
 			} else {
 				// other path
-				value = this._path;
+				// Sourcegraph uses a git-based URI scheme which requires us to change
+				// vscode's default behavior for setting filepath. (The filepath for our URIs
+				// is the fragment, not the path).
+				value = this._path.replace(/^\//, "")
+				if (this._fragment) {
+					value += "/" + this.fragment;
+				}
 			}
 			if (platform.isWindows) {
 				value = value.replace(/\//g, '\\');

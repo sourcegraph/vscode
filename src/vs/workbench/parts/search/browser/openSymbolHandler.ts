@@ -127,7 +127,10 @@ export class OpenSymbolHandler extends QuickOpenHandler {
 	private delayer: ThrottledDelayer<QuickOpenEntry[]>;
 	private options: IOpenSymbolOptions;
 
-	constructor( @IInstantiationService private instantiationService: IInstantiationService) {
+	constructor(
+		@IInstantiationService private instantiationService: IInstantiationService,
+		@IWorkspaceContextService private contextService: IWorkspaceContextService
+	) {
 		super();
 
 		this.delayer = new ThrottledDelayer<QuickOpenEntry[]>(OpenSymbolHandler.SEARCH_DELAY);
@@ -156,7 +159,7 @@ export class OpenSymbolHandler extends QuickOpenHandler {
 	}
 
 	private doGetResults(searchValue: string): TPromise<SymbolEntry[]> {
-		return getWorkspaceSymbols(searchValue).then(tuples => {
+		return getWorkspaceSymbols(searchValue, this.contextService.getWorkspace()).then(tuples => {
 			const result: SymbolEntry[] = [];
 			for (let tuple of tuples) {
 				const [provider, bearings] = tuple;

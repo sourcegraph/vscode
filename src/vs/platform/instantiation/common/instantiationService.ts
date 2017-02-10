@@ -129,7 +129,7 @@ export class InstantiationService implements IInstantiationService {
 		for (const dependency of serviceDependencies) {
 			let service = this._getOrCreateServiceInstance(dependency.id);
 			if (!service && this._strict && !dependency.optional) {
-				console.warn(`[createInstance] ${desc.ctor.name} depends on UNKNOWN service ${dependency.id}.`);
+				throw new Error(`[createInstance] ${desc.ctor.name} depends on UNKNOWN service ${dependency.id}.`);
 			}
 			serviceArgs.push(service);
 		}

@@ -896,10 +896,10 @@ export class ExtHostLanguageFeatures extends ExtHostLanguageFeaturesShape {
 
 	// --- navigate types
 
-	registerWorkspaceSymbolProvider(provider: vscode.WorkspaceSymbolProvider): vscode.Disposable {
+	registerWorkspaceSymbolProvider(provider: vscode.WorkspaceSymbolProvider, workspace?: IWorkspace): vscode.Disposable {
 		const handle = this._nextHandle();
 		this._adapter.set(handle, new NavigateTypeAdapter(provider, this._heapService));
-		this._proxy.$registerNavigateTypeSupport(handle);
+		this._proxy.$registerNavigateTypeSupport(handle, workspace);
 		return this._createDisposable(handle);
 	}
 

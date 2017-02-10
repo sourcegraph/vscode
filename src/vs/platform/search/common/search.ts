@@ -21,6 +21,7 @@ export const ISearchService = createDecorator<ISearchService>(ID);
 export interface ISearchService {
 	_serviceBrand: any;
 	search(query: ISearchQuery): PPromise<ISearchComplete, ISearchProgressItem>;
+	searchRepo(query: ISearchQuery): PPromise<ISearchComplete, ISearchProgressItem>;
 	extendQuery(query: ISearchQuery): void;
 	clearCache(cacheKey: string): TPromise<void>;
 }

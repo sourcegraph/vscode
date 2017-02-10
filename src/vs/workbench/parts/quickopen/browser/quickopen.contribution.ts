@@ -43,15 +43,6 @@ registry.registerWorkbenchAction(new SyncActionDescriptor(QuickOpenViewPickerAct
 
 Registry.as<IQuickOpenRegistry>(QuickOpenExtensions.Quickopen).registerQuickOpenHandler(
 	new QuickOpenHandlerDescriptor(
-		'vs/workbench/parts/quickopen/browser/commandsHandler',
-		'CommandsHandler',
-		ALL_COMMANDS_PREFIX,
-		nls.localize('commandsHandlerDescriptionDefault', "Show and Run Commands")
-	)
-);
-
-Registry.as<IQuickOpenRegistry>(QuickOpenExtensions.Quickopen).registerQuickOpenHandler(
-	new QuickOpenHandlerDescriptor(
 		'vs/workbench/parts/quickopen/browser/gotoLineHandler',
 		'GotoLineHandler',
 		GOTO_LINE_PREFIX,

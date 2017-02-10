@@ -236,7 +236,7 @@ export function createApiFactory(initData: IInitData, threadService: IThreadServ
 				return languageFeatures.registerDocumentSymbolProvider(selector, provider, currWorkspace);
 			},
 			registerWorkspaceSymbolProvider(provider: vscode.WorkspaceSymbolProvider): vscode.Disposable {
-				return languageFeatures.registerWorkspaceSymbolProvider(provider);
+				return languageFeatures.registerWorkspaceSymbolProvider(provider, currWorkspace);
 			},
 			registerDocumentFormattingEditProvider(selector: vscode.DocumentSelector, provider: vscode.DocumentFormattingEditProvider): vscode.Disposable {
 				return languageFeatures.registerDocumentFormattingEditProvider(selector, provider, currWorkspace);

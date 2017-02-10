@@ -5,6 +5,8 @@
 
 'use strict';
 
+import * as path from 'path';
+
 import * as arrays from 'vs/base/common/arrays';
 import * as objects from 'vs/base/common/objects';
 import { TPromise } from 'vs/base/common/winjs.base';
@@ -18,7 +20,11 @@ import { IAutoFocus } from 'vs/base/parts/quickopen/common/quickOpen';
 import { QuickOpenEntry, QuickOpenModel } from 'vs/base/parts/quickopen/browser/quickOpenModel';
 import { QuickOpenHandler } from 'vs/workbench/browser/quickopen';
 import { FileEntry, OpenFileHandler, FileQuickOpenModel } from 'vs/workbench/parts/search/browser/openFileHandler';
+import { RepoEntry, OpenRepoHandler, RepoQuickOpenModel } from 'vs/workbench/parts/search/browser/openRepoHandler';
+/* tslint:disable:no-unused-variable */
 import * as openSymbolHandler from 'vs/workbench/parts/search/browser/openSymbolHandler';
+/* tslint:enable:no-unused-variable */
+import * as openRepoHandler from 'vs/workbench/parts/search/browser/openRepoHandler';
 import { IMessageService, Severity } from 'vs/platform/message/common/message';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { ISearchStats, ICachedSearchStats, IUncachedSearchStats } from 'vs/platform/search/common/search';
@@ -78,6 +84,8 @@ interface ITelemetryData {
 
 // OpenSymbolHandler is used from an extension and must be in the main bundle file so it can load
 export import OpenSymbolHandler = openSymbolHandler.OpenSymbolHandler;
+// OpenRepoHandler is used from an extension and must be in the main bundle file so it can load
+export import OpenRepoHandler = openRepoHandler.OpenRepoHandler;
 
 export class OpenAnythingHandler extends QuickOpenHandler {
 
@@ -90,6 +98,7 @@ export class OpenAnythingHandler extends QuickOpenHandler {
 
 	private openSymbolHandler: OpenSymbolHandler;
 	private openFileHandler: OpenFileHandler;
+	private openRepoHandler: OpenRepoHandler;
 	private searchDelayer: ThrottledDelayer<QuickOpenModel>;
 	private pendingSearch: TPromise<QuickOpenModel>;
 	private isClosed: boolean;
@@ -109,6 +118,7 @@ export class OpenAnythingHandler extends QuickOpenHandler {
 
 		this.openSymbolHandler = instantiationService.createInstance(OpenSymbolHandler);
 		this.openFileHandler = instantiationService.createInstance(OpenFileHandler);
+		this.openRepoHandler = instantiationService.createInstance(OpenRepoHandler);
 
 		this.updateHandlers(this.configurationService.getConfiguration<IWorkbenchSearchConfiguration>());
 
@@ -125,6 +135,11 @@ export class OpenAnythingHandler extends QuickOpenHandler {
 		// Files
 		this.openFileHandler.setOptions({
 			forceUseIcons: this.includeSymbols // only need icons for file results if we mix with symbol results
+		});
+
+		// Repos
+		this.openRepoHandler.setOptions({
+			forceUseIcons: this.includeSymbols // only need icons for repo results if we mix with symbol results
 		});
 
 		// Symbols
@@ -162,6 +177,14 @@ export class OpenAnythingHandler extends QuickOpenHandler {
 
 			// File Results
 			resultPromises.push(this.openFileHandler.getResults(searchValue, OpenAnythingHandler.MAX_DISPLAYED_RESULTS));
+
+			// Repo Results
+			// resultPromises.push(this.openRepoHandler.getResults(searchValue, OpenAnythingHandler.MAX_DISPLAYED_RESULTS));
+			if (this.includeSymbols && !searchWithRange && !path.isAbsolute(searchValue)) {
+				resultPromises.push(this.openRepoHandler.getResults(searchValue));
+			} else {
+				resultPromises.push(TPromise.as(new QuickOpenModel())); // We need this empty promise because we are using the throttler below!
+			}
 
 			// Symbol Results (unless disabled or a range or absolute path is specified)
 			if (this.includeSymbols && !searchWithRange) {
@@ -236,7 +259,7 @@ export class OpenAnythingHandler extends QuickOpenHandler {
 			return this.openFileHandler.hasShortResponseTime();
 		}
 
-		return this.openFileHandler.hasShortResponseTime() && this.openSymbolHandler.hasShortResponseTime();
+		return this.openFileHandler.hasShortResponseTime() && this.openSymbolHandler.hasShortResponseTime() && this.openRepoHandler.hasShortResponseTime();
 	}
 
 	private extractRange(value: string): ISearchWithRange {
@@ -307,6 +330,7 @@ export class OpenAnythingHandler extends QuickOpenHandler {
 
 	public onOpen(): void {
 		this.openSymbolHandler.onOpen();
+		this.openRepoHandler.onOpen();
 		this.openFileHandler.onOpen();
 	}
 
@@ -322,6 +346,7 @@ export class OpenAnythingHandler extends QuickOpenHandler {
 		// Propagate
 		this.openSymbolHandler.onClose(canceled);
 		this.openFileHandler.onClose(canceled);
+		this.openRepoHandler.onClose(canceled);
 	}
 
 	private cancelPendingSearch(): void {

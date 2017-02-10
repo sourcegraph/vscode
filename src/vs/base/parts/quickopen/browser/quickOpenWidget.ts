@@ -76,7 +76,7 @@ const DEFAULT_INPUT_ARIA_LABEL = nls.localize('quickOpenAriaLabel', "Quick picke
 export class QuickOpenWidget implements IModelProvider {
 
 	private static MAX_WIDTH = 600;				// Max total width of quick open widget
-	private static MAX_ITEMS_HEIGHT = 20 * 22;	// Max height of item list below input field
+	private static MAX_ITEMS_HEIGHT = 10 * 40;	// Max height of item list below input field
 
 	private options: IQuickOpenOptions;
 	private builder: Builder;
@@ -676,7 +676,7 @@ export class QuickOpenWidget implements IModelProvider {
 		this.inputElement.setAttribute('aria-haspopup', 'false');
 
 		// Reset Tree Height
-		this.treeContainer.style({ height: (this.options.minItemsToShow ? this.options.minItemsToShow * 22 : 0) + 'px' });
+		this.treeContainer.style({ height: (this.options.minItemsToShow ? this.options.minItemsToShow * 40 : 0) + 'px' });
 
 		// Clear any running Progress
 		this.progressBar.stop().getContainer().hide();
