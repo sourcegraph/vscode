@@ -2,8 +2,8 @@ import { ExtensionContext, ReferenceProvider, ReferenceContext, TextDocument, Ca
 
 export function activate(context: ExtensionContext) {
 	const goReferenceProvider = new GoReferenceProvider();
-	languages.registerReferenceProvider("go", goReferenceProvider);
-	context.subscriptions.push(goReferenceProvider);
+	// languages.registerReferenceProvider("go", goReferenceProvider);
+	// context.subscriptions.push(goReferenceProvider);
 }
 
 /**

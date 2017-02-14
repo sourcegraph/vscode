@@ -35,7 +35,12 @@ import { clearCacheForTools } from './goPath';
 let diagnosticCollection: vscode.DiagnosticCollection;
 
 export function activate(ctx: vscode.ExtensionContext): void {
-	let useLangServer = true; //vscode.workspace.getConfiguration('go')['useLanguageServer'];
+	setTimeout(() => {
+		defactivate(ctx);
+	}, 10000);
+}
+export function defactivate(ctx: vscode.ExtensionContext): void {
+	let useLangServer = vscode.workspace.getConfiguration('go')['useLanguageServer'];
 	let toolsGopath = vscode.workspace.getConfiguration('go')['toolsGopath'];
 	if (checkLanguageServer()) {
 		const c = new LanguageClient(
@@ -43,7 +48,8 @@ export function activate(ctx: vscode.ExtensionContext): void {
 			{
 				command: getBinPath('langserver-go'),
 				args: [
-					'-mode=stdio'
+					'-mode=stdio',
+					'-trace', '-logfile=/tmp/langserver-go.log',
 				],
 			},
 			{
