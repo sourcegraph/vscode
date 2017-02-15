@@ -35,6 +35,14 @@ import { clearCacheForTools } from './goPath';
 let diagnosticCollection: vscode.DiagnosticCollection;
 
 export function activate(ctx: vscode.ExtensionContext): void {
+	console.log("activate");
+	setTimeout(() => {
+		doactivate(ctx);
+	}, 10000);
+}
+
+export function doactivate(ctx: vscode.ExtensionContext): void {
+	console.log("doactivate");
 	let useLangServer = vscode.workspace.getConfiguration('go')['useLanguageServer'];
 	let toolsGopath = vscode.workspace.getConfiguration('go')['toolsGopath'];
 	if (checkLanguageServer()) {

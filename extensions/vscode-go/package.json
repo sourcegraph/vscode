@@ -1,5 +1,5 @@
 {
-  "name": "Go",
+  "name": "vscode-go",
   "version": "0.6.53",
   "publisher": "lukehoban",
   "description": "Rich Go language support for Visual Studio Code",
@@ -24,11 +24,8 @@
     "url": "https://github.com/Microsoft/vscode-go.git"
   },
   "scripts": {
-    "vscode:prepublish": "tsc -p ./",
-    "compile": "tsc -watch -p ./",
-    "postinstall": "node ./node_modules/vscode/bin/install",
-    "test": "node ./node_modules/vscode/bin/test",
-    "lint": "node ./node_modules/tslint/bin/tslint ./src/*.ts ./src/debugAdapter/*.ts ./test/*.ts"
+    "compile": "gulp compile-extension:vscode-go",
+    "watch": "gulp watch-extension:vscode-go"
   },
   "extensionDependencies": [],
   "dependencies": {
@@ -45,10 +42,7 @@
     "@types/fs-extra": "0.0.35",
     "@types/mocha": "^2.2.33",
     "@types/node": "^6.0.50",
-    "fs-extra": "^1.0.0",
-    "tslint": "^4.0.2",
-    "typescript": "^2.1.5",
-    "vscode": "^1.0.3"
+    "fs-extra": "^1.0.0"
   },
   "engines": {
     "vscode": "^1.8.0"
@@ -59,7 +53,7 @@
     "onCommand:go.tools.install",
     "onCommand:go.debug.startSession"
   ],
-  "main": "./out/src/goMain",
+  "main": "./out/goMain",
   "contributes": {
     "languages": [
       {
