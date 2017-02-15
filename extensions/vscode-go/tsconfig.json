@@ -4,10 +4,8 @@
 		"outDir": "out",
 		"sourceMap": true,
 		"target": "es6",
-		"strictNullChecks": false,
-		"experimentalDecorators": true,
 		"lib": [
-			"es2016"
+			"es2015"
 		]
 	},
 	"exclude": [

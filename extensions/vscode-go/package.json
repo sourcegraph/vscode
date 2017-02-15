@@ -1,5 +1,5 @@
 {
-  "name": "vscode-go",
+  "name": "Go",
   "version": "0.6.53",
   "publisher": "lukehoban",
   "description": "Rich Go language support for Visual Studio Code",
@@ -25,8 +25,8 @@
   },
   "scripts": {
     "vscode:prepublish": "tsc -p ./",
-    "compile": "gulp compile-extension:vscode-go",
-    "watch": "gulp watch-extension:vscode-go",
+    "compile": "tsc -watch -p ./",
+    "postinstall": "node ./node_modules/vscode/bin/install",
     "test": "node ./node_modules/vscode/bin/test",
     "lint": "node ./node_modules/tslint/bin/tslint ./src/*.ts ./src/debugAdapter/*.ts ./test/*.ts"
   },
@@ -47,7 +47,8 @@
     "@types/node": "^6.0.50",
     "fs-extra": "^1.0.0",
     "tslint": "^4.0.2",
-    "typescript": "^2.1.5"
+    "typescript": "^2.1.5",
+    "vscode": "^1.0.3"
   },
   "engines": {
     "vscode": "^1.8.0"
@@ -58,7 +59,7 @@
     "onCommand:go.tools.install",
     "onCommand:go.debug.startSession"
   ],
-  "main": "./out/goMain",
+  "main": "./out/src/goMain",
   "contributes": {
     "languages": [
       {
@@ -154,6 +155,56 @@
           "go"
         ],
         "startSessionCommand": "go.debug.startSession",
+        "configurationSnippets": [
+          {
+            "label": "Go: Launch package",
+            "description": "Debug the package in the program attribute",
+            "body":{
+              "name": "${2:Launch Package}",
+              "type": "go",
+              "request": "launch",
+              "mode": "debug",
+              "program": "^\"\\${workspaceRoot}${1:}\""
+            }
+          },
+          {
+            "label": "Go: Launch file",
+            "description": "Debug the file in the program attribute",
+            "body":{
+              "name": "${2:Launch file}",
+              "type": "go",
+              "request": "launch",
+              "mode": "debug",
+              "program": "^\"\\${workspaceRoot}/${1:main.go}\""
+            }
+          },
+          {
+            "label": "Go: Launch test package",
+            "description": "Debug the test package in the program attribute",
+            "body":{
+              "name": "${2:Launch test package}",
+              "type": "go",
+              "request": "launch",
+              "mode": "test",
+              "program": "^\"\\${workspaceRoot}${1:}\""
+            }
+          },
+          {
+            "label": "Go: Launch test function",
+            "description": "Debug the test function in the args, ensure program attributes points to right package",
+            "body":{
+              "name": "${3:Launch test function}",
+              "type": "go",
+              "request": "launch",
+              "mode": "test",
+              "program": "^\"\\${workspaceRoot}${1:}\"",
+              "args": [
+                "-test.run",
+                "${2:MyTestFunction}"
+              ]
+            }
+          }
+        ],
         "initialConfigurations": [
           {
             "name": "Launch",

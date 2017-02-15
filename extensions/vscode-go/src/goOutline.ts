@@ -12,12 +12,12 @@ import { getBinPath, sendTelemetryEvent } from './util';
 import { promptForMissingTool, promptForUpdatingTool } from './goInstallTools';
 
 // Keep in sync with https://github.com/lukehoban/go-outline
-export interface GoOutlineRange {
+interface GoOutlineRange {
 	start: number;
 	end: number;
 }
 
-export interface GoOutlineDeclaration {
+interface GoOutlineDeclaration {
 	label: string;
 	type: string;
 	receiverType?: string;
@@ -29,7 +29,7 @@ export interface GoOutlineDeclaration {
 	comment?: GoOutlineRange;
 }
 
-export interface GoOutlineOptions {
+interface GoOutlineOptions {
 	fileName: string;
 	importsOnly?: boolean;
 }
