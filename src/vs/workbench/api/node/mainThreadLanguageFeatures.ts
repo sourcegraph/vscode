@@ -12,7 +12,7 @@ import * as vscode from 'vscode';
 import { IReadOnlyModel, ISingleEditOperation } from 'vs/editor/common/editorCommon';
 import * as modes from 'vs/editor/common/modes';
 import { WorkspaceSymbolProviderRegistry, IWorkspaceSymbolProvider, IWorkspaceSymbol } from 'vs/workbench/parts/search/common/search';
-import { wireCancellationToken } from 'vs/base/common/async';
+import { always, wireCancellationToken } from 'vs/base/common/async';
 import { CancellationToken } from 'vs/base/common/cancellation';
 import { Position as EditorPosition } from 'vs/editor/common/core/position';
 import { Range as EditorRange } from 'vs/editor/common/core/range';
@@ -22,6 +22,7 @@ import { LanguageConfiguration } from 'vs/editor/common/modes/languageConfigurat
 import { IHeapService } from './mainThreadHeapService';
 import { IModeService } from 'vs/editor/common/services/modeService';
 import { IWorkspace } from 'vs/platform/workspace/common/workspace';
+import { MainThreadHandlerRegistry } from 'vs/workbench/api/node/mainThreadHandlerRegistry';
 
 export class MainThreadLanguageFeatures extends MainThreadLanguageFeaturesShape {
 
@@ -29,6 +30,13 @@ export class MainThreadLanguageFeatures extends MainThreadLanguageFeaturesShape 
 	private _heapService: IHeapService;
 	private _modeService: IModeService;
 	private _registrations: { [handle: number]: IDisposable; } = Object.create(null);
+
+	/**
+	 * Maintains a collection of callbacks for ongoing requests.
+	 * Currently, provideReferences is the only call that saves a callback for reporting progress,
+	 * but other methods may use this to register callbacks as well.
+	 */
+	private _callbackRegistrations = new MainThreadHandlerRegistry<(value: any) => void>();
 
 	constructor(
 		@IThreadService threadService: IThreadService,
@@ -46,6 +54,7 @@ export class MainThreadLanguageFeatures extends MainThreadLanguageFeaturesShape 
 		if (registration) {
 			registration.dispose();
 			delete this._registrations[handle];
+			this._callbackRegistrations.unregister(handle);
 		}
 		return undefined;
 	}
@@ -147,10 +156,21 @@ export class MainThreadLanguageFeatures extends MainThreadLanguageFeaturesShape 
 
 	$registerReferenceSupport(handle: number, selector: vscode.DocumentSelector, workspace?: IWorkspace): TPromise<any> {
 		this._registrations[handle] = modes.ReferenceProviderRegistry.register(selector, <modes.ReferenceProvider>{
-			provideReferences: (model: IReadOnlyModel, position: EditorPosition, context: modes.ReferenceContext, token: CancellationToken): Thenable<modes.Location[]> => {
-				return wireCancellationToken(token, this._proxy.$provideReferences(handle, model.uri, position, context));
+			provideReferences: (model: IReadOnlyModel, position: EditorPosition, context: modes.ReferenceContext, token: CancellationToken, progress: (locations: modes.Location[]) => void): Thenable<modes.Location[]> => {
+				const progressHandle = this._callbackRegistrations.registerChild(handle, progress);
+				let refs = this._proxy.$provideReferences(handle, progressHandle, model.uri, position, context);
+				refs = always(refs, () => this._callbackRegistrations.unregisterChild(handle, progressHandle));
+				return wireCancellationToken(token, refs);
 			}
 		}, workspace);
+		return undefined;
+	}
+
+	$notifyProvideReferencesProgress(handle: number, progressHandle: number, locations: modes.Location[]): TPromise<any> {
+		const progressHandler = this._callbackRegistrations.getChild(handle, progressHandle);
+		if (progressHandler) {
+			progressHandler(locations);
+		}
 		return undefined;
 	}
 
