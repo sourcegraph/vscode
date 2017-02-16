@@ -248,6 +248,7 @@ export class ExtensionHostProcessWorker {
 			this.extensionService.getExtensions()
 		]).then(([telemetryInfo, extensionDescriptions]) => {
 			let initData: IInitData = {
+				seqId: 0,
 				parentPid: process.pid,
 				environment: {
 					appSettingsHome: this.environmentService.appSettingsHome,

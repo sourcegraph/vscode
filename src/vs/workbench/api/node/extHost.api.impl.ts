@@ -73,7 +73,7 @@ export function createApiFactory(initData: IInitData, threadService: IThreadServ
 	const extHostExplorers = col.define(ExtHostContext.ExtHostExplorers).set<ExtHostTreeExplorers>(new ExtHostTreeExplorers(threadService, extHostCommands));
 	const extHostConfiguration = col.define(ExtHostContext.ExtHostConfiguration).set<ExtHostConfiguration>(new ExtHostConfiguration(threadService.get(MainContext.MainThreadConfiguration), initData.configuration));
 	const extHostDiagnostics = col.define(ExtHostContext.ExtHostDiagnostics).set<ExtHostDiagnostics>(new ExtHostDiagnostics(threadService));
-	const languageFeatures = col.define(ExtHostContext.ExtHostLanguageFeatures).set<ExtHostLanguageFeatures>(new ExtHostLanguageFeatures(threadService, extHostDocuments, extHostCommands, extHostHeapService, extHostDiagnostics));
+	const languageFeatures = col.define(ExtHostContext.ExtHostLanguageFeatures).set<ExtHostLanguageFeatures>(new ExtHostLanguageFeatures(initData.seqId, threadService, extHostDocuments, extHostCommands, extHostHeapService, extHostDiagnostics));
 	const extHostFileSystemEvent = col.define(ExtHostContext.ExtHostFileSystemEventService).set<ExtHostFileSystemEventService>(new ExtHostFileSystemEventService());
 	const extHostQuickOpen = col.define(ExtHostContext.ExtHostQuickOpen).set<ExtHostQuickOpen>(new ExtHostQuickOpen(threadService));
 	col.define(ExtHostContext.ExtHostExtensionService).set(extensionService);
@@ -83,7 +83,8 @@ export function createApiFactory(initData: IInitData, threadService: IThreadServ
 	const extHostMessageService = new ExtHostMessageService(threadService);
 	const extHostStatusBar = new ExtHostStatusBar(threadService);
 	const extHostOutputService = new ExtHostOutputService(threadService);
-	const workspacePath = contextService.getWorkspace() ? contextService.getWorkspace().resource.toString() : undefined;
+	const currWorkspace = contextService.getWorkspace();
+	const workspacePath = currWorkspace && currWorkspace.resource ? currWorkspace.resource.toString() : undefined;
 	const extHostWorkspace = new ExtHostWorkspace(threadService, workspacePath);
 	const extHostLanguages = new ExtHostLanguages(threadService);
 
@@ -170,49 +171,49 @@ export function createApiFactory(initData: IInitData, threadService: IThreadServ
 				return score(selector, <any>document.uri, document.languageId);
 			},
 			registerCodeActionsProvider(selector: vscode.DocumentSelector, provider: vscode.CodeActionProvider): vscode.Disposable {
-				return languageFeatures.registerCodeActionProvider(selector, provider);
+				return languageFeatures.registerCodeActionProvider(selector, provider, currWorkspace);
 			},
 			registerCodeLensProvider(selector: vscode.DocumentSelector, provider: vscode.CodeLensProvider): vscode.Disposable {
-				return languageFeatures.registerCodeLensProvider(selector, provider);
+				return languageFeatures.registerCodeLensProvider(selector, provider, currWorkspace);
 			},
 			registerDefinitionProvider(selector: vscode.DocumentSelector, provider: vscode.DefinitionProvider): vscode.Disposable {
-				return languageFeatures.registerDefinitionProvider(selector, provider);
+				return languageFeatures.registerDefinitionProvider(selector, provider, currWorkspace);
 			},
 			registerHoverProvider(selector: vscode.DocumentSelector, provider: vscode.HoverProvider): vscode.Disposable {
-				return languageFeatures.registerHoverProvider(selector, provider);
+				return languageFeatures.registerHoverProvider(selector, provider, currWorkspace);
 			},
 			registerDocumentHighlightProvider(selector: vscode.DocumentSelector, provider: vscode.DocumentHighlightProvider): vscode.Disposable {
-				return languageFeatures.registerDocumentHighlightProvider(selector, provider);
+				return languageFeatures.registerDocumentHighlightProvider(selector, provider, currWorkspace);
 			},
 			registerReferenceProvider(selector: vscode.DocumentSelector, provider: vscode.ReferenceProvider): vscode.Disposable {
-				return languageFeatures.registerReferenceProvider(selector, provider);
+				return languageFeatures.registerReferenceProvider(selector, provider, currWorkspace);
 			},
 			registerRenameProvider(selector: vscode.DocumentSelector, provider: vscode.RenameProvider): vscode.Disposable {
-				return languageFeatures.registerRenameProvider(selector, provider);
+				return languageFeatures.registerRenameProvider(selector, provider, currWorkspace);
 			},
 			registerDocumentSymbolProvider(selector: vscode.DocumentSelector, provider: vscode.DocumentSymbolProvider): vscode.Disposable {
-				return languageFeatures.registerDocumentSymbolProvider(selector, provider);
+				return languageFeatures.registerDocumentSymbolProvider(selector, provider, currWorkspace);
 			},
 			registerWorkspaceSymbolProvider(provider: vscode.WorkspaceSymbolProvider): vscode.Disposable {
 				return languageFeatures.registerWorkspaceSymbolProvider(provider);
 			},
 			registerDocumentFormattingEditProvider(selector: vscode.DocumentSelector, provider: vscode.DocumentFormattingEditProvider): vscode.Disposable {
-				return languageFeatures.registerDocumentFormattingEditProvider(selector, provider);
+				return languageFeatures.registerDocumentFormattingEditProvider(selector, provider, currWorkspace);
 			},
 			registerDocumentRangeFormattingEditProvider(selector: vscode.DocumentSelector, provider: vscode.DocumentRangeFormattingEditProvider): vscode.Disposable {
-				return languageFeatures.registerDocumentRangeFormattingEditProvider(selector, provider);
+				return languageFeatures.registerDocumentRangeFormattingEditProvider(selector, provider, currWorkspace);
 			},
 			registerOnTypeFormattingEditProvider(selector: vscode.DocumentSelector, provider: vscode.OnTypeFormattingEditProvider, firstTriggerCharacter: string, ...moreTriggerCharacters: string[]): vscode.Disposable {
-				return languageFeatures.registerOnTypeFormattingEditProvider(selector, provider, [firstTriggerCharacter].concat(moreTriggerCharacters));
+				return languageFeatures.registerOnTypeFormattingEditProvider(selector, provider, [firstTriggerCharacter].concat(moreTriggerCharacters), currWorkspace);
 			},
 			registerSignatureHelpProvider(selector: vscode.DocumentSelector, provider: vscode.SignatureHelpProvider, ...triggerCharacters: string[]): vscode.Disposable {
-				return languageFeatures.registerSignatureHelpProvider(selector, provider, triggerCharacters);
+				return languageFeatures.registerSignatureHelpProvider(selector, provider, triggerCharacters, currWorkspace);
 			},
 			registerCompletionItemProvider(selector: vscode.DocumentSelector, provider: vscode.CompletionItemProvider, ...triggerCharacters: string[]): vscode.Disposable {
-				return languageFeatures.registerCompletionItemProvider(selector, provider, triggerCharacters);
+				return languageFeatures.registerCompletionItemProvider(selector, provider, triggerCharacters, currWorkspace);
 			},
 			registerDocumentLinkProvider(selector: vscode.DocumentSelector, provider: vscode.DocumentLinkProvider): vscode.Disposable {
-				return languageFeatures.registerDocumentLinkProvider(selector, provider);
+				return languageFeatures.registerDocumentLinkProvider(selector, provider, currWorkspace);
 			},
 			setLanguageConfiguration: (language: string, configuration: vscode.LanguageConfiguration): vscode.Disposable => {
 				return languageFeatures.setLanguageConfiguration(language, configuration);
