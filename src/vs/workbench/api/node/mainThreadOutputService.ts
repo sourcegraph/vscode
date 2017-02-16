@@ -16,6 +16,7 @@ export class MainThreadOutputService extends MainThreadOutputServiceShape {
 	private _outputService: IOutputService;
 	private _partService: IPartService;
 	private _panelService: IPanelService;
+	private _disable: boolean;
 
 	constructor( @IOutputService outputService: IOutputService,
 		@IPartService partService: IPartService,
@@ -25,19 +26,33 @@ export class MainThreadOutputService extends MainThreadOutputServiceShape {
 		this._outputService = outputService;
 		this._partService = partService;
 		this._panelService = panelService;
+		this._disable = false;
+	}
+
+	public disable(): void {
+		this._disable = true;
 	}
 
 	public $append(channelId: string, label: string, value: string): TPromise<void> {
+		if (this._disable) {
+			return;
+		}
 		this._getChannel(channelId, label).append(value);
 		return undefined;
 	}
 
 	public $clear(channelId: string, label: string): TPromise<void> {
+		if (this._disable) {
+			return;
+		}
 		this._getChannel(channelId, label).clear();
 		return undefined;
 	}
 
 	public $reveal(channelId: string, label: string, preserveFocus: boolean): TPromise<void> {
+		if (this._disable) {
+			return;
+		}
 		this._getChannel(channelId, label).show(preserveFocus);
 		return undefined;
 	}
@@ -51,6 +66,9 @@ export class MainThreadOutputService extends MainThreadOutputServiceShape {
 	}
 
 	public $close(channelId: string): TPromise<void> {
+		if (this._disable) {
+			return;
+		}
 		const panel = this._panelService.getActivePanel();
 		if (panel && panel.getId() === OUTPUT_PANEL_ID && channelId === this._outputService.getActiveChannel().id) {
 			this._partService.setPanelHidden(true);
