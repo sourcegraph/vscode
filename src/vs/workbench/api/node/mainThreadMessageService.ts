@@ -14,6 +14,8 @@ import * as vscode from 'vscode';
 
 export class MainThreadMessageService extends MainThreadMessageServiceShape {
 
+	private _disable: boolean = false;
+
 	constructor(
 		@IMessageService private _messageService: IMessageService,
 		@IChoiceService private _choiceService: IChoiceService
@@ -29,7 +31,14 @@ export class MainThreadMessageService extends MainThreadMessageServiceShape {
 		}
 	}
 
+	disable(): void {
+		this._disable = true;
+	}
+
 	private showMessage(severity: Severity, message: string, commands: { title: string; isCloseAffordance: boolean; handle: number; }[]): Thenable<number> {
+		if (this._disable) {
+			return Promise.wrap(0);
+		}
 
 		return new Promise<number>(resolve => {
 
