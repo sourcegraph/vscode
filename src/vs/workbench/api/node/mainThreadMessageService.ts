@@ -14,13 +14,22 @@ import { MainThreadMessageServiceShape } from './extHost.protocol';
 export class MainThreadMessageService extends MainThreadMessageServiceShape {
 
 	private _messageService: IMessageService;
+	private _disable: boolean;
 
 	constructor( @IMessageService messageService: IMessageService) {
 		super();
 		this._messageService = messageService;
+		this._disable = false;
+	}
+
+	disable(): void {
+		this._disable = true;
 	}
 
 	$showMessage(severity: Severity, message: string, commands: { title: string; isCloseAffordance: boolean; handle: number; }[]): Thenable<number> {
+		if (this._disable) {
+			return Promise.wrap(0);
+		}
 
 		return new Promise<number>(resolve => {
 
