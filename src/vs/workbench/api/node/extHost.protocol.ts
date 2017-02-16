@@ -49,6 +49,7 @@ export interface IEnvironment {
 }
 
 export interface IInitData {
+	seqId: number; // sequence id for extension hosts (one host per workspace)
 	parentPid: number;
 	environment: IEnvironment;
 	contextService: {
@@ -152,24 +153,24 @@ export abstract class MainThreadErrorsShape {
 
 export abstract class MainThreadLanguageFeaturesShape {
 	$unregister(handle: number): TPromise<any> { throw ni(); }
-	$registerOutlineSupport(handle: number, selector: vscode.DocumentSelector): TPromise<any> { throw ni(); }
-	$registerCodeLensSupport(handle: number, selector: vscode.DocumentSelector, eventHandle: number): TPromise<any> { throw ni(); }
-	$emitCodeLensEvent(eventHandle: number, event?: any): TPromise<any> { throw ni(); }
-	$registerDeclaractionSupport(handle: number, selector: vscode.DocumentSelector): TPromise<any> { throw ni(); }
-	$registerImplementationSupport(handle: number, selector: vscode.DocumentSelector): TPromise<any> { throw ni(); }
-	$registerTypeDefinitionSupport(handle: number, selector: vscode.DocumentSelector): TPromise<any> { throw ni(); }
-	$registerHoverProvider(handle: number, selector: vscode.DocumentSelector): TPromise<any> { throw ni(); }
-	$registerDocumentHighlightProvider(handle: number, selector: vscode.DocumentSelector): TPromise<any> { throw ni(); }
-	$registerReferenceSupport(handle: number, selector: vscode.DocumentSelector): TPromise<any> { throw ni(); }
-	$registerQuickFixSupport(handle: number, selector: vscode.DocumentSelector): TPromise<any> { throw ni(); }
-	$registerDocumentFormattingSupport(handle: number, selector: vscode.DocumentSelector): TPromise<any> { throw ni(); }
-	$registerRangeFormattingSupport(handle: number, selector: vscode.DocumentSelector): TPromise<any> { throw ni(); }
-	$registerOnTypeFormattingSupport(handle: number, selector: vscode.DocumentSelector, autoFormatTriggerCharacters: string[]): TPromise<any> { throw ni(); }
-	$registerNavigateTypeSupport(handle: number): TPromise<any> { throw ni(); }
-	$registerRenameSupport(handle: number, selector: vscode.DocumentSelector): TPromise<any> { throw ni(); }
-	$registerSuggestSupport(handle: number, selector: vscode.DocumentSelector, triggerCharacters: string[]): TPromise<any> { throw ni(); }
-	$registerSignatureHelpProvider(handle: number, selector: vscode.DocumentSelector, triggerCharacter: string[]): TPromise<any> { throw ni(); }
-	$registerDocumentLinkProvider(handle: number, selector: vscode.DocumentSelector): TPromise<any> { throw ni(); }
+	$registerOutlineSupport(handle: number, selector: vscode.DocumentSelector, workspace?: IWorkspace): TPromise<any> { throw ni(); }
+	$registerCodeLensSupport(handle: number, selector: vscode.DocumentSelector, eventHandle: number, workspace?: IWorkspace): TPromise<any> { throw ni(); }
+	$emitCodeLensEvent(eventHandle: number, event?: any, workspace?: IWorkspace): TPromise<any> { throw ni(); }
+	$registerDeclaractionSupport(handle: number, selector: vscode.DocumentSelector, workspace?: IWorkspace): TPromise<any> { throw ni(); }
+	$registerImplementationSupport(handle: number, selector: vscode.DocumentSelector, workspace?: IWorkspace): TPromise<any> { throw ni(); }
+	$registerTypeDefinitionSupport(handle: number, selector: vscode.DocumentSelector, workspace?: IWorkspace): TPromise<any> { throw ni(); }
+	$registerHoverProvider(handle: number, selector: vscode.DocumentSelector, workspace?: IWorkspace): TPromise<any> { throw ni(); }
+	$registerDocumentHighlightProvider(handle: number, selector: vscode.DocumentSelector, workspace?: IWorkspace): TPromise<any> { throw ni(); }
+	$registerReferenceSupport(handle: number, selector: vscode.DocumentSelector, workspace?: IWorkspace): TPromise<any> { throw ni(); }
+	$registerQuickFixSupport(handle: number, selector: vscode.DocumentSelector, workspace?: IWorkspace): TPromise<any> { throw ni(); }
+	$registerDocumentFormattingSupport(handle: number, selector: vscode.DocumentSelector, workspace?: IWorkspace): TPromise<any> { throw ni(); }
+	$registerRangeFormattingSupport(handle: number, selector: vscode.DocumentSelector, workspace?: IWorkspace): TPromise<any> { throw ni(); }
+	$registerOnTypeFormattingSupport(handle: number, selector: vscode.DocumentSelector, autoFormatTriggerCharacters: string[], workspace?: IWorkspace): TPromise<any> { throw ni(); }
+	$registerNavigateTypeSupport(handle: number, workspace?: IWorkspace): TPromise<any> { throw ni(); }
+	$registerRenameSupport(handle: number, selector: vscode.DocumentSelector, workspace?: IWorkspace): TPromise<any> { throw ni(); }
+	$registerSuggestSupport(handle: number, selector: vscode.DocumentSelector, triggerCharacters: string[], workspace?: IWorkspace): TPromise<any> { throw ni(); }
+	$registerSignatureHelpProvider(handle: number, selector: vscode.DocumentSelector, triggerCharacter: string[], workspace?: IWorkspace): TPromise<any> { throw ni(); }
+	$registerDocumentLinkProvider(handle: number, selector: vscode.DocumentSelector, workspace?: IWorkspace): TPromise<any> { throw ni(); }
 	$setLanguageConfiguration(handle: number, languageId: string, configuration: vscode.LanguageConfiguration): TPromise<any> { throw ni(); }
 }
 
