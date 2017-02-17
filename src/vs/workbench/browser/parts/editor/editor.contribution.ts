@@ -222,16 +222,16 @@ export class QuickOpenActionContributor extends ActionBarContributor {
 	public getActions(context: any): IAction[] {
 		const actions: Action[] = [];
 
-		const entry = this.getEntry(context);
-		if (entry) {
-			if (!this.openToSideActionInstance) {
-				this.openToSideActionInstance = this.instantiationService.createInstance(OpenToSideAction);
-			} else {
-				this.openToSideActionInstance.updateClass();
-			}
+		// const entry = this.getEntry(context);
+		// if (entry) {
+		// 	if (!this.openToSideActionInstance) {
+		// 		this.openToSideActionInstance = this.instantiationService.createInstance(OpenToSideAction);
+		// 	} else {
+		// 		this.openToSideActionInstance.updateClass();
+		// 	}
 
-			actions.push(this.openToSideActionInstance);
-		}
+		// 	actions.push(this.openToSideActionInstance);
+		// }
 
 		return actions;
 	}
@@ -248,65 +248,65 @@ export class QuickOpenActionContributor extends ActionBarContributor {
 const actionBarRegistry = Registry.as<IActionBarRegistry>(ActionBarExtensions.Actionbar);
 actionBarRegistry.registerActionBarContributor(Scope.VIEWER, QuickOpenActionContributor);
 
-Registry.as<IQuickOpenRegistry>(QuickOpenExtensions.Quickopen).registerQuickOpenHandler(
-	new QuickOpenHandlerDescriptor(
-		'vs/workbench/browser/parts/editor/editorPicker',
-		'GroupOnePicker',
-		NAVIGATE_IN_GROUP_ONE_PREFIX,
-		[
-			{
-				prefix: NAVIGATE_IN_GROUP_ONE_PREFIX,
-				needsEditor: false,
-				description: nls.localize('groupOnePicker', "Show Editors in First Group")
-			}
-		]
-	)
-);
+// Registry.as<IQuickOpenRegistry>(QuickOpenExtensions.Quickopen).registerQuickOpenHandler(
+// 	new QuickOpenHandlerDescriptor(
+// 		'vs/workbench/browser/parts/editor/editorPicker',
+// 		'GroupOnePicker',
+// 		NAVIGATE_IN_GROUP_ONE_PREFIX,
+// 		[
+// 			{
+// 				prefix: NAVIGATE_IN_GROUP_ONE_PREFIX,
+// 				needsEditor: false,
+// 				description: nls.localize('groupOnePicker', "Show Editors in First Group")
+// 			}
+// 		]
+// 	)
+// );
 
-Registry.as<IQuickOpenRegistry>(QuickOpenExtensions.Quickopen).registerQuickOpenHandler(
-	new QuickOpenHandlerDescriptor(
-		'vs/workbench/browser/parts/editor/editorPicker',
-		'GroupTwoPicker',
-		NAVIGATE_IN_GROUP_TWO_PREFIX,
-		[
-			{
-				prefix: NAVIGATE_IN_GROUP_TWO_PREFIX,
-				needsEditor: false,
-				description: nls.localize('groupTwoPicker', "Show Editors in Second Group")
-			}
-		]
-	)
-);
+// Registry.as<IQuickOpenRegistry>(QuickOpenExtensions.Quickopen).registerQuickOpenHandler(
+// 	new QuickOpenHandlerDescriptor(
+// 		'vs/workbench/browser/parts/editor/editorPicker',
+// 		'GroupTwoPicker',
+// 		NAVIGATE_IN_GROUP_TWO_PREFIX,
+// 		[
+// 			{
+// 				prefix: NAVIGATE_IN_GROUP_TWO_PREFIX,
+// 				needsEditor: false,
+// 				description: nls.localize('groupTwoPicker', "Show Editors in Second Group")
+// 			}
+// 		]
+// 	)
+// );
 
-Registry.as<IQuickOpenRegistry>(QuickOpenExtensions.Quickopen).registerQuickOpenHandler(
-	new QuickOpenHandlerDescriptor(
-		'vs/workbench/browser/parts/editor/editorPicker',
-		'GroupThreePicker',
-		NAVIGATE_IN_GROUP_THREE_PREFIX,
-		[
-			{
-				prefix: NAVIGATE_IN_GROUP_THREE_PREFIX,
-				needsEditor: false,
-				description: nls.localize('groupThreePicker', "Show Editors in Third Group")
-			}
-		]
-	)
-);
+// Registry.as<IQuickOpenRegistry>(QuickOpenExtensions.Quickopen).registerQuickOpenHandler(
+// 	new QuickOpenHandlerDescriptor(
+// 		'vs/workbench/browser/parts/editor/editorPicker',
+// 		'GroupThreePicker',
+// 		NAVIGATE_IN_GROUP_THREE_PREFIX,
+// 		[
+// 			{
+// 				prefix: NAVIGATE_IN_GROUP_THREE_PREFIX,
+// 				needsEditor: false,
+// 				description: nls.localize('groupThreePicker', "Show Editors in Third Group")
+// 			}
+// 		]
+// 	)
+// );
 
-Registry.as<IQuickOpenRegistry>(QuickOpenExtensions.Quickopen).registerQuickOpenHandler(
-	new QuickOpenHandlerDescriptor(
-		'vs/workbench/browser/parts/editor/editorPicker',
-		'AllEditorsPicker',
-		NAVIGATE_ALL_EDITORS_GROUP_PREFIX,
-		[
-			{
-				prefix: NAVIGATE_ALL_EDITORS_GROUP_PREFIX,
-				needsEditor: false,
-				description: nls.localize('allEditorsPicker', "Show All Opened Editors")
-			}
-		]
-	)
-);
+// Registry.as<IQuickOpenRegistry>(QuickOpenExtensions.Quickopen).registerQuickOpenHandler(
+// 	new QuickOpenHandlerDescriptor(
+// 		'vs/workbench/browser/parts/editor/editorPicker',
+// 		'AllEditorsPicker',
+// 		NAVIGATE_ALL_EDITORS_GROUP_PREFIX,
+// 		[
+// 			{
+// 				prefix: NAVIGATE_ALL_EDITORS_GROUP_PREFIX,
+// 				needsEditor: false,
+// 				description: nls.localize('allEditorsPicker', "Show All Opened Editors")
+// 			}
+// 		]
+// 	)
+// );
 
 // Register Editor Actions
 const category = nls.localize('view', "View");

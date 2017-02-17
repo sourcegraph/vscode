@@ -160,7 +160,7 @@ export abstract class MainThreadLanguageFeaturesShape {
 	$registerDocumentFormattingSupport(handle: number, selector: vscode.DocumentSelector, workspace?: IWorkspace): TPromise<any> { throw ni(); }
 	$registerRangeFormattingSupport(handle: number, selector: vscode.DocumentSelector, workspace?: IWorkspace): TPromise<any> { throw ni(); }
 	$registerOnTypeFormattingSupport(handle: number, selector: vscode.DocumentSelector, autoFormatTriggerCharacters: string[], workspace?: IWorkspace): TPromise<any> { throw ni(); }
-	$registerNavigateTypeSupport(handle: number): TPromise<any> { throw ni(); }
+	$registerNavigateTypeSupport(handle: number, workspace?: IWorkspace): TPromise<any> { throw ni(); }
 	$registerRenameSupport(handle: number, selector: vscode.DocumentSelector, workspace?: IWorkspace): TPromise<any> { throw ni(); }
 	$registerSuggestSupport(handle: number, selector: vscode.DocumentSelector, triggerCharacters: string[], workspace?: IWorkspace): TPromise<any> { throw ni(); }
 	$registerSignatureHelpProvider(handle: number, selector: vscode.DocumentSelector, triggerCharacter: string[], workspace?: IWorkspace): TPromise<any> { throw ni(); }
