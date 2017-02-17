@@ -19,6 +19,7 @@ import { IAutoFocus } from 'vs/base/parts/quickopen/common/quickOpen';
 import { QuickOpenEntry, QuickOpenModel } from 'vs/base/parts/quickopen/browser/quickOpenModel';
 import { QuickOpenHandler } from 'vs/workbench/browser/quickopen';
 import { FileEntry, OpenFileHandler, FileQuickOpenModel } from 'vs/workbench/parts/search/browser/openFileHandler';
+import { RepoEntry, OpenRepoHandler, RepoQuickOpenModel } from 'vs/workbench/parts/search/browser/openRepoHandler';
 /* tslint:disable:no-unused-variable */
 import * as openSymbolHandler from 'vs/workbench/parts/search/browser/openSymbolHandler';
 /* tslint:enable:no-unused-variable */
@@ -93,6 +94,7 @@ export class OpenAnythingHandler extends QuickOpenHandler {
 
 	private openSymbolHandler: OpenSymbolHandler;
 	private openFileHandler: OpenFileHandler;
+	private openRepoHandler: OpenRepoHandler;
 	private searchDelayer: ThrottledDelayer<QuickOpenModel>;
 	private pendingSearch: TPromise<QuickOpenModel>;
 	private isClosed: boolean;
@@ -112,6 +114,7 @@ export class OpenAnythingHandler extends QuickOpenHandler {
 
 		this.openSymbolHandler = instantiationService.createInstance(OpenSymbolHandler);
 		this.openFileHandler = instantiationService.createInstance(OpenFileHandler);
+		this.openRepoHandler = instantiationService.createInstance(OpenRepoHandler);
 
 		this.updateHandlers(this.configurationService.getConfiguration<IWorkbenchSearchConfiguration>());
 
@@ -126,6 +129,11 @@ export class OpenAnythingHandler extends QuickOpenHandler {
 		this.includeSymbols = configuration && configuration.search && configuration.search.quickOpen && configuration.search.quickOpen.includeSymbols;
 
 		// Files
+		this.openFileHandler.setOptions({
+			forceUseIcons: this.includeSymbols // only need icons for file results if we mix with symbol results
+		});
+
+		// Repos
 		this.openFileHandler.setOptions({
 			forceUseIcons: this.includeSymbols // only need icons for file results if we mix with symbol results
 		});
@@ -165,6 +173,9 @@ export class OpenAnythingHandler extends QuickOpenHandler {
 
 			// File Results
 			resultPromises.push(this.openFileHandler.getResults(searchValue, OpenAnythingHandler.MAX_DISPLAYED_RESULTS));
+
+			// Repo Results
+			resultPromises.push(this.openRepoHandler.getResults(searchValue, OpenAnythingHandler.MAX_DISPLAYED_RESULTS));
 
 			// Symbol Results (unless disabled or a range or absolute path is specified)
 			if (this.includeSymbols && !searchWithRange && !paths.isAbsolute(searchValue)) {
@@ -311,6 +322,7 @@ export class OpenAnythingHandler extends QuickOpenHandler {
 	public onOpen(): void {
 		this.openSymbolHandler.onOpen();
 		this.openFileHandler.onOpen();
+		this.openRepoHandler.onOpen();
 	}
 
 	public onClose(canceled: boolean): void {

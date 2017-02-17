@@ -111,6 +111,11 @@ export class SearchService implements ISearchService {
 		}, () => rawSearchQuery && rawSearchQuery.cancel());
 	}
 
+	public searchRepo(query: ISearchQuery): PPromise<ISearchComplete, ISearchProgressItem> {
+		// overridden by Sourcegraph
+		return null;
+	}
+
 	private getLocalResults(query: ISearchQuery): { [resourcePath: string]: IFileMatch; } {
 		let localResults: { [resourcePath: string]: IFileMatch; } = Object.create(null);
 
