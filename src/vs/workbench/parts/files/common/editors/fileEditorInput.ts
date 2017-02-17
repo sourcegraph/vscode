@@ -70,10 +70,6 @@ export class FileEditorInput extends CommonFileEditorInput {
 	}
 
 	public setResource(resource: URI): void {
-		if (resource.scheme !== 'file') {
-			throw new Error('FileEditorInput can only handle file:// resources.');
-		}
-
 		this.resource = resource;
 
 		// Reset resource dependent properties
