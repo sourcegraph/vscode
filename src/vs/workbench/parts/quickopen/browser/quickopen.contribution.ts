@@ -35,14 +35,14 @@ registry.registerWorkbenchAction(new SyncActionDescriptor(GotoSymbolAction, Goto
 
 // Register Quick Open Handler
 
-(<IQuickOpenRegistry>Registry.as(QuickOpenExtensions.Quickopen)).registerQuickOpenHandler(
-	new QuickOpenHandlerDescriptor(
-		'vs/workbench/parts/quickopen/browser/commandsHandler',
-		'CommandsHandler',
-		ALL_COMMANDS_PREFIX,
-		nls.localize('commandsHandlerDescriptionDefault', "Show and Run Commands")
-	)
-);
+// (<IQuickOpenRegistry>Registry.as(QuickOpenExtensions.Quickopen)).registerQuickOpenHandler(
+// 	new QuickOpenHandlerDescriptor(
+// 		'vs/workbench/parts/quickopen/browser/commandsHandler',
+// 		'CommandsHandler',
+// 		ALL_COMMANDS_PREFIX,
+// 		nls.localize('commandsHandlerDescriptionDefault', "Show and Run Commands")
+// 	)
+// );
 
 (<IQuickOpenRegistry>Registry.as(QuickOpenExtensions.Quickopen)).registerQuickOpenHandler(
 	new QuickOpenHandlerDescriptor(
