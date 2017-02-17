@@ -222,16 +222,16 @@ export class QuickOpenActionContributor extends ActionBarContributor {
 	public getActions(context: any): IAction[] {
 		const actions: Action[] = [];
 
-		const entry = this.getEntry(context);
-		if (entry) {
-			if (!this.openToSideActionInstance) {
-				this.openToSideActionInstance = this.instantiationService.createInstance(OpenToSideAction);
-			} else {
-				this.openToSideActionInstance.updateClass();
-			}
+		// const entry = this.getEntry(context);
+		// if (entry) {
+		// 	if (!this.openToSideActionInstance) {
+		// 		this.openToSideActionInstance = this.instantiationService.createInstance(OpenToSideAction);
+		// 	} else {
+		// 		this.openToSideActionInstance.updateClass();
+		// 	}
 
-			actions.push(this.openToSideActionInstance);
-		}
+		// 	actions.push(this.openToSideActionInstance);
+		// }
 
 		return actions;
 	}
