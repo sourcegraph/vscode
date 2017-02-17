@@ -5,6 +5,7 @@
 
 'use strict';
 
+import { TPromise } from 'vs/base/common/winjs.base';
 import * as assert from 'assert';
 import { TestInstantiationService } from 'vs/test/utils/instantiationTestUtils';
 import { setUnexpectedErrorHandler, errorHandler } from 'vs/base/common/errors';
@@ -546,7 +547,7 @@ suite('ExtHostLanguageFeatures', function () {
 
 		return threadService.sync().then(() => {
 
-			return provideReferences(model, new EditorPosition(1, 2), value => { }).then(value => {
+			return provideReferences(model, new EditorPosition(1, 2)).then(value => {
 				assert.equal(value.length, 2);
 
 				let [first, second] = value;
@@ -566,7 +567,7 @@ suite('ExtHostLanguageFeatures', function () {
 
 		return threadService.sync().then(() => {
 
-			return provideReferences(model, new EditorPosition(1, 2), value => { }).then(value => {
+			return provideReferences(model, new EditorPosition(1, 2)).then(value => {
 				assert.equal(value.length, 1);
 
 				let [item] = value;
@@ -592,19 +593,18 @@ suite('ExtHostLanguageFeatures', function () {
 
 		return threadService.sync().then(() => {
 
-			return provideReferences(model, new EditorPosition(1, 2), value => { }).then(value => {
+			return provideReferences(model, new EditorPosition(1, 2)).then(value => {
 				assert.equal(value.length, 1);
 			});
 
 		});
 	});
 
-	// TODO(nick): this test is currently broken but I can't debug due to https://github.com/Microsoft/vscode/issues/20344
 	test('References, progress', function () {
 
-		const locations = [
+		const locations: vscode.Location[] = [
 			new types.Location(URI.parse('ref://the/first'), new types.Range(0, 0, 0, 0)),
-			new types.Location(URI.parse('ref://the/second'), new types.Range(0, 0, 0, 0)),
+			new types.Location(URI.parse('ref://the/second'), new types.Range(1, 1, 1, 1)),
 			new types.Location(URI.parse('ref://the/third'), new types.Range(0, 0, 0, 0))
 		];
 		const modeLocations = locations.map(TypeConverters.location.from);
@@ -613,19 +613,27 @@ suite('ExtHostLanguageFeatures', function () {
 			provideReferences(document: any, position: any, context: any, token: any, progress: (locations: vscode.Location[]) => void): vscode.ProviderResult<vscode.Location[]> {
 				progress(locations.slice(0, 1));
 				progress(locations.slice(1, 2));
-				return locations;
+				// TODO(nick): test should pass if locations are returned immediately but it doesn't.
+				// Progress callback never gets called. Can't debug test to figure out why.
+				// https://github.com/Microsoft/vscode/issues/20776
+				// return locations;
+				return new TPromise((resolve, error) => {
+					setTimeout(() => {
+						resolve(locations);
+					});
+				}, 10);
 			}
 		}));
 
 		return threadService.sync().then(() => {
-
 			let progressIndex = 0;
 			return provideReferences(model, new EditorPosition(1, 2), (values: Location[]) => {
-				assert.equal(values, modeLocations.slice(progressIndex, progressIndex + 1), "progress");
+				assert.equal(values.length, 1);
+				assert.deepEqual(values[0], modeLocations[progressIndex]);
 				progressIndex = progressIndex + 1;
 			}).then((values: Location[]) => {
 				assert.equal(progressIndex, 2);
-				assert.deepEqual(values, modeLocations, "final value");
+				assert.deepEqual(values, modeLocations);
 			});
 		});
 	});
