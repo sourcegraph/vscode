@@ -164,12 +164,15 @@ export class OpenRepoHandler extends QuickOpenHandler {
 			const results: QuickOpenEntry[] = [];
 			for (let i = 0; i < complete.results.length; i++) {
 				const fileMatch = complete.results[i];
-
 				const label = paths.basename(fileMatch.resource.fsPath);
 				const description = labels.getPathLabel(paths.dirname(fileMatch.resource.fsPath), this.contextService);
-
 				results.push(this.instantiationService.createInstance(RepoEntry, fileMatch.resource, label, description, iconClass));
 			}
+			results.forEach(result => {
+				// results.setRange(searchWithRange ? searchWithRange.range : null);
+				const {labelHighlights, descriptionHighlights} = QuickOpenEntry.highlight(result, searchValue, true /* fuzzy highlight */);
+				result.setHighlights(labelHighlights, descriptionHighlights);
+			});
 
 			return new RepoQuickOpenModel(results, complete.stats);
 		});

@@ -182,6 +182,21 @@ actionBarRegistry.registerActionBarContributor(Scope.VIEWER, ExplorerViewerActio
 	)
 );
 
+(<IQuickOpenRegistry>Registry.as(QuickOpenExtensions.Quickopen)).registerQuickOpenHandler(
+	new QuickOpenHandlerDescriptor(
+		'vs/workbench/parts/search/browser/openAnythingHandler',
+		'OpenRepoHandler',
+		ALL_REPOS_PREFIX,
+		[
+			{
+				prefix: ALL_REPOS_PREFIX,
+				needsEditor: false,
+				description: nls.localize('openRepositoryDescriptionNormal', "Go to Repository")
+			}
+		]
+	)
+);
+
 
 // Configuration
 const configurationRegistry = <IConfigurationRegistry>Registry.as(ConfigurationExtensions.Configuration);
