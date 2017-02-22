@@ -911,7 +911,7 @@ export class Workbench implements IPartService {
 		this.workbench = $().div({ 'class': 'monaco-workbench ' + (isWindows ? 'windows' : isLinux ? 'linux' : 'mac'), id: Identifiers.WORKBENCH_CONTAINER }).appendTo(this.workbenchContainer);
 		$(this.workbench).div({
 			'class': 'workbench-modal-overlay', id: Identifiers.MODALOVERLAY,
-			'style': { 'display': 'hidden', 'position': 'absolute', 'top': 0, 'left': 0, 'width': '100%', 'height': '100%', 'z-index': 4, 'background-color': 'rgba(0,0,0,.5)' }
+			'style': { 'visibility': 'hidden', 'position': 'absolute', 'top': 0, 'left': 0, 'width': '100%', 'height': '100%', 'z-index': 4, 'background-color': 'rgba(0,0,0,.5)' }
 		});
 	}
 

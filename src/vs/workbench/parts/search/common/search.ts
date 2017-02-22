@@ -70,11 +70,10 @@ export namespace WorkspaceSymbolProviderRegistry {
 	}
 
 	export function all(workspace?: IWorkspace): IWorkspaceSymbolProvider[] {
-		const supports = _supports.slice(0);
 		if (workspace) {
-			return supports.filter(support => support.workspace && support.workspace.resource && support.workspace.resource.toString() === workspace.resource.toString())
+			return _supports.filter(support => support.workspace && support.workspace.resource && support.workspace.resource.toString() === workspace.resource.toString())
 		}
-		return supports;
+		return _supports.slice(0); // make a copy
 	}
 }
 
