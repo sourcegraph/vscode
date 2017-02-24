@@ -208,7 +208,14 @@ export class OpenRepoHandler extends QuickOpenHandler {
 	}
 
 	public getGroupLabel(): string {
-		return nls.localize('searchResults', "search results");
+		return nls.localize('repositorySearchResults', "repository results");
+	}
+
+	public getEmptyLabel(searchString: string): string {
+		if (searchString.length > 0) {
+			return nls.localize('noRepositoriesMatching', "No repositories matching");
+		}
+		return nls.localize('noRepositoriesWithoutInput', "Type to search for repositories");
 	}
 
 	public getAutoFocus(searchValue: string): IAutoFocus {
