@@ -19,7 +19,7 @@ import { KeybindingsRegistry } from 'vs/platform/keybinding/common/keybindingsRe
 import { IPartService } from 'vs/workbench/services/part/common/partService';
 import { CommonEditorRegistry } from 'vs/editor/common/editorCommonExtensions';
 import { IWindowIPCService } from 'vs/workbench/services/window/electron-browser/windowService';
-import { CloseEditorAction, KeybindingsReferenceAction, ReportIssueAction, ZoomResetAction, ZoomOutAction, ZoomInAction, ToggleFullScreenAction, ToggleMenuBarAction, CloseFolderAction, CloseWindowAction, SwitchWindow, NewWindowAction, CloseMessagesAction } from 'vs/workbench/electron-browser/actions';
+import { CloseEditorAction, KeybindingsReferenceAction, ReportIssueAction, ToggleFullScreenAction, ToggleMenuBarAction, CloseFolderAction, CloseWindowAction, SwitchWindow, NewWindowAction, CloseMessagesAction } from 'vs/workbench/electron-browser/actions';
 import { MessagesVisibleContext, NoEditorsVisibleContext, InZenModeContext } from 'vs/workbench/electron-browser/workbench';
 import { IJSONSchema } from 'vs/base/common/jsonSchema';
 import { IWindowsService } from 'vs/platform/windows/common/windows';
@@ -41,23 +41,6 @@ if (!!product.reportIssueUrl) {
 if (KeybindingsReferenceAction.AVAILABLE) {
 	workbenchActionsRegistry.registerWorkbenchAction(new SyncActionDescriptor(KeybindingsReferenceAction, KeybindingsReferenceAction.ID, KeybindingsReferenceAction.LABEL, { primary: KeyChord(KeyMod.CtrlCmd | KeyCode.KEY_K, KeyMod.CtrlCmd | KeyCode.KEY_R) }), 'Help: Keyboard Shortcuts Reference', helpCategory);
 }
-workbenchActionsRegistry.registerWorkbenchAction(
-	new SyncActionDescriptor(ZoomInAction, ZoomInAction.ID, ZoomInAction.LABEL, {
-		primary: KeyMod.CtrlCmd | KeyCode.US_EQUAL,
-		secondary: [KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.US_EQUAL, KeyMod.CtrlCmd | KeyCode.NUMPAD_ADD]
-	}), 'View: Zoom In', viewCategory);
-workbenchActionsRegistry.registerWorkbenchAction(
-	new SyncActionDescriptor(ZoomOutAction, ZoomOutAction.ID, ZoomOutAction.LABEL, {
-		primary: KeyMod.CtrlCmd | KeyCode.US_MINUS,
-		secondary: [KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.US_MINUS, KeyMod.CtrlCmd | KeyCode.NUMPAD_SUBTRACT],
-		linux: { primary: KeyMod.CtrlCmd | KeyCode.US_MINUS, secondary: [KeyMod.CtrlCmd | KeyCode.NUMPAD_SUBTRACT] }
-	}), 'View: Zoom Out', viewCategory
-);
-workbenchActionsRegistry.registerWorkbenchAction(
-	new SyncActionDescriptor(ZoomResetAction, ZoomResetAction.ID, ZoomResetAction.LABEL, {
-		primary: KeyMod.CtrlCmd | KeyCode.NUMPAD_0
-	}), 'View: Reset Zoom', viewCategory
-);
 workbenchActionsRegistry.registerWorkbenchAction(new SyncActionDescriptor(CloseMessagesAction, CloseMessagesAction.ID, CloseMessagesAction.LABEL, { primary: KeyCode.Escape, secondary: [KeyMod.Shift | KeyCode.Escape] }, MessagesVisibleContext), 'Close Notification Messages');
 workbenchActionsRegistry.registerWorkbenchAction(new SyncActionDescriptor(CloseEditorAction, CloseEditorAction.ID, CloseEditorAction.LABEL, closeEditorOrWindowKeybindings), 'View: Close Editor', viewCategory);
 workbenchActionsRegistry.registerWorkbenchAction(new SyncActionDescriptor(ToggleFullScreenAction, ToggleFullScreenAction.ID, ToggleFullScreenAction.LABEL, { primary: KeyCode.F11, mac: { primary: KeyMod.CtrlCmd | KeyMod.WinCtrl | KeyCode.KEY_F } }), 'View: Toggle Full Screen', viewCategory);
