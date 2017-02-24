@@ -153,7 +153,7 @@ registry.registerWorkbenchAction(new SyncActionDescriptor(searchActions.ToggleWh
 registry.registerWorkbenchAction(new SyncActionDescriptor(searchActions.ToggleRegexAction, Constants.ToggleRegexActionId, '', ToggleRegexKeybinding, ContextKeyExpr.and(Constants.SearchViewletVisibleKey, Constants.SearchInputBoxFocussedKey)), '');
 
 registry.registerWorkbenchAction(new SyncActionDescriptor(ShowAllSymbolsAction, ACTION_ID, ACTION_LABEL, { primary: KeyMod.CtrlCmd | KeyCode.KEY_T }), 'Go to Symbol in Workspace...');
-registry.registerWorkbenchAction(new SyncActionDescriptor(OpenRepoAction, OPEN_REPO_ACTION_ID, OPEN_REPO_ACTION_LABEL, { primary: KeyMod.CtrlCmd | KeyCode.KEY_Y }), 'Go to Repository...');
+registry.registerWorkbenchAction(new SyncActionDescriptor(OpenRepoAction, OPEN_REPO_ACTION_ID, OPEN_REPO_ACTION_LABEL), 'Go to Repository...');
 
 // Contribute to Explorer Viewer
 const actionBarRegistry = Registry.as<IActionBarRegistry>(ActionBarExtensions.Actionbar);
