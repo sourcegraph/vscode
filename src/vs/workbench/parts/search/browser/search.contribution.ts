@@ -103,7 +103,7 @@ class ShowAllSymbolsAction extends QuickOpenAction {
 }
 
 const OPEN_REPO_ACTION_ID = 'workbench.action.openRepo';
-const OPEN_REPO_ACTION_LABEL = nls.localize('showTriggerActions', "Go to Repository...");
+const OPEN_REPO_ACTION_LABEL = nls.localize('goToRepository', "Go to Repository...");
 const ALL_REPOS_PREFIX = '!';
 
 class OpenRepoAction extends QuickOpenAction {
