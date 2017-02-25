@@ -370,6 +370,47 @@ export interface ReferenceProvider {
 }
 
 /**
+ * Represents information about a programming construct that can be used to
+ * identify and locate the construct's symbol. The identification does not have
+ * to be unique, but it should be as unique as possible. It is up to the
+ * language server to define the schema of this object.
+ *
+ * In contrast to `SymbolInformation`, `SymbolDescriptor` includes more concrete,
+ * language-specific, metadata about the symbol.
+ */
+export interface ISymbolDescriptor {
+	/**
+	 * A list of properties of a symbol that can be used to identify or locate
+	 * it.
+	 */
+	[attr: string]: any;
+}
+
+/**
+ * Represents information about a reference to programming constructs like
+ * variables, classes, interfaces, etc.
+ */
+export interface IReferenceInformation {
+	/**
+	 * The location in the workspace where the `symbol` is referenced.
+	 */
+	reference: Location;
+
+	/**
+	 * Metadata about the symbol that can be used to identify or locate its
+	 * definition.
+	 */
+	symbol: ISymbolDescriptor;
+}
+
+export interface WorkspaceReferenceProvider {
+	/**
+	 * Implements https://github.com/sourcegraph/language-server-protocol/blob/master/extension-workspace-references.md
+	 */
+	provideWorkspaceReferences(workspace: URI, query: ISymbolDescriptor, hints: { [hint: string]: any }, token: CancellationToken, progress: (references: IReferenceInformation[]) => void): IReferenceInformation[] | Thenable<IReferenceInformation[]>;
+}
+
+/**
  * Represents a location inside a resource, such as a line
  * inside a text file.
  */
@@ -672,6 +713,11 @@ export interface CodeLensProvider {
  * @internal
  */
 export const ReferenceProviderRegistry = new LanguageFeatureRegistry<ReferenceProvider>();
+
+/**
+ * @internal
+ */
+export const WorkspaceReferenceProviderRegistry = new LanguageFeatureRegistry<WorkspaceReferenceProvider>();
 
 /**
  * @internal
