@@ -5,9 +5,9 @@
 
 'use strict';
 
+import URI from 'vs/base/common/uri';
 import Event, { Emitter } from 'vs/base/common/event';
 import { IDisposable } from 'vs/base/common/lifecycle';
-import { IReadOnlyModel } from 'vs/editor/common/editorCommon';
 import { LanguageSelector, score } from 'vs/editor/common/modes/languageSelector';
 import { IWorkspace } from 'vs/platform/workspace/common/workspace';
 
@@ -17,6 +17,29 @@ interface Entry<T> {
 	provider: T;
 	_score: number;
 	_time: number;
+}
+
+
+/**
+ * The minimal set of methods from IReadOnlyModel required for registration.
+ */
+export interface Model {
+	/**
+	 * Only basic mode supports allowed on this model because it is simply too large.
+	 * (tokenization is allowed and other basic supports)
+	 * @internal
+	 */
+	isTooLargeForHavingARichMode(): boolean;
+
+	/**
+	 * Gets the resource associated with this editor model.
+	 */
+	readonly uri: URI;
+
+	/**
+	 * Get the language associated with this model.
+	 */
+	getModeId(): string;
 }
 
 export default class LanguageFeatureRegistry<T> {
@@ -61,11 +84,11 @@ export default class LanguageFeatureRegistry<T> {
 		};
 	}
 
-	has(model: IReadOnlyModel): boolean {
+	has(model: Model): boolean {
 		return this.all(model).length > 0;
 	}
 
-	all(model: IReadOnlyModel): T[] {
+	all(model: Model): T[] {
 		if (!model || model.isTooLargeForHavingARichMode()) {
 			return [];
 		}
@@ -83,13 +106,13 @@ export default class LanguageFeatureRegistry<T> {
 		return result;
 	}
 
-	ordered(model: IReadOnlyModel): T[] {
+	ordered(model: Model): T[] {
 		const result: T[] = [];
 		this._orderedForEach(model, entry => result.push(entry.provider));
 		return result;
 	}
 
-	orderedGroups(model: IReadOnlyModel): T[][] {
+	orderedGroups(model: Model): T[][] {
 		const result: T[][] = [];
 		let lastBucket: T[];
 		let lastBucketScore: number;
@@ -107,7 +130,7 @@ export default class LanguageFeatureRegistry<T> {
 		return result;
 	}
 
-	private _orderedForEach(model: IReadOnlyModel, callback: (provider: Entry<T>) => any): void {
+	private _orderedForEach(model: Model, callback: (provider: Entry<T>) => any): void {
 
 		if (!model || model.isTooLargeForHavingARichMode()) {
 			return;
@@ -125,7 +148,7 @@ export default class LanguageFeatureRegistry<T> {
 
 	private _lastCandidate: { uri: string; language: string; };
 
-	private _updateScores(model: IReadOnlyModel): boolean {
+	private _updateScores(model: Model): boolean {
 
 		let candidate = {
 			uri: model.uri.toString(),
@@ -148,7 +171,7 @@ export default class LanguageFeatureRegistry<T> {
 			// Ignore entries whose (non-empty) workspace doesn't match the currently requested resource.
 			// Prevents multiple requests from being made to extension host if multiple extension hosts have
 			// registered a provider.
-			if (entry.workspace !== null && model.uri.with({ fragment: "" }).toString() !== entry.workspace.resource.toString()) {
+			if (entry.workspace !== null && model.uri.with({ fragment: '' }).toString() !== entry.workspace.resource.toString()) {
 				entry._score = 0;
 			}
 		}
