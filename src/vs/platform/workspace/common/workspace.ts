@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 'use strict';
 
+import Event, { Emitter } from 'vs/base/common/event';
 import URI from 'vs/base/common/uri';
 import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
 import paths = require('vs/base/common/paths');
@@ -41,7 +42,7 @@ export interface IWorkspaceContextService {
 	 */
 	setWorkspace(workspace: IWorkspace): void;
 
-	onWorkspaceUpdated(listener: (workspace: IWorkspace) => void): void;
+	onWorkspaceUpdated: Event<IWorkspace>;
 }
 
 export interface IWorkspace {
@@ -51,6 +52,15 @@ export interface IWorkspace {
 	 * of the workspace on disk.
 	 */
 	resource: URI;
+
+	/**
+	 * the current revision state of to the workspace.
+	 */
+	revState?: {
+		commitID?: string;
+		branch?: string;
+		zapRef?: string;
+	};
 
 	/**
 	 * the unique identifier of the workspace. if the workspace is deleted and recreated
@@ -70,11 +80,11 @@ export class WorkspaceContextService implements IWorkspaceContextService {
 	public _serviceBrand: any;
 
 	private workspace: IWorkspace;
-	private listeners: ((IWorkspace) => void)[];
+	private workspaceEmitter: Emitter<IWorkspace>;
 
 	constructor(workspace: IWorkspace) {
 		this.workspace = workspace;
-		this.listeners = [];
+		this.workspaceEmitter = new Emitter<IWorkspace>();
 	}
 
 	public getWorkspace(): IWorkspace {
@@ -107,10 +117,10 @@ export class WorkspaceContextService implements IWorkspaceContextService {
 
 	public setWorkspace(workspace: IWorkspace): void {
 		this.workspace = workspace;
-		this.listeners.forEach(listener => listener(workspace));
+		this.workspaceEmitter.fire(workspace);
 	}
 
-	public onWorkspaceUpdated(listener: (workspace: IWorkspace) => void): void {
-		this.listeners.push(listener);
+	public get onWorkspaceUpdated(): Event<IWorkspace> {
+		return this.workspaceEmitter.event;
 	}
 }
