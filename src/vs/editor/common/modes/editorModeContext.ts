@@ -26,6 +26,7 @@ export class EditorModeContext {
 	private _hasDocumentHighlightProvider: IContextKey<boolean>;
 	private _hasDocumentSymbolProvider: IContextKey<boolean>;
 	private _hasReferenceProvider: IContextKey<boolean>;
+	private _hasWorkspaceReferenceProvider: IContextKey<boolean>;
 	private _hasRenameProvider: IContextKey<boolean>;
 	private _hasDocumentFormattingProvider: IContextKey<boolean>;
 	private _hasDocumentSelectionFormattingProvider: IContextKey<boolean>;
@@ -49,6 +50,7 @@ export class EditorModeContext {
 		this._hasDocumentHighlightProvider = ModeContextKeys.hasDocumentHighlightProvider.bindTo(contextKeyService);
 		this._hasDocumentSymbolProvider = ModeContextKeys.hasDocumentSymbolProvider.bindTo(contextKeyService);
 		this._hasReferenceProvider = ModeContextKeys.hasReferenceProvider.bindTo(contextKeyService);
+		this._hasWorkspaceReferenceProvider = ModeContextKeys.hasWorkspaceReferenceProvider.bindTo(contextKeyService);
 		this._hasRenameProvider = ModeContextKeys.hasRenameProvider.bindTo(contextKeyService);
 		this._hasDocumentFormattingProvider = ModeContextKeys.hasDocumentFormattingProvider.bindTo(contextKeyService);
 		this._hasDocumentSelectionFormattingProvider = ModeContextKeys.hasDocumentSelectionFormattingProvider.bindTo(contextKeyService);
@@ -70,6 +72,7 @@ export class EditorModeContext {
 		modes.DocumentHighlightProviderRegistry.onDidChange(this._update, this, this._disposables);
 		modes.DocumentSymbolProviderRegistry.onDidChange(this._update, this, this._disposables);
 		modes.ReferenceProviderRegistry.onDidChange(this._update, this, this._disposables);
+		modes.WorkspaceReferenceProviderRegistry.onDidChange(this._update, this, this._disposables);
 		modes.RenameProviderRegistry.onDidChange(this._update, this, this._disposables);
 		modes.DocumentFormattingEditProviderRegistry.onDidChange(this._update, this, this._disposables);
 		modes.DocumentRangeFormattingEditProviderRegistry.onDidChange(this._update, this, this._disposables);
@@ -94,6 +97,7 @@ export class EditorModeContext {
 		this._hasDocumentHighlightProvider.reset();
 		this._hasDocumentSymbolProvider.reset();
 		this._hasReferenceProvider.reset();
+		this._hasWorkspaceReferenceProvider.reset();
 		this._hasRenameProvider.reset();
 		this._hasDocumentFormattingProvider.reset();
 		this._hasDocumentSelectionFormattingProvider.reset();
@@ -118,6 +122,7 @@ export class EditorModeContext {
 		this._hasDocumentHighlightProvider.set(modes.DocumentHighlightProviderRegistry.has(model));
 		this._hasDocumentSymbolProvider.set(modes.DocumentSymbolProviderRegistry.has(model));
 		this._hasReferenceProvider.set(modes.ReferenceProviderRegistry.has(model));
+		this._hasWorkspaceReferenceProvider.set(modes.WorkspaceReferenceProviderRegistry.has(model));
 		this._hasRenameProvider.set(modes.RenameProviderRegistry.has(model));
 		this._hasSignatureHelpProvider.set(modes.SignatureHelpProviderRegistry.has(model));
 		this._hasDocumentFormattingProvider.set(modes.DocumentFormattingEditProviderRegistry.has(model) || modes.DocumentRangeFormattingEditProviderRegistry.has(model));

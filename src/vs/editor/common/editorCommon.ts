@@ -3242,6 +3242,10 @@ export namespace ModeContextKeys {
 	/**
 	 * @internal
 	 */
+	export const hasWorkspaceReferenceProvider = new RawContextKey<boolean>('editorHasWorkspaceReferenceProvider', undefined);
+	/**
+	 * @internal
+	 */
 	export const hasRenameProvider = new RawContextKey<boolean>('editorHasRenameProvider', undefined);
 	/**
 	 * @internal

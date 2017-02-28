@@ -6,10 +6,11 @@
 'use strict';
 
 import { onUnexpectedExternalError } from 'vs/base/common/errors';
+import URI from 'vs/base/common/uri';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { IReadOnlyModel } from 'vs/editor/common/editorCommon';
 import { CommonEditorRegistry } from 'vs/editor/common/editorCommonExtensions';
-import { Location, ReferenceProviderRegistry, ReferenceContext } from 'vs/editor/common/modes';
+import { Location, ReferenceProviderRegistry, WorkspaceReferenceProviderRegistry, IReferenceInformation, ISymbolDescriptor, ReferenceContext } from 'vs/editor/common/modes';
 import { asWinJsPromise } from 'vs/base/common/async';
 import { Position } from 'vs/editor/common/core/position';
 
@@ -31,10 +32,46 @@ export function provideReferences(model: IReadOnlyModel, position: Position, pro
 	});
 
 	return TPromise.join(promises).then(references => {
-		let result: Location[] = [];
-		for (let ref of references) {
-			if (ref) {
-				result.push(...ref);
+		const result: Location[] = [];
+		for (const refs of references) {
+			for (const ref of refs) {
+				result.push(ref);
+			}
+		}
+		return result;
+	});
+}
+
+export function provideWorkspaceReferences(modeId: string, workspace: URI, query: ISymbolDescriptor, hints: { [hint: string]: any }, progress: (references: IReferenceInformation[]) => void): TPromise<IReferenceInformation[]> {
+
+	const model = {
+		isTooLargeForHavingARichMode() {
+			return false;
+		},
+		getModeId() {
+			return modeId;
+		},
+		uri: workspace
+	};
+
+	// collect references from all providers
+	const promises = WorkspaceReferenceProviderRegistry.ordered(model).map(provider => {
+		return asWinJsPromise(token => {
+			return provider.provideWorkspaceReferences(workspace, query, hints, token, progress);
+		}).then(result => {
+			if (Array.isArray(result)) {
+				return <IReferenceInformation[]>result;
+			}
+		}, err => {
+			onUnexpectedExternalError(err);
+		});
+	});
+
+	return TPromise.join(promises).then(references => {
+		const result: IReferenceInformation[] = [];
+		for (const refs of references) {
+			for (const ref of refs) {
+				result.push(ref);
 			}
 		}
 		return result;

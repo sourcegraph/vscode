@@ -5,6 +5,7 @@
 
 'use strict';
 
+import URI from 'vs/base/common/uri';
 import Event, { Emitter } from 'vs/base/common/event';
 import { IDisposable } from 'vs/base/common/lifecycle';
 import { IReadOnlyModel } from 'vs/editor/common/editorCommon';
@@ -17,6 +18,29 @@ interface Entry<T> {
 	provider: T;
 	_score: number;
 	_time: number;
+}
+
+
+/**
+ * The minimal set of methods from IReadOnlyModel required for registration.
+ */
+export interface Model {
+	/**
+	 * Only basic mode supports allowed on this model because it is simply too large.
+	 * (tokenization is allowed and other basic supports)
+	 * @internal
+	 */
+	isTooLargeForHavingARichMode(): boolean;
+
+	/**
+	 * Gets the resource associated with this editor model.
+	 */
+	readonly uri: URI;
+
+	/**
+	 * Get the language associated with this model.
+	 */
+	getModeId(): string;
 }
 
 export default class LanguageFeatureRegistry<T> {
@@ -148,7 +172,7 @@ export default class LanguageFeatureRegistry<T> {
 			// Ignore entries whose (non-empty) workspace doesn't match the currently requested resource.
 			// Prevents multiple requests from being made to extension host if multiple extension hosts have
 			// registered a provider.
-			if (entry.workspace !== null && model.uri.with({ fragment: "" }).toString() !== entry.workspace.resource.toString()) {
+			if (entry.workspace !== null && model.uri.with({ fragment: '' }).toString() !== entry.workspace.resource.toString()) {
 				entry._score = 0;
 			}
 		}

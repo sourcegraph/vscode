@@ -229,6 +229,9 @@ export function createApiFactory(initData: IInitData, threadService: IThreadServ
 			registerReferenceProvider(selector: vscode.DocumentSelector, provider: vscode.ReferenceProvider): vscode.Disposable {
 				return languageFeatures.registerReferenceProvider(selector, provider, currWorkspace);
 			},
+			registerWorkspaceReferenceProvider(selector: vscode.DocumentSelector, provider: vscode.WorkspaceReferenceProvider): vscode.Disposable {
+				return languageFeatures.registerWorkspaceReferenceProvider(selector, provider, currWorkspace);
+			},
 			registerRenameProvider(selector: vscode.DocumentSelector, provider: vscode.RenameProvider): vscode.Disposable {
 				return languageFeatures.registerRenameProvider(selector, provider, currWorkspace);
 			},
