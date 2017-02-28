@@ -165,6 +165,10 @@ export abstract class MainThreadLanguageFeaturesShape {
 	 * vscode.d.ts exposes a higher level API with a progress callback.
 	 */
 	$notifyProvideReferencesProgress(handle: number, progressHandle: number, locations: modes.Location[]): TPromise<any> { throw ni(); }
+
+	$registerWorkspaceReferenceSupport(handle: number, selector: vscode.DocumentSelector, workspace?: IWorkspace): TPromise<any> { throw ni(); }
+	$notifyProvideWorkspaceReferencesProgress(handle: number, progressHandle: number, references: modes.IReferenceInformation[]): TPromise<any> { throw ni(); }
+
 	$registerQuickFixSupport(handle: number, selector: vscode.DocumentSelector, workspace?: IWorkspace): TPromise<any> { throw ni(); }
 	$registerDocumentFormattingSupport(handle: number, selector: vscode.DocumentSelector, workspace?: IWorkspace): TPromise<any> { throw ni(); }
 	$registerRangeFormattingSupport(handle: number, selector: vscode.DocumentSelector, workspace?: IWorkspace): TPromise<any> { throw ni(); }
@@ -341,6 +345,7 @@ export abstract class ExtHostLanguageFeaturesShape {
 	$provideHover(handle: number, resource: URI, position: editorCommon.IPosition): TPromise<modes.Hover> { throw ni(); }
 	$provideDocumentHighlights(handle: number, resource: URI, position: editorCommon.IPosition): TPromise<modes.DocumentHighlight[]> { throw ni(); }
 	$provideReferences(handle: number, progressHandle: number, resource: URI, position: editorCommon.IPosition, context: modes.ReferenceContext): TPromise<modes.Location[]> { throw ni(); }
+	$provideWorkspaceReferences(handle: number, progressHandle: number, resource: URI, query: modes.ISymbolDescriptor, hints: { [hint: string]: any }): TPromise<modes.IReferenceInformation[]> { throw ni(); }
 	$provideCodeActions(handle: number, resource: URI, range: editorCommon.IRange): TPromise<modes.CodeAction[]> { throw ni(); }
 	$provideDocumentFormattingEdits(handle: number, resource: URI, options: modes.FormattingOptions): TPromise<editorCommon.ISingleEditOperation[]> { throw ni(); }
 	$provideDocumentRangeFormattingEdits(handle: number, resource: URI, range: editorCommon.IRange, options: modes.FormattingOptions): TPromise<editorCommon.ISingleEditOperation[]> { throw ni(); }

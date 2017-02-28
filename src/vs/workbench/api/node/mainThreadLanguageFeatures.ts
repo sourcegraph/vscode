@@ -6,6 +6,7 @@
 
 import { TPromise } from 'vs/base/common/winjs.base';
 import { IDisposable } from 'vs/base/common/lifecycle';
+import URI from 'vs/base/common/uri';
 import { IThreadService } from 'vs/workbench/services/thread/common/threadService';
 import * as vscode from 'vscode';
 import { IReadOnlyModel, ISingleEditOperation } from 'vs/editor/common/editorCommon';
@@ -127,6 +128,28 @@ export class MainThreadLanguageFeatures extends MainThreadLanguageFeaturesShape 
 	}
 
 	$notifyProvideReferencesProgress(handle: number, progressHandle: number, locations: modes.Location[]): TPromise<any> {
+		const progressHandler = this._callbackRegistrations.getChild(handle, progressHandle);
+		if (progressHandler) {
+			progressHandler(locations);
+		}
+		return undefined;
+	}
+
+	// --- workspace references
+
+	$registerWorkspaceReferenceSupport(handle: number, selector: vscode.DocumentSelector, workspace?: IWorkspace): TPromise<any> {
+		this._registrations[handle] = modes.WorkspaceReferenceProviderRegistry.register(selector, <modes.WorkspaceReferenceProvider>{
+			provideWorkspaceReferences: (workspace: URI, query: modes.ISymbolDescriptor, hints: { [hint: string]: any }, token: CancellationToken, progress: (references: modes.IReferenceInformation[]) => void): modes.IReferenceInformation[] | Thenable<modes.IReferenceInformation[]> => {
+				const progressHandle = this._callbackRegistrations.registerChild(handle, progress);
+				let refs = this._proxy.$provideWorkspaceReferences(handle, progressHandle, workspace, query, hints);
+				refs = always(refs, () => this._callbackRegistrations.unregisterChild(handle, progressHandle));
+				return wireCancellationToken(token, refs);
+			}
+		}, workspace);
+		return undefined;
+	}
+
+	$notifyProvideWorkspaceReferencesProgress(handle: number, progressHandle: number, locations: modes.IReferenceInformation[]): TPromise<any> {
 		const progressHandler = this._callbackRegistrations.getChild(handle, progressHandle);
 		if (progressHandler) {
 			progressHandler(locations);

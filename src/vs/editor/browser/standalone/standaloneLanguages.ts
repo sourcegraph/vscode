@@ -89,6 +89,13 @@ export function registerReferenceProvider(languageId: string, provider: modes.Re
 }
 
 /**
+ * Register a workspace reference provider (used by e.g. workspace reference search).
+ */
+export function registerWorkspaceReferenceProvider(languageId: string, provider: modes.WorkspaceReferenceProvider): IDisposable {
+	return modes.WorkspaceReferenceProviderRegistry.register(languageId, provider);
+}
+
+/**
  * Register a rename provider (used by e.g. rename symbol).
  */
 export function registerRenameProvider(languageId: string, provider: modes.RenameProvider): IDisposable {
@@ -495,6 +502,7 @@ export function createMonacoLanguagesAPI(): typeof monaco.languages {
 		setTokensProvider: setTokensProvider,
 		setMonarchTokensProvider: setMonarchTokensProvider,
 		registerReferenceProvider: registerReferenceProvider,
+		registerWorkspaceReferenceProvider: registerWorkspaceReferenceProvider,
 		registerRenameProvider: registerRenameProvider,
 		registerCompletionItemProvider: registerCompletionItemProvider,
 		registerSignatureHelpProvider: registerSignatureHelpProvider,

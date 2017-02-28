@@ -214,6 +214,33 @@ class ReferenceAdapter {
 	}
 }
 
+class WorkspaceReferenceAdapter {
+
+	constructor(private _provider: vscode.WorkspaceReferenceProvider) {
+	}
+
+	provideWorkspaceReferences(resource: URI, query: modes.ISymbolDescriptor, hints: { [hint: string]: any }, progress: (references: modes.IReferenceInformation[]) => void): TPromise<modes.IReferenceInformation[]> {
+		const convertReferences = (references: vscode.ReferenceInformation[]) => {
+			if (Array.isArray(references)) {
+				return references.map(reference => {
+					return <modes.IReferenceInformation>{
+						reference: TypeConverters.location.from(reference.reference),
+						symbol: reference.symbol
+					};
+				});
+			}
+			return undefined;
+		};
+		const convertedProgress = (references: vscode.ReferenceInformation[]) => {
+			const convertedReferences = convertReferences(references);
+			if (convertedReferences) {
+				progress(convertedReferences);
+			}
+		};
+		return asWinJsPromise(token => this._provider.provideWorkspaceReferences(query, hints, token, convertedProgress)).then(convertReferences);
+	}
+}
+
 class QuickFixAdapter {
 
 	private _documents: ExtHostDocuments;
@@ -620,7 +647,7 @@ class LinkProviderAdapter {
 }
 
 type Adapter = OutlineAdapter | CodeLensAdapter | DefinitionAdapter | HoverAdapter
-	| DocumentHighlightAdapter | ReferenceAdapter | QuickFixAdapter | DocumentFormattingAdapter
+	| DocumentHighlightAdapter | ReferenceAdapter | WorkspaceReferenceAdapter | QuickFixAdapter | DocumentFormattingAdapter
 	| RangeFormattingAdapter | OnTypeFormattingAdapter | NavigateTypeAdapter | RenameAdapter
 	| SuggestAdapter | SignatureHelpAdapter | LinkProviderAdapter;
 
@@ -755,6 +782,22 @@ export class ExtHostLanguageFeatures extends ExtHostLanguageFeaturesShape {
 			this._proxy.$notifyProvideReferencesProgress(handle, progressHandle, locations);
 		};
 		return this._withAdapter(handle, ReferenceAdapter, adapter => adapter.provideReferences(resource, position, context, progress));
+	}
+
+	// --- workspace references
+
+	registerWorkspaceReferenceProvider(selector: vscode.DocumentSelector, provider: vscode.WorkspaceReferenceProvider, workspace?: IWorkspace): vscode.Disposable {
+		const handle = this._nextHandle();
+		this._adapter[handle] = new WorkspaceReferenceAdapter(provider);
+		this._proxy.$registerWorkspaceReferenceSupport(handle, selector, workspace);
+		return this._createDisposable(handle);
+	}
+
+	$provideWorkspaceReferences(handle: number, progressHandle: number, resource: URI, query: modes.ISymbolDescriptor, hints: { [hint: string]: any }): TPromise<modes.IReferenceInformation[]> {
+		const progress = (references: modes.IReferenceInformation[]) => {
+			this._proxy.$notifyProvideWorkspaceReferencesProgress(handle, progressHandle, references);
+		};
+		return this._withAdapter(handle, WorkspaceReferenceAdapter, adapter => adapter.provideWorkspaceReferences(resource, query, hints, progress));
 	}
 
 	// --- quick fix
