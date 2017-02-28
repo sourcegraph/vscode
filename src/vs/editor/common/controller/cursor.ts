@@ -230,15 +230,7 @@ export class Cursor extends EventEmitter {
 	}
 
 	private _onModelContentChanged(e: editorCommon.IModelContentChangedEvent): void {
-		if (e.changeType === editorCommon.EventType.ModelRawContentChangedFlush) {
-			// a model.setValue() was called
-			this.cursors.dispose();
-
-			this.cursors = new CursorCollection(this.editorId, this.model, this.configuration, this.viewModelHelper);
-
-			this.emitCursorPositionChanged('model', editorCommon.CursorChangeReason.ContentFlush);
-			this.emitCursorSelectionChanged('model', editorCommon.CursorChangeReason.ContentFlush);
-		} else {
+		if (e.changeType !== editorCommon.EventType.ModelRawContentChangedFlush) {
 			if (!this._isHandling) {
 				// Read the markers before entering `_onHandler`, since that would validate
 				// the position and ruin the markers
