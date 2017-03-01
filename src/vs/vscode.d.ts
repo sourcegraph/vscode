@@ -126,6 +126,15 @@ declare module 'vscode' {
 		save(): Thenable<boolean>;
 
 		/**
+		 * Revert the underlying file.
+		 *
+		 * @return A promise that will resolve to true when the file
+		 * has been saved. If the file was not dirty or the save failed,
+		 * will return false.
+		 */
+		revert(): Thenable<boolean>;
+
+		/**
 		 * The number of lines in this document.
 		 */
 		readonly lineCount: number;
