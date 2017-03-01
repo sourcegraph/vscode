@@ -249,6 +249,10 @@ export abstract class ExtHostCommandsShape {
 	$getContributedCommandHandlerDescriptions(): TPromise<{ [id: string]: string | ICommandHandlerDescription }> { throw ni(); }
 }
 
+export abstract class ExtHostWorkspaceShape {
+	$updateWorkspace(workspace: IWorkspace): TPromise<any> { throw ni(); }
+}
+
 export abstract class ExtHostConfigurationShape {
 	$acceptConfigurationChanged(values: IWorkspaceConfigurationValues) { throw ni(); }
 }
@@ -395,6 +399,7 @@ export const MainContext = {
 
 export const ExtHostContext = {
 	ExtHostCommands: createExtId<ExtHostCommandsShape>('ExtHostCommands', ExtHostCommandsShape),
+	ExtHostWorkspace: createExtId<ExtHostWorkspaceShape>('ExtHostWorkspace', ExtHostWorkspaceShape),
 	ExtHostConfiguration: createExtId<ExtHostConfigurationShape>('ExtHostConfiguration', ExtHostConfigurationShape),
 	ExtHostDiagnostics: createExtId<ExtHostDiagnosticsShape>('ExtHostDiagnostics', ExtHostDiagnosticsShape),
 	ExtHostDocuments: createExtId<ExtHostDocumentsShape>('ExtHostDocuments', ExtHostDocumentsShape),

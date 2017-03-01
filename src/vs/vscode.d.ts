@@ -4032,6 +4032,11 @@ declare module 'vscode' {
 		export const onDidSaveTextDocument: Event<TextDocument>;
 
 		/**
+		 * An event that is emitted when the active workspace is updated.
+		 */
+		export const onDidUpdateWorkspace: Event<{ resource: Uri, revState?: { zapRef?: string, branch?: string, commitID?: string } }>;
+
+		/**
 		 * Get a configuration object.
 		 *
 		 * When a section-identifier is provided only that part of the configuration

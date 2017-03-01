@@ -5,6 +5,7 @@
 'use strict';
 
 import { IThreadService } from 'vs/workbench/services/thread/common/threadService';
+import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
 import { ICommandService, CommandsRegistry, ICommandHandlerDescription } from 'vs/platform/commands/common/commands';
 import { IDisposable } from 'vs/base/common/lifecycle';
 import { TPromise } from 'vs/base/common/winjs.base';
@@ -17,7 +18,8 @@ export class MainThreadCommands extends MainThreadCommandsShape {
 
 	constructor(
 		@IThreadService private _threadService: IThreadService,
-		@ICommandService private _commandService: ICommandService
+		@ICommandService private _commandService: ICommandService,
+		@IWorkspaceContextService private _contextService: IWorkspaceContextService
 	) {
 		super();
 		this._proxy = this._threadService.get(ExtHostContext.ExtHostCommands);
