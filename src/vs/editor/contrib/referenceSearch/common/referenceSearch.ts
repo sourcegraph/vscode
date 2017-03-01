@@ -34,8 +34,10 @@ export function provideReferences(model: IReadOnlyModel, position: Position, pro
 	return TPromise.join(promises).then(references => {
 		const result: Location[] = [];
 		for (const refs of references) {
-			for (const ref of refs) {
-				result.push(ref);
+			if (refs) {
+				for (const ref of refs) {
+					result.push(ref);
+				}
 			}
 		}
 		return result;
@@ -70,8 +72,10 @@ export function provideWorkspaceReferences(modeId: string, workspace: URI, query
 	return TPromise.join(promises).then(references => {
 		const result: IReferenceInformation[] = [];
 		for (const refs of references) {
-			for (const ref of refs) {
-				result.push(ref);
+			if (refs) {
+				for (const ref of refs) {
+					result.push(ref);
+				}
 			}
 		}
 		return result;
