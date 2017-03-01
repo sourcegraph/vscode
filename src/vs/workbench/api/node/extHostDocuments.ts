@@ -256,6 +256,7 @@ export class ExtHostDocumentData extends MirrorModel2 {
 				get version() { return data._versionId; },
 				get isDirty() { return data._isDirty; },
 				save() { return data._proxy.$trySaveDocument(data._uri); },
+				revert() { return data._proxy.$tryRevertAll([data._uri]); },
 				getText(range?) { return range ? data._getTextInRange(range) : data.getText(); },
 				get lineCount() { return data._lines.length; },
 				lineAt(lineOrPos) { return data.lineAt(lineOrPos); },

@@ -125,6 +125,7 @@ export abstract class MainThreadDocumentsShape {
 	$onVirtualDocumentChange(uri: URI, value: string): void { throw ni(); }
 	$unregisterTextContentProvider(handle: number): void { throw ni(); }
 	$trySaveDocument(uri: URI): TPromise<boolean> { throw ni(); }
+	$tryRevertAll(uris: URI[]): TPromise<boolean> { throw ni(); }
 }
 
 export abstract class MainThreadEditorsShape {
