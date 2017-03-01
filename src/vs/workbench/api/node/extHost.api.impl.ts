@@ -93,6 +93,8 @@ function proposed(extension: IExtensionDescription): Function {
  * This method instantiates and returns the extension API surface
  */
 export function createApiFactory(initData: IInitData, threadService: IThreadService, extensionService: ExtHostExtensionService, contextService: IWorkspaceContextService): IExtensionApiFactory {
+	const currWorkspace = contextService.getWorkspace();
+	const workspacePath = currWorkspace && currWorkspace.resource ? currWorkspace.resource.toString() : undefined;
 
 	// Addressable instances
 	const col = new InstanceCollection();
@@ -109,6 +111,7 @@ export function createApiFactory(initData: IInitData, threadService: IThreadServ
 	const extHostFileSystemEvent = col.define(ExtHostContext.ExtHostFileSystemEventService).set<ExtHostFileSystemEventService>(new ExtHostFileSystemEventService());
 	const extHostQuickOpen = col.define(ExtHostContext.ExtHostQuickOpen).set<ExtHostQuickOpen>(new ExtHostQuickOpen(threadService));
 	const extHostSCM = col.define(ExtHostContext.ExtHostSCM).set<ExtHostSCM>(new ExtHostSCM(threadService));
+	const extHostWorkspace = col.define(ExtHostContext.ExtHostWorkspace).set<ExtHostWorkspace>(new ExtHostWorkspace(threadService, workspacePath));
 	col.define(ExtHostContext.ExtHostExtensionService).set(extensionService);
 	col.finish(false, threadService);
 
@@ -117,9 +120,6 @@ export function createApiFactory(initData: IInitData, threadService: IThreadServ
 	const extHostStatusBar = new ExtHostStatusBar(threadService);
 	const extHostProgress = new ExtHostProgress(threadService.get(MainContext.MainThreadProgress));
 	const extHostOutputService = new ExtHostOutputService(threadService);
-	const currWorkspace = contextService.hasWorkspace() ? contextService.getWorkspace() : undefined;
-	const workspacePath = currWorkspace && currWorkspace.resource ? currWorkspace.resource.toString() : undefined;
-	const extHostWorkspace = new ExtHostWorkspace(threadService, workspacePath);
 	const extHostLanguages = new ExtHostLanguages(threadService);
 
 	// Register API-ish commands
@@ -408,6 +408,12 @@ export function createApiFactory(initData: IInitData, threadService: IThreadServ
 			},
 			onDidChangeConfiguration: (listener: () => any, thisArgs?: any, disposables?: extHostTypes.Disposable[]) => {
 				return extHostConfiguration.onDidChangeConfiguration(listener, thisArgs, disposables);
+			},
+			setWorkspaceState: (state) => {
+				return extHostWorkspace.$setWorkspaceState(state);
+			},
+			onDidUpdateWorkspace: (listener, thisArgs?, disposables?) => {
+				return extHostWorkspace.onDidUpdateWorkspace(listener, thisArgs, disposables);
 			},
 			getConfiguration: (section?: string): vscode.WorkspaceConfiguration => {
 				return extHostConfiguration.getConfiguration(section);

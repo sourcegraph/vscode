@@ -249,6 +249,7 @@ export abstract class MainThreadWorkspaceShape {
 	$cancelSearch(requestId: number): Thenable<boolean> { throw ni(); }
 	$saveAll(includeUntitled?: boolean): Thenable<boolean> { throw ni(); }
 	$applyWorkspaceEdit(edits: IResourceEdit[]): TPromise<boolean> { throw ni(); }
+	$setWorkspaceState(state?: { commitID?: string, branch?: string, zapRef?: string }): TPromise<any> { throw ni(); }
 }
 
 export abstract class MainProcessExtensionServiceShape {
@@ -284,6 +285,10 @@ export abstract class MainThreadSCMShape {
 export abstract class ExtHostCommandsShape {
 	$executeContributedCommand<T>(id: string, ...args: any[]): Thenable<T> { throw ni(); }
 	$getContributedCommandHandlerDescriptions(): TPromise<{ [id: string]: string | ICommandHandlerDescription }> { throw ni(); }
+}
+
+export abstract class ExtHostWorkspaceShape {
+	$onDidUpdateWorkspace(workspace: IWorkspace): TPromise<any> { throw ni(); }
 }
 
 export abstract class ExtHostConfigurationShape {
@@ -453,6 +458,7 @@ export const MainContext = {
 
 export const ExtHostContext = {
 	ExtHostCommands: createExtId<ExtHostCommandsShape>('ExtHostCommands', ExtHostCommandsShape),
+	ExtHostWorkspace: createExtId<ExtHostWorkspaceShape>('ExtHostWorkspace', ExtHostWorkspaceShape),
 	ExtHostConfiguration: createExtId<ExtHostConfigurationShape>('ExtHostConfiguration', ExtHostConfigurationShape),
 	ExtHostDiagnostics: createExtId<ExtHostDiagnosticsShape>('ExtHostDiagnostics', ExtHostDiagnosticsShape),
 	ExtHostDocumentsAndEditors: createExtId<ExtHostDocumentsAndEditorsShape>('ExtHostDocumentsAndEditors', ExtHostDocumentsAndEditorsShape),
