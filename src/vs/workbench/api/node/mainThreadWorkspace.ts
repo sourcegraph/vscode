@@ -7,6 +7,7 @@
 import { isPromiseCanceledError } from 'vs/base/common/errors';
 import { ISearchService, QueryType } from 'vs/platform/search/common/search';
 import { IWorkspaceContextService, IWorkspace } from 'vs/platform/workspace/common/workspace';
+import { IThreadService } from 'vs/workbench/services/thread/common/threadService';
 import { IEventService } from 'vs/platform/event/common/event';
 import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { ITextFileService } from 'vs/workbench/services/textfile/common/textfiles';
@@ -14,22 +15,25 @@ import { ICommonCodeEditor } from 'vs/editor/common/editorCommon';
 import { bulkEdit, IResourceEdit } from 'vs/editor/common/services/bulkEdit';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { Uri } from 'vscode';
-import { MainThreadWorkspaceShape } from './extHost.protocol';
+import { MainThreadWorkspaceShape, ExtHostContext, ExtHostWorkspaceShape } from './extHost.protocol';
 import { ITextModelResolverService } from 'vs/editor/common/services/resolverService';
 
 export class MainThreadWorkspace extends MainThreadWorkspaceShape {
 
 	private _activeSearches: { [id: number]: TPromise<Uri[]> } = Object.create(null);
 	private _searchService: ISearchService;
-	private _workspace: IWorkspace;
+	private _contextService: IWorkspaceContextService;
 	private _textFileService: ITextFileService;
 	private _editorService: IWorkbenchEditorService;
 	private _textModelResolverService: ITextModelResolverService;
 	private _eventService: IEventService;
+	private _threadService: IThreadService;
+	private _proxy: ExtHostWorkspaceShape;
 
 	constructor(
 		@ISearchService searchService: ISearchService,
 		@IWorkspaceContextService contextService: IWorkspaceContextService,
+		@IThreadService threadService: IThreadService,
 		@ITextFileService textFileService,
 		@IWorkbenchEditorService editorService,
 		@ITextModelResolverService textModelResolverService,
@@ -37,9 +41,12 @@ export class MainThreadWorkspace extends MainThreadWorkspaceShape {
 	) {
 		super();
 
+		this._proxy = threadService.get(ExtHostContext.ExtHostWorkspace);
+		contextService.onWorkspaceUpdated(workspace => this._proxy.$onDidUpdateWorkspace(workspace));
+
 		this._searchService = searchService;
-		this._workspace = contextService.getWorkspace();
 		this._textFileService = textFileService;
+		this._contextService = contextService;
 		this._editorService = editorService;
 		this._eventService = eventService;
 		this._textModelResolverService = textModelResolverService;
@@ -47,12 +54,12 @@ export class MainThreadWorkspace extends MainThreadWorkspaceShape {
 
 	$startSearch(include: string, exclude: string, maxResults: number, requestId: number): Thenable<Uri[]> {
 
-		if (!this._workspace) {
+		if (!this._contextService.getWorkspace()) {
 			return;
 		}
 
 		const search = this._searchService.search({
-			folderResources: [this._workspace.resource],
+			folderResources: [this._contextService.getWorkspace().resource],
 			type: QueryType.File,
 			maxResults,
 			includePattern: { [include]: true },
@@ -101,5 +108,10 @@ export class MainThreadWorkspace extends MainThreadWorkspaceShape {
 
 		return bulkEdit(this._eventService, this._textModelResolverService, codeEditor, edits)
 			.then(() => true);
+	}
+
+	$setWorkspaceState(state?: { commitID?: string, branch?: string, zapRef?: string }): TPromise<void> {
+		this._contextService.setWorkspace({ ...this._contextService.getWorkspace(), revState: state });
+		return TPromise.as(void 0);
 	}
 }
