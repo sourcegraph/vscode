@@ -248,11 +248,11 @@ export class EditorStatus implements IStatusbarItem {
 	private state: State;
 	private element: HTMLElement;
 	private tabFocusModeElement: HTMLElement;
-	private indentationElement: HTMLElement;
-	private selectionElement: HTMLElement;
-	private encodingElement: HTMLElement;
-	private eolElement: HTMLElement;
-	private modeElement: HTMLElement;
+	// private indentationElement: HTMLElement;
+	// private selectionElement: HTMLElement;
+	// private encodingElement: HTMLElement;
+	// private eolElement: HTMLElement;
+	// private modeElement: HTMLElement;
 	private metadataElement: HTMLElement;
 	private toDispose: IDisposable[];
 	private activeEditorListeners: IDisposable[];
@@ -282,30 +282,30 @@ export class EditorStatus implements IStatusbarItem {
 		this.tabFocusModeElement.textContent = nlsTabFocusMode;
 		hide(this.tabFocusModeElement);
 
-		this.selectionElement = append(this.element, $('a.editor-status-selection'));
-		this.selectionElement.title = nls.localize('gotoLine', "Go to Line");
-		this.selectionElement.onclick = () => this.onSelectionClick();
-		hide(this.selectionElement);
+		// this.selectionElement = append(this.element, $('a.editor-status-selection'));
+		// this.selectionElement.title = nls.localize('gotoLine', "Go to Line");
+		// this.selectionElement.onclick = () => this.onSelectionClick();
+		// hide(this.selectionElement);
 
-		this.indentationElement = append(this.element, $('a.editor-status-indentation'));
-		this.indentationElement.title = nls.localize('indentation', "Indentation");
-		this.indentationElement.onclick = () => this.onIndentationClick();
-		hide(this.indentationElement);
+		// this.indentationElement = append(this.element, $('a.editor-status-indentation'));
+		// this.indentationElement.title = nls.localize('indentation', "Indentation");
+		// this.indentationElement.onclick = () => this.onIndentationClick();
+		// hide(this.indentationElement);
 
-		this.encodingElement = append(this.element, $('a.editor-status-encoding'));
-		this.encodingElement.title = nls.localize('selectEncoding', "Select Encoding");
-		this.encodingElement.onclick = () => this.onEncodingClick();
-		hide(this.encodingElement);
+		// this.encodingElement = append(this.element, $('a.editor-status-encoding'));
+		// this.encodingElement.title = nls.localize('selectEncoding', "Select Encoding");
+		// this.encodingElement.onclick = () => this.onEncodingClick();
+		// hide(this.encodingElement);
 
-		this.eolElement = append(this.element, $('a.editor-status-eol'));
-		this.eolElement.title = nls.localize('selectEOL', "Select End of Line Sequence");
-		this.eolElement.onclick = () => this.onEOLClick();
-		hide(this.eolElement);
+		// this.eolElement = append(this.element, $('a.editor-status-eol'));
+		// this.eolElement.title = nls.localize('selectEOL', "Select End of Line Sequence");
+		// this.eolElement.onclick = () => this.onEOLClick();
+		// hide(this.eolElement);
 
-		this.modeElement = append(this.element, $('a.editor-status-mode'));
-		this.modeElement.title = nls.localize('selectLanguageMode', "Select Language Mode");
-		this.modeElement.onclick = () => this.onModeClick();
-		hide(this.modeElement);
+		// this.modeElement = append(this.element, $('a.editor-status-mode'));
+		// this.modeElement.title = nls.localize('selectLanguageMode', "Select Language Mode");
+		// this.modeElement.onclick = () => this.onModeClick();
+		// hide(this.modeElement);
 
 		this.metadataElement = append(this.element, $('span.editor-status-metadata'));
 		this.metadataElement.title = nls.localize('fileInfo', "File Information");
@@ -361,50 +361,50 @@ export class EditorStatus implements IStatusbarItem {
 			}
 		}
 
-		if (changed.indentation) {
-			if (this.state.indentation) {
-				this.indentationElement.textContent = this.state.indentation;
-				show(this.indentationElement);
-			} else {
-				hide(this.indentationElement);
-			}
-		}
+		// if (changed.indentation) {
+		// 	if (this.state.indentation) {
+		// 		this.indentationElement.textContent = this.state.indentation;
+		// 		show(this.indentationElement);
+		// 	} else {
+		// 		hide(this.indentationElement);
+		// 	}
+		// }
 
-		if (changed.selectionStatus) {
-			if (this.state.selectionStatus) {
-				this.selectionElement.textContent = this.state.selectionStatus;
-				show(this.selectionElement);
-			} else {
-				hide(this.selectionElement);
-			}
-		}
+		// if (changed.selectionStatus) {
+		// 	if (this.state.selectionStatus) {
+		// 		this.selectionElement.textContent = this.state.selectionStatus;
+		// 		show(this.selectionElement);
+		// 	} else {
+		// 		hide(this.selectionElement);
+		// 	}
+		// }
 
-		if (changed.encoding) {
-			if (this.state.encoding) {
-				this.encodingElement.textContent = this.state.encoding;
-				show(this.encodingElement);
-			} else {
-				hide(this.encodingElement);
-			}
-		}
+		// if (changed.encoding) {
+		// 	if (this.state.encoding) {
+		// 		this.encodingElement.textContent = this.state.encoding;
+		// 		show(this.encodingElement);
+		// 	} else {
+		// 		hide(this.encodingElement);
+		// 	}
+		// }
 
-		if (changed.EOL) {
-			if (this.state.EOL) {
-				this.eolElement.textContent = this.state.EOL === '\r\n' ? nlsEOLCRLF : nlsEOLLF;
-				show(this.eolElement);
-			} else {
-				hide(this.eolElement);
-			}
-		}
+		// if (changed.EOL) {
+		// 	if (this.state.EOL) {
+		// 		this.eolElement.textContent = this.state.EOL === '\r\n' ? nlsEOLCRLF : nlsEOLLF;
+		// 		show(this.eolElement);
+		// 	} else {
+		// 		hide(this.eolElement);
+		// 	}
+		// }
 
-		if (changed.mode) {
-			if (this.state.mode) {
-				this.modeElement.textContent = this.state.mode;
-				show(this.modeElement);
-			} else {
-				hide(this.modeElement);
-			}
-		}
+		// if (changed.mode) {
+		// 	if (this.state.mode) {
+		// 		this.modeElement.textContent = this.state.mode;
+		// 		show(this.modeElement);
+		// 	} else {
+		// 		hide(this.modeElement);
+		// 	}
+		// }
 
 		if (changed.metadata) {
 			if (this.state.metadata) {
