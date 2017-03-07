@@ -675,6 +675,10 @@ export abstract class TextFileService implements ITextFileService {
 		});
 	}
 
+	public delete(resource: URI): TPromise<void> {
+		return this.fileService.del(resource, false);
+	}
+
 	public getAutoSaveMode(): AutoSaveMode {
 		if (this.configuredAutoSaveOnFocusChange) {
 			return AutoSaveMode.ON_FOCUS_CHANGE;

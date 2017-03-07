@@ -128,6 +128,7 @@ export abstract class MainThreadDocumentsShape {
 	$unregisterTextContentProvider(handle: number): void { throw ni(); }
 	$trySaveDocument(uri: URI): TPromise<boolean> { throw ni(); }
 	$tryRevertAll(uris: URI[]): TPromise<boolean> { throw ni(); }
+	$tryDeleteDocument(uri: URI): TPromise<void> { throw ni(); }
 }
 
 export abstract class MainThreadEditorsShape {
