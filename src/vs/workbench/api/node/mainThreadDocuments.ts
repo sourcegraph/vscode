@@ -154,6 +154,9 @@ export class MainThreadDocuments extends MainThreadDocumentsShape {
 		return this._textFileService.save(uri);
 	}
 
+	$tryDeleteDocument(uri: URI): TPromise<void> {
+		return this._textFileService.delete(uri);
+	}
 
 	$tryRevertAll(uris: URI[]): TPromise<boolean> {
 		return this._textFileService.revertAll(uris, true).then(() => true, () => false);
