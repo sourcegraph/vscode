@@ -159,6 +159,11 @@ declare module 'vscode' {
 		revert(): Thenable<boolean>;
 
 		/**
+		 * Delete the udnerlying file.
+		 */
+		delete(): Thenable<void>;
+
+		/**
 		 * The number of lines in this document.
 		 *
 		 * @readonly
