@@ -126,5 +126,14 @@
 			},
 			"sourceMaps": true
 		}
+	],
+	"compounds": [
+		{
+			"name": "Attach VS Code and Extension Host",
+			"configurations": [
+				"Attach to VS Code",
+				"Attach to Extension Host"
+			]
+		}
 	]
 }

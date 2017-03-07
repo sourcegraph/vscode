@@ -86,6 +86,7 @@ const copyrightFilter = [
 	'!**/*.disabled',
 	'!resources/win32/bin/code.js',
 	'!extensions/markdown/media/tomorrow.css',
+	'!extensions/vscode-extensiontest/**',
 	'!extensions/html/server/src/modes/typescript/*'
 ];
 
@@ -98,6 +99,7 @@ const tslintFilter = [
 	'!**/node_modules/**',
 	'!extensions/typescript/test/colorize-fixtures/**',
 	'!extensions/vscode-api-tests/testWorkspace/**',
+	'!extensions/vscode-extensiontest/**',
 	'!extensions/**/*.test.ts'
 ];
 
