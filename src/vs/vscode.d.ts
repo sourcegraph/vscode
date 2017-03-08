@@ -4197,6 +4197,11 @@ declare module 'vscode' {
 		export const onDidSaveTextDocument: Event<TextDocument>;
 
 		/**
+		 * A method used to set workspace.
+		 */
+		export function setWorkspace(resource: Uri, state?: { zapRef?: string, branch?: string, commitID?: string }): void;
+
+		/**
 		 * A method used to set workspace state.
 		 */
 		export function setWorkspaceState(state?: { zapRef?: string, branch?: string, commitID?: string }): void;
