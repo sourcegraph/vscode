@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 'use strict';
 
+import URI from 'vs/base/common/uri';
 import { isPromiseCanceledError } from 'vs/base/common/errors';
 import { ISearchService, QueryType } from 'vs/platform/search/common/search';
 import { IWorkspaceContextService, IWorkspace } from 'vs/platform/workspace/common/workspace';
@@ -108,6 +109,11 @@ export class MainThreadWorkspace extends MainThreadWorkspaceShape {
 
 		return bulkEdit(this._eventService, this._textModelResolverService, codeEditor, edits)
 			.then(() => true);
+	}
+
+	$setWorkspace(resource: URI, state?: { commitID?: string, branch?: string, zapRef?: string }): TPromise<void> {
+		this._contextService.setWorkspace({ ...this._contextService.getWorkspace(), resource, revState: state });
+		return TPromise.as(void 0);
 	}
 
 	$setWorkspaceState(state?: { commitID?: string, branch?: string, zapRef?: string }): TPromise<void> {

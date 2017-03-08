@@ -355,6 +355,9 @@ export function createApiFactory(initData: IInitData, threadService: IThreadServ
 			onDidChangeConfiguration: (listener: () => any, thisArgs?: any, disposables?: extHostTypes.Disposable[]) => {
 				return extHostConfiguration.onDidChangeConfiguration(listener, thisArgs, disposables);
 			},
+			setWorkspace: (resource, state) => {
+				return extHostWorkspace.$setWorkspace(URI.parse(resource.toString()), state);
+			},
 			setWorkspaceState: (state) => {
 				return extHostWorkspace.$setWorkspaceState(state);
 			},
