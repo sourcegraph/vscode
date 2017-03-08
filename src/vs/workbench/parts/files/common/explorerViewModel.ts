@@ -84,7 +84,11 @@ export class FileStat implements IFileStat {
 	 * exists locally.
 	 */
 	public static mergeLocalWithDisk(disk: FileStat, local: FileStat): void {
-		assert.ok(disk.resource.toString() === local.resource.toString(), 'Merging only supported for stats with the same resource');
+		if (disk.resource.toString() !== local.resource.toString()) {
+			// In vscode ths can never happen; in sourcegraph, we change underlying document URIs
+			// every time your rev state (incl. zap ref) is updated.
+			return;
+		}
 
 		// Stop merging when a folder is not resolved to avoid loosing local data
 		const mergingDirectories = disk.isDirectory || local.isDirectory;
