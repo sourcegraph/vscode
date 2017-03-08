@@ -86,6 +86,11 @@ export class ExtHostWorkspace implements ExtHostWorkspaceShape {
 		return this._workspaceEmitter.event;
 	}
 
+	$setWorkspace(resource: URI, state: { commitID?: string, branch?: string, zapRef?: string }): TPromise<void> {
+		this._proxy.$setWorkspace(resource, state);
+		return TPromise.as(void 0);
+	}
+
 	$setWorkspaceState(state: { commitID?: string, branch?: string, zapRef?: string }): TPromise<void> {
 		this._proxy.$setWorkspaceState(state);
 		return TPromise.as(void 0);
