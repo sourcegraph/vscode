@@ -65,10 +65,10 @@ export class MainThreadEditors extends MainThreadEditorsShape {
 		let id = textEditor.getId();
 		let toDispose: IDisposable[] = [];
 		toDispose.push(textEditor.onConfigurationChanged((opts) => {
-			this._proxy.$acceptOptionsChanged(id, opts);
+			this._proxy.$acceptOptionsChanged(id, opts, textEditor.getModel().uri);
 		}));
 		toDispose.push(textEditor.onSelectionChanged((event) => {
-			this._proxy.$acceptSelectionsChanged(id, event);
+			this._proxy.$acceptSelectionsChanged(id, event, textEditor.getModel().uri);
 		}));
 
 		this._textEditorsListenersMap[id] = toDispose;

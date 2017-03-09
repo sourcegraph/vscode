@@ -334,9 +334,9 @@ export interface ITextEditorPositionData {
 	[id: string]: EditorPosition;
 }
 export abstract class ExtHostEditorsShape {
-	$acceptOptionsChanged(id: string, opts: IResolvedTextEditorConfiguration): void { throw ni(); }
-	$acceptSelectionsChanged(id: string, event: ISelectionChangeEvent): void { throw ni(); }
-	$acceptEditorPositionData(data: ITextEditorPositionData): void { throw ni(); }
+	$acceptOptionsChanged(id: string, opts: IResolvedTextEditorConfiguration, document?: URI): void { throw ni(); }
+	$acceptSelectionsChanged(id: string, event: ISelectionChangeEvent, document?: URI): void { throw ni(); }
+	$acceptEditorPositionData(data: ITextEditorPositionData, document?: URI): void { throw ni(); }
 }
 
 export interface IDocumentsAndEditorsDelta {
