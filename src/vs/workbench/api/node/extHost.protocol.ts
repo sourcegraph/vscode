@@ -299,11 +299,11 @@ export interface ITextEditorPositionData {
 }
 export abstract class ExtHostEditorsShape {
 	$acceptTextEditorAdd(data: ITextEditorAddData): void { throw ni(); }
-	$acceptOptionsChanged(id: string, opts: IResolvedTextEditorConfiguration): void { throw ni(); }
-	$acceptSelectionsChanged(id: string, event: ISelectionChangeEvent): void { throw ni(); }
+	$acceptOptionsChanged(id: string, opts: IResolvedTextEditorConfiguration, document?: URI): void { throw ni(); }
+	$acceptSelectionsChanged(id: string, event: ISelectionChangeEvent, document?: URI): void { throw ni(); }
 	$acceptActiveEditorAndVisibleEditors(id: string, visibleIds: string[]): void { throw ni(); }
-	$acceptEditorPositionData(data: ITextEditorPositionData): void { throw ni(); }
-	$acceptTextEditorRemove(id: string): void { throw ni(); }
+	$acceptEditorPositionData(data: ITextEditorPositionData, document?: URI): void { throw ni(); }
+	$acceptTextEditorRemove(id: string, document?: URI): void { throw ni(); }
 }
 
 export abstract class ExtHostTreeExplorersShape {

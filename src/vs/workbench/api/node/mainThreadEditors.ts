@@ -78,10 +78,10 @@ export class MainThreadEditors extends MainThreadEditorsShape {
 		let id = textEditor.getId();
 		let toDispose: IDisposable[] = [];
 		toDispose.push(textEditor.onConfigurationChanged((opts) => {
-			this._proxy.$acceptOptionsChanged(id, opts);
+			this._proxy.$acceptOptionsChanged(id, opts, textEditor.getModel().uri);
 		}));
 		toDispose.push(textEditor.onSelectionChanged((event) => {
-			this._proxy.$acceptSelectionsChanged(id, event);
+			this._proxy.$acceptSelectionsChanged(id, event, textEditor.getModel().uri);
 		}));
 		this._proxy.$acceptTextEditorAdd({
 			id: id,
@@ -100,7 +100,7 @@ export class MainThreadEditors extends MainThreadEditorsShape {
 		dispose(this._textEditorsListenersMap[id]);
 		delete this._textEditorsListenersMap[id];
 		delete this._textEditorsMap[id];
-		this._proxy.$acceptTextEditorRemove(id);
+		this._proxy.$acceptTextEditorRemove(id, textEditor.getModel().uri);
 	}
 
 	private _updateActiveAndVisibleTextEditors(): void {
@@ -266,6 +266,14 @@ export class MainThreadEditors extends MainThreadEditorsShape {
 	}
 
 	$trySetDecorations(id: string, key: string, ranges: IDecorationOptions[]): TPromise<any> {
+		// TODO(john): I don't know yet why the zap extension thinks it should be applying
+		// decorations to the left editor. The editors get registered via $acceptTextEditorAdd
+		// on the extension host, there must be a mismatch of which editor id the zap extension thinks
+		// it's running on and the actual id we're applying edits to.
+		const numEditors = Object.keys(this._textEditorsMap).length;
+		if (numEditors === 2 && id === "1") {
+			id = "2"; // choose the right editor for the diff view
+		}
 		if (!this._textEditorsMap[id]) {
 			return TPromise.wrapError('TextEditor disposed');
 		}

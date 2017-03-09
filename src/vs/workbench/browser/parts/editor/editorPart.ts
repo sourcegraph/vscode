@@ -677,7 +677,9 @@ export class EditorPart extends Part implements IEditorPart, IEditorGroupService
 				return editor.save().then(ok => !ok);
 
 			case ConfirmResult.DONT_SAVE:
-				return editor.revert().then(ok => !ok);
+				// The default vscode behavior (to revert) is undesirable on Sourcegraph.com,
+				// as it may potentially revert (and 2-way sync) changes from a zap buffer.
+				return TPromise.as(false);
 
 			case ConfirmResult.CANCEL:
 				return TPromise.as(true); // veto
