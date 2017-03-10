@@ -98,8 +98,10 @@ export function score(selector: LanguageSelector, candidateUri: URI, candidateLa
 interface DefaultSchemes {
 	file: 'file';
 	untitled: 'untitled';
+	git: 'git';
 }
 
 const _defaultSchemes: DefaultSchemes = Object.create(null);
 _defaultSchemes.file = 'file';
 _defaultSchemes.untitled = 'untitled';
+_defaultSchemes.git = 'git';

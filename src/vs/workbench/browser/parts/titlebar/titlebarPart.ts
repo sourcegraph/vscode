@@ -270,9 +270,6 @@ export class TitlebarPart extends Part implements ITitleService {
 
 	public setTitle(title: string): void {
 
-		// Always set the native window title to identify us properly to the OS
-		window.document.title = title;
-
 		// Apply if we can
 		if (this.title) {
 			this.title.text(title);

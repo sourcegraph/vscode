@@ -877,7 +877,7 @@ export class ExtHostLanguageFeatures extends ExtHostLanguageFeaturesShape {
 
 	registerWorkspaceReferenceProvider(selector: vscode.DocumentSelector, provider: vscode.WorkspaceReferenceProvider, workspace?: IWorkspace): vscode.Disposable {
 		const handle = this._nextHandle();
-		this._adapter[handle] = new WorkspaceReferenceAdapter(provider);
+		this._adapter.set(handle, new WorkspaceReferenceAdapter(provider));
 		this._proxy.$registerWorkspaceReferenceSupport(handle, selector, workspace);
 		return this._createDisposable(handle);
 	}

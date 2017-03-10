@@ -7,62 +7,71 @@
 
 import { IThemeRule } from 'vs/editor/common/modes/supports/tokenization';
 
+const red = 'FF0A3B'; // rgba(255, 10, 59, 1)
+const white = 'F2F4F8'; // rgba(242, 244, 248, 1)
+const violet = 'E4ADFF'; // rgba(228, 173, 255, 1)
+const coolMidGray = '93A9C8'; // rgba(147, 169, 200, 1)
+const blue = '5CC0FF'; // rgba(92, 192, 255, 1)
+const green = '00BFA5'; // rgba(0, 191, 165, 1)
+const magenta = 'FF859D'; // rgba(255, 133, 157, 1)
+const yellow = 'FDBA86'; // rgba(255, 133, 157, 1)
+
 /* -------------------------------- Begin vs tokens -------------------------------- */
 export const vs: IThemeRule[] = [
-	{ token: '', foreground: '000000', background: 'fffffe' },
-	{ token: 'invalid', foreground: 'cd3131' },
+	{ token: '', foreground: white, background: 'fffffe' },
+	{ token: 'invalid', foreground: red },
 	{ token: 'emphasis', fontStyle: 'italic' },
 	{ token: 'strong', fontStyle: 'bold' },
 
-	{ token: 'variable', foreground: '001188' },
-	{ token: 'variable.predefined', foreground: '4864AA' },
-	{ token: 'constant', foreground: 'dd0000' },
-	{ token: 'comment', foreground: '008000' },
-	{ token: 'number', foreground: '09885A' },
-	{ token: 'number.hex', foreground: '3030c0' },
-	{ token: 'regexp', foreground: '800000' },
-	{ token: 'annotation', foreground: '808080' },
-	{ token: 'type', foreground: '008080' },
+	{ token: 'variable', foreground: violet },
+	{ token: 'variable.predefined', foreground: violet },
+	{ token: 'constant', foreground: red },
+	{ token: 'comment', foreground: coolMidGray, fontStyle: 'italic' },
+	{ token: 'number', foreground: violet },
+	{ token: 'number.hex', foreground: violet },
+	{ token: 'regexp', foreground: green },
+	{ token: 'annotation', foreground: red },
+	{ token: 'type', foreground: blue },
 
-	{ token: 'delimiter', foreground: '000000' },
-	{ token: 'delimiter.html', foreground: '383838' },
-	{ token: 'delimiter.xml', foreground: '0000FF' },
+	{ token: 'delimiter', foreground: coolMidGray },
+	{ token: 'delimiter.html', foreground: coolMidGray },
+	{ token: 'delimiter.xml', foreground: coolMidGray },
 
-	{ token: 'tag', foreground: '800000' },
-	{ token: 'tag.id.jade', foreground: '4F76AC' },
-	{ token: 'tag.class.jade', foreground: '4F76AC' },
-	{ token: 'meta.scss', foreground: '800000' },
-	{ token: 'metatag', foreground: 'e00000' },
-	{ token: 'metatag.content.html', foreground: 'FF0000' },
-	{ token: 'metatag.html', foreground: '808080' },
-	{ token: 'metatag.xml', foreground: '808080' },
+	{ token: 'tag', foreground: violet },
+	{ token: 'tag.id.jade', foreground: violet },
+	{ token: 'tag.class.jade', foreground: violet },
+	{ token: 'meta.scss', foreground: red },
+	{ token: 'metatag', foreground: red },
+	{ token: 'metatag.content.html', foreground: yellow },
+	{ token: 'metatag.html', foreground: blue },
+	{ token: 'metatag.xml', foreground: blue },
 	{ token: 'metatag.php', fontStyle: 'bold' },
 
-	{ token: 'key', foreground: '863B00' },
-	{ token: 'string.key.json', foreground: 'A31515' },
-	{ token: 'string.value.json', foreground: '0451A5' },
+	{ token: 'key', foreground: magenta },
+	{ token: 'string.key.json', foreground: yellow },
+	{ token: 'string.value.json', foreground: white },
 
-	{ token: 'attribute.name', foreground: 'FF0000' },
-	{ token: 'attribute.value', foreground: '0451A5' },
-	{ token: 'attribute.value.number', foreground: '09885A' },
-	{ token: 'attribute.value.unit', foreground: '09885A' },
-	{ token: 'attribute.value.html', foreground: '0000FF' },
-	{ token: 'attribute.value.xml', foreground: '0000FF' },
+	{ token: 'attribute.name', foreground: coolMidGray },
+	{ token: 'attribute.value', foreground: yellow },
+	{ token: 'attribute.value.number', foreground: yellow },
+	{ token: 'attribute.value.unit', foreground: yellow },
+	{ token: 'attribute.value.html', foreground: yellow },
+	{ token: 'attribute.value.xml', foreground: yellow },
 
-	{ token: 'string', foreground: 'A31515' },
-	{ token: 'string.html', foreground: '0000FF' },
-	{ token: 'string.sql', foreground: 'FF0000' },
-	{ token: 'string.yaml', foreground: '0451A5' },
+	{ token: 'string', foreground: yellow },
+	{ token: 'string.html', foreground: yellow },
+	{ token: 'string.sql', foreground: yellow },
+	{ token: 'string.yaml', foreground: yellow },
 
-	{ token: 'keyword', foreground: '0000FF' },
-	{ token: 'keyword.json', foreground: '0451A5' },
-	{ token: 'keyword.flow', foreground: 'AF00DB' },
-	{ token: 'keyword.flow.scss', foreground: '0000FF' },
+	{ token: 'keyword', foreground: blue },
+	{ token: 'keyword.json', foreground: blue },
+	{ token: 'keyword.flow', foreground: blue },
+	{ token: 'keyword.flow.scss', foreground: blue },
 
-	{ token: 'operator.scss', foreground: '666666' },
-	{ token: 'operator.sql', foreground: '778899' },
-	{ token: 'operator.swift', foreground: '666666' },
-	{ token: 'predefined.sql', foreground: 'FF00FF' },
+	{ token: 'operator.scss', foreground: coolMidGray },
+	{ token: 'operator.sql', foreground: coolMidGray },
+	{ token: 'operator.swift', foreground: coolMidGray },
+	{ token: 'predefined.sql', foreground: coolMidGray },
 ];
 /* -------------------------------- End vs tokens -------------------------------- */
 
