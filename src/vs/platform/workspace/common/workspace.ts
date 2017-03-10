@@ -8,7 +8,6 @@ import Event, { Emitter } from 'vs/base/common/event';
 import URI from 'vs/base/common/uri';
 import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
 import paths = require('vs/base/common/paths');
-import { LinkedMap as Map } from 'vs/base/common/map';
 
 export const IWorkspaceContextService = createDecorator<IWorkspaceContextService>('contextService');
 
@@ -46,7 +45,7 @@ export interface IWorkspaceContextService {
 	/**
 	 * Attempts to get the workspace from the registry instead of using the default.
 	 */
-	tryGetWorkspaceFromRegistry(resource: URI): IWorkspaceRevState | undefined;
+	tryGetWorkspaceFromRegistry(resource: URI): IWorkspace | undefined;
 
 	onWorkspaceUpdated: Event<IWorkspace>;
 }
@@ -83,6 +82,13 @@ export interface IWorkspaceRevState {
 	zapRef?: string;
 }
 
+declare class Map<K, V> {
+	// delete(key: K): boolean;
+	get(key: K): V;
+	// has(key: K): boolean;
+	set(key: K, value?: V): Map<K, V>;
+}
+
 export class WorkspaceContextService implements IWorkspaceContextService {
 
 	public _serviceBrand: any;
@@ -94,7 +100,8 @@ export class WorkspaceContextService implements IWorkspaceContextService {
 	constructor(workspace: IWorkspace) {
 		this.workspace = workspace;
 		this.workspaceEmitter = new Emitter<IWorkspace>();
-		this.workspaceRegistry.set(this.workspace.resource.toString(), this.workspace);
+		const workspaceRegistryKey = workspace.resource.with({ fragment: '', query: '' }).toString();
+		this.workspaceRegistry.set(workspaceRegistryKey, workspace);
 	}
 
 	public getWorkspace(): IWorkspace {
@@ -125,13 +132,14 @@ export class WorkspaceContextService implements IWorkspaceContextService {
 		return null;
 	}
 
-	public tryGetWorkspaceFromRegistry(resource: URI): IWorkspaceRevState | undefined {
+	public tryGetWorkspaceFromRegistry(resource: URI): IWorkspace | undefined {
 		return this.workspaceRegistry.get(resource.toString());
 	}
 
 	public setWorkspace(workspace: IWorkspace): void {
 		this.workspace = workspace;
-		this.workspaceRegistry.set(this.workspace.resource.toString(), this.workspace);
+		const workspaceRegistryKey = workspace.resource.with({ fragment: '', query: '' }).toString();
+		this.workspaceRegistry.set(workspaceRegistryKey, workspace);
 		this.workspaceEmitter.fire(workspace);
 	}
 

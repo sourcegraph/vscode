@@ -134,9 +134,9 @@ export class WindowsService implements IWindowsService, IDisposable {
 
 	getRecentlyOpen(windowId: number): TPromise<{ files: string[]; folders: string[]; }> {
 		const vscodeWindow = this.windowsMainService.getWindowById(windowId);
+
 		if (vscodeWindow) {
 			const { files, folders } = this.windowsMainService.getRecentPathsList(vscodeWindow.config.workspacePath, vscodeWindow.config.filesToOpen);
-			console.log(`Logging files`, files);
 			return TPromise.as({ files, folders });
 		}
 

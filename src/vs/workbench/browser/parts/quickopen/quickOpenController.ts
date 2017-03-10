@@ -784,8 +784,6 @@ export class QuickOpenController extends WorkbenchComponent implements IQuickOpe
 			if (input instanceof EditorInput) {
 				resource = getUntitledOrFileResource(input);
 			} else {
-				// for each history item we need to grab the correct resource!
-				console.log(`logging resource`, resource);
 				resource = (input as IResourceInput).resource;
 			}
 
