@@ -8,6 +8,7 @@ import Event, { Emitter } from 'vs/base/common/event';
 import URI from 'vs/base/common/uri';
 import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
 import paths = require('vs/base/common/paths');
+import { LinkedMap as Map } from 'vs/base/common/map';
 
 export const IWorkspaceContextService = createDecorator<IWorkspaceContextService>('contextService');
 
@@ -56,11 +57,7 @@ export interface IWorkspace {
 	/**
 	 * the current revision state of the workspace.
 	 */
-	revState?: {
-		commitID?: string;
-		branch?: string;
-		zapRef?: string;
-	};
+	revState?: IWorkspaceRevState;
 
 	/**
 	 * the unique identifier of the workspace. if the workspace is deleted and recreated
@@ -75,16 +72,24 @@ export interface IWorkspace {
 	name?: string;
 }
 
+export interface IWorkspaceRevState {
+	commitID?: string;
+	branch?: string;
+	zapRef?: string;
+}
+
 export class WorkspaceContextService implements IWorkspaceContextService {
 
 	public _serviceBrand: any;
 
 	private workspace: IWorkspace;
 	private workspaceEmitter: Emitter<IWorkspace>;
+	private workspaceRegistry = new Map<string, IWorkspace>();
 
 	constructor(workspace: IWorkspace) {
 		this.workspace = workspace;
 		this.workspaceEmitter = new Emitter<IWorkspace>();
+		this.workspaceRegistry.set(this.workspace.resource.toString(), this.workspace);
 	}
 
 	public getWorkspace(): IWorkspace {
@@ -115,8 +120,13 @@ export class WorkspaceContextService implements IWorkspaceContextService {
 		return null;
 	}
 
+	public tryGetWorkspaceFromRegistry(resource: URI): IWorkspaceRevState | undefined {
+		return this.workspaceRegistry.get(resource.toString());
+	}
+
 	public setWorkspace(workspace: IWorkspace): void {
 		this.workspace = workspace;
+		this.workspaceRegistry.set(this.workspace.resource.toString(), this.workspace);
 		this.workspaceEmitter.fire(workspace);
 	}
 
