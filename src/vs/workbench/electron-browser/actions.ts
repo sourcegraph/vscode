@@ -467,6 +467,7 @@ export class OpenRecentAction extends Action {
 	}
 
 	private openRecent(recentFiles: string[], recentFolders: string[]): void {
+		console.log(`openRecent`, recentFiles);
 		function toPick(path: string, separator: ISeparator, isFolder: boolean): IFilePickOpenEntry {
 			return {
 				resource: URI.file(path),
@@ -479,6 +480,7 @@ export class OpenRecentAction extends Action {
 		}
 
 		const runPick = (path: string, context: IEntryRunContext) => {
+			// running pick on path.
 			const newWindow = context.keymods.indexOf(KeyMod.CtrlCmd) >= 0;
 			this.windowsService.windowOpen([path], newWindow);
 		};

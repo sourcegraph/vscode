@@ -500,7 +500,7 @@ export class WindowsManager implements IWindowsMainService {
 			mru.folders = mru.folders.slice(0, WindowsManager.MAX_TOTAL_RECENT_ENTRIES);
 			mru.files = mru.files.slice(0, WindowsManager.MAX_TOTAL_RECENT_ENTRIES);
 		});
-
+		console.log(`mru`, mru);
 		this.storageService.setItem(WindowsManager.recentPathsListStorageKey, mru);
 		this._onRecentPathsChange.fire();
 	}

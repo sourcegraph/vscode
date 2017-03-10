@@ -43,6 +43,11 @@ export interface IWorkspaceContextService {
 	 */
 	setWorkspace(workspace: IWorkspace): void;
 
+	/**
+	 * Attempts to get the workspace from the registry instead of using the default.
+	 */
+	tryGetWorkspaceFromRegistry(resource: URI): IWorkspaceRevState | undefined;
+
 	onWorkspaceUpdated: Event<IWorkspace>;
 }
 
