@@ -10,7 +10,7 @@ import URI from 'vs/base/common/uri';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { IReadOnlyModel } from 'vs/editor/common/editorCommon';
 import { CommonEditorRegistry } from 'vs/editor/common/editorCommonExtensions';
-import { Location, ReferenceProviderRegistry, WorkspaceReferenceProviderRegistry, IReferenceInformation, ISymbolDescriptor, ReferenceContext } from 'vs/editor/common/modes';
+import { LanguageIdentifier, Location, ReferenceProviderRegistry, WorkspaceReferenceProviderRegistry, IReferenceInformation, ISymbolDescriptor, ReferenceContext } from 'vs/editor/common/modes';
 import { asWinJsPromise } from 'vs/base/common/async';
 import { Position } from 'vs/editor/common/core/position';
 
@@ -44,26 +44,30 @@ export function provideReferences(model: IReadOnlyModel, position: Position, pro
 	});
 }
 
-export function provideWorkspaceReferences(modeId: string, workspace: URI, query: ISymbolDescriptor, hints: { [hint: string]: any }, progress: (references: IReferenceInformation[]) => void): TPromise<IReferenceInformation[]> {
+export function provideWorkspaceReferences(language: LanguageIdentifier, workspace: URI, query: ISymbolDescriptor, hints: { [hint: string]: any }, progress: (references: IReferenceInformation[]) => void): TPromise<IReferenceInformation[]> {
 
 	const model = {
 		isTooLargeForHavingARichMode() {
 			return false;
 		},
-		getModeId() {
-			return modeId;
+		getModeId(): string {
+			return language.language;
 		},
-		uri: workspace
+		getLanguageIdentifier(): LanguageIdentifier {
+			return language;
+		},
+		uri: workspace,
 	};
 
 	// collect references from all providers
-	const promises = WorkspaceReferenceProviderRegistry.ordered(model).map(provider => {
+	const promises = WorkspaceReferenceProviderRegistry.ordered(model as any).map(provider => {
 		return asWinJsPromise(token => {
 			return provider.provideWorkspaceReferences(workspace, query, hints, token, progress);
 		}).then(result => {
 			if (Array.isArray(result)) {
 				return <IReferenceInformation[]>result;
 			}
+			return undefined;
 		}, err => {
 			onUnexpectedExternalError(err);
 		});

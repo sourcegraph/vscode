@@ -7,6 +7,7 @@
 
 import 'vs/workbench/parts/files/browser/files.contribution'; // load our contribution into the test
 import { FileEditorInput } from 'vs/workbench/parts/files/common/editors/fileEditorInput';
+import { IDisposable } from 'vs/base/common/lifecycle';
 import { Promise, TPromise } from 'vs/base/common/winjs.base';
 import { TestInstantiationService } from 'vs/platform/instantiation/test/common/instantiationServiceMock';
 import { EventEmitter } from 'vs/base/common/eventEmitter';
@@ -80,7 +81,7 @@ export class TestContextService implements IWorkspaceContextService {
 		this.workspace = workspace;
 	}
 
-	public onWorkspaceUpdated(listener: (workspace: IWorkspace) => void): void {
+	public onWorkspaceUpdated(listener: (workspace: IWorkspace) => void): IDisposable {
 		throw new Error('not implemented');
 	}
 

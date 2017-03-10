@@ -35,7 +35,7 @@ export class MainThreadOutputService extends MainThreadOutputServiceShape {
 
 	public $append(channelId: string, label: string, value: string): TPromise<void> {
 		if (this._disable) {
-			return;
+			return TPromise.as(void 0);
 		}
 		this._getChannel(channelId, label).append(value);
 		return undefined;
@@ -43,7 +43,7 @@ export class MainThreadOutputService extends MainThreadOutputServiceShape {
 
 	public $clear(channelId: string, label: string): TPromise<void> {
 		if (this._disable) {
-			return;
+			return TPromise.as(void 0);
 		}
 		this._getChannel(channelId, label).clear();
 		return undefined;
@@ -51,7 +51,7 @@ export class MainThreadOutputService extends MainThreadOutputServiceShape {
 
 	public $reveal(channelId: string, label: string, preserveFocus: boolean): TPromise<void> {
 		if (this._disable) {
-			return;
+			return TPromise.as(void 0);
 		}
 		this._getChannel(channelId, label).show(preserveFocus);
 		return undefined;
@@ -67,7 +67,7 @@ export class MainThreadOutputService extends MainThreadOutputServiceShape {
 
 	public $close(channelId: string): TPromise<void> {
 		if (this._disable) {
-			return;
+			return TPromise.as(void 0);
 		}
 		const panel = this._panelService.getActivePanel();
 		if (panel && panel.getId() === OUTPUT_PANEL_ID && channelId === this._outputService.getActiveChannel().id) {
