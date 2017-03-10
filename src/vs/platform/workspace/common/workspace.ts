@@ -90,12 +90,12 @@ export class WorkspaceContextService implements IWorkspaceContextService {
 
 	private workspace: IWorkspace;
 	private workspaceEmitter: Emitter<IWorkspace>;
-	private workspaceRegistry = new Map<string, IWorkspaceRevState>();
+	private workspaceRegistry = new Map<string, IWorkspace>();
 
 	constructor(workspace: IWorkspace) {
 		this.workspace = workspace;
 		this.workspaceEmitter = new Emitter<IWorkspace>();
-		this.workspaceRegistry.set(this.workspace.resource.toString(), this.workspace.revState);
+		this.workspaceRegistry.set(this.workspace.resource.toString(), this.workspace);
 	}
 
 	public getWorkspace(): IWorkspace {
@@ -130,13 +130,13 @@ export class WorkspaceContextService implements IWorkspaceContextService {
 		return null;
 	}
 
-	public getWorkspaceRevState(resource: URI): IWorkspaceRevState {
+	public tryGetWorkspaceFromRegistry(resource: URI): IWorkspaceRevState | undefined {
 		return this.workspaceRegistry.get(resource.toString());
 	}
 
 	public setWorkspace(workspace: IWorkspace): void {
 		this.workspace = workspace;
-		this.workspaceRegistry.set(this.workspace.resource.toString(), workspace.revState);
+		this.workspaceRegistry.set(this.workspace.resource.toString(), this.workspace);
 		this.workspaceEmitter.fire(workspace);
 	}
 
