@@ -7,7 +7,7 @@
 import URI from 'vs/base/common/uri';
 import { isPromiseCanceledError } from 'vs/base/common/errors';
 import { ISearchService, QueryType } from 'vs/platform/search/common/search';
-import { IWorkspaceContextService, IWorkspace } from 'vs/platform/workspace/common/workspace';
+import { IWorkspaceContextService, IWorkspaceRevState } from 'vs/platform/workspace/common/workspace';
 import { IThreadService } from 'vs/workbench/services/thread/common/threadService';
 import { IEventService } from 'vs/platform/event/common/event';
 import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
@@ -18,6 +18,7 @@ import { TPromise } from 'vs/base/common/winjs.base';
 import { Uri } from 'vscode';
 import { MainThreadWorkspaceShape, ExtHostContext, ExtHostWorkspaceShape } from './extHost.protocol';
 import { ITextModelResolverService } from 'vs/editor/common/services/resolverService';
+import { assign } from 'vs/base/common/objects';
 
 export class MainThreadWorkspace extends MainThreadWorkspaceShape {
 
@@ -28,7 +29,6 @@ export class MainThreadWorkspace extends MainThreadWorkspaceShape {
 	private _editorService: IWorkbenchEditorService;
 	private _textModelResolverService: ITextModelResolverService;
 	private _eventService: IEventService;
-	private _threadService: IThreadService;
 	private _proxy: ExtHostWorkspaceShape;
 
 	constructor(
@@ -111,13 +111,13 @@ export class MainThreadWorkspace extends MainThreadWorkspaceShape {
 			.then(() => true);
 	}
 
-	$setWorkspace(resource: URI, state?: { commitID?: string, branch?: string, zapRef?: string }): TPromise<void> {
-		this._contextService.setWorkspace({ ...this._contextService.getWorkspace(), resource, revState: state });
+	$setWorkspace(resource: URI, state?: IWorkspaceRevState): TPromise<void> {
+		this._contextService.setWorkspace(assign({}, this._contextService.getWorkspace(), { resource, revState: state }));
 		return TPromise.as(void 0);
 	}
 
-	$setWorkspaceState(state?: { commitID?: string, branch?: string, zapRef?: string }): TPromise<void> {
-		this._contextService.setWorkspace({ ...this._contextService.getWorkspace(), revState: state });
+	$setWorkspaceState(state?: IWorkspaceRevState): TPromise<void> {
+		this._contextService.setWorkspace(assign({}, this._contextService.getWorkspace(), { revState: state }));
 		return TPromise.as(void 0);
 	}
 }

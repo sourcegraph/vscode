@@ -8,7 +8,6 @@ import Event, { Emitter } from 'vs/base/common/event';
 import URI from 'vs/base/common/uri';
 import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
 import paths = require('vs/base/common/paths');
-import { LinkedMap as Map } from 'vs/base/common/map';
 
 export const IWorkspaceContextService = createDecorator<IWorkspaceContextService>('contextService');
 
@@ -42,6 +41,11 @@ export interface IWorkspaceContextService {
 	 * Sets the workspace object. This may happen to e.g. handle cross-repo j2d.
 	 */
 	setWorkspace(workspace: IWorkspace): void;
+
+	/**
+	 * Attempts to get the workspace from the registry instead of using the default.
+	 */
+	tryGetWorkspaceFromRegistry(resource: URI): IWorkspace | undefined;
 
 	onWorkspaceUpdated: Event<IWorkspace>;
 }
@@ -78,6 +82,11 @@ export interface IWorkspaceRevState {
 	zapRef?: string;
 }
 
+declare class Map<K, V> {
+	get(key: K): V;
+	set(key: K, value?: V): Map<K, V>;
+}
+
 export class WorkspaceContextService implements IWorkspaceContextService {
 
 	public _serviceBrand: any;
@@ -89,7 +98,8 @@ export class WorkspaceContextService implements IWorkspaceContextService {
 	constructor(workspace: IWorkspace) {
 		this.workspace = workspace;
 		this.workspaceEmitter = new Emitter<IWorkspace>();
-		this.workspaceRegistry.set(this.workspace.resource.toString(), this.workspace);
+		const workspaceRegistryKey = workspace.resource.with({ fragment: '', query: '' }).toString();
+		this.workspaceRegistry.set(workspaceRegistryKey, workspace);
 	}
 
 	public getWorkspace(): IWorkspace {
@@ -120,13 +130,16 @@ export class WorkspaceContextService implements IWorkspaceContextService {
 		return null;
 	}
 
-	public tryGetWorkspaceFromRegistry(resource: URI): IWorkspaceRevState | undefined {
-		return this.workspaceRegistry.get(resource.toString());
+	public tryGetWorkspaceFromRegistry(resource: URI): IWorkspace | undefined {
+		const workspaceRegistryKey = resource.with({ fragment: '', query: '' }).toString();
+		return this.workspaceRegistry.get(workspaceRegistryKey);
 	}
 
 	public setWorkspace(workspace: IWorkspace): void {
 		this.workspace = workspace;
-		this.workspaceRegistry.set(this.workspace.resource.toString(), this.workspace);
+		// TODO that when @rothfels changes the URI scheme on Sourcegraph we no longer need to do .with({ fragment: '', query: '' })
+		const workspaceRegistryKey = workspace.resource.with({ fragment: '', query: '' }).toString();
+		this.workspaceRegistry.set(workspaceRegistryKey, workspace);
 		this.workspaceEmitter.fire(workspace);
 	}
 
