@@ -89,9 +89,7 @@ export interface IWorkspaceRevState {
 }
 
 declare class Map<K, V> {
-	// delete(key: K): boolean;
 	get(key: K): V;
-	// has(key: K): boolean;
 	set(key: K, value?: V): Map<K, V>;
 }
 
@@ -143,11 +141,13 @@ export class WorkspaceContextService implements IWorkspaceContextService {
 	}
 
 	public tryGetWorkspaceFromRegistry(resource: URI): IWorkspace | undefined {
-		return this.workspaceRegistry.get(resource.toString());
+		const workspaceRegistryKey = resource.with({ fragment: '', query: '' }).toString();
+		return this.workspaceRegistry.get(workspaceRegistryKey);
 	}
 
 	public setWorkspace(workspace: IWorkspace): void {
 		this.workspace = workspace;
+		// TODO that when @rothfels changes the URI scheme on Sourcegraph we no longer need to do .with({ fragment: '', query: '' })
 		const workspaceRegistryKey = workspace.resource.with({ fragment: '', query: '' }).toString();
 		this.workspaceRegistry.set(workspaceRegistryKey, workspace);
 		this.workspaceEmitter.fire(workspace);
