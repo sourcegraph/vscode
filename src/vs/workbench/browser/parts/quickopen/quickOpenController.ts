@@ -1099,6 +1099,7 @@ export class EditorHistoryEntry extends EditorQuickOpenEntry {
 	private label: string;
 	private description: string;
 	private dirty: boolean;
+	private contextService: IWorkspaceContextService;
 
 	constructor(
 		input: IEditorInput | IResourceInput,
@@ -1110,6 +1111,7 @@ export class EditorHistoryEntry extends EditorQuickOpenEntry {
 		@IConfigurationService private configurationService: IConfigurationService
 	) {
 		super(editorService);
+		this.contextService = contextService;
 
 		this.input = input;
 
@@ -1169,7 +1171,12 @@ export class EditorHistoryEntry extends EditorQuickOpenEntry {
 			if (this.input instanceof EditorInput) {
 				this.editorService.openEditor(this.input, { pinned }, sideBySide).done(null, errors.onUnexpectedError);
 			} else {
-				this.editorService.openEditor({ resource: (this.input as IResourceInput).resource, options: { pinned } }, sideBySide);
+				this.editorService.openEditor({ resource: (this.input as IResourceInput).resource, options: { pinned } }, sideBySide).then(() => {
+					const workspace = this.contextService.tryGetWorkspaceFromRegistry(this.resource);
+					if (workspace) {
+						this.contextService.setWorkspace(workspace);
+					}
+				});
 			}
 
 			return true;
