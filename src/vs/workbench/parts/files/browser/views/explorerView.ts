@@ -730,7 +730,7 @@ export class ExplorerView extends CollapsibleViewletView {
 				// Drop those path which are parents of the current one
 				for (let i = resolvedDirectories.length - 1; i >= 0; i--) {
 					const resource = resolvedDirectories[i];
-					if (paths.isEqualOrParent(stat.resource.fsPath, resource.fsPath)) {
+					if (stat.resource.fragment.indexOf(resource.fragment) !== 0) {
 						resolvedDirectories.splice(i);
 					}
 				}
