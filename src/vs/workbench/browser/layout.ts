@@ -20,7 +20,8 @@ import { IDisposable, dispose } from 'vs/base/common/lifecycle';
 import { IEditorGroupService } from 'vs/workbench/services/group/common/groupService';
 import { getZoomFactor } from 'vs/base/browser/browser';
 
-const MIN_SIDEBAR_PART_WIDTH = 170;
+// TODO(nicot) remove this once activity bar and sidebar sash is in prod.
+const MIN_SIDEBAR_PART_WIDTH = 300;
 const MIN_EDITOR_PART_HEIGHT = 70;
 const MIN_EDITOR_PART_WIDTH = 220;
 const MIN_PANEL_PART_HEIGHT = 77;
