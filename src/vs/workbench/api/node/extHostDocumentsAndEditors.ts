@@ -44,10 +44,8 @@ export class ExtHostDocumentsAndEditors extends ExtHostDocumentsAndEditorsShape 
 		if (delta.removedDocuments) {
 			for (const id of delta.removedDocuments) {
 				const data = this._documents.get(id);
-				if (data) {
-					this._documents.delete(id);
-					removedDocuments.push(data);
-				}
+				this._documents.delete(id);
+				removedDocuments.push(data);
 			}
 		}
 
