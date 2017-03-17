@@ -85,7 +85,8 @@ export interface IWorkspace {
 export interface IWorkspaceRevState {
 	commitID?: string;
 	branch?: string;
-	zapRef?: string;
+	zapRev?: string; // the original (possibly fuzzy) Zap rev
+	zapRef?: string; // the full (non-fuzzy) Zap ref name
 }
 
 declare class Map<K, V> {
