@@ -13,10 +13,10 @@ import { SyncActionDescriptor } from 'vs/platform/actions/common/actions';
 import { IWorkbenchActionRegistry, Extensions as ActionExtensions } from 'vs/workbench/common/actionRegistry';
 import { KeyMod, KeyCode } from 'vs/base/common/keyCodes';
 import { GotoSymbolAction, GOTO_SYMBOL_PREFIX, SCOPE_PREFIX } from 'vs/workbench/parts/quickopen/browser/gotoSymbolHandler';
-import { ShowAllCommandsAction, ALL_COMMANDS_PREFIX } from 'vs/workbench/parts/quickopen/browser/commandsHandler';
+import { ShowAllCommandsAction } from 'vs/workbench/parts/quickopen/browser/commandsHandler';
 import { GotoLineAction, GOTO_LINE_PREFIX } from 'vs/workbench/parts/quickopen/browser/gotoLineHandler';
 import { HELP_PREFIX } from 'vs/workbench/parts/quickopen/browser/helpHandler';
-import { VIEW_PICKER_PREFIX, OpenViewPickerAction, QuickOpenViewPickerAction } from 'vs/workbench/parts/quickopen/browser/viewPickerHandler';
+import { OpenViewPickerAction, QuickOpenViewPickerAction } from 'vs/workbench/parts/quickopen/browser/viewPickerHandler';
 
 // Register Actions
 let registry = <IWorkbenchActionRegistry>Registry.as(ActionExtensions.WorkbenchActions);
@@ -85,17 +85,17 @@ Registry.as<IQuickOpenRegistry>(QuickOpenExtensions.Quickopen).registerQuickOpen
 	)
 );
 
-Registry.as<IQuickOpenRegistry>(QuickOpenExtensions.Quickopen).registerQuickOpenHandler(
-	new QuickOpenHandlerDescriptor(
-		'vs/workbench/parts/quickopen/browser/viewPickerHandler',
-		'ViewPickerHandler',
-		VIEW_PICKER_PREFIX,
-		[
-			{
-				prefix: VIEW_PICKER_PREFIX,
-				needsEditor: false,
-				description: nls.localize('viewPickerDescription', "Open View")
-			}
-		]
-	)
-);
+// Registry.as<IQuickOpenRegistry>(QuickOpenExtensions.Quickopen).registerQuickOpenHandler(
+// 	new QuickOpenHandlerDescriptor(
+// 		'vs/workbench/parts/quickopen/browser/viewPickerHandler',
+// 		'ViewPickerHandler',
+// 		VIEW_PICKER_PREFIX,
+// 		[
+// 			{
+// 				prefix: VIEW_PICKER_PREFIX,
+// 				needsEditor: false,
+// 				description: nls.localize('viewPickerDescription', "Open View")
+// 			}
+// 		]
+// 	)
+// );
