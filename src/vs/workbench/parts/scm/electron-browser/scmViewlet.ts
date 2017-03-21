@@ -146,7 +146,7 @@ class ResourceRenderer implements IRenderer<ISCMResource, ResourceTemplate> {
 
 class Delegate implements IDelegate<ISCMResourceGroup | ISCMResource> {
 
-	getHeight() { return 22; }
+	getHeight() { return 30; }
 
 	getTemplateId(element: ISCMResourceGroup | ISCMResource) {
 		return isSCMResource(element) ? ResourceRenderer.TEMPLATE_ID : ResourceGroupRenderer.TEMPLATE_ID;

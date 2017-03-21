@@ -236,7 +236,7 @@ export class Renderer implements tree.IRenderer {
 	}
 
 	public getHeight(tree: tree.ITree, element: any): number {
-		return 22;
+		return 30;
 	}
 
 	public getTemplateId(tree: tree.ITree, element: any): string {

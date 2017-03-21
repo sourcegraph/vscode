@@ -255,7 +255,7 @@ export class ActionRunner extends BaseActionRunner implements IActionRunner {
 // Explorer Renderer
 export class FileRenderer extends ActionsRenderer implements IRenderer {
 
-	private static ITEM_HEIGHT = 22;
+	private static ITEM_HEIGHT = 30;
 
 	private state: FileViewletState;
 

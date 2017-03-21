@@ -60,7 +60,7 @@ export class TreeRenderer extends ActionsRenderer implements IRenderer {
 	}
 
 	public getContentHeight(tree: ITree, element: any): number {
-		return 22;
+		return 30;
 	}
 
 	public renderContents(tree: ITree, node: InternalTreeExplorerNode, domElement: HTMLElement, previousCleanupFn: IElementCallback): IElementCallback {
