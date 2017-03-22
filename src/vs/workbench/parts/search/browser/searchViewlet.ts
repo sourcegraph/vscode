@@ -162,19 +162,6 @@ export class SearchViewlet extends Viewlet {
 		let patternIncludes = this.viewletSettings['query.folderIncludes'] || '';
 
 		this.queryDetails = this.searchWidgetsContainer.div({ 'class': ['query-details'] }, (builder) => {
-			builder.div({ 'class': 'more', 'tabindex': 0, 'role': 'button', 'title': nls.localize('moreSearch', "Toggle Search Details") })
-				.on(dom.EventType.CLICK, (e) => {
-					dom.EventHelper.stop(e);
-					this.toggleFileTypes(true);
-				}).on(dom.EventType.KEY_UP, (e: KeyboardEvent) => {
-					let event = new StandardKeyboardEvent(e);
-
-					if (event.equals(KeyCode.Enter) || event.equals(KeyCode.Space)) {
-						dom.EventHelper.stop(e);
-						this.toggleFileTypes();
-					}
-				});
-
 			//folder includes list
 			builder.div({ 'class': 'file-types' }, (builder) => {
 				let title = nls.localize('searchScope.includes', "files to include");
