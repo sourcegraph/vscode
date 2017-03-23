@@ -548,7 +548,7 @@ export class SearchModel extends Disposable {
 
 		this._searchQuery = query;
 		this._searchResult.query = this._searchQuery.contentPattern;
-		this._replacePattern = new ReplacePattern(this._replaceString, this._searchQuery.contentPattern);
+		// this._replacePattern = new ReplacePattern(this._replaceString, this._searchQuery.contentPattern);
 
 		this.currentRequest = this.searchService.search(this._searchQuery);
 
