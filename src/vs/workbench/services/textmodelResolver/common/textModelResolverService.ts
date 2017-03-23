@@ -17,6 +17,7 @@ import network = require('vs/base/common/network');
 import { ITextModelResolverService, ITextModelContentProvider, ITextEditorModel } from 'vs/editor/common/services/resolverService';
 import { IUntitledEditorService } from 'vs/workbench/services/untitled/common/untitledEditorService';
 import { UntitledEditorInput } from 'vs/workbench/common/editor/untitledEditorInput';
+import { IModeService } from "vs/editor/common/services/modeService";
 
 class ResourceModelCollection extends ReferenceCollection<TPromise<ITextEditorModel>> {
 
@@ -93,7 +94,8 @@ export class TextModelResolverService implements ITextModelResolverService {
 		@ITextFileService private textFileService: ITextFileService,
 		@IUntitledEditorService private untitledEditorService: IUntitledEditorService,
 		@IInstantiationService private instantiationService: IInstantiationService,
-		@IModelService private modelService: IModelService
+		@IModelService private modelService: IModelService,
+		@IModeService private modeService: IModeService
 	) {
 		this.resourceModelCollection = instantiationService.createInstance(ResourceModelCollection);
 	}
@@ -124,6 +126,15 @@ export class TextModelResolverService implements ITextModelResolverService {
 		if (resource.scheme === UntitledEditorInput.SCHEMA) {
 			return this.untitledEditorService.createOrGet(resource).resolve()
 				.then(model => new ImmortalReference(model));
+		}
+
+		if (resource.scheme === 'git' || resource.scheme === 'zap') {
+			return this.textFileService.models.loadOrCreate(resource).then(model => {
+				return this.modeService.getOrCreateModeByFilenameOrFirstLine(resource.fragment).then(mode => {
+					model.textEditorModel.setMode(mode.getLanguageIdentifier());
+					return new ImmortalReference(model);
+				});
+			});
 		}
 
 		// InMemory Schema: go through model service cache
