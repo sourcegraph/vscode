@@ -199,6 +199,11 @@ export class SearchWidget extends Widget {
 	}
 
 	private renderToggleReplaceButton(parent: HTMLElement): void {
+		this.toggleReplaceButton = this._register(new Button(parent));
+		this.toggleReplaceButton.icon = 'toggle-replace-button collapse';
+		this.toggleReplaceButton.addListener2('click', () => this.onToggleReplaceButton());
+		this.toggleReplaceButton.getElement().style.display = 'none';
+		this.toggleReplaceButton.getElement().title = nls.localize('search.replace.toggle.button.title', "Toggle Replace");
 	}
 
 	private renderSearchInput(parent: HTMLElement, options: ISearchWidgetOptions): void {
