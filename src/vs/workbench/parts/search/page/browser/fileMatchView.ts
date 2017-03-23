@@ -22,7 +22,6 @@ export class FileMatchView {
 
 	renderLineMatch(builder: Builder, match: Match): void {
 		builder.div({}, div => {
-			console.log(match.text());
 			div.innerHtml(match.text());
 		});
 	}

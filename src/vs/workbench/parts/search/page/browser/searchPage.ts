@@ -24,6 +24,8 @@ import { FindInput } from 'vs/base/browser/ui/findinput/findInput';
 import { QueryType, ISearchQuery } from 'vs/platform/search/common/search';
 import { ISearchWorkbenchService, FileMatch } from 'vs/workbench/parts/search/common/searchModel';
 import { FileMatchView } from 'vs/workbench/parts/search/page/browser/fileMatchView';
+import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
+import * as dom from 'vs/base/browser/dom';
 
 export class SearchPageContribution implements IWorkbenchContribution {
 
@@ -37,6 +39,7 @@ export class SearchPageContribution implements IWorkbenchContribution {
 	public getId() {
 		return 'sg.searchPage';
 	}
+
 }
 
 class SearchPage {
@@ -51,6 +54,7 @@ class SearchPage {
 		@IInstantiationService private instantiationService: IInstantiationService,
 		@ISearchWorkbenchService private searchService: ISearchWorkbenchService,
 		@ILifecycleService private lifecycleService: ILifecycleService,
+		@IWorkspaceContextService private contextService: IWorkspaceContextService,
 	) {
 		this.disposables.push(lifecycleService.onShutdown(() => this.dispose()));
 		this.create();
@@ -81,6 +85,7 @@ class SearchPage {
 
 	private updated = () => {
 		const query: ISearchQuery = {
+			folderResources: [this.contextService.getWorkspace().resource],
 			type: QueryType.Text,
 			contentPattern: {
 				pattern: this.findInput.getValue(),
@@ -89,6 +94,10 @@ class SearchPage {
 				isCaseSensitive: this.findInput.getCaseSensitive(),
 			}
 		};
+		if (query.contentPattern.pattern.length === 0) {
+			this.renderEmpty();
+			return;
+		}
 		this.search(query);
 	}
 
@@ -104,8 +113,8 @@ class SearchPage {
 		this.renderResults();
 	}
 
-	private renderResults = () => {
-		this.resultContainer.clearChildren();
+	private renderResults(): void {
+		dom.clearNode(this.resultContainer.getHTMLElement());
 		this.resultContainer.div({}, parent => {
 			this.fileMatches.forEach(fileMatch => {
 				parent.div({}, div => {
@@ -115,11 +124,15 @@ class SearchPage {
 		});
 	}
 
-	private renderLoading = () => {
-		this.resultContainer.clearChildren();
+	private renderLoading(): void {
+		dom.clearNode(this.resultContainer.getHTMLElement());
 		this.resultContainer.div({}, div => {
 			div.innerHtml('loading');
 		});
+	}
+
+	private renderEmpty(): void {
+		dom.clearNode(this.resultContainer.getHTMLElement());
 	}
 
 	private onError = (e) => {
