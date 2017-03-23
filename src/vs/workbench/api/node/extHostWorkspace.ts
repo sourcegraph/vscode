@@ -9,7 +9,7 @@ import URI from 'vs/base/common/uri';
 import { normalize } from 'vs/base/common/paths';
 import { relative } from 'path';
 import { IThreadService } from 'vs/workbench/services/thread/common/threadService';
-import { IWorkspace } from 'vs/platform/workspace/common/workspace';
+import { IWorkspace, IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
 import { IResourceEdit } from 'vs/editor/common/services/bulkEdit';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { fromRange } from 'vs/workbench/api/node/extHostTypeConverters';
@@ -21,17 +21,23 @@ export class ExtHostWorkspace implements ExtHostWorkspaceShape {
 	private static _requestIdPool = 0;
 
 	private _proxy: MainThreadWorkspaceShape;
-	private _workspacePath: string;
 	private _workspaceEmitter: Emitter<IWorkspace>;
 
-	constructor(threadService: IThreadService, workspacePath: string) {
+	constructor(threadService: IThreadService, private contextService: IWorkspaceContextService) {
 		this._proxy = threadService.get(MainContext.MainThreadWorkspace);
-		this._workspacePath = workspacePath;
 		this._workspaceEmitter = new Emitter<IWorkspace>();
 	}
 
 	getPath(): string {
-		return this._workspacePath;
+		const workspace = this.contextService.getWorkspace();
+		if (!workspace.resource) {
+			return undefined;
+		}
+		const resource = workspace.resource;
+		if (resource.query === '' && workspace.revState && workspace.revState.commitID) {
+			return `${resource.toString()}?${workspace.revState.commitID}`;
+		}
+		return resource.toString();
 	}
 
 	getRelativePath(pathOrUri: string | vscode.Uri): string {
@@ -47,11 +53,11 @@ export class ExtHostWorkspace implements ExtHostWorkspaceShape {
 			return path;
 		}
 
-		if (!this._workspacePath) {
+		if (!this.getPath()) {
 			return normalize(path);
 		}
 
-		let result = relative(this._workspacePath, path);
+		let result = relative(this.getPath(), path);
 		if (!result || result.indexOf('..') === 0) {
 			return normalize(path);
 		}
@@ -96,8 +102,9 @@ export class ExtHostWorkspace implements ExtHostWorkspaceShape {
 		return this._workspaceEmitter.event;
 	}
 
-	$setWorkspace(resource: URI, state: { commitID?: string, branch?: string, zapRef?: string }): TPromise<void> {
-		this._proxy.$setWorkspace(resource, state);
+	$setWorkspace(resource: URI, revState: { commitID?: string, branch?: string, zapRef?: string }): TPromise<void> {
+		this.contextService.setWorkspace({ resource, revState }); // TODO(john): is this ok?
+		this._proxy.$setWorkspace(resource, revState);
 		return TPromise.as(void 0);
 	}
 

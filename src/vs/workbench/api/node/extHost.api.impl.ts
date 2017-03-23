@@ -94,7 +94,6 @@ function proposed(extension: IExtensionDescription): Function {
  */
 export function createApiFactory(initData: IInitData, threadService: IThreadService, extensionService: ExtHostExtensionService, contextService: IWorkspaceContextService): IExtensionApiFactory {
 	const currWorkspace = contextService.getWorkspace();
-	const workspacePath = currWorkspace && currWorkspace.resource ? currWorkspace.resource.toString() : undefined;
 
 	// Addressable instances
 	const col = new InstanceCollection();
@@ -111,7 +110,7 @@ export function createApiFactory(initData: IInitData, threadService: IThreadServ
 	const extHostFileSystemEvent = col.define(ExtHostContext.ExtHostFileSystemEventService).set<ExtHostFileSystemEventService>(new ExtHostFileSystemEventService());
 	const extHostQuickOpen = col.define(ExtHostContext.ExtHostQuickOpen).set<ExtHostQuickOpen>(new ExtHostQuickOpen(threadService));
 	const extHostSCM = col.define(ExtHostContext.ExtHostSCM).set<ExtHostSCM>(new ExtHostSCM(threadService));
-	const extHostWorkspace = col.define(ExtHostContext.ExtHostWorkspace).set<ExtHostWorkspace>(new ExtHostWorkspace(threadService, workspacePath));
+	const extHostWorkspace = col.define(ExtHostContext.ExtHostWorkspace).set<ExtHostWorkspace>(new ExtHostWorkspace(threadService, contextService));
 	col.define(ExtHostContext.ExtHostExtensionService).set(extensionService);
 	col.finish(false, threadService);
 
