@@ -12,15 +12,14 @@ import { IEditorService } from 'vs/platform/editor/common/editor';
 import { optional } from 'vs/platform/instantiation/common/instantiation';
 import { CommandsRegistry, ICommandHandler } from 'vs/platform/commands/common/commands';
 import { IContextKeyService, ContextKeyExpr } from 'vs/platform/contextkey/common/contextkey';
-import { KeybindingsRegistry } from 'vs/platform/keybinding/common/keybindingsRegistry';
 import { Position } from 'vs/editor/common/core/position';
 import { Range } from 'vs/editor/common/core/range';
 import * as editorCommon from 'vs/editor/common/editorCommon';
-import { editorAction, ServicesAccessor, EditorAction, CommonEditorRegistry, commonEditorContribution } from 'vs/editor/common/editorCommonExtensions';
+import { editorAction, ServicesAccessor, EditorAction, commonEditorContribution } from 'vs/editor/common/editorCommonExtensions';
 import { Location } from 'vs/editor/common/modes';
-import { IPeekViewService, PeekContext, getOuterEditor } from 'vs/editor/contrib/zoneWidget/browser/peekViewWidget';
+import { IPeekViewService, PeekContext } from 'vs/editor/contrib/zoneWidget/browser/peekViewWidget';
 import { provideReferences } from '../common/referenceSearch';
-import { ReferencesController, RequestOptions, ctxReferenceSearchVisible } from './referencesController';
+import { ReferencesController, RequestOptions } from './referencesController';
 import { ReferencesModel } from './referencesModel';
 
 import ModeContextKeys = editorCommon.ModeContextKeys;
@@ -170,34 +169,34 @@ CommandsRegistry.registerCommand('editor.action.showReferences', {
 	}
 });
 
-function closeActiveReferenceSearch(accessor, args) {
-	var outerEditor = getOuterEditor(accessor, args);
-	if (!outerEditor) {
-		return;
-	}
+// function closeActiveReferenceSearch(accessor, args) {
+// 	var outerEditor = getOuterEditor(accessor, args);
+// 	if (!outerEditor) {
+// 		return;
+// 	}
 
-	let controller = ReferencesController.get(outerEditor);
-	if (!controller) {
-		return;
-	}
+// 	let controller = ReferencesController.get(outerEditor);
+// 	if (!controller) {
+// 		return;
+// 	}
 
-	controller.closeWidget();
-}
+// 	controller.closeWidget();
+// }
 
-KeybindingsRegistry.registerCommandAndKeybindingRule({
-	id: 'closeReferenceSearch',
-	weight: CommonEditorRegistry.commandWeight(50),
-	primary: KeyCode.Escape,
-	secondary: [KeyMod.Shift | KeyCode.Escape],
-	when: ContextKeyExpr.and(ctxReferenceSearchVisible, ContextKeyExpr.not('config.editor.stablePeek')),
-	handler: closeActiveReferenceSearch
-});
+// KeybindingsRegistry.registerCommandAndKeybindingRule({
+// 	id: 'closeReferenceSearch',
+// 	weight: CommonEditorRegistry.commandWeight(50),
+// 	primary: KeyCode.Escape,
+// 	secondary: [KeyMod.Shift | KeyCode.Escape],
+// 	when: ContextKeyExpr.and(ctxReferenceSearchVisible, ContextKeyExpr.not('config.editor.stablePeek')),
+// 	handler: closeActiveReferenceSearch
+// });
 
-KeybindingsRegistry.registerCommandAndKeybindingRule({
-	id: 'closeReferenceSearchEditor',
-	weight: CommonEditorRegistry.commandWeight(-101),
-	primary: KeyCode.Escape,
-	secondary: [KeyMod.Shift | KeyCode.Escape],
-	when: ContextKeyExpr.and(PeekContext.inPeekEditor, ContextKeyExpr.not('config.editor.stablePeek')),
-	handler: closeActiveReferenceSearch
-});
+// KeybindingsRegistry.registerCommandAndKeybindingRule({
+// 	id: 'closeReferenceSearchEditor',
+// 	weight: CommonEditorRegistry.commandWeight(-101),
+// 	primary: KeyCode.Escape,
+// 	secondary: [KeyMod.Shift | KeyCode.Escape],
+// 	when: ContextKeyExpr.and(PeekContext.inPeekEditor, ContextKeyExpr.not('config.editor.stablePeek')),
+// 	handler: closeActiveReferenceSearch
+// });
