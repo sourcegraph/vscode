@@ -134,7 +134,7 @@ export function createApiFactory(initData: IInitData, threadService: IThreadServ
 				console.warn('PROPOSED API is only available when developing an extension');
 
 			} else {
-				console.warn(`${extension.name} (${extension.id}) uses PROPOSED API which is subject to change and removal without notice`);
+				// console.warn(`${extension.name} (${extension.id}) uses PROPOSED API which is subject to change and removal without notice`);
 			}
 		}
 
