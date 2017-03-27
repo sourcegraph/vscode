@@ -25,7 +25,6 @@ import { IEnvironmentService } from 'vs/platform/environment/common/environment'
 import { Schemas } from 'vs/base/common/network';
 import { IBackupFileService } from 'vs/workbench/services/backup/common/backup';
 import { IMessageService, Severity } from 'vs/platform/message/common/message';
-import { getInstalledKeymaps, IKeymapExtension, onKeymapExtensionChanged } from 'vs/workbench/parts/extensions/electron-browser/keymapExtensions';
 import { used } from 'vs/workbench/parts/content/vs_code_dynamic_content_page';
 import { ILifecycleService } from 'vs/platform/lifecycle/common/lifecycle';
 import { IDisposable, dispose } from 'vs/base/common/lifecycle';
@@ -83,16 +82,6 @@ export class DynamicContentAction extends Action {
 	}
 }
 
-const reorderedQuickLinks = [
-	'showInterfaceOverview',
-	'selectTheme',
-	'showRecommendedKeymapExtensions',
-	'showCommands',
-	'keybindingsReference',
-	'openGlobalSettings',
-	'showInteractivePlayground',
-];
-
 class DynamicContentPage {
 
 	private disposables: IDisposable[] = [];
@@ -116,78 +105,23 @@ class DynamicContentPage {
 
 	private create() {
 		const recentlyOpened = this.windowService.getRecentlyOpen();
-		const installedKeymaps = this.instantiationService.invokeFunction(getInstalledKeymaps);
 		const uri = URI.parse(require.toUrl('./vs_code_dynamic_content_page'))
 			.with({
 				scheme: Schemas.walkThrough,
 				query: JSON.stringify({ moduleId: 'vs/workbench/parts/content/vs_code_dynamic_content_page' })
 			});
-		const input = this.instantiationService.createInstance(WalkThroughInput, localize('welcome.title', "Dynamic Content"), '', uri, telemetryFrom, container => this.onReady(container, recentlyOpened, installedKeymaps));
+		const input = this.instantiationService.createInstance(WalkThroughInput, localize('welcome.title', "Dynamic Content"), '', uri, telemetryFrom, container => this.onReady(container, recentlyOpened));
 		this.editorService.openEditor(input, { pinned: true }, Position.ONE)
 			.then(null, onUnexpectedError);
 	}
 
-	private onReady(container: HTMLElement, recentlyOpened: TPromise<{ files: string[]; folders: string[]; }>, installedKeymaps: TPromise<IKeymapExtension[]>): void {
+	private onReady(container: HTMLElement, recentlyOpened: TPromise<{ files: string[]; folders: string[]; }>): void {
 		const showOnStartup = <HTMLInputElement>container.querySelector('#showOnStartup');
 		showOnStartup.setAttribute('checked', 'checked');
 		showOnStartup.addEventListener('click', e => {
 			this.configurationEditingService.writeConfiguration(ConfigurationTarget.USER, { key: enabledKey, value: showOnStartup.checked })
 				.then(null, error => this.messageService.show(Severity.Error, error));
 		});
-
-		if (this.telemetryService.getExperiments().reorderQuickLinks) {
-			reorderedQuickLinks.forEach(clazz => {
-				const link = container.querySelector(`.commands .${clazz}`);
-				if (link) {
-					link.parentElement.appendChild(link);
-				}
-			});
-		}
-
-		container.addEventListener('click', event => {
-			for (let node = event.target as HTMLElement; node; node = node.parentNode as HTMLElement) {
-				if (node instanceof HTMLAnchorElement && node.classList.contains('installKeymap')) {
-					const keymapName = node.getAttribute('data-keymap-name');
-					const keymapIdentifier = node.getAttribute('data-keymap');
-					if (keymapName && keymapIdentifier) {
-						event.preventDefault();
-						event.stopPropagation();
-					}
-				}
-			}
-		});
-
-		this.updateInstalledKeymaps(container, installedKeymaps);
-		this.disposables.push(this.instantiationService.invokeFunction(onKeymapExtensionChanged)(ids => {
-			for (const id of ids) {
-				if (container.querySelector(`.installKeymap[data-keymap="${id}"], .currentKeymap[data-keymap="${id}"]`)) {
-					const installedKeymaps = this.instantiationService.invokeFunction(getInstalledKeymaps);
-					this.updateInstalledKeymaps(container, installedKeymaps);
-					break;
-				}
-			};
-		}));
-	}
-
-	private updateInstalledKeymaps(container: HTMLElement, installedKeymaps: TPromise<IKeymapExtension[]>) {
-		installedKeymaps.then(extensions => {
-			const elements = container.querySelectorAll('.installKeymap, .currentKeymap');
-			for (let i = 0; i < elements.length; i++) {
-				elements[i].classList.remove('installed');
-			}
-			extensions.filter(ext => ext.globallyEnabled)
-				.map(ext => ext.identifier)
-				.forEach(id => {
-					const install = container.querySelector(`.installKeymap[data-keymap="${id}"]`);
-					if (install) {
-						install.classList.add('installed');
-					}
-					const current = container.querySelector(`.currentKeymap[data-keymap="${id}"]`);
-					if (current) {
-						current.classList.add('installed');
-					}
-				});
-		}).then(null, onUnexpectedError);
 	}
 
 	dispose(): void {
