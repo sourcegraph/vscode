@@ -117,10 +117,10 @@ class DynamicContentPage {
 	private create() {
 		const recentlyOpened = this.windowService.getRecentlyOpen();
 		const installedKeymaps = this.instantiationService.invokeFunction(getInstalledKeymaps);
-		const uri = URI.parse(require.toUrl('./vs_code_welcome_page'))
+		const uri = URI.parse(require.toUrl('./vs_code_dynamic_content_page'))
 			.with({
 				scheme: Schemas.walkThrough,
-				query: JSON.stringify({ moduleId: 'vs/workbench/parts/welcome/page/electron-browser/vs_code_welcome_page' })
+				query: JSON.stringify({ moduleId: 'vs/workbench/parts/content/vs_code_dynamic_content_page' })
 			});
 		const input = this.instantiationService.createInstance(WalkThroughInput, localize('welcome.title', "Dynamic Content"), '', uri, telemetryFrom, container => this.onReady(container, recentlyOpened, installedKeymaps));
 		this.editorService.openEditor(input, { pinned: true }, Position.ONE)
