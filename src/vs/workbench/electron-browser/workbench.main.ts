@@ -101,6 +101,8 @@ import 'vs/workbench/parts/feedback/electron-browser/feedback.contribution';
 
 import 'vs/workbench/parts/welcome/gettingStarted/electron-browser/gettingStarted.contribution';
 
+import 'vs/workbench/parts/content/dynamicContent.contribution';
+
 import 'vs/workbench/parts/update/electron-browser/update.contribution';
 
 import 'vs/workbench/parts/nps/electron-browser/nps.contribution';
