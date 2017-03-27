@@ -3155,7 +3155,7 @@ declare module monaco.editor {
          * will not be destroyed.
          * It is safe to call setModel(null) to simply detach the current model from the editor.
          */
-        setModel(model: IEditorModel | undefined): void;
+        setModel(model: IEditorModel): void;
     }
 
     /**
@@ -4052,11 +4052,6 @@ declare module monaco.languages {
     export function registerReferenceProvider(languageId: string, provider: ReferenceProvider): IDisposable;
 
     /**
-     * Register a workspace reference provider (used by e.g. workspace reference search).
-     */
-    export function registerWorkspaceReferenceProvider(languageId: string, provider: WorkspaceReferenceProvider): IDisposable;
-
-    /**
      * Register a rename provider (used by e.g. rename symbol).
      */
     export function registerRenameProvider(languageId: string, provider: RenameProvider): IDisposable;
@@ -4671,49 +4666,7 @@ declare module monaco.languages {
         /**
          * Provide a set of project-wide references for the given position and document.
          */
-        provideReferences(model: editor.IReadOnlyModel, position: Position, context: ReferenceContext, token: CancellationToken, progress: (locations: Location[]) => void): Location[] | Thenable<Location[]>;
-    }
-
-    /**
-     * Represents information about a programming construct that can be used to
-     * identify and locate the construct's symbol. The identification does not have
-     * to be unique, but it should be as unique as possible. It is up to the
-     * language server to define the schema of this object.
-     *
-     * In contrast to `SymbolInformation`, `SymbolDescriptor` includes more concrete,
-     * language-specific, metadata about the symbol.
-     */
-    export interface ISymbolDescriptor {
-        /**
-         * A list of properties of a symbol that can be used to identify or locate
-         * it.
-         */
-        [attr: string]: any;
-    }
-
-    /**
-     * Represents information about a reference to programming constructs like
-     * variables, classes, interfaces, etc.
-     */
-    export interface IReferenceInformation {
-        /**
-         * The location in the workspace where the `symbol` is referenced.
-         */
-        reference: Location;
-        /**
-         * Metadata about the symbol that can be used to identify or locate its
-         * definition.
-         */
-        symbol: ISymbolDescriptor;
-    }
-
-    export interface WorkspaceReferenceProvider {
-        /**
-         * Implements https://github.com/sourcegraph/language-server-protocol/blob/master/extension-workspace-references.md
-         */
-        provideWorkspaceReferences(workspace: Uri, query: ISymbolDescriptor, hints: {
-            [hint: string]: any;
-        }, token: CancellationToken, progress: (references: IReferenceInformation[]) => void): IReferenceInformation[] | Thenable<IReferenceInformation[]>;
+        provideReferences(model: editor.IReadOnlyModel, position: Position, context: ReferenceContext, token: CancellationToken): Location[] | Thenable<Location[]>;
     }
 
     /**

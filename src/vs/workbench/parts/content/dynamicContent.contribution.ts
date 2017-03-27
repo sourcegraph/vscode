@@ -11,6 +11,12 @@ import { DynamicContentContribution, DynamicContentAction } from 'vs/workbench/p
 import { IConfigurationRegistry, Extensions as ConfigurationExtensions } from 'vs/platform/configuration/common/configurationRegistry';
 import { IWorkbenchActionRegistry, Extensions as ActionExtensions } from 'vs/workbench/common/actionRegistry';
 import { SyncActionDescriptor } from 'vs/platform/actions/common/actions';
+import { IEditorRegistry, Extensions as EditorExtensions } from 'vs/workbench/common/editor';
+import { EditorDescriptor } from 'vs/workbench/browser/parts/editor/baseEditor';
+import { DynamicContentInput } from 'vs/workbench/parts/content/dynamicContentInput';
+import { SyncDescriptor } from 'vs/platform/instantiation/common/descriptors';
+import { WalkThroughPart } from 'vs/workbench/parts/welcome/walkThrough/electron-browser/walkThroughPart';
+import { DynamicContentContentProvider, DynamicContentSnippetContentProvider } from "vs/workbench/parts/content/dynamicContentContentProvider";
 
 Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration)
 	.registerConfiguration({
@@ -29,5 +35,18 @@ Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration)
 Registry.as<IWorkbenchContributionsRegistry>(WorkbenchExtensions.Workbench)
 	.registerWorkbenchContribution(DynamicContentContribution);
 
+Registry.as<IWorkbenchContributionsRegistry>(WorkbenchExtensions.Workbench)
+	.registerWorkbenchContribution(DynamicContentContentProvider);
+
+Registry.as<IWorkbenchContributionsRegistry>(WorkbenchExtensions.Workbench)
+	.registerWorkbenchContribution(DynamicContentSnippetContentProvider);
+
 Registry.as<IWorkbenchActionRegistry>(ActionExtensions.WorkbenchActions)
 	.registerWorkbenchAction(new SyncActionDescriptor(DynamicContentAction, DynamicContentAction.ID, DynamicContentAction.LABEL), 'Help: Welcome', localize('help', "Help"));
+
+Registry.as<IEditorRegistry>(EditorExtensions.Editors)
+	.registerEditor(new EditorDescriptor(WalkThroughPart.ID,
+		localize('walkThrough.editor.label', "Interactive Playground"),
+		'vs/workbench/parts/welcome/walkThrough/electron-browser/walkThroughPart',
+		'WalkThroughPart'),
+	[new SyncDescriptor(DynamicContentInput)]);
