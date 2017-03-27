@@ -6,14 +6,13 @@
 
 import 'vs/css!./dynamicContent';
 import URI from 'vs/base/common/uri';
-import * as arrays from 'vs/base/common/arrays';
 import { WalkThroughInput } from 'vs/workbench/parts/welcome/walkThrough/node/walkThroughInput';
 import { IWorkbenchContribution } from 'vs/workbench/common/contributions';
 import { IPartService } from 'vs/workbench/services/part/common/partService';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { Position } from 'vs/platform/editor/common/editor';
-import { onUnexpectedError, isPromiseCanceledError } from 'vs/base/common/errors';
+import { onUnexpectedError } from 'vs/base/common/errors';
 import { IWindowService, IWindowsService } from 'vs/platform/windows/common/windows';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
@@ -25,10 +24,9 @@ import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 import { Schemas } from 'vs/base/common/network';
 import { IBackupFileService } from 'vs/workbench/services/backup/common/backup';
-import { IMessageService, Severity, CloseAction } from 'vs/platform/message/common/message';
+import { IMessageService, Severity } from 'vs/platform/message/common/message';
 import { getInstalledKeymaps, IKeymapExtension, onKeymapExtensionChanged } from 'vs/workbench/parts/extensions/electron-browser/keymapExtensions';
-import { IExtensionEnablementService, IExtensionManagementService, IExtensionGalleryService } from 'vs/platform/extensionManagement/common/extensionManagement';
-import { used } from 'vs/workbench/parts/welcome/page/electron-browser/vs_code_welcome_page';
+import { used } from 'vs/workbench/parts/content/vs_code_dynamic_content_page';
 import { ILifecycleService } from 'vs/platform/lifecycle/common/lifecycle';
 import { IDisposable, dispose } from 'vs/base/common/lifecycle';
 
@@ -109,9 +107,6 @@ class DynamicContentPage {
 		@IConfigurationEditingService private configurationEditingService: IConfigurationEditingService,
 		@IEnvironmentService private environmentService: IEnvironmentService,
 		@IMessageService private messageService: IMessageService,
-		@IExtensionEnablementService private extensionEnablementService: IExtensionEnablementService,
-		@IExtensionGalleryService private extensionGalleryService: IExtensionGalleryService,
-		@IExtensionManagementService private extensionManagementService: IExtensionManagementService,
 		@ILifecycleService lifecycleService: ILifecycleService,
 		@ITelemetryService private telemetryService: ITelemetryService
 	) {
@@ -140,55 +135,6 @@ class DynamicContentPage {
 				.then(null, error => this.messageService.show(Severity.Error, error));
 		});
 
-		// recentlyOpened.then(({folders}) => {
-		// 	if (this.contextService.hasWorkspace()) {
-		// 		const current = this.contextService.getWorkspace().resource.fsPath;
-		// 		folders = folders.filter(folder => folder !== current);
-		// 	}
-		// 	if (!folders.length) {
-		// 		const recent = container.querySelector('.dynamicContentPage') as HTMLElement;
-		// 		recent.classList.add('emptyRecent');
-		// 		return;
-		// 	}
-		// 	const ul = container.querySelector('.recent ul');
-		// 	folders.slice(0, 5).forEach(folder => {
-		// 		const li = document.createElement('li');
-
-		// 		const a = document.createElement('a');
-		// 		let name = path.basename(folder);
-		// 		let parentFolder = path.dirname(folder);
-		// 		if (!name && parentFolder) {
-		// 			const tmp = name;
-		// 			name = parentFolder;
-		// 			parentFolder = tmp;
-		// 		}
-		// 		a.innerText = name;
-		// 		a.title = folder;
-		// 		a.href = 'javascript:void(0)';
-		// 		a.addEventListener('click', e => {
-		// 			this.telemetryService.publicLog('workbenchActionExecuted', {
-		// 				id: 'openRecentFolder',
-		// 				from: telemetryFrom
-		// 			});
-		// 			this.windowsService.openWindow([folder], { forceNewWindow: e.ctrlKey || e.metaKey });
-		// 			e.preventDefault();
-		// 			e.stopPropagation();
-		// 		});
-		// 		li.appendChild(a);
-
-		// 		const span = document.createElement('span');
-		// 		span.classList.add('path');
-		// 		if ((platform.isMacintosh || platform.isLinux) && strings.startsWith(parentFolder, this.environmentService.userHome)) {
-		// 			parentFolder = `~${parentFolder.substr(this.environmentService.userHome.length)}`;
-		// 		}
-		// 		span.innerText = parentFolder;
-		// 		span.title = folder;
-		// 		li.appendChild(span);
-
-		// 		ul.appendChild(li);
-		// 	});
-		// }).then(null, onUnexpectedError);
-
 		if (this.telemetryService.getExperiments().reorderQuickLinks) {
 			reorderedQuickLinks.forEach(clazz => {
 				const link = container.querySelector(`.commands .${clazz}`);
@@ -204,7 +150,6 @@ class DynamicContentPage {
 					const keymapName = node.getAttribute('data-keymap-name');
 					const keymapIdentifier = node.getAttribute('data-keymap');
 					if (keymapName && keymapIdentifier) {
-						this.installKeymap(keymapName, keymapIdentifier);
 						event.preventDefault();
 						event.stopPropagation();
 					}
@@ -222,105 +167,6 @@ class DynamicContentPage {
 				}
 			};
 		}));
-	}
-
-	private installKeymap(keymapName: string, keymapIdentifier: string): void {
-		this.telemetryService.publicLog('installKeymap', {
-			from: telemetryFrom,
-			extensionId: keymapIdentifier,
-		});
-		this.instantiationService.invokeFunction(getInstalledKeymaps).then(extensions => {
-			const keymap = arrays.first(extensions, extension => extension.identifier === keymapIdentifier);
-			if (keymap && keymap.globallyEnabled) {
-				this.telemetryService.publicLog('installedKeymap', {
-					from: telemetryFrom,
-					extensionId: keymapIdentifier,
-					outcome: 'already_enabled',
-				});
-				this.messageService.show(Severity.Info, localize('dynamicContentPage.keymapAlreadyInstalled', "The {0} keyboard shortcuts are already installed.", keymapName));
-				return;
-			}
-			const foundAndInstalled = keymap ? TPromise.as(true) : this.extensionGalleryService.query({ names: [keymapIdentifier] })
-				.then(result => {
-					const [extension] = result.firstPage;
-					if (!extension) {
-						return false;
-					}
-					return this.extensionManagementService.installFromGallery(extension)
-						.then(() => {
-							// TODO: Do this as part of the install to avoid multiple events.
-							return this.extensionEnablementService.setEnablement(keymapIdentifier, false);
-						}).then(() => {
-							return true;
-						});
-				});
-			this.messageService.show(Severity.Info, {
-				message: localize('dynamicContentPage.willReloadAfterInstallingKeymap', "The window will reload after installing the {0} keyboard shortcuts.", keymapName),
-				actions: [
-					new Action('ok', localize('ok', "OK"), null, true, () => {
-						const messageDelay = TPromise.timeout(300);
-						messageDelay.then(() => {
-							this.messageService.show(Severity.Info, {
-								message: localize('dynamicContentPage.installingKeymap', "Installing the {0} keyboard shortcuts...", keymapName),
-								actions: [CloseAction]
-							});
-						});
-						TPromise.join(extensions.filter(extension => extension.globallyEnabled)
-							.map(extension => {
-								return this.extensionEnablementService.setEnablement(extension.identifier, false);
-							})).then(() => {
-								return foundAndInstalled.then(found => {
-									messageDelay.cancel();
-									if (found) {
-										return this.extensionEnablementService.setEnablement(keymapIdentifier, true)
-											.then(() => {
-												this.telemetryService.publicLog('installedKeymap', {
-													from: telemetryFrom,
-													extensionId: keymapIdentifier,
-													outcome: keymap ? 'enabled' : 'installed',
-												});
-												return this.windowService.reloadWindow();
-											});
-									} else {
-										this.telemetryService.publicLog('installedKeymap', {
-											from: telemetryFrom,
-											extensionId: keymapIdentifier,
-											outcome: 'not_found',
-										});
-										this.messageService.show(Severity.Error, localize('dynamicContentPage.keymapNotFound', "The {0} keyboard shortcuts with id {1} could not be found.", keymapName, keymapIdentifier));
-										return undefined;
-									}
-								});
-							}).then(null, err => {
-								this.telemetryService.publicLog('installedKeymap', {
-									from: telemetryFrom,
-									extensionId: keymapIdentifier,
-									outcome: isPromiseCanceledError(err) ? 'canceled' : 'error',
-									error: String(err),
-								});
-								this.messageService.show(Severity.Error, err);
-							});
-						return TPromise.as(true);
-					}),
-					new Action('cancel', localize('cancel', "Cancel"), null, true, () => {
-						this.telemetryService.publicLog('installedKeymap', {
-							from: telemetryFrom,
-							extensionId: keymapIdentifier,
-							outcome: 'user_canceled',
-						});
-						return TPromise.as(true);
-					})
-				]
-			});
-		}).then<void>(null, err => {
-			this.telemetryService.publicLog('installedKeymap', {
-				from: telemetryFrom,
-				extensionId: keymapIdentifier,
-				outcome: isPromiseCanceledError(err) ? 'canceled' : 'error',
-				error: String(err),
-			});
-			this.messageService.show(Severity.Error, err);
-		});
 	}
 
 	private updateInstalledKeymaps(container: HTMLElement, installedKeymaps: TPromise<IKeymapExtension[]>) {
