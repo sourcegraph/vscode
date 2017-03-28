@@ -7,19 +7,15 @@
 import 'vs/css!./dynamicOverlay';
 import { $, Builder } from 'vs/base/browser/builder';
 import * as dom from 'vs/base/browser/dom';
-import { Registry } from 'vs/platform/platform';
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { Parts, IPartService } from 'vs/workbench/services/part/common/partService';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { localize } from 'vs/nls';
 import { Action } from 'vs/base/common/actions';
-import { IWorkbenchActionRegistry, Extensions } from 'vs/workbench/common/actionRegistry';
-import { SyncActionDescriptor } from 'vs/platform/actions/common/actions';
 import { ICommandService } from 'vs/platform/commands/common/commands';
 import { IDisposable, dispose } from 'vs/base/common/lifecycle';
 import { RawContextKey, IContextKey, IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
-import { KeyCode } from 'vs/base/common/keyCodes';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 
 const OVERLAY_VISIBLE = new RawContextKey<boolean>('interfaceOverviewVisible', false);
@@ -94,11 +90,6 @@ export class DynamicOverlay {
 			.style({ height: `calc(100% - ${offset}px)` })
 			.display('none');
 
-		this._overlay.on('click', () => this.hide(), this._toDispose);
-		this.commandService.onWillExecuteCommand(() => this.hide());
-
-		$(this._overlay).div({ 'class': 'commandPalettePlaceholder' });
-
 		if (content) {
 			console.log(`we have content sooooo yay!`);
 			$(this._overlay).append(content);
@@ -132,9 +123,3 @@ export class DynamicOverlay {
 		this._toDispose = dispose(this._toDispose);
 	}
 }
-
-Registry.as<IWorkbenchActionRegistry>(Extensions.WorkbenchActions)
-	.registerWorkbenchAction(new SyncActionDescriptor(DynamicOverlayAction, DynamicOverlayAction.ID, DynamicOverlayAction.LABEL), 'Help: Show Interface Overview', localize('help', "Help"));
-
-Registry.as<IWorkbenchActionRegistry>(Extensions.WorkbenchActions)
-	.registerWorkbenchAction(new SyncActionDescriptor(HideDynamicOverlayAction, HideDynamicOverlayAction.ID, HideDynamicOverlayAction.LABEL, { primary: KeyCode.Escape }, OVERLAY_VISIBLE), 'Help: Hide Interface Overview', localize('help', "Help"));
