@@ -29,10 +29,6 @@ export namespace Schemas {
 	 */
 	export const walkThrough: string = 'walkThrough';
 
-	export const dynamicContent: string = 'dynamicContent';
-
-	export const dynamicContentSnippet: string = 'dynamicContentSnippet';
-
 	/**
 	 * An embedded code snippet.
 	 */
