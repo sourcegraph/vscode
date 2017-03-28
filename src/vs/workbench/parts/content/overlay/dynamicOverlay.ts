@@ -99,7 +99,10 @@ export class DynamicOverlay {
 			console.error('Create must be called before calling show() dynamicOverlay');
 			return;
 		}
-		this._overlayVisible.set(true);
+		if (this._overlay.style('display') !== 'flex') {
+			this._overlay.display('flex');
+			this._overlayVisible.set(true);
+		}
 	}
 
 	public hide() {
