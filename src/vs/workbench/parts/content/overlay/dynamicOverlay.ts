@@ -106,6 +106,9 @@ export class DynamicOverlay {
 	}
 
 	public hide() {
+		if (!this._overlay || this._overlay.isHidden()) {
+			return;
+		}
 		if (this._overlay.style('display') !== 'none') {
 			this._overlay.display('none');
 			this._overlayVisible.reset();
