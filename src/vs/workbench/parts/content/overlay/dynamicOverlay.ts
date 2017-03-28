@@ -6,7 +6,6 @@
 
 import 'vs/css!./dynamicOverlay';
 import { $, Builder } from 'vs/base/browser/builder';
-import * as dom from 'vs/base/browser/dom';
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { Parts, IPartService } from 'vs/workbench/services/part/common/partService';
@@ -80,18 +79,17 @@ export class DynamicOverlay {
 		this._overlayVisible = OVERLAY_VISIBLE.bindTo(this._contextKeyService);
 	}
 
-	public create(content?: Builder): void {
+	public create(content?: Builder, overlayStyles?: any): void {
 		const container = this.partService.getContainer(Parts.EDITOR_PART);
 
-		const offset = this.partService.getTitleBarOffset();
+		const isStatusbarHidden = !this.partService.isVisible(Parts.STATUSBAR_PART);
+		const offset = isStatusbarHidden ? 0 : 32;
 		this._overlay = $(container.parentElement)
 			.div({ 'class': 'welcomeOverlay' })
-			.style({ top: `${offset}px` })
-			.style({ height: `calc(100% - ${offset}px)` })
+			.style(overlayStyles ? overlayStyles : { height: `calc(100% - ${offset}px)`, backgroundColor: 'white' })
 			.display('none');
 
 		if (content) {
-			console.log(`we have content sooooo yay!`);
 			$(this._overlay).append(content);
 		}
 	}
@@ -101,20 +99,12 @@ export class DynamicOverlay {
 			console.error('Create must be called before calling show() dynamicOverlay');
 			return;
 		}
-
-		if (this._overlay.style('display') !== 'block') {
-			this._overlay.display('block');
-			const workbench = document.querySelector('.monaco-workbench') as HTMLElement;
-			dom.addClass(workbench, 'blur-background');
-			this._overlayVisible.set(true);
-		}
+		this._overlayVisible.set(true);
 	}
 
 	public hide() {
 		if (this._overlay.style('display') !== 'none') {
 			this._overlay.display('none');
-			const workbench = document.querySelector('.monaco-workbench') as HTMLElement;
-			dom.removeClass(workbench, 'blur-background');
 			this._overlayVisible.reset();
 		}
 	}
