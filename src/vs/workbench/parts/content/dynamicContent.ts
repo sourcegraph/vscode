@@ -15,8 +15,11 @@ import { IConfigurationService } from 'vs/platform/configuration/common/configur
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IBackupFileService } from 'vs/workbench/services/backup/common/backup';
 import { DynamicOverlay } from 'vs/workbench/parts/content/overlay/dynamicOverlay';
+import { $, Builder } from 'vs/base/browser/builder';
 
 export class DynamicContentContribution implements IWorkbenchContribution {
+
+	private _overlay: Builder;
 
 	constructor(
 		@IPartService partService: IPartService,
@@ -34,6 +37,8 @@ export class DynamicContentContribution implements IWorkbenchContribution {
 			if (!activeInput && !hasBackups) {
 				console.log(`creating the dynamic overlay!`);
 				const overlay = instantiationService.createInstance(DynamicOverlay);
+				this._overlay = $('h2.title').text('Making dynamic components is awesome!');
+				overlay.create(this._overlay);
 				overlay.show();
 			}
 		}).then(null, onUnexpectedError);
