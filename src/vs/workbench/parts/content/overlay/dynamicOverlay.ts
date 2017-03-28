@@ -84,7 +84,7 @@ export class DynamicOverlay {
 		this._overlayVisible = OVERLAY_VISIBLE.bindTo(this._contextKeyService);
 	}
 
-	public create(content: Builder): void {
+	public create(content?: Builder): void {
 		const container = this.partService.getContainer(Parts.EDITOR_PART);
 
 		const offset = this.partService.getTitleBarOffset();
