@@ -106,12 +106,14 @@ export class DynamicOverlayAction extends Action {
 		@IInstantiationService private instantiationService: IInstantiationService
 	) {
 		super(id, label);
+		console.log(`creating`);
 	}
 
-	public run(): TPromise<void> {
+	public run(event?: any, data?: any): TPromise<any> {
 		if (!dynamicOverlay) {
 			dynamicOverlay = this.instantiationService.createInstance(DynamicOverlay);
 		}
+		console.log(`running! with args`, event, data);
 		dynamicOverlay.show();
 		return null;
 	}
@@ -137,7 +139,7 @@ export class HideDynamicOverlayAction extends Action {
 	}
 }
 
-class DynamicOverlay {
+export class DynamicOverlay {
 
 	private _toDispose: IDisposable[] = [];
 	private _overlayVisible: IContextKey<boolean>;
@@ -189,7 +191,7 @@ class DynamicOverlay {
 			});
 	}
 
-	public show() {
+	public show(additionalNode?: any) {
 		if (this._overlay.style('display') !== 'block') {
 			this._overlay.display('block');
 			const workbench = document.querySelector('.monaco-workbench') as HTMLElement;

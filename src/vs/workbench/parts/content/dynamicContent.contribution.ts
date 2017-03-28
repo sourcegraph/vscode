@@ -7,10 +7,8 @@
 import { localize } from 'vs/nls';
 import { IWorkbenchContributionsRegistry, Extensions as WorkbenchExtensions } from 'vs/workbench/common/contributions';
 import { Registry } from 'vs/platform/platform';
-import { DynamicContentContribution, DynamicContentAction } from 'vs/workbench/parts/content/dynamicContent';
+import { DynamicContentContribution } from 'vs/workbench/parts/content/dynamicContent';
 import { IConfigurationRegistry, Extensions as ConfigurationExtensions } from 'vs/platform/configuration/common/configurationRegistry';
-import { IWorkbenchActionRegistry, Extensions as ActionExtensions } from 'vs/workbench/common/actionRegistry';
-import { SyncActionDescriptor } from 'vs/platform/actions/common/actions';
 import { IEditorRegistry, Extensions as EditorExtensions } from 'vs/workbench/common/editor';
 import { EditorDescriptor } from 'vs/workbench/browser/parts/editor/baseEditor';
 import { DynamicContentInput } from 'vs/workbench/parts/content/dynamicContentInput';
@@ -40,9 +38,6 @@ Registry.as<IWorkbenchContributionsRegistry>(WorkbenchExtensions.Workbench)
 
 Registry.as<IWorkbenchContributionsRegistry>(WorkbenchExtensions.Workbench)
 	.registerWorkbenchContribution(DynamicContentSnippetContentProvider);
-
-Registry.as<IWorkbenchActionRegistry>(ActionExtensions.WorkbenchActions)
-	.registerWorkbenchAction(new SyncActionDescriptor(DynamicContentAction, DynamicContentAction.ID, DynamicContentAction.LABEL), 'Help: Welcome', localize('help', "Help"));
 
 Registry.as<IEditorRegistry>(EditorExtensions.Editors)
 	.registerEditor(new EditorDescriptor(WalkThroughPart.ID,
