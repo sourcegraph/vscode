@@ -9,59 +9,11 @@ import { $, Builder } from 'vs/base/browser/builder';
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { Parts, IPartService } from 'vs/workbench/services/part/common/partService';
-import { TPromise } from 'vs/base/common/winjs.base';
-import { localize } from 'vs/nls';
-import { Action } from 'vs/base/common/actions';
 import { ICommandService } from 'vs/platform/commands/common/commands';
 import { IDisposable, dispose } from 'vs/base/common/lifecycle';
 import { RawContextKey, IContextKey, IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
-import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 
 const OVERLAY_VISIBLE = new RawContextKey<boolean>('interfaceOverviewVisible', false);
-
-let dynamicOverlay: DynamicOverlay;
-
-export class DynamicOverlayAction extends Action {
-
-	public static ID = 'workbench.action.showDynamicInterfaceOverview';
-	public static LABEL = localize('dynamicOverlay', "User Interface Overview");
-
-	constructor(
-		id: string,
-		label: string,
-		@IInstantiationService private instantiationService: IInstantiationService
-	) {
-		super(id, label);
-	}
-
-	public run(event?: any, data?: any): TPromise<any> {
-		if (!dynamicOverlay) {
-			dynamicOverlay = this.instantiationService.createInstance(DynamicOverlay);
-		}
-		dynamicOverlay.show();
-		return null;
-	}
-}
-
-export class HideDynamicOverlayAction extends Action {
-
-	public static ID = 'workbench.action.hideDynamicInterfaceOverview';
-	public static LABEL = localize('hideWelcomeOverlay', "Hide Interface Overview");
-
-	constructor(
-		id: string,
-		label: string
-	) {
-		super(id, label);
-	}
-
-	public run(): TPromise<void> {
-		if (dynamicOverlay) {
-			dynamicOverlay.hide();
-		}
-		return null;
-	}
-}
 
 export class DynamicOverlay {
 
@@ -85,9 +37,10 @@ export class DynamicOverlay {
 		const isStatusbarHidden = !this.partService.isVisible(Parts.STATUSBAR_PART);
 		const offset = isStatusbarHidden ? 0 : 32;
 		this._overlay = $(container.parentElement)
-			.div({ 'class': 'welcomeOverlay' })
+			.div({ 'class': 'dynamicOverlay' })
 			.style(overlayStyles ? overlayStyles : { height: `calc(100% - ${offset}px)`, backgroundColor: 'white' })
 			.display('none');
+		this._toDispose.push(this._overlay);
 
 		if (content) {
 			$(this._overlay).append(content);
@@ -108,6 +61,11 @@ export class DynamicOverlay {
 	public hide() {
 		this._overlay.display('none');
 		this._overlayVisible.reset();
+	}
+
+	public destory() {
+		this.hide();
+		this._overlay.destroy();
 	}
 
 	dispose() {

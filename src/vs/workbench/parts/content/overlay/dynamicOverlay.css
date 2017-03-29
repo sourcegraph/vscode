@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-.monaco-workbench > .welcomeOverlay {
+.monaco-workbench > .dynamicOverlay {
 	position: relative;
 	height: 100%;
 	width: 100%;
