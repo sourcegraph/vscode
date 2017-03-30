@@ -53,6 +53,11 @@ export interface IWorkspaceContextService {
 	 */
 	tryGetWorkspaceFromRegistry(resource: URI): IWorkspace | undefined;
 
+	/**
+	 * Registers (but doesn't change) a workspace (unless overwrite is 'true').
+	 */
+	registerWorkspace(workspace: IWorkspace, overwrite?: boolean): void;
+
 	onWorkspaceUpdated: Event<IWorkspace>;
 }
 
@@ -89,24 +94,19 @@ export interface IWorkspaceRevState {
 	zapRef?: string; // the full (non-fuzzy) Zap ref name
 }
 
-declare class Map<K, V> {
-	get(key: K): V;
-	set(key: K, value?: V): Map<K, V>;
-}
-
 export class WorkspaceContextService implements IWorkspaceContextService {
 
 	public _serviceBrand: any;
 
 	private workspace: IWorkspace;
 	private workspaceEmitter: Emitter<IWorkspace>;
-	private workspaceRegistry = new Map<string, IWorkspace>();
+	private workspaceRegistry: { [key: string]: IWorkspace } = {};
 
 	constructor(workspace: IWorkspace) {
 		this.workspace = workspace;
 		this.workspaceEmitter = new Emitter<IWorkspace>();
-		const workspaceRegistryKey = workspace.resource.with({ fragment: '', query: '' }).toString();
-		this.workspaceRegistry.set(workspaceRegistryKey, workspace);
+		const workspaceRegistryKey = workspace.resource.toString();
+		this.workspaceRegistry[workspaceRegistryKey] = workspace;
 	}
 
 	public getWorkspace(): IWorkspace {
@@ -142,16 +142,33 @@ export class WorkspaceContextService implements IWorkspaceContextService {
 	}
 
 	public tryGetWorkspaceFromRegistry(resource: URI): IWorkspace | undefined {
-		const workspaceRegistryKey = resource.with({ fragment: '', query: '' }).toString();
-		return this.workspaceRegistry.get(workspaceRegistryKey);
+		const resourceString = resource.toString();
+		for (const registryKey of Object.keys(this.workspaceRegistry)) {
+			// The resource must be identical to the workspace or a subpath of workspace.
+			// Select the closest match, e.g. for `file://github.com/gorilla/muxy/file`
+			// match `file://github.com/gorilla/muxy` not `github.com/gorilla/mux`.
+			if (resourceString.indexOf(registryKey) !== -1) {
+				if (resourceString === registryKey || resourceString.substr(registryKey.length)[0] === '/') {
+					return this.workspaceRegistry[registryKey];
+				}
+			}
+		}
+		return undefined;
 	}
 
 	public setWorkspace(workspace: IWorkspace): void {
 		this.workspace = workspace;
-		// TODO that when @rothfels changes the URI scheme on Sourcegraph we no longer need to do .with({ fragment: '', query: '' })
-		const workspaceRegistryKey = workspace.resource.with({ fragment: '', query: '' }).toString();
-		this.workspaceRegistry.set(workspaceRegistryKey, workspace);
+		const workspaceRegistryKey = workspace.resource.toString();
+		this.workspaceRegistry[workspaceRegistryKey] = workspace;
 		this.workspaceEmitter.fire(workspace);
+	}
+
+	public registerWorkspace(workspace: IWorkspace, overwrite?: boolean): void {
+		const workspaceRegistryKey = workspace.resource.toString();
+		if (this.workspaceRegistry[workspaceRegistryKey] && !overwrite) {
+			return;
+		}
+		this.workspaceRegistry[workspaceRegistryKey] = workspace;
 	}
 
 	public get onWorkspaceUpdated(): Event<IWorkspace> {

@@ -400,6 +400,9 @@ export function createApiFactory(initData: IInitData, threadService: IThreadServ
 			onDidChangeTextDocument: (listener, thisArgs?, disposables?) => {
 				return extHostDocuments.onDidChangeDocument(listener, thisArgs, disposables);
 			},
+			onDidRevertTextDocument: (listener, thisArgs?, disposables?) => {
+				return extHostDocuments.onDidRevertDocument(listener, thisArgs, disposables);
+			},
 			onDidSaveTextDocument: (listener, thisArgs?, disposables?) => {
 				return extHostDocuments.onDidSaveDocument(listener, thisArgs, disposables);
 			},

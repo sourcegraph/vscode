@@ -206,7 +206,7 @@ export class MainThreadDocuments extends MainThreadDocumentsShape {
 	}
 
 	$tryRevertAll(uris: URI[]): TPromise<boolean> {
-		return this._textFileService.revertAll(uris, true).then(() => true, () => false);
+		return this._textFileService.revertAll(uris, { force: true }).then(() => true, () => false);
 	}
 
 	$tryOpenDocument(uri: URI): TPromise<any> {

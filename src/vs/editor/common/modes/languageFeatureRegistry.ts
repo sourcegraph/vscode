@@ -172,7 +172,16 @@ export default class LanguageFeatureRegistry<T> {
 			// Ignore entries whose (non-empty) workspace doesn't match the currently requested resource.
 			// Prevents multiple requests from being made to extension host if multiple extension hosts have
 			// registered a provider.
-			if (entry.workspace !== null && model.uri.with({ fragment: '' }).toString() !== entry.workspace.resource.toString()) {
+			const modelUriInWorkspace = () => {
+				return model.uri.toString().indexOf(entry.workspace.resource.toString()) === 0;
+			};
+			const modelUriIsWorkspace = () => {
+				return model.uri.toString() === entry.workspace.resource.toString();
+			};
+			const modelUriIsSubpathOfWorkspace = () => {
+				return modelUriInWorkspace() && model.uri.toString()[entry.workspace.resource.toString().length] === '/';
+			};
+			if (entry.workspace && !modelUriIsWorkspace() && !modelUriIsSubpathOfWorkspace()) {
 				entry._score = 0;
 			}
 		}
