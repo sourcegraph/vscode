@@ -4,8 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 'use strict';
-
-import assert = require('vs/base/common/assert');
 import URI from 'vs/base/common/uri';
 import paths = require('vs/base/common/paths');
 import { IFileStat, isEqual, isParent } from 'vs/platform/files/common/files';
@@ -259,7 +257,7 @@ export class FileStat implements IFileStat {
 				return child;
 			}
 
-			if (child.isDirectory && isParent(resource.fragment, child.resource.fragment)) {
+			if (child.isDirectory && isParent(resource.path, child.resource.path)) {
 				return child.find(resource);
 			}
 		}
