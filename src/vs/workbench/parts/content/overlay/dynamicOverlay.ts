@@ -80,7 +80,7 @@ export class DynamicOverlay {
 	 * all listeners and properties set to the data slots.
 	 * @returns void
 	 */
-	public destory(): void {
+	public destroy(): void {
 		this.hide();
 		this._overlay.destroy();
 	}
