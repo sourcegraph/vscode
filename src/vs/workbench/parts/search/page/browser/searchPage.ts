@@ -26,6 +26,9 @@ import { ISearchWorkbenchService, FileMatch } from 'vs/workbench/parts/search/co
 import { FileMatchView } from 'vs/workbench/parts/search/page/browser/fileMatchView';
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
 import * as dom from 'vs/base/browser/dom';
+import { IKeyboardEvent } from 'vs/base/browser/keyboardEvent';
+import { KeyCode } from 'vs/base/common/keyCodes';
+
 
 export class SearchPageContribution implements IWorkbenchContribution {
 
@@ -76,14 +79,20 @@ class SearchPage {
 			tip.innerHtml('Tip: Continue typing terms separated by spaces to refine your search');
 		});
 		this.findInput = new FindInput(container, null, { width: 798, label: '' });
-		this.findInput.onDidOptionChange(this.updated);
-		this.findInput.onInput(this.updated);
+		this.findInput.onDidOptionChange(this.startSearch);
+		this.findInput.onKeyDown(this.keyDown);
 		$(container).div({}, c => {
 			this.resultContainer = c;
 		});
 	}
 
-	private updated = () => {
+	private keyDown = (e: IKeyboardEvent) => {
+		if (e.keyCode === KeyCode.Enter) {
+			this.startSearch();
+		}
+	}
+
+	private startSearch(): void {
 		const query: ISearchQuery = {
 			folderResources: [this.contextService.getWorkspace().resource],
 			type: QueryType.Text,
