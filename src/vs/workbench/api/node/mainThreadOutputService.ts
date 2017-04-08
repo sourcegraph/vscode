@@ -43,7 +43,7 @@ export class MainThreadOutputService extends MainThreadOutputServiceShape {
 	}
 
 	private _getChannel(channelId: string, label: string): IOutputChannel {
-		if (Registry.as<IOutputChannelRegistry>(Extensions.OutputChannels).getChannels().every(channel => channel.id !== channelId)) {
+		if (!Registry.as<IOutputChannelRegistry>(Extensions.OutputChannels).getChannel(channelId)) {
 			Registry.as<IOutputChannelRegistry>(Extensions.OutputChannels).registerChannel(channelId, label);
 		}
 
@@ -56,6 +56,11 @@ export class MainThreadOutputService extends MainThreadOutputServiceShape {
 			return this._partService.setPanelHidden(true);
 		}
 
+		return undefined;
+	}
+
+	public $dispose(channelId: string, label: string): TPromise<void> {
+		this._getChannel(channelId, label).dispose();
 		return undefined;
 	}
 }

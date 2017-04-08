@@ -5,6 +5,13 @@
 
 'use strict';
 
+if (process.argv.indexOf('--prof-startup') >= 0) {
+	var profiler = require('v8-profiler');
+	var prefix = require('crypto').randomBytes(2).toString('hex');
+	process.env.VSCODE_PROFILES_PREFIX = prefix;
+	profiler.startProfiling('main', true);
+}
+
 // Perf measurements
 global.perfStartTime = Date.now();
 
@@ -118,8 +125,34 @@ function getNodeCachedDataDir() {
 		return Promise.resolve(undefined);
 	}
 
-	var dir = path.join(app.getPath('userData'), 'CachedData');
+	// find commit id
+	var productJson = require(path.join(__dirname, '../product.json'));
+	if (!productJson.commit) {
+		return Promise.resolve(undefined);
+	}
 
+	var dir = path.join(app.getPath('userData'), 'CachedData', productJson.commit);
+
+	return mkdirp(dir).then(undefined, function (err) { /*ignore*/ });
+}
+
+function mkdirp(dir) {
+	return mkdir(dir)
+		.then(null, function (err) {
+			if (err && err.code === 'ENOENT') {
+				var parent = path.dirname(dir);
+				if (parent !== dir) { // if not arrived at root
+					return mkdirp(parent)
+						.then(function () {
+							return mkdir(dir);
+						});
+				}
+			}
+			throw err;
+		});
+}
+
+function mkdir(dir) {
 	return new Promise(function (resolve, reject) {
 		fs.mkdir(dir, function (err) {
 			if (err && err.code !== 'EEXIST') {
@@ -186,5 +219,5 @@ app.once('ready', function () {
 
 	nodeCachedDataDir.then(function () {
 		require('./bootstrap-amd').bootstrap('vs/code/electron-main/main');
-	});
+	}, console.error);
 });

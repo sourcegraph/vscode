@@ -14,11 +14,18 @@ import { SelectBox } from 'vs/base/browser/ui/selectBox/selectBox';
 import { SelectActionItem, IActionItem } from 'vs/base/browser/ui/actionbar/actionbar';
 import { EventEmitter } from 'vs/base/common/eventEmitter';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
+import { ICommandService } from 'vs/platform/commands/common/commands';
 import { IDebugService } from 'vs/workbench/parts/debug/common/debug';
+import { IThemeService } from "vs/platform/theme/common/themeService";
+import { attachSelectBoxStyler } from "vs/platform/theme/common/styler";
+import { SIDE_BAR_BACKGROUND } from "vs/workbench/common/theme";
 
 const $ = dom.$;
 
 export class StartDebugActionItem extends EventEmitter implements IActionItem {
+
+	private static ADD_CONFIGURATION = nls.localize('addConfiguration', "Add Configuration...");
+	private static SEPARATOR = '─────────';
 
 	public actionRunner: IActionRunner;
 	private container: HTMLElement;
@@ -30,11 +37,17 @@ export class StartDebugActionItem extends EventEmitter implements IActionItem {
 		private context: any,
 		private action: IAction,
 		@IDebugService private debugService: IDebugService,
-		@IConfigurationService private configurationService: IConfigurationService
+		@IThemeService themeService: IThemeService,
+		@IConfigurationService private configurationService: IConfigurationService,
+		@ICommandService private commandService: ICommandService
 	) {
 		super();
 		this.toDispose = [];
 		this.selectBox = new SelectBox([], -1);
+		this.toDispose.push(attachSelectBoxStyler(this.selectBox, themeService, {
+			selectBackground: SIDE_BAR_BACKGROUND
+		}));
+
 		this.registerListeners();
 	}
 
@@ -45,7 +58,16 @@ export class StartDebugActionItem extends EventEmitter implements IActionItem {
 			}
 		}));
 		this.toDispose.push(this.selectBox.onDidSelect(configurationName => {
-			this.debugService.getViewModel().setSelectedConfigurationName(configurationName);
+			if (configurationName === StartDebugActionItem.ADD_CONFIGURATION) {
+				this.selectBox.select(this.debugService.getConfigurationManager().getConfigurationNames().indexOf(this.debugService.getViewModel().selectedConfigurationName));
+				this.commandService.executeCommand('debug.addConfiguration').done(undefined, errors.onUnexpectedError);
+			} else {
+				this.debugService.getViewModel().setSelectedConfigurationName(configurationName);
+			}
+		}));
+		this.toDispose.push(this.debugService.getViewModel().onDidSelectConfiguration(configurationName => {
+			const manager = this.debugService.getConfigurationManager();
+			this.selectBox.select(manager.getConfigurationNames().indexOf(configurationName));
 		}));
 	}
 
@@ -61,8 +83,8 @@ export class StartDebugActionItem extends EventEmitter implements IActionItem {
 			this.actionRunner.run(this.action, this.context).done(null, errors.onUnexpectedError);
 		}));
 
-		this.toDispose.push(dom.addDisposableListener(this.start, dom.EventType.MOUSE_DOWN, () => {
-			if (this.selectBox.enabled) {
+		this.toDispose.push(dom.addDisposableListener(this.start, dom.EventType.MOUSE_DOWN, (e: MouseEvent) => {
+			if (this.action.enabled && e.button === 0) {
 				dom.addClass(this.start, 'active');
 			}
 		}));
@@ -73,14 +95,27 @@ export class StartDebugActionItem extends EventEmitter implements IActionItem {
 			dom.removeClass(this.start, 'active');
 		}));
 
-		this.toDispose.push(dom.addDisposableListener(this.start, dom.EventType.KEY_UP, (e: KeyboardEvent) => {
-			let event = new StandardKeyboardEvent(e);
+		this.toDispose.push(dom.addDisposableListener(this.start, dom.EventType.KEY_DOWN, (e: KeyboardEvent) => {
+			const event = new StandardKeyboardEvent(e);
 			if (event.equals(KeyCode.Enter)) {
 				this.actionRunner.run(this.action, this.context).done(null, errors.onUnexpectedError);
 			}
+			if (event.equals(KeyCode.RightArrow)) {
+				this.selectBox.focus();
+				event.stopPropagation();
+			}
 		}));
 
-		this.selectBox.render(dom.append(container, $('.configuration')));
+		const selectBoxContainer = $('.configuration');
+		this.selectBox.render(dom.append(container, selectBoxContainer));
+		this.toDispose.push(dom.addDisposableListener(selectBoxContainer, dom.EventType.KEY_DOWN, (e: KeyboardEvent) => {
+			const event = new StandardKeyboardEvent(e);
+			if (event.equals(KeyCode.LeftArrow)) {
+				this.start.focus();
+				event.stopPropagation();
+			}
+		}));
+
 		this.updateOptions();
 	}
 
@@ -89,11 +124,15 @@ export class StartDebugActionItem extends EventEmitter implements IActionItem {
 	}
 
 	public isEnabled(): boolean {
-		return this.selectBox.enabled;
+		return true;
 	}
 
-	public focus(): void {
-		this.start.focus();
+	public focus(fromRight?: boolean): void {
+		if (fromRight) {
+			this.selectBox.focus();
+		} else {
+			this.start.focus();
+		}
 	}
 
 	public blur(): void {
@@ -104,31 +143,27 @@ export class StartDebugActionItem extends EventEmitter implements IActionItem {
 		this.toDispose = lifecycle.dispose(this.toDispose);
 	}
 
-	private setEnabled(enabled: boolean): void {
-		this.selectBox.enabled = enabled;
-		if (!enabled) {
-			this.selectBox.setOptions([nls.localize('noConfigurations', "No Configurations")], 0);
-		}
-	}
-
 	private updateOptions(): void {
 		const options = this.debugService.getConfigurationManager().getConfigurationNames();
 		if (options.length === 0) {
-			this.setEnabled(false);
-		} else {
-			this.setEnabled(true);
-			const selected = options.indexOf(this.debugService.getViewModel().selectedConfigurationName);
-			this.selectBox.setOptions(options, selected);
+			options.push(nls.localize('noConfigurations', "No Configurations"));
 		}
+		const selected = options.indexOf(this.debugService.getViewModel().selectedConfigurationName);
+		options.push(StartDebugActionItem.SEPARATOR);
+		options.push(StartDebugActionItem.ADD_CONFIGURATION);
+		this.selectBox.setOptions(options, selected, options.length - 2);
 	}
 }
 
 export class FocusProcessActionItem extends SelectActionItem {
 	constructor(
 		action: IAction,
-		@IDebugService private debugService: IDebugService
+		@IDebugService private debugService: IDebugService,
+		@IThemeService themeService: IThemeService
 	) {
 		super(null, action, [], -1);
+
+		this.toDispose.push(attachSelectBoxStyler(this.selectBox, themeService));
 
 		this.debugService.getViewModel().onDidFocusStackFrame(() => {
 			const process = this.debugService.getViewModel().focusedProcess;
@@ -139,7 +174,9 @@ export class FocusProcessActionItem extends SelectActionItem {
 		});
 
 		this.debugService.getModel().onDidChangeCallStack(() => {
-			this.setOptions(this.debugService.getModel().getProcesses().map(p => p.name));
+			const process = this.debugService.getViewModel().focusedProcess;
+			const names = this.debugService.getModel().getProcesses().map(p => p.name);
+			this.setOptions(names, process ? names.indexOf(process.name) : undefined);
 		});
 	}
 }

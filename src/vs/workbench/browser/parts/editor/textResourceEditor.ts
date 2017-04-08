@@ -18,10 +18,11 @@ import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IStorageService } from 'vs/platform/storage/common/storage';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
-import { IThemeService } from 'vs/workbench/services/themes/common/themeService';
+import { IWorkbenchThemeService } from 'vs/workbench/services/themes/common/workbenchThemeService';
 import { IUntitledEditorService } from 'vs/workbench/services/untitled/common/untitledEditorService';
-import { ITextFileService } from 'vs/workbench/services/textfile/common/textfiles';
 import { IEditorGroupService } from 'vs/workbench/services/group/common/groupService';
+import { IModeService } from 'vs/editor/common/services/modeService';
+import { ITextFileService } from 'vs/workbench/services/textfile/common/textfiles';
 
 /**
  * An editor implementation that is capable of showing the contents of resource inputs. Uses
@@ -36,12 +37,13 @@ export class TextResourceEditor extends BaseTextEditor {
 		@IInstantiationService instantiationService: IInstantiationService,
 		@IStorageService storageService: IStorageService,
 		@IConfigurationService configurationService: IConfigurationService,
-		@IThemeService themeService: IThemeService,
+		@IWorkbenchThemeService themeService: IWorkbenchThemeService,
 		@IUntitledEditorService private untitledEditorService: IUntitledEditorService,
-		@IEditorGroupService private editorGroupService: IEditorGroupService,
+		@IEditorGroupService editorGroupService: IEditorGroupService,
+		@IModeService modeService: IModeService,
 		@ITextFileService textFileService: ITextFileService
 	) {
-		super(TextResourceEditor.ID, telemetryService, instantiationService, storageService, configurationService, themeService, textFileService);
+		super(TextResourceEditor.ID, telemetryService, instantiationService, storageService, configurationService, themeService, modeService, textFileService, editorGroupService);
 
 		this.toUnbind.push(this.untitledEditorService.onDidChangeDirty(e => this.onUntitledDirtyChange(e)));
 	}
@@ -87,7 +89,7 @@ export class TextResourceEditor extends BaseTextEditor {
 
 			// Assert Model instance
 			if (!(resolvedModel instanceof BaseTextEditorModel)) {
-				return TPromise.wrapError<void>('Invalid editor input. String editor requires a model instance of BaseTextEditorModel.');
+				return TPromise.wrapError<void>('Unable to open file as text');
 			}
 
 			// Assert that the current input is still the one we expect. This prevents a race condition when loading takes long and another input was set meanwhile
@@ -111,6 +113,7 @@ export class TextResourceEditor extends BaseTextEditor {
 			if (!optionsGotApplied) {
 				this.restoreViewState(input);
 			}
+			return undefined;
 		});
 	}
 
@@ -126,11 +129,14 @@ export class TextResourceEditor extends BaseTextEditor {
 	protected getConfigurationOverrides(): IEditorOptions {
 		const options = super.getConfigurationOverrides();
 
-		const input = this.input;
-		const isUntitled = input instanceof UntitledEditorInput;
-		const isReadonly = !isUntitled; // all string editors are readonly except for the untitled one
+		options.readOnly = !(this.input instanceof UntitledEditorInput); // all resource editors are readonly except for the untitled one;
 
-		options.readOnly = isReadonly;
+		return options;
+	}
+
+	protected getAriaLabel(): string {
+		const input = this.input;
+		const isReadonly = !(this.input instanceof UntitledEditorInput);
 
 		let ariaLabel: string;
 		const inputName = input && input.getName();
@@ -140,29 +146,18 @@ export class TextResourceEditor extends BaseTextEditor {
 			ariaLabel = inputName ? nls.localize('untitledFileEditorWithInputAriaLabel', "{0}. Untitled file text editor.", inputName) : nls.localize('untitledFileEditorAriaLabel', "Untitled file text editor.");
 		}
 
-		const model = this.editorGroupService.getStacksModel();
-		if (model.groups.length > 1) {
-			const group = model.groupAt(this.position);
-			if (group) {
-				ariaLabel = nls.localize('editorLabelWithGroup', "{0} Group {1}.", ariaLabel, group.label);
-			}
-		}
-
-		options.ariaLabel = ariaLabel;
-
-		return options;
+		return ariaLabel;
 	}
 
 	/**
 	 * Reveals the last line of this editor if it has a model set.
 	 * If smart reveal is true will only reveal the last line if the line before last is visible #3351
 	 */
-	public revealLastLine(smartReveal = false): void {
+	public revealLastLine(): void {
 		const codeEditor = <ICodeEditor>this.getControl();
 		const model = codeEditor.getModel();
-		const lineBeforeLastRevealed = codeEditor.getScrollTop() + codeEditor.getLayoutInfo().height >= codeEditor.getScrollHeight();
 
-		if (model && (!smartReveal || lineBeforeLastRevealed)) {
+		if (model) {
 			const lastLine = model.getLineCount();
 			codeEditor.revealLine(lastLine);
 		}

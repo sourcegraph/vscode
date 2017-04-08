@@ -12,6 +12,7 @@ import { SimpleWorkerClient, logOnceWebWorkerWarning } from 'vs/base/common/work
 import { DefaultWorkerFactory } from 'vs/base/worker/defaultWorkerFactory';
 import * as editorCommon from 'vs/editor/common/editorCommon';
 import * as modes from 'vs/editor/common/modes';
+import { Position } from 'vs/editor/common/core/position';
 import { IEditorWorkerService } from 'vs/editor/common/services/editorWorkerService';
 import { IModelService } from 'vs/editor/common/services/modelService';
 import { EditorSimpleWorkerImpl } from 'vs/editor/common/services/editorSimpleWorker';
@@ -31,8 +32,8 @@ const STOP_WORKER_DELTA_TIME_MS = 5 * 60 * 1000;
 export class EditorWorkerServiceImpl implements IEditorWorkerService {
 	public _serviceBrand: any;
 
-	private _workerManager: WorkerManager;
-	private _registrations: IDisposable[];
+	private readonly _workerManager: WorkerManager;
+	private readonly _registrations: IDisposable[];
 
 	constructor(
 		@IModelService modelService: IModelService,
@@ -46,14 +47,7 @@ export class EditorWorkerServiceImpl implements IEditorWorkerService {
 				return wireCancellationToken(token, this._workerManager.withWorker().then(client => client.computeLinks(model.uri)));
 			}
 		});
-		const completionProvider = modes.SuggestRegistry.register('*', <modes.ISuggestSupport>{
-			triggerCharacters: [],
-			provideCompletionItems: (model, position, token) => {
-				if (configurationService.lookup<boolean>('editor.wordBasedSuggestions').value) {
-					return this._workerManager.withWorker().then(client => client.textualSuggest(model.uri, position));
-				}
-			}
-		});
+		const completionProvider = modes.SuggestRegistry.register('*', new WordBasedCompletionItemProvider(this._workerManager, configurationService));
 		this._registrations = [linkProvider, completionProvider];
 	}
 
@@ -70,7 +64,7 @@ export class EditorWorkerServiceImpl implements IEditorWorkerService {
 		return this._workerManager.withWorker().then(client => client.computeDirtyDiff(original, modified, ignoreTrimWhitespace));
 	}
 
-	public computeMoreMinimalEdits(resource: URI, edits: editorCommon.ISingleEditOperation[], ranges: editorCommon.IRange[]): TPromise<editorCommon.ISingleEditOperation[]> {
+	public computeMoreMinimalEdits(resource: URI, edits: modes.TextEdit[], ranges: editorCommon.IRange[]): TPromise<modes.TextEdit[]> {
 		if (!Array.isArray(edits) || edits.length === 0) {
 			return TPromise.as(edits);
 		} else {
@@ -81,7 +75,26 @@ export class EditorWorkerServiceImpl implements IEditorWorkerService {
 	public navigateValueSet(resource: URI, range: editorCommon.IRange, up: boolean): TPromise<modes.IInplaceReplaceSupportResult> {
 		return this._workerManager.withWorker().then(client => client.navigateValueSet(resource, range, up));
 	}
+}
 
+class WordBasedCompletionItemProvider implements modes.ISuggestSupport {
+
+	private readonly _workerManager: WorkerManager;
+	private readonly _configurationService: IConfigurationService;
+
+	constructor(workerManager: WorkerManager, configurationService: IConfigurationService) {
+		this._workerManager = workerManager;
+		this._configurationService = configurationService;
+	}
+
+	provideCompletionItems(model: editorCommon.IModel, position: Position): TPromise<modes.ISuggestResult> {
+
+		const { wordBasedSuggestions } = this._configurationService.getConfiguration<editorCommon.IEditorOptions>('editor');
+		if (!wordBasedSuggestions) {
+			return undefined;
+		}
+		return this._workerManager.withWorker().then(client => client.textualSuggest(model.uri, position));
+	}
 }
 
 class WorkerManager extends Disposable {
@@ -96,7 +109,9 @@ class WorkerManager extends Disposable {
 		this._editorWorkerClient = null;
 
 		let stopWorkerInterval = this._register(new IntervalTimer());
-		stopWorkerInterval.cancelAndSet(() => this._checkStopWorker(), Math.round(STOP_WORKER_DELTA_TIME_MS / 2));
+		stopWorkerInterval.cancelAndSet(() => this._checkStopIdleWorker(), Math.round(STOP_WORKER_DELTA_TIME_MS / 2));
+
+		this._register(this._modelService.onModelRemoved(_ => this._checkStopEmptyWorker()));
 	}
 
 	public dispose(): void {
@@ -107,7 +122,26 @@ class WorkerManager extends Disposable {
 		super.dispose();
 	}
 
-	private _checkStopWorker(): void {
+	/**
+	 * Check if the model service has no more models and stop the worker if that is the case.
+	 */
+	private _checkStopEmptyWorker(): void {
+		if (!this._editorWorkerClient) {
+			return;
+		}
+
+		let models = this._modelService.getModels();
+		if (models.length === 0) {
+			// There are no more models => nothing possible for me to do
+			this._editorWorkerClient.dispose();
+			this._editorWorkerClient = null;
+		}
+	}
+
+	/**
+	 * Check if the worker has been idle for a while and then stop it.
+	 */
+	private _checkStopIdleWorker(): void {
 		if (!this._editorWorkerClient) {
 			return;
 		}
@@ -187,18 +221,17 @@ class EditorModelManager extends Disposable {
 	}
 
 	private _beginModelSync(resource: URI): void {
-		let modelUrl = resource.toString();
 		let model = this._modelService.getModel(resource);
 		if (!model) {
 			return;
 		}
-		if (model.isTooLargeForHavingARichMode()) {
-			return;
-		}
+
+		let modelUrl = resource.toString();
 
 		this._proxy.acceptNewModel({
 			url: model.uri.toString(),
-			value: model.toRawText(),
+			lines: model.getLinesContent(),
+			EOL: model.getEOL(),
 			versionId: model.getVersionId()
 		});
 
@@ -326,7 +359,7 @@ export class EditorWorkerClient extends Disposable {
 		});
 	}
 
-	public computeMoreMinimalEdits(resource: URI, edits: editorCommon.ISingleEditOperation[], ranges: editorCommon.IRange[]): TPromise<editorCommon.ISingleEditOperation[]> {
+	public computeMoreMinimalEdits(resource: URI, edits: modes.TextEdit[], ranges: editorCommon.IRange[]): TPromise<modes.TextEdit[]> {
 		return this._withSyncedResources([resource]).then(proxy => {
 			return proxy.computeMoreMinimalEdits(resource.toString(), edits, ranges);
 		});

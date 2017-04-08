@@ -26,12 +26,12 @@ export interface IProductConfiguration {
 	};
 	extensionTips: { [id: string]: string; };
 	extensionImportantTips: { [id: string]: { name: string; pattern: string; }; };
+	extensionKeywords: { [extension: string]: string[]; };
 	keymapExtensionTips: string[];
 	crashReporter: Electron.CrashReporterStartOptions;
 	welcomePage: string;
 	enableTelemetry: boolean;
 	aiConfig: {
-		key: string;
 		asimovKey: string;
 	};
 	sendASmile: {
@@ -52,6 +52,7 @@ export interface IProductConfiguration {
 	npsSurveyUrl: string;
 	checksums: { [path: string]: string; };
 	checksumFailMoreInfoUrl: string;
+	extraNodeModules: string[];
 }
 
 const rootPath = path.dirname(uri.parse(require.toUrl('')).fsPath);

@@ -30,7 +30,11 @@ const extensions = [
 	'php',
 	'javascript',
 	'css',
-	'html'
+	'html',
+	'git',
+	'gulp'
 ];
 
 extensions.forEach(extension => npmInstall(`extensions/${extension}`));
+
+npmInstall(`build`); // node modules required for build

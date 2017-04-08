@@ -6,12 +6,12 @@
 
 import { TPromise } from 'vs/base/common/winjs.base';
 import { $, Builder } from 'vs/base/browser/builder';
-import { ITree, IDataSource, IRenderer, IElementCallback } from 'vs/base/parts/tree/browser/tree';
+import { ITree, IDataSource, IRenderer, IElementCallback, IActionProvider } from 'vs/base/parts/tree/browser/tree';
 import { InternalTreeExplorerNode } from 'vs/workbench/parts/explorers/common/treeExplorerViewModel';
 import { ClickBehavior, DefaultController } from 'vs/base/parts/tree/browser/treeDefaults';
 import { IMouseEvent } from 'vs/base/browser/mouseEvent';
 import { IActionRunner } from 'vs/base/common/actions';
-import { IActionProvider, ActionsRenderer } from 'vs/base/parts/tree/browser/actionsRenderer';
+import { ActionsRenderer } from 'vs/base/parts/tree/browser/actionsRenderer';
 import { ContributableActionProvider } from 'vs/workbench/browser/actionBarRegistry';
 import { ITreeExplorerService } from 'vs/workbench/parts/explorers/common/treeExplorerService';
 import { IProgressService } from 'vs/platform/progress/common/progress';
@@ -84,7 +84,7 @@ export class TreeController extends DefaultController {
 		private treeNodeProviderId: string,
 		@ITreeExplorerService private treeExplorerService: ITreeExplorerService
 	) {
-		super({ clickBehavior: ClickBehavior.ON_MOUSE_UP /* do not change to not break DND */ });
+		super({ clickBehavior: ClickBehavior.ON_MOUSE_UP /* do not change to not break DND */, keyboardSupport: false });
 	}
 
 	public onLeftClick(tree: ITree, node: InternalTreeExplorerNode, event: IMouseEvent, origin: string = 'mouse'): boolean {

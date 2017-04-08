@@ -22,25 +22,49 @@ if (os.platform() === 'win32') {
 var shell = process.env.PTYSHELL;
 var args = getArgs();
 var cwd = process.env.PTYCWD;
+var cols = process.env.PTYCOLS;
+var rows = process.env.PTYROWS;
 var currentTitle = '';
 
 setupPlanB(process.env.PTYPID);
 cleanEnv();
 
-var ptyProcess = ptyJs.fork(shell, args, {
+var options = {
 	name: name,
 	cwd: cwd
-});
+};
+if (cols && rows) {
+	options.cols = parseInt(cols, 10);
+	options.rows = parseInt(rows, 10);
+}
+
+var ptyProcess = ptyJs.fork(shell, args, options);
+var closeTimeout;
+var exitCode;
+
+// Allow any trailing data events to be sent before the exit event is sent.
+// See https://github.com/Tyriar/node-pty/issues/72
+function queueProcessExit() {
+	closeTimeout = setTimeout(function () {
+		ptyProcess.kill();
+		process.exit(exitCode);
+	}, 250);
+}
 
 ptyProcess.on('data', function (data) {
 	process.send({
 		type: 'data',
 		content: data
 	});
+	if (closeTimeout) {
+		clearTimeout(closeTimeout);
+		queueProcessExit();
+	}
 });
 
-ptyProcess.on('exit', function (exitCode) {
-	process.exit(exitCode);
+ptyProcess.on('exit', function (code) {
+	exitCode = code;
+	queueProcessExit();
 });
 
 process.on('message', function (message) {
@@ -55,6 +79,9 @@ sendProcessId();
 setupTitlePolling();
 
 function getArgs() {
+	if (process.env['PTYSHELLCMDLINE']) {
+		return process.env['PTYSHELLCMDLINE'];
+	}
 	var args = [];
 	var i = 0;
 	while (process.env['PTYSHELLARG' + i]) {
@@ -69,7 +96,10 @@ function cleanEnv() {
 		'ELECTRON_RUN_AS_NODE',
 		'PTYCWD',
 		'PTYPID',
-		'PTYSHELL'
+		'PTYSHELL',
+		'PTYCOLS',
+		'PTYROWS',
+		'PTYSHELLCMDLINE'
 	];
 	keys.forEach(function (key) {
 		if (process.env[key]) {

@@ -65,7 +65,7 @@ suite('Emmet', () => {
 			}
 
 			// emmet supported languages, null is used as the scopeName since it should not be consulted, they map to to mode to the same syntax name
-			let emmetSupportedModes = ['html', 'xhtml', 'css', 'xml', 'xsl', 'haml', 'jade', 'jsx', 'slim', 'scss', 'sass', 'less', 'stylus', 'styl'];
+			let emmetSupportedModes = ['html', 'css', 'xml', 'xsl', 'haml', 'jade', 'jsx', 'slim', 'scss', 'sass', 'less', 'stylus', 'styl'];
 			emmetSupportedModes.forEach(each => {
 				testIsEnabled(each, null);
 			});
@@ -73,6 +73,7 @@ suite('Emmet', () => {
 			// mapped syntaxes
 			testIsEnabled('typescriptreact', null);
 			testIsEnabled('javascriptreact', null);
+			testIsEnabled('jsx-tags', null);
 			testIsEnabled('sass-indented', null);
 
 			// syntaxes mapped using the scope name of the grammar
@@ -139,7 +140,7 @@ suite('Emmet', () => {
 			}
 
 			// emmet supported languages, null is used as the scopeName since it should not be consulted, they map to to mode to the same syntax name
-			let emmetSupportedModes = ['html', 'xhtml', 'css', 'xml', 'xsl', 'haml', 'jade', 'jsx', 'slim', 'scss', 'sass', 'less', 'stylus', 'styl'];
+			let emmetSupportedModes = ['html', 'css', 'xml', 'xsl', 'haml', 'jade', 'jsx', 'slim', 'scss', 'sass', 'less', 'stylus', 'styl'];
 			emmetSupportedModes.forEach(each => {
 				testSyntax(each, null, each);
 			});
@@ -147,6 +148,7 @@ suite('Emmet', () => {
 			// mapped syntaxes
 			testSyntax('typescriptreact', null, 'jsx');
 			testSyntax('javascriptreact', null, 'jsx');
+			testSyntax('jsx-tags', null, 'jsx');
 			testSyntax('sass-indented', null, 'sass');
 
 			// syntaxes mapped using the scope name of the grammar

@@ -9,15 +9,18 @@ import { LineTokens } from 'vs/editor/common/core/lineTokens';
 import { ModelLine, ILineEdit, LineMarker, MarkersTracker } from 'vs/editor/common/model/modelLine';
 import { MetadataConsts } from 'vs/editor/common/modes';
 import { Position } from 'vs/editor/common/core/position';
+import { ViewLineToken, ViewLineTokenFactory } from 'vs/editor/common/core/viewLineToken';
 
-function assertLineTokens(actual: LineTokens, expected: TestToken[]): void {
-	let inflatedActual = actual.inflate();
-	assert.deepEqual(inflatedActual, expected.map((token) => {
+function assertLineTokens(_actual: LineTokens, _expected: TestToken[]): void {
+	let expected = ViewLineTokenFactory.inflateArr(TestToken.toTokens(_expected), _actual.getLineLength());
+	let actual = _actual.inflate();
+	let decode = (token: ViewLineToken) => {
 		return {
-			startIndex: token.startOffset,
-			type: 'mtk' + token.color
+			endIndex: token.endIndex,
+			type: token.getType()
 		};
-	}), 'Line tokens are equal');
+	};
+	assert.deepEqual(actual.map(decode), expected.map(decode));
 }
 
 const NO_TAB_SIZE = 0;
@@ -301,7 +304,7 @@ suite('Editor Model - modelLine.applyEdits text & tokens', () => {
 		line.applyEdits(new MarkersTracker(), edits, NO_TAB_SIZE);
 
 		assert.equal(line.text, expectedText);
-		assertLineTokens(line.getTokens(0, []), expectedTokens);
+		assertLineTokens(line.getTokens(0), expectedTokens);
 	}
 
 	test('insertion on empty line', () => {
@@ -312,7 +315,7 @@ suite('Editor Model - modelLine.applyEdits text & tokens', () => {
 		line.setTokens(0, new Uint32Array(0));
 
 		line.applyEdits(new MarkersTracker(), [{ startColumn: 1, endColumn: 1, text: 'a', forceMoveMarkers: false }], NO_TAB_SIZE);
-		assertLineTokens(line.getTokens(0, []), [new TestToken(0, 1)]);
+		assertLineTokens(line.getTokens(0), [new TestToken(0, 1)]);
 	});
 
 	test('updates tokens on insertion 1', () => {
@@ -874,7 +877,7 @@ suite('Editor Model - modelLine.split text & tokens', () => {
 
 		assert.equal(line.text, expectedText1);
 		assert.equal(other.text, expectedText2);
-		assertLineTokens(line.getTokens(0, []), expectedTokens);
+		assertLineTokens(line.getTokens(0), expectedTokens);
 	}
 
 	test('split at the beginning', () => {
@@ -960,7 +963,7 @@ suite('Editor Model - modelLine.append text & tokens', () => {
 		a.append(new MarkersTracker(), b, NO_TAB_SIZE);
 
 		assert.equal(a.text, expectedText);
-		assertLineTokens(a.getTokens(0, []), expectedTokens);
+		assertLineTokens(a.getTokens(0), expectedTokens);
 	}
 
 	test('append empty 1', () => {

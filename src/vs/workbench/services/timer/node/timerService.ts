@@ -5,6 +5,7 @@
 'use strict';
 
 import { ITimerService, IStartupMetrics, IInitData, IMemoryInfo } from 'vs/workbench/services/timer/common/timerService';
+import { virtualMachineHint } from 'vs/base/node/id';
 
 import * as os from 'os';
 
@@ -12,24 +13,24 @@ export class TimerService implements ITimerService {
 
 	public _serviceBrand: any;
 
-	public readonly start: Date;
-	public readonly appReady: Date;
-	public readonly windowLoad: Date;
+	public readonly start: number;
+	public readonly appReady: number;
+	public readonly windowLoad: number;
 
-	public readonly beforeLoadWorkbenchMain: Date;
-	public readonly afterLoadWorkbenchMain: Date;
+	public readonly beforeLoadWorkbenchMain: number;
+	public readonly afterLoadWorkbenchMain: number;
 
 	public readonly isInitialStartup: boolean;
 	public readonly hasAccessibilitySupport: boolean;
 
-	public beforeDOMContentLoaded: Date;
-	public afterDOMContentLoaded: Date;
+	public beforeDOMContentLoaded: number;
+	public afterDOMContentLoaded: number;
 
-	public beforeWorkbenchOpen: Date;
-	public workbenchStarted: Date;
+	public beforeWorkbenchOpen: number;
+	public workbenchStarted: number;
 
-	public beforeExtensionLoad: Date;
-	public afterExtensionLoad: Date;
+	public beforeExtensionLoad: number;
+	public afterExtensionLoad: number;
 
 	public restoreViewletDuration: number;
 	public restoreEditorsDuration: number;
@@ -67,6 +68,7 @@ export class TimerService implements ITimerService {
 		let release: string;
 		let loadavg: number[];
 		let meminfo: IMemoryInfo;
+		let isVMLikelyhood: number;
 
 		try {
 			totalmem = os.totalmem();
@@ -75,6 +77,8 @@ export class TimerService implements ITimerService {
 			release = os.release();
 			loadavg = os.loadavg();
 			meminfo = process.getProcessMemoryInfo();
+
+			isVMLikelyhood = Math.round((virtualMachineHint.value() * 100));
 
 			const rawCpus = os.cpus();
 			if (rawCpus && rawCpus.length > 0) {
@@ -86,15 +90,15 @@ export class TimerService implements ITimerService {
 
 		this._startupMetrics = {
 			version: 1,
-			ellapsed: Math.round(this.workbenchStarted.getTime() - start.getTime()),
+			ellapsed: this.workbenchStarted - start,
 			timers: {
-				ellapsedExtensions: Math.round(this.afterExtensionLoad.getTime() - this.beforeExtensionLoad.getTime()),
-				ellapsedExtensionsReady: Math.round(this.afterExtensionLoad.getTime() - start.getTime()),
-				ellapsedRequire: Math.round(this.afterLoadWorkbenchMain.getTime() - this.beforeLoadWorkbenchMain.getTime()),
-				ellapsedViewletRestore: Math.round(this.restoreViewletDuration),
-				ellapsedEditorRestore: Math.round(this.restoreEditorsDuration),
-				ellapsedWorkbench: Math.round(this.workbenchStarted.getTime() - this.beforeWorkbenchOpen.getTime()),
-				ellapsedWindowLoadToRequire: Math.round(this.beforeLoadWorkbenchMain.getTime() - this.windowLoad.getTime()),
+				ellapsedExtensions: this.afterExtensionLoad - this.beforeExtensionLoad,
+				ellapsedExtensionsReady: this.afterExtensionLoad - start,
+				ellapsedRequire: this.afterLoadWorkbenchMain - this.beforeLoadWorkbenchMain,
+				ellapsedViewletRestore: this.restoreViewletDuration,
+				ellapsedEditorRestore: this.restoreEditorsDuration,
+				ellapsedWorkbench: this.workbenchStarted - this.beforeWorkbenchOpen,
+				ellapsedWindowLoadToRequire: this.beforeLoadWorkbenchMain - this.windowLoad,
 				ellapsedTimersToTimersComputed: Date.now() - now
 			},
 			platform,
@@ -105,13 +109,14 @@ export class TimerService implements ITimerService {
 			cpus,
 			loadavg,
 			initialStartup,
+			isVMLikelyhood,
 			hasAccessibilitySupport: !!this.hasAccessibilitySupport,
 			emptyWorkbench: this.isEmptyWorkbench
 		};
 
 		if (initialStartup) {
-			this._startupMetrics.timers.ellapsedAppReady = Math.round(this.appReady.getTime() - this.start.getTime());
-			this._startupMetrics.timers.ellapsedWindowLoad = Math.round(this.windowLoad.getTime() - this.appReady.getTime());
+			this._startupMetrics.timers.ellapsedAppReady = this.appReady - this.start;
+			this._startupMetrics.timers.ellapsedWindowLoad = this.windowLoad - this.appReady;
 		}
 	}
 }

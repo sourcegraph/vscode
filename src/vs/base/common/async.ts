@@ -9,7 +9,7 @@ import * as errors from 'vs/base/common/errors';
 import * as platform from 'vs/base/common/platform';
 import { Promise, TPromise, ValueCallback, ErrorCallback, ProgressCallback } from 'vs/base/common/winjs.base';
 import { CancellationToken, CancellationTokenSource } from 'vs/base/common/cancellation';
-import { Disposable } from 'vs/base/common/lifecycle';
+import { Disposable, IDisposable } from 'vs/base/common/lifecycle';
 import Event, { Emitter } from 'vs/base/common/event';
 
 function isThenable<T>(obj: any): obj is Thenable<T> {
@@ -50,6 +50,7 @@ export function wireCancellationToken<T>(token: CancellationToken, promise: TPro
 			if (!errors.isPromiseCanceledError(err)) {
 				return TPromise.wrapError(err);
 			}
+			return undefined;
 		});
 	}
 	return always(promise, () => subscription.dispose());
@@ -422,23 +423,6 @@ export function first<T>(promiseFactories: ITask<TPromise<T>>[], shouldStop: (t:
 	return loop();
 }
 
-export function once<T extends Function>(fn: T): T {
-	const _this = this;
-	let didCall = false;
-	let result: any;
-
-	return function () {
-		if (didCall) {
-			return result;
-		}
-
-		didCall = true;
-		result = fn.apply(_this, arguments);
-
-		return result;
-	} as any as T;
-}
-
 interface ILimitedTaskFactory {
 	factory: ITask<Promise>;
 	c: ValueCallback;
@@ -515,6 +499,11 @@ export class Queue<T> extends Limiter<T> {
 	constructor() {
 		super(1);
 	}
+}
+
+export function setDisposableTimeout(handler: Function, timeout: number, ...args: any[]): IDisposable {
+	const handle = setTimeout(handler, timeout, ...args);
+	return { dispose() { clearTimeout(handle); } };
 }
 
 export class TimeoutTimer extends Disposable {

@@ -15,16 +15,17 @@ import { TerminalInstance } from 'vs/workbench/parts/terminal/electron-browser/t
 import { IShellLaunchConfig } from 'vs/workbench/parts/terminal/common/terminal';
 import { TestInstantiationService } from 'vs/platform/instantiation/test/common/instantiationServiceMock';
 import { TestMessageService, TestContextService } from 'vs/workbench/test/workbenchTestServices';
-import { MockKeybindingService, MockKeybindingService2 } from 'vs/platform/keybinding/test/common/mockKeybindingService';
+import { MockContextKeyService, MockKeybindingService } from 'vs/platform/keybinding/test/common/mockKeybindingService';
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
 
 class TestTerminalInstance extends TerminalInstance {
-	public _getCwd(workspace: IWorkspace, ignoreCustomCwd: boolean): string {
-		return super._getCwd(workspace, ignoreCustomCwd);
+	public _getCwd(shell: IShellLaunchConfig, workspace: IWorkspace): string {
+		return super._getCwd(shell, workspace);
 	}
 
-	protected _createProcess(workspace: IWorkspace, name: string, shell: IShellLaunchConfig): void { }
+	protected _createProcess(workspace: IWorkspace, shell: IShellLaunchConfig): void { }
+	protected _createXterm(): void { }
 }
 
 suite('Workbench - TerminalInstance', () => {
@@ -68,7 +69,7 @@ suite('Workbench - TerminalInstance', () => {
 		assert.equal(env2['LANG'], 'en_AU.UTF-8', 'LANG is equal to the requested locale with UTF-8');
 
 		const env3 = TerminalInstance.createTerminalEnv(parentEnv1, shell1, '/', null);
-		assert.ok(!('LANG' in env3), 'LANG is unset');
+		assert.equal(env3['LANG'], 'en_US.UTF-8', 'LANG is equal to en_US.UTF-8 as fallback.'); // More info on issue #14586
 
 		const env4 = TerminalInstance.createTerminalEnv(parentEnv2, shell1, '/', null);
 		assert.equal(env4['LANG'], 'en_US.UTF-8', 'LANG is equal to the parent environment\'s LANG');
@@ -77,11 +78,11 @@ suite('Workbench - TerminalInstance', () => {
 	suite('_getCwd', () => {
 		let instance: TestTerminalInstance;
 		let instantiationService: TestInstantiationService;
-		let configHelper: { getCwd: () => string };
+		let configHelper: { config: { cwd: string } };
 
 		setup(() => {
-			let contextKeyService = new MockKeybindingService();
-			let keybindingService = new MockKeybindingService2();
+			let contextKeyService = new MockContextKeyService();
+			let keybindingService = new MockKeybindingService();
 			let terminalFocusContextKey = contextKeyService.createKey('test', false);
 			instantiationService = new TestInstantiationService();
 			instantiationService.stub(IMessageService, new TestMessageService());
@@ -89,9 +90,11 @@ suite('Workbench - TerminalInstance', () => {
 			instantiationService.stub(IKeybindingService, keybindingService);
 			instantiationService.stub(IContextKeyService, contextKeyService);
 			configHelper = {
-				getCwd: () => null
+				config: {
+					cwd: null
+				}
 			};
-			instance = instantiationService.createInstance(TestTerminalInstance, terminalFocusContextKey, configHelper, null, null, null);
+			instance = instantiationService.createInstance(TestTerminalInstance, terminalFocusContextKey, configHelper, null, null);
 		});
 
 		// This helper checks the paths in a cross-platform friendly manner
@@ -100,39 +103,39 @@ suite('Workbench - TerminalInstance', () => {
 		}
 
 		test('should default to os.homedir() for an empty workspace', () => {
-			assertPathsMatch(instance._getCwd(null, false), os.homedir());
+			assertPathsMatch(instance._getCwd({ executable: null, args: [] }, null), os.homedir());
 		});
 
 		test('should use to the workspace if it exists', () => {
-			assertPathsMatch(instance._getCwd({ resource: Uri.file('/foo') }, false), '/foo');
+			assertPathsMatch(instance._getCwd({ executable: null, args: [] }, { resource: Uri.file('/foo') }), '/foo');
 		});
 
 		test('should use an absolute custom cwd as is', () => {
-			configHelper.getCwd = () => '/foo';
-			assertPathsMatch(instance._getCwd(null, false), '/foo');
+			configHelper.config.cwd = '/foo';
+			assertPathsMatch(instance._getCwd({ executable: null, args: [] }, null), '/foo');
 		});
 
 		test('should normalize a relative custom cwd against the workspace path', () => {
-			configHelper.getCwd = () => 'foo';
-			assertPathsMatch(instance._getCwd({ resource: Uri.file('/bar') }, false), '/bar/foo');
-			configHelper.getCwd = () => './foo';
-			assertPathsMatch(instance._getCwd({ resource: Uri.file('/bar') }, false), '/bar/foo');
-			configHelper.getCwd = () => '../foo';
-			assertPathsMatch(instance._getCwd({ resource: Uri.file('/bar') }, false), '/foo');
+			configHelper.config.cwd = 'foo';
+			assertPathsMatch(instance._getCwd({ executable: null, args: [] }, { resource: Uri.file('/bar') }), '/bar/foo');
+			configHelper.config.cwd = './foo';
+			assertPathsMatch(instance._getCwd({ executable: null, args: [] }, { resource: Uri.file('/bar') }), '/bar/foo');
+			configHelper.config.cwd = '../foo';
+			assertPathsMatch(instance._getCwd({ executable: null, args: [] }, { resource: Uri.file('/bar') }, ), '/foo');
 		});
 
 		test('should fall back for relative a custom cwd that doesn\'t have a workspace', () => {
-			configHelper.getCwd = () => 'foo';
-			assertPathsMatch(instance._getCwd(null, false), os.homedir());
-			configHelper.getCwd = () => './foo';
-			assertPathsMatch(instance._getCwd(null, false), os.homedir());
-			configHelper.getCwd = () => '../foo';
-			assertPathsMatch(instance._getCwd(null, false), os.homedir());
+			configHelper.config.cwd = 'foo';
+			assertPathsMatch(instance._getCwd({ executable: null, args: [] }, null), os.homedir());
+			configHelper.config.cwd = './foo';
+			assertPathsMatch(instance._getCwd({ executable: null, args: [] }, null), os.homedir());
+			configHelper.config.cwd = '../foo';
+			assertPathsMatch(instance._getCwd({ executable: null, args: [] }, null), os.homedir());
 		});
 
 		test('should ignore custom cwd when told to ignore', () => {
-			configHelper.getCwd = () => '/foo';
-			assertPathsMatch(instance._getCwd({ resource: Uri.file('/bar') }, true), '/bar');
+			configHelper.config.cwd = '/foo';
+			assertPathsMatch(instance._getCwd({ executable: null, args: [], ignoreConfigurationCwd: true }, { resource: Uri.file('/bar') }), '/bar');
 		});
 	});
 });

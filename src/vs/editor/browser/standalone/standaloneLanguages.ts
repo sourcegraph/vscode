@@ -7,7 +7,6 @@
 
 import { TPromise } from 'vs/base/common/winjs.base';
 import { IDisposable } from 'vs/base/common/lifecycle';
-import { onWillActivate } from 'vs/platform/extensions/common/extensionsRegistry';
 import { ModesRegistry } from 'vs/editor/common/modes/modesRegistry';
 import { IMonarchLanguage } from 'vs/editor/common/modes/monarch/monarchTypes';
 import { ILanguageExtensionPoint } from 'vs/editor/common/services/modeService';
@@ -24,7 +23,7 @@ import { createTokenizationSupport } from 'vs/editor/common/modes/monarch/monarc
 import { LanguageConfigurationRegistry } from 'vs/editor/common/modes/languageConfigurationRegistry';
 import { IMarkerData } from 'vs/platform/markers/common/markers';
 import { Token, TokenizationResult, TokenizationResult2 } from 'vs/editor/common/core/token';
-import { IStandaloneColorService } from 'vs/editor/common/services/standaloneColorService';
+import { IStandaloneThemeService } from 'vs/editor/common/services/standaloneThemeService';
 
 /**
  * Register information about a new language.
@@ -47,9 +46,8 @@ export function getLanguages(): ILanguageExtensionPoint[] {
  * @event
  */
 export function onLanguage(languageId: string, callback: () => void): IDisposable {
-	const desired = 'onLanguage:' + languageId;
-	let disposable = onWillActivate.event((activationEvent) => {
-		if (activationEvent === desired) {
+	let disposable = StaticServices.modeService.get().onDidCreateMode((mode) => {
+		if (mode.getId() === languageId) {
 			// stop listening
 			disposable.dispose();
 			// invoke actual listener
@@ -75,12 +73,12 @@ export function setLanguageConfiguration(languageId: string, configuration: Lang
  */
 export class TokenizationSupport2Adapter implements modes.ITokenizationSupport {
 
-	private readonly _standaloneColorService: IStandaloneColorService;
+	private readonly _standaloneThemeService: IStandaloneThemeService;
 	private readonly _languageIdentifier: modes.LanguageIdentifier;
 	private readonly _actual: TokensProvider;
 
-	constructor(standaloneColorService: IStandaloneColorService, languageIdentifier: modes.LanguageIdentifier, actual: TokensProvider) {
-		this._standaloneColorService = standaloneColorService;
+	constructor(standaloneThemeService: IStandaloneThemeService, languageIdentifier: modes.LanguageIdentifier, actual: TokensProvider) {
+		this._standaloneThemeService = standaloneThemeService;
 		this._languageIdentifier = languageIdentifier;
 		this._actual = actual;
 	}
@@ -115,12 +113,12 @@ export class TokenizationSupport2Adapter implements modes.ITokenizationSupport {
 
 	private _toBinaryTokens(tokens: IToken[], offsetDelta: number): Uint32Array {
 		let languageId = this._languageIdentifier.id;
-		let theme = this._standaloneColorService.getTheme();
+		let tokenTheme = this._standaloneThemeService.getTheme().tokenTheme;
 
 		let result: number[] = [], resultLen = 0;
 		for (let i = 0, len = tokens.length; i < len; i++) {
 			let t = tokens[i];
-			let metadata = theme.match(languageId, t.scopes);
+			let metadata = tokenTheme.match(languageId, t.scopes);
 			if (resultLen > 0 && result[resultLen - 1] === metadata) {
 				// same metadata
 				continue;
@@ -197,7 +195,7 @@ export function setTokensProvider(languageId: string, provider: TokensProvider):
 	if (!languageIdentifier) {
 		throw new Error(`Cannot set tokens provider for unknown language ${languageId}`);
 	}
-	let adapter = new TokenizationSupport2Adapter(StaticServices.standaloneColorService.get(), languageIdentifier, provider);
+	let adapter = new TokenizationSupport2Adapter(StaticServices.standaloneThemeService.get(), languageIdentifier, provider);
 	return modes.TokenizationRegistry.register(languageId, adapter);
 }
 
@@ -206,7 +204,7 @@ export function setTokensProvider(languageId: string, provider: TokensProvider):
  */
 export function setMonarchTokensProvider(languageId: string, languageDef: IMonarchLanguage): IDisposable {
 	let lexer = compile(languageId, languageDef);
-	let adapter = createTokenizationSupport(StaticServices.modeService.get(), StaticServices.standaloneColorService.get(), languageId, lexer);
+	let adapter = createTokenizationSupport(StaticServices.modeService.get(), StaticServices.standaloneThemeService.get(), languageId, lexer);
 	return modes.TokenizationRegistry.register(languageId, adapter);
 }
 
@@ -241,7 +239,7 @@ export function registerHoverProvider(languageId: string, provider: modes.HoverP
 
 			return toThenable<modes.Hover>(provider.provideHover(model, position, token)).then((value) => {
 				if (!value) {
-					return;
+					return undefined;
 				}
 				if (!value.range && word) {
 					value.range = new Range(position.lineNumber, word.startColumn, position.column, word.endColumn);
@@ -274,6 +272,20 @@ export function registerDocumentHighlightProvider(languageId: string, provider: 
  */
 export function registerDefinitionProvider(languageId: string, provider: modes.DefinitionProvider): IDisposable {
 	return modes.DefinitionProviderRegistry.register(languageId, provider);
+}
+
+/**
+ * Register a implementation provider (used by e.g. go to implementation).
+ */
+export function registerImplementationProvider(languageId: string, provider: modes.ImplementationProvider): IDisposable {
+	return modes.ImplementationProviderRegistry.register(languageId, provider);
+}
+
+/**
+ * Register a type definition provider (used by e.g. go to type definition).
+ */
+export function registerTypeDefinitionProvider(languageId: string, provider: modes.TypeDefinitionProvider): IDisposable {
+	return modes.TypeDefinitionProviderRegistry.register(languageId, provider);
 }
 
 /**
@@ -390,6 +402,25 @@ export enum CompletionItemKind {
 	Reference,
 	Folder
 }
+
+/**
+ * A snippet string is a template which allows to insert text
+ * and to control the editor cursor when insertion happens.
+ *
+ * A snippet can define tab stops and placeholders with `$1`, `$2`
+ * and `${3:foo}`. `$0` defines the final tab stop, it defaults to
+ * the end of the snippet. Variables are defined with `$name` and
+ * `${name:default value}`. The full snippet syntax is documented
+ * [here](http://code.visualstudio.com/docs/editor/userdefinedsnippets#_creating-your-own-snippets).
+ */
+export interface SnippetString {
+
+	/**
+	 * The snippet string.
+	 */
+	value: string;
+}
+
 /**
  * A completion item represents a text snippet that is
  * proposed to complete text that is being typed.
@@ -428,18 +459,30 @@ export interface CompletionItem {
 	 */
 	filterText?: string;
 	/**
-	 * A string that should be inserted in a document when selecting
+	 * A string or snippet that should be inserted in a document when selecting
 	 * this completion. When `falsy` the [label](#CompletionItem.label)
 	 * is used.
 	 */
-	insertText?: string;
+	insertText?: string | SnippetString;
 	/**
-	 * An [edit](#TextEdit) which is applied to a document when selecting
-	 * this completion. When an edit is provided the value of
-	 * [insertText](#CompletionItem.insertText) is ignored.
+	 * A range of text that should be replaced by this completion item.
 	 *
-	 * The [range](#Range) of the edit must be single-line and one the same
-	 * line completions where [requested](#CompletionItemProvider.provideCompletionItems) at.
+	 * Defaults to a range from the start of the [current word](#TextDocument.getWordRangeAtPosition) to the
+	 * current position.
+	 *
+	 * *Note:* The range must be a [single line](#Range.isSingleLine) and it must
+	 * [contain](#Range.contains) the position at which completion has been [requested](#CompletionItemProvider.provideCompletionItems).
+	 */
+	range?: Range;
+	/**
+	 * @deprecated **Deprecated** in favor of `CompletionItem.insertText` and `CompletionItem.range`.
+	 *
+	 * ~~An [edit](#TextEdit) which is applied to a document when selecting
+	 * this completion. When an edit is provided the value of
+	 * [insertText](#CompletionItem.insertText) is ignored.~~
+	 *
+	 * ~~The [range](#Range) of the edit must be single-line and on the same
+	 * line completions were [requested](#CompletionItemProvider.provideCompletionItems) at.~~
 	 */
 	textEdit?: editorCommon.ISingleEditOperation;
 }
@@ -460,7 +503,7 @@ export interface CompletionList {
 }
 /**
  * The completion item provider interface defines the contract between extensions and
- * the [IntelliSense](https://code.visualstudio.com/docs/editor/editingevolved#_intellisense).
+ * the [IntelliSense](https://code.visualstudio.com/docs/editor/intellisense).
  *
  * When computing *complete* completion items is expensive, providers can optionally implement
  * the `resolveCompletionItem`-function. In that case it is enough to return completion
@@ -519,11 +562,11 @@ class SuggestAdapter {
 		this._provider = provider;
 	}
 
-	private static from(item: CompletionItem): ISuggestion2 {
-		return {
+	private static from(item: CompletionItem, position: Position, wordStartPos: Position): ISuggestion2 {
+		let suggestion: ISuggestion2 = {
 			_actual: item,
 			label: item.label,
-			insertText: item.insertText || item.label,
+			insertText: item.label,
 			type: convertKind(item.kind),
 			detail: item.detail,
 			documentation: item.documentation,
@@ -531,6 +574,33 @@ class SuggestAdapter {
 			filterText: item.filterText,
 			snippetType: 'internal'
 		};
+		let editRange = item.textEdit ? item.textEdit.range : item.range;
+		if (editRange) {
+			let isSingleLine = (editRange.startLineNumber === editRange.endLineNumber);
+
+			// invalid text edit
+			if (!isSingleLine || editRange.startLineNumber !== position.lineNumber) {
+				console.warn('INVALID range, must be single line and on the same line');
+				return null;
+			}
+
+			// insert the text of the edit and create a dedicated
+			// suggestion-container with overwrite[Before|After]
+			suggestion.overwriteBefore = position.column - editRange.startColumn;
+			suggestion.overwriteAfter = editRange.endColumn - position.column;
+		} else {
+			suggestion.overwriteBefore = position.column - wordStartPos.column;
+			suggestion.overwriteAfter = 0;
+		}
+		if (item.textEdit) {
+			suggestion.insertText = item.textEdit.text;
+		} else if (typeof item.insertText === 'object' && typeof item.insertText.value === 'string') {
+			suggestion.insertText = item.insertText.value;
+			suggestion.snippetType = 'textmate';
+		} else if (typeof item.insertText === 'string') {
+			suggestion.insertText = item.insertText;
+		}
+		return suggestion;
 	}
 
 	provideCompletionItems(model: editorCommon.IReadOnlyModel, position: Position, token: CancellationToken): Thenable<modes.ISuggestResult> {
@@ -558,7 +628,7 @@ class SuggestAdapter {
 				result.incomplete = list.isIncomplete;
 			} else if (!value) {
 				// undefined and null are valid results
-				return;
+				return undefined;
 			} else {
 				// warn about everything else
 				console.warn('INVALID result from completion provider. expected CompletionItem-array or CompletionList but got:', value);
@@ -566,30 +636,10 @@ class SuggestAdapter {
 
 			for (let i = 0; i < list.items.length; i++) {
 				const item = list.items[i];
-				const suggestion = SuggestAdapter.from(item);
-
-				if (item.textEdit) {
-
-					let editRange = item.textEdit.range;
-					let isSingleLine = (editRange.startLineNumber === editRange.endLineNumber);
-
-					// invalid text edit
-					if (!isSingleLine || editRange.startLineNumber !== position.lineNumber) {
-						console.warn('INVALID text edit, must be single line and on the same line');
-						continue;
-					}
-
-					// insert the text of the edit and create a dedicated
-					// suggestion-container with overwrite[Before|After]
-					suggestion.insertText = item.textEdit.text;
-					suggestion.overwriteBefore = position.column - editRange.startColumn;
-					suggestion.overwriteAfter = editRange.endColumn - position.column;
-				} else {
-					suggestion.overwriteBefore = position.column - wordStartPos.column;
-					suggestion.overwriteAfter = 0;
+				const suggestion = SuggestAdapter.from(item, position, wordStartPos);
+				if (suggestion) {
+					result.suggestions.push(suggestion);
 				}
-
-				result.suggestions.push(suggestion);
 			}
 
 			return result;
@@ -607,7 +657,12 @@ class SuggestAdapter {
 		}
 
 		return toThenable(this._provider.resolveCompletionItem(item, token)).then(resolvedItem => {
-			return SuggestAdapter.from(resolvedItem);
+			let wordStartPos = position;
+			const word = model.getWordUntilPosition(position);
+			if (word) {
+				wordStartPos = new Position(wordStartPos.lineNumber, word.startColumn);
+			}
+			return SuggestAdapter.from(resolvedItem, position, wordStartPos);
 		});
 	}
 }
@@ -633,6 +688,8 @@ export function createMonacoLanguagesAPI(): typeof monaco.languages {
 		registerDocumentSymbolProvider: registerDocumentSymbolProvider,
 		registerDocumentHighlightProvider: registerDocumentHighlightProvider,
 		registerDefinitionProvider: registerDefinitionProvider,
+		registerImplementationProvider: registerImplementationProvider,
+		registerTypeDefinitionProvider: registerTypeDefinitionProvider,
 		registerCodeLensProvider: registerCodeLensProvider,
 		registerCodeActionProvider: registerCodeActionProvider,
 		registerDocumentFormattingEditProvider: registerDocumentFormattingEditProvider,

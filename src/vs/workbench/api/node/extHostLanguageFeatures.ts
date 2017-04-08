@@ -17,7 +17,7 @@ import { ExtHostHeapService } from 'vs/workbench/api/node/extHostHeapService';
 import { ExtHostDocuments } from 'vs/workbench/api/node/extHostDocuments';
 import { ExtHostCommands, CommandsConverter } from 'vs/workbench/api/node/extHostCommands';
 import { ExtHostDiagnostics } from 'vs/workbench/api/node/extHostDiagnostics';
-import { IWorkspaceSymbolProvider, IWorkspaceSymbol } from 'vs/workbench/parts/search/common/search';
+import { IWorkspaceSymbolProvider } from 'vs/workbench/parts/search/common/search';
 import { asWinJsPromise } from 'vs/base/common/async';
 import { MainContext, MainThreadLanguageFeaturesShape, ExtHostLanguageFeaturesShape, ObjectIdentifier } from './extHost.protocol';
 import { regExpLeadsToEndlessLoop } from 'vs/base/common/strings';
@@ -38,8 +38,9 @@ class OutlineAdapter {
 		let doc = this._documents.getDocumentData(resource).document;
 		return asWinJsPromise(token => this._provider.provideDocumentSymbols(doc, token)).then(value => {
 			if (Array.isArray(value)) {
-				return value.map(TypeConverters.SymbolInformation.toOutlineEntry);
+				return value.map(TypeConverters.fromSymbolInformation);
 			}
+			return undefined;
 		});
 	}
 }
@@ -64,7 +65,6 @@ class CodeLensAdapter {
 		const doc = this._documents.getDocumentData(resource).document;
 
 		return asWinJsPromise(token => this._provider.provideCodeLenses(doc, token)).then(lenses => {
-
 			if (Array.isArray(lenses)) {
 				return lenses.map(lens => {
 					const id = this._heapService.keep(lens);
@@ -74,6 +74,7 @@ class CodeLensAdapter {
 					}, id);
 				});
 			}
+			return undefined;
 		});
 	}
 
@@ -81,7 +82,7 @@ class CodeLensAdapter {
 
 		const lens = this._heapService.get<vscode.CodeLens>(ObjectIdentifier.of(symbol));
 		if (!lens) {
-			return;
+			return undefined;
 		}
 
 		let resolve: TPromise<vscode.CodeLens>;
@@ -100,7 +101,6 @@ class CodeLensAdapter {
 }
 
 class DefinitionAdapter {
-
 	private _documents: ExtHostDocuments;
 	private _provider: vscode.DefinitionProvider;
 
@@ -118,9 +118,57 @@ class DefinitionAdapter {
 			} else if (value) {
 				return TypeConverters.location.from(value);
 			}
+			return undefined;
 		});
 	}
 }
+
+class ImplementationAdapter {
+	private _documents: ExtHostDocuments;
+	private _provider: vscode.ImplementationProvider;
+
+	constructor(documents: ExtHostDocuments, provider: vscode.ImplementationProvider) {
+		this._documents = documents;
+		this._provider = provider;
+	}
+
+	provideImplementation(resource: URI, position: IPosition): TPromise<modes.Definition> {
+		let doc = this._documents.getDocumentData(resource).document;
+		let pos = TypeConverters.toPosition(position);
+		return asWinJsPromise(token => this._provider.provideImplementation(doc, pos, token)).then(value => {
+			if (Array.isArray(value)) {
+				return value.map(TypeConverters.location.from);
+			} else if (value) {
+				return TypeConverters.location.from(value);
+			}
+			return undefined;
+		});
+	}
+}
+
+class TypeDefinitionAdapter {
+	private _documents: ExtHostDocuments;
+	private _provider: vscode.TypeDefinitionProvider;
+
+	constructor(documents: ExtHostDocuments, provider: vscode.TypeDefinitionProvider) {
+		this._documents = documents;
+		this._provider = provider;
+	}
+
+	provideTypeDefinition(resource: URI, position: IPosition): TPromise<modes.Definition> {
+		const doc = this._documents.getDocumentData(resource).document;
+		const pos = TypeConverters.toPosition(position);
+		return asWinJsPromise(token => this._provider.provideTypeDefinition(doc, pos, token)).then(value => {
+			if (Array.isArray(value)) {
+				return value.map(TypeConverters.location.from);
+			} else if (value) {
+				return TypeConverters.location.from(value);
+			}
+			return undefined;
+		});
+	}
+}
+
 
 class HoverAdapter {
 
@@ -139,7 +187,7 @@ class HoverAdapter {
 
 		return asWinJsPromise(token => this._provider.provideHover(doc, pos, token)).then(value => {
 			if (!value) {
-				return;
+				return undefined;
 			}
 			if (!value.range) {
 				value.range = doc.getWordRangeAtPosition(pos);
@@ -172,6 +220,7 @@ class DocumentHighlightAdapter {
 			if (Array.isArray(value)) {
 				return value.map(DocumentHighlightAdapter._convertDocumentHighlight);
 			}
+			return undefined;
 		});
 	}
 
@@ -201,6 +250,7 @@ class ReferenceAdapter {
 			if (Array.isArray(value)) {
 				return value.map(TypeConverters.location.from);
 			}
+			return undefined;
 		});
 	}
 }
@@ -237,7 +287,7 @@ class QuickFixAdapter {
 
 		return asWinJsPromise(token => this._provider.provideCodeActions(doc, ran, { diagnostics: allDiagnostics }, token)).then(commands => {
 			if (!Array.isArray(commands)) {
-				return;
+				return undefined;
 			}
 			return commands.map((command, i) => {
 				return <modes.CodeAction>{
@@ -261,12 +311,13 @@ class DocumentFormattingAdapter {
 
 	provideDocumentFormattingEdits(resource: URI, options: modes.FormattingOptions): TPromise<ISingleEditOperation[]> {
 
-		const {document} = this._documents.getDocumentData(resource);
+		const { document } = this._documents.getDocumentData(resource);
 
 		return asWinJsPromise(token => this._provider.provideDocumentFormattingEdits(document, <any>options, token)).then(value => {
 			if (Array.isArray(value)) {
 				return value.map(TypeConverters.TextEdit.from);
 			}
+			return undefined;
 		});
 	}
 }
@@ -283,13 +334,14 @@ class RangeFormattingAdapter {
 
 	provideDocumentRangeFormattingEdits(resource: URI, range: IRange, options: modes.FormattingOptions): TPromise<ISingleEditOperation[]> {
 
-		const {document} = this._documents.getDocumentData(resource);
+		const { document } = this._documents.getDocumentData(resource);
 		const ran = TypeConverters.toRange(range);
 
 		return asWinJsPromise(token => this._provider.provideDocumentRangeFormattingEdits(document, ran, <any>options, token)).then(value => {
 			if (Array.isArray(value)) {
 				return value.map(TypeConverters.TextEdit.from);
 			}
+			return undefined;
 		});
 	}
 }
@@ -308,13 +360,14 @@ class OnTypeFormattingAdapter {
 
 	provideOnTypeFormattingEdits(resource: URI, position: IPosition, ch: string, options: modes.FormattingOptions): TPromise<ISingleEditOperation[]> {
 
-		const {document} = this._documents.getDocumentData(resource);
+		const { document } = this._documents.getDocumentData(resource);
 		const pos = TypeConverters.toPosition(position);
 
 		return asWinJsPromise(token => this._provider.provideOnTypeFormattingEdits(document, pos, ch, <any>options, token)).then(value => {
 			if (Array.isArray(value)) {
 				return value.map(TypeConverters.TextEdit.from);
 			}
+			return undefined;
 		});
 	}
 }
@@ -330,7 +383,7 @@ class NavigateTypeAdapter implements IWorkspaceSymbolProvider {
 		this._heapService = heapService;
 	}
 
-	provideWorkspaceSymbols(search: string): TPromise<IWorkspaceSymbol[]> {
+	provideWorkspaceSymbols(search: string): TPromise<modes.SymbolInformation[]> {
 
 		return asWinJsPromise(token => this._provider.provideWorkspaceSymbols(search, token)).then(value => {
 			if (Array.isArray(value)) {
@@ -340,10 +393,11 @@ class NavigateTypeAdapter implements IWorkspaceSymbolProvider {
 					return ObjectIdentifier.mixin(result, id);
 				});
 			}
+			return undefined;
 		});
 	}
 
-	resolveWorkspaceSymbol(item: IWorkspaceSymbol): TPromise<IWorkspaceSymbol> {
+	resolveWorkspaceSymbol(item: modes.SymbolInformation): TPromise<modes.SymbolInformation> {
 
 		if (typeof this._provider.resolveWorkspaceSymbol !== 'function') {
 			return TPromise.as(item);
@@ -355,6 +409,7 @@ class NavigateTypeAdapter implements IWorkspaceSymbolProvider {
 				return value && TypeConverters.fromSymbolInformation(value);
 			});
 		}
+		return undefined;
 	}
 }
 
@@ -374,9 +429,8 @@ class RenameAdapter {
 		let pos = TypeConverters.toPosition(position);
 
 		return asWinJsPromise(token => this._provider.provideRenameEdits(doc, pos, newName, token)).then(value => {
-
 			if (!value) {
-				return;
+				return undefined;
 			}
 
 			let result = <modes.WorkspaceEdit>{
@@ -435,7 +489,7 @@ class SuggestAdapter {
 			let list: CompletionList;
 			if (!value) {
 				// undefined and null are valid results
-				return;
+				return undefined;
 
 			} else if (Array.isArray(value)) {
 				list = new CompletionList(value);
@@ -500,7 +554,7 @@ class SuggestAdapter {
 	private _convertCompletionItem(item: vscode.CompletionItem, position: vscode.Position, defaultRange: vscode.Range): modes.ISuggestion {
 		if (!item.label) {
 			console.warn('INVALID text edit -> must have at least a label');
-			return;
+			return undefined;
 		}
 
 		const result: modes.ISuggestion = {
@@ -550,7 +604,7 @@ class SuggestAdapter {
 
 		if (!range.isSingleLine || range.start.line !== position.line) {
 			console.warn('INVALID text edit -> must be single line and on the same line');
-			return;
+			return undefined;
 		}
 
 		return result;
@@ -576,6 +630,7 @@ class SignatureHelpAdapter {
 			if (value) {
 				return TypeConverters.SignatureHelp.from(value);
 			}
+			return undefined;
 		});
 	}
 }
@@ -597,6 +652,7 @@ class LinkProviderAdapter {
 			if (Array.isArray(links)) {
 				return links.map(TypeConverters.DocumentLink.from);
 			}
+			return undefined;
 		});
 	}
 
@@ -606,15 +662,17 @@ class LinkProviderAdapter {
 				if (value) {
 					return TypeConverters.DocumentLink.from(value);
 				}
+				return undefined;
 			});
 		}
+		return undefined;
 	}
 }
 
 type Adapter = OutlineAdapter | CodeLensAdapter | DefinitionAdapter | HoverAdapter
 	| DocumentHighlightAdapter | ReferenceAdapter | QuickFixAdapter | DocumentFormattingAdapter
 	| RangeFormattingAdapter | OnTypeFormattingAdapter | NavigateTypeAdapter | RenameAdapter
-	| SuggestAdapter | SignatureHelpAdapter | LinkProviderAdapter;
+	| SuggestAdapter | SignatureHelpAdapter | LinkProviderAdapter | ImplementationAdapter | TypeDefinitionAdapter;
 
 export class ExtHostLanguageFeatures extends ExtHostLanguageFeaturesShape {
 
@@ -713,6 +771,28 @@ export class ExtHostLanguageFeatures extends ExtHostLanguageFeaturesShape {
 		return this._withAdapter(handle, DefinitionAdapter, adapter => adapter.provideDefinition(resource, position));
 	}
 
+	registerImplementationProvider(selector: vscode.DocumentSelector, provider: vscode.ImplementationProvider): vscode.Disposable {
+		const handle = this._nextHandle();
+		this._adapter.set(handle, new ImplementationAdapter(this._documents, provider));
+		this._proxy.$registerImplementationSupport(handle, selector);
+		return this._createDisposable(handle);
+	}
+
+	$provideImplementation(handle: number, resource: URI, position: IPosition): TPromise<modes.Definition> {
+		return this._withAdapter(handle, ImplementationAdapter, adapter => adapter.provideImplementation(resource, position));
+	}
+
+	registerTypeDefinitionProvider(selector: vscode.DocumentSelector, provider: vscode.TypeDefinitionProvider): vscode.Disposable {
+		const handle = this._nextHandle();
+		this._adapter.set(handle, new TypeDefinitionAdapter(this._documents, provider));
+		this._proxy.$registerTypeDefinitionSupport(handle, selector);
+		return this._createDisposable(handle);
+	}
+
+	$provideTypeDefinition(handle: number, resource: URI, position: IPosition): TPromise<modes.Definition> {
+		return this._withAdapter(handle, TypeDefinitionAdapter, adapter => adapter.provideTypeDefinition(resource, position));
+	}
+
 	// --- extra info
 
 	registerHoverProvider(selector: vscode.DocumentSelector, provider: vscode.HoverProvider): vscode.Disposable {
@@ -809,11 +889,11 @@ export class ExtHostLanguageFeatures extends ExtHostLanguageFeaturesShape {
 		return this._createDisposable(handle);
 	}
 
-	$provideWorkspaceSymbols(handle: number, search: string): TPromise<IWorkspaceSymbol[]> {
+	$provideWorkspaceSymbols(handle: number, search: string): TPromise<modes.SymbolInformation[]> {
 		return this._withAdapter(handle, NavigateTypeAdapter, adapter => adapter.provideWorkspaceSymbols(search));
 	}
 
-	$resolveWorkspaceSymbol(handle: number, symbol: IWorkspaceSymbol): TPromise<IWorkspaceSymbol> {
+	$resolveWorkspaceSymbol(handle: number, symbol: modes.SymbolInformation): TPromise<modes.SymbolInformation> {
 		return this._withAdapter(handle, NavigateTypeAdapter, adapter => adapter.resolveWorkspaceSymbol(symbol));
 	}
 
@@ -880,7 +960,7 @@ export class ExtHostLanguageFeatures extends ExtHostLanguageFeaturesShape {
 	// --- configuration
 
 	setLanguageConfiguration(languageId: string, configuration: vscode.LanguageConfiguration): vscode.Disposable {
-		let {wordPattern} = configuration;
+		let { wordPattern } = configuration;
 
 		// check for a valid word pattern
 		if (wordPattern && regExpLeadsToEndlessLoop(wordPattern)) {

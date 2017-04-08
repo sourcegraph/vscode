@@ -10,7 +10,8 @@ import { TestInstantiationService } from 'vs/platform/instantiation/test/common/
 import { Match, FileMatch, SearchResult, SearchModel } from 'vs/workbench/parts/search/common/searchModel';
 import URI from 'vs/base/common/uri';
 import { IFileMatch, ILineMatch } from 'vs/platform/search/common/search';
-import { ITelemetryService, NullTelemetryService } from 'vs/platform/telemetry/common/telemetry';
+import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
+import { NullTelemetryService } from 'vs/platform/telemetry/common/telemetryUtils';
 import { Range } from 'vs/editor/common/core/range';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { TestConfigurationService } from 'vs/platform/configuration/test/common/testConfigurationService';
@@ -31,18 +32,18 @@ suite('SearchResult', () => {
 	});
 
 	test('Line Match', function () {
-		let fileMatch = aFileMatch('folder\\file.txt', null);
+		let fileMatch = aFileMatch('folder/file.txt', null);
 		let lineMatch = new Match(fileMatch, 'foo bar', 1, 0, 3);
 		assert.equal(lineMatch.text(), 'foo bar');
 		assert.equal(lineMatch.range().startLineNumber, 2);
 		assert.equal(lineMatch.range().endLineNumber, 2);
 		assert.equal(lineMatch.range().startColumn, 1);
 		assert.equal(lineMatch.range().endColumn, 4);
-		assert.equal('file:///c%3A/folder/file.txt>1>0foo', lineMatch.id());
+		assert.equal('file:///folder/file.txt>1>0foo', lineMatch.id());
 	});
 
 	test('Line Match - Remove', function () {
-		let fileMatch = aFileMatch('folder\\file.txt', aSearchResult(), ...[{
+		let fileMatch = aFileMatch('folder/file.txt', aSearchResult(), ...[{
 			preview: 'foo bar',
 			lineNumber: 1,
 			offsetAndLengths: [[0, 3]]
@@ -53,19 +54,19 @@ suite('SearchResult', () => {
 	});
 
 	test('File Match', function () {
-		let fileMatch = aFileMatch('folder\\file.txt');
+		let fileMatch = aFileMatch('folder/file.txt');
 		assert.equal(fileMatch.matches(), 0);
-		assert.equal(fileMatch.resource().toString(), 'file:///c%3A/folder/file.txt');
+		assert.equal(fileMatch.resource().toString(), 'file:///folder/file.txt');
 		assert.equal(fileMatch.name(), 'file.txt');
 
 		fileMatch = aFileMatch('file.txt');
 		assert.equal(fileMatch.matches(), 0);
-		assert.equal(fileMatch.resource().toString(), 'file:///c%3A/file.txt');
+		assert.equal(fileMatch.resource().toString(), 'file:///file.txt');
 		assert.equal(fileMatch.name(), 'file.txt');
 	});
 
 	test('File Match: Select an existing match', function () {
-		let testObject = aFileMatch('folder\\file.txt', aSearchResult(), ...[{
+		let testObject = aFileMatch('folder/file.txt', aSearchResult(), ...[{
 			preview: 'foo',
 			lineNumber: 1,
 			offsetAndLengths: [[0, 3]]
@@ -81,7 +82,7 @@ suite('SearchResult', () => {
 	});
 
 	test('File Match: Select non existing match', function () {
-		let testObject = aFileMatch('folder\\file.txt', aSearchResult(), ...[{
+		let testObject = aFileMatch('folder/file.txt', aSearchResult(), ...[{
 			preview: 'foo',
 			lineNumber: 1,
 			offsetAndLengths: [[0, 3]]
@@ -99,7 +100,7 @@ suite('SearchResult', () => {
 	});
 
 	test('File Match: isSelected return true for selected match', function () {
-		let testObject = aFileMatch('folder\\file.txt', aSearchResult(), ...[{
+		let testObject = aFileMatch('folder/file.txt', aSearchResult(), ...[{
 			preview: 'foo',
 			lineNumber: 1,
 			offsetAndLengths: [[0, 3]]
@@ -115,7 +116,7 @@ suite('SearchResult', () => {
 	});
 
 	test('File Match: isSelected return false for un-selected match', function () {
-		let testObject = aFileMatch('folder\\file.txt', aSearchResult(), ...[{
+		let testObject = aFileMatch('folder/file.txt', aSearchResult(), ...[{
 			preview: 'foo',
 			lineNumber: 1,
 			offsetAndLengths: [[0, 3]]
@@ -131,7 +132,7 @@ suite('SearchResult', () => {
 	});
 
 	test('File Match: unselect', function () {
-		let testObject = aFileMatch('folder\\file.txt', aSearchResult(), ...[{
+		let testObject = aFileMatch('folder/file.txt', aSearchResult(), ...[{
 			preview: 'foo',
 			lineNumber: 1,
 			offsetAndLengths: [[0, 3]]
@@ -148,7 +149,7 @@ suite('SearchResult', () => {
 	});
 
 	test('File Match: unselect when not selected', function () {
-		let testObject = aFileMatch('folder\\file.txt', aSearchResult(), ...[{
+		let testObject = aFileMatch('folder/file.txt', aSearchResult(), ...[{
 			preview: 'foo',
 			lineNumber: 1,
 			offsetAndLengths: [[0, 3]]
@@ -165,7 +166,7 @@ suite('SearchResult', () => {
 
 	test('Alle Drei Zusammen', function () {
 		let searchResult = instantiationService.createInstance(SearchResult, null);
-		let fileMatch = aFileMatch('far\\boo', searchResult);
+		let fileMatch = aFileMatch('far/boo', searchResult);
 		let lineMatch = new Match(fileMatch, 'foo bar', 1, 0, 3);
 
 		assert(lineMatch.parent() === fileMatch);
@@ -359,7 +360,7 @@ suite('SearchResult', () => {
 
 	function aFileMatch(path: string, searchResult?: SearchResult, ...lineMatches: ILineMatch[]): FileMatch {
 		let rawMatch: IFileMatch = {
-			resource: URI.file('C:\\' + path),
+			resource: URI.file('/' + path),
 			lineMatches: lineMatches
 		};
 		return instantiationService.createInstance(FileMatch, null, searchResult, rawMatch);

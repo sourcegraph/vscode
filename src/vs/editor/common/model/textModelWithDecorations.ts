@@ -14,6 +14,7 @@ import { MarkersTracker, LineMarker } from 'vs/editor/common/model/modelLine';
 import { Position } from 'vs/editor/common/core/position';
 import { INewMarker, TextModelWithMarkers } from 'vs/editor/common/model/textModelWithMarkers';
 import { LanguageIdentifier } from 'vs/editor/common/modes';
+import { ITextSource, IRawTextSource } from 'vs/editor/common/model/textSource';
 
 class DecorationsTracker {
 
@@ -139,9 +140,9 @@ export class TextModelWithDecorations extends TextModelWithMarkers implements ed
 	private _internalDecorations: { [internalDecorationId: number]: InternalDecoration; };
 	private _multiLineDecorationsMap: { [key: string]: InternalDecoration; };
 
-	constructor(allowedEventTypes: string[], rawText: editorCommon.IRawText, languageIdentifier: LanguageIdentifier) {
+	constructor(allowedEventTypes: string[], rawTextSource: IRawTextSource, creationOptions: editorCommon.ITextModelCreationOptions, languageIdentifier: LanguageIdentifier) {
 		allowedEventTypes.push(editorCommon.EventType.ModelDecorationsChanged);
-		super(allowedEventTypes, rawText, languageIdentifier);
+		super(allowedEventTypes, rawTextSource, creationOptions, languageIdentifier);
 
 		this._instanceId = nextInstanceId();
 		this._lastDecorationId = 0;
@@ -165,7 +166,7 @@ export class TextModelWithDecorations extends TextModelWithMarkers implements ed
 		super.dispose();
 	}
 
-	protected _resetValue(newValue: editorCommon.IRawText): void {
+	protected _resetValue(newValue: ITextSource): void {
 		super._resetValue(newValue);
 
 		// Destroy all my decorations
@@ -347,7 +348,10 @@ export class TextModelWithDecorations extends TextModelWithMarkers implements ed
 		}
 
 		for (let lineNumber = filterStartLineNumber; lineNumber <= filterEndLineNumber; lineNumber++) {
-			let lineMarkers = this._getLineMarkers(lineNumber);
+			let lineMarkers = this._lines[lineNumber - 1].getMarkers();
+			if (lineMarkers === null) {
+				continue;
+			}
 			for (let i = 0, len = lineMarkers.length; i < len; i++) {
 				let lineMarker = lineMarkers[i];
 				let internalDecorationId = lineMarker.internalDecorationId;
@@ -834,8 +838,8 @@ export class ModelDecorationOptions implements editorCommon.IModelDecorationOpti
 
 	stickiness: editorCommon.TrackedRangeStickiness;
 	className: string;
-	glyphMarginHoverMessage: string;
 	hoverMessage: MarkedString | MarkedString[];
+	glyphMarginHoverMessage: MarkedString | MarkedString[];
 	isWholeLine: boolean;
 	showInOverviewRuler: string;
 	overviewRuler: editorCommon.IModelDecorationOverviewRulerOptions;
@@ -849,8 +853,8 @@ export class ModelDecorationOptions implements editorCommon.IModelDecorationOpti
 	constructor(options: editorCommon.IModelDecorationOptions) {
 		this.stickiness = options.stickiness || editorCommon.TrackedRangeStickiness.AlwaysGrowsWhenTypingAtEdges;
 		this.className = options.className ? cleanClassName(options.className) : strings.empty;
-		this.glyphMarginHoverMessage = options.glyphMarginHoverMessage || strings.empty;
 		this.hoverMessage = options.hoverMessage || [];
+		this.glyphMarginHoverMessage = options.glyphMarginHoverMessage || strings.empty;
 		this.isWholeLine = options.isWholeLine || false;
 		this.overviewRuler = _normalizeOverviewRulerOptions(options.overviewRuler, options.showInOverviewRuler);
 		this.glyphMarginClassName = options.glyphMarginClassName ? cleanClassName(options.glyphMarginClassName) : strings.empty;
@@ -873,7 +877,6 @@ export class ModelDecorationOptions implements editorCommon.IModelDecorationOpti
 		return (
 			this.stickiness === other.stickiness
 			&& this.className === other.className
-			&& this.glyphMarginHoverMessage === other.glyphMarginHoverMessage
 			&& this.isWholeLine === other.isWholeLine
 			&& this.showInOverviewRuler === other.showInOverviewRuler
 			&& this.glyphMarginClassName === other.glyphMarginClassName
@@ -883,6 +886,7 @@ export class ModelDecorationOptions implements editorCommon.IModelDecorationOpti
 			&& this.beforeContentClassName === other.beforeContentClassName
 			&& this.afterContentClassName === other.afterContentClassName
 			&& markedStringsEquals(this.hoverMessage, other.hoverMessage)
+			&& markedStringsEquals(this.glyphMarginHoverMessage, other.glyphMarginHoverMessage)
 			&& ModelDecorationOptions._overviewRulerEquals(this.overviewRuler, other.overviewRuler)
 		);
 	}

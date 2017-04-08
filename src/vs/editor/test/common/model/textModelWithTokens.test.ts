@@ -18,6 +18,7 @@ import { TextModelWithTokens } from 'vs/editor/common/model/textModelWithTokens'
 import { LanguageConfigurationRegistry } from 'vs/editor/common/modes/languageConfigurationRegistry';
 import { NULL_STATE } from 'vs/editor/common/modes/nullMode';
 import { TokenizationResult2 } from 'vs/editor/common/core/token';
+import { RawTextSource } from 'vs/editor/common/model/textSource';
 
 suite('TextModelWithTokens', () => {
 
@@ -77,7 +78,8 @@ suite('TextModelWithTokens', () => {
 
 		let model = new TextModelWithTokens(
 			[],
-			TextModel.toRawText(contents.join('\n'), TextModel.DEFAULT_CREATION_OPTIONS),
+			RawTextSource.fromString(contents.join('\n')),
+			TextModel.DEFAULT_CREATION_OPTIONS,
 			languageIdentifier
 		);
 
@@ -264,8 +266,17 @@ suite('TextModelWithTokens regression tests', () => {
 
 	test('Microsoft/monaco-editor#122: Unhandled Exception: TypeError: Unable to get property \'replace\' of undefined or null reference', () => {
 		function assertViewLineTokens(model: Model, lineNumber: number, forceTokenization: boolean, expected: ViewLineToken[]): void {
-			let actual = model.getLineTokens(lineNumber, !forceTokenization).inflate();
-			assert.deepEqual(actual, expected);
+			if (forceTokenization) {
+				model.forceTokenization(lineNumber);
+			}
+			let actual = model.getLineTokens(lineNumber).inflate();
+			let decode = (token: ViewLineToken) => {
+				return {
+					endIndex: token.endIndex,
+					foreground: token.getForeground()
+				};
+			};
+			assert.deepEqual(actual.map(decode), expected.map(decode));
 		}
 
 		let _tokenId = 10;
@@ -293,23 +304,31 @@ suite('TextModelWithTokens regression tests', () => {
 
 		let model = Model.createFromString('A model with\ntwo lines');
 
-		assertViewLineTokens(model, 1, true, [new ViewLineToken(0, 'mtk1')]);
-		assertViewLineTokens(model, 2, true, [new ViewLineToken(0, 'mtk1')]);
+		assertViewLineTokens(model, 1, true, [createViewLineToken(12, 1)]);
+		assertViewLineTokens(model, 2, true, [createViewLineToken(9, 1)]);
 
 		model.setMode(languageIdentifier1);
 
-		assertViewLineTokens(model, 1, true, [new ViewLineToken(0, 'mtk11')]);
-		assertViewLineTokens(model, 2, true, [new ViewLineToken(0, 'mtk12')]);
+		assertViewLineTokens(model, 1, true, [createViewLineToken(12, 11)]);
+		assertViewLineTokens(model, 2, true, [createViewLineToken(9, 12)]);
 
 		model.setMode(languageIdentifier2);
 
-		assertViewLineTokens(model, 1, false, [new ViewLineToken(0, 'mtk1')]);
-		assertViewLineTokens(model, 2, false, [new ViewLineToken(0, 'mtk1')]);
+		assertViewLineTokens(model, 1, false, [createViewLineToken(12, 1)]);
+		assertViewLineTokens(model, 2, false, [createViewLineToken(9, 1)]);
 
 		model.dispose();
 		registration1.dispose();
 		registration2.dispose();
+
+		function createViewLineToken(endIndex: number, foreground: number): ViewLineToken {
+			let metadata = (
+				(foreground << MetadataConsts.FOREGROUND_OFFSET)
+			) >>> 0;
+			return new ViewLineToken(endIndex, metadata);
+		}
 	});
+
 
 	test('Microsoft/monaco-editor#133: Error: Cannot read property \'modeId\' of undefined', () => {
 

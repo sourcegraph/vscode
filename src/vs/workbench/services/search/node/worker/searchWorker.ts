@@ -33,7 +33,7 @@ function onError(error: any): void {
 	}
 }
 
-export class SearchWorkerManager implements ISearchWorker {
+export class SearchWorker implements ISearchWorker {
 	private currentSearchEngine: SearchWorkerEngine;
 
 	initialize(): TPromise<void> {
@@ -167,31 +167,13 @@ export class SearchWorkerEngine {
 		return new TPromise<void>((resolve, reject) => {
 			fs.open(filename, 'r', null, (error: Error, fd: number) => {
 				if (error) {
-					return reject(error);
+					return resolve(null);
 				}
 
-				let buffer = new Buffer(options.bufferLength);
-				let pos: number;
-				let i: number;
+				const buffer = new Buffer(options.bufferLength);
 				let line = '';
 				let lineNumber = 0;
-				let lastBufferHadTraillingCR = false;
-
-				const decodeBuffer = (buffer: NodeBuffer, start: number, end: number): string => {
-					if (options.encoding === UTF8 || options.encoding === UTF8_with_bom) {
-						return buffer.toString(undefined, start, end); // much faster to use built in toString() when encoding is default
-					}
-
-					return decode(buffer.slice(start, end), options.encoding);
-				};
-
-				const lineFinished = (offset: number): void => {
-					line += decodeBuffer(buffer, pos, i + offset);
-					perLineCallback(line, lineNumber);
-					line = '';
-					lineNumber++;
-					pos = i + offset;
-				};
+				let lastBufferHadTrailingCR = false;
 
 				const readFile = (isFirstRead: boolean, clb: (error: Error) => void): void => {
 					if (this.isCanceled) {
@@ -199,16 +181,35 @@ export class SearchWorkerEngine {
 					}
 
 					fs.read(fd, buffer, 0, buffer.length, null, (error: Error, bytesRead: number, buffer: NodeBuffer) => {
+						const decodeBuffer = (buffer: NodeBuffer, start: number, end: number): string => {
+							if (options.encoding === UTF8 || options.encoding === UTF8_with_bom) {
+								return buffer.toString(undefined, start, end); // much faster to use built in toString() when encoding is default
+							}
+
+							return decode(buffer.slice(start, end), options.encoding);
+						};
+
+						const lineFinished = (offset: number): void => {
+							line += decodeBuffer(buffer, pos, i + offset);
+							perLineCallback(line, lineNumber);
+							line = '';
+							lineNumber++;
+							pos = i + offset;
+						};
+
 						if (error || bytesRead === 0 || this.isCanceled) {
 							return clb(error); // return early if canceled or limit reached or no more bytes to read
 						}
 
-						pos = 0;
-						i = 0;
+						let crlfCharSize = 1;
+						let crBytes = [CR];
+						let lfBytes = [LF];
+						let pos = 0;
+						let i = 0;
 
 						// Detect encoding and mime when this is the beginning of the file
 						if (isFirstRead) {
-							const mimeAndEncoding = detectMimeAndEncodingFromBuffer(buffer, bytesRead);
+							const mimeAndEncoding = detectMimeAndEncodingFromBuffer({ buffer, bytesRead }, false);
 							if (mimeAndEncoding.mimes[mimeAndEncoding.mimes.length - 1] !== baseMime.MIME_TEXT) {
 								return clb(null); // skip files that seem binary
 							}
@@ -228,41 +229,49 @@ export class SearchWorkerEngine {
 									options.encoding = UTF16le;
 									break;
 							}
+
+							// when we are running with UTF16le/be, LF and CR are encoded as
+							// two bytes, like 0A 00 (LF) / 0D 00 (CR) for LE or flipped around
+							// for BE. We need to account for this when splitting the buffer into
+							// newlines, and when detecting a CRLF combo.
+							if (options.encoding === UTF16le) {
+								crlfCharSize = 2;
+								crBytes = [CR, 0x00];
+								lfBytes = [LF, 0x00];
+							} else if (options.encoding === UTF16be) {
+								crlfCharSize = 2;
+								crBytes = [0x00, CR];
+								lfBytes = [0x00, LF];
+							}
 						}
 
-						// when we are running with UTF16le, LF and CR are encoded as
-						// 0A 00 (LF) and 0D 00 (CR). the zero bytes are at the end
-						// due to little endianess. since we want to split our buffer
-						// into lines, we need to skip over the 00 bytes after LF and CR
-						// so UTF16-LE gets a multiplier of 2, otherwise we would include
-						// bad 00 bytes in our resulting buffer.
-						let byteOffsetMultiplier = 1;
-						if (options.encoding === UTF16le) {
-							byteOffsetMultiplier = 2;
-						}
-
-						if (lastBufferHadTraillingCR) {
-							if (buffer[i] === LF) {
-								lineFinished(1 * byteOffsetMultiplier);
+						if (lastBufferHadTrailingCR) {
+							if (buffer[i] === lfBytes[0] && (lfBytes.length === 1 || buffer[i + 1] === lfBytes[1])) {
+								lineFinished(1 * crlfCharSize);
 								i++;
 							} else {
 								lineFinished(0);
 							}
 
-							lastBufferHadTraillingCR = false;
+							lastBufferHadTrailingCR = false;
 						}
 
+						/**
+						 * This loop executes for every byte of every file in the workspace - it is highly performance-sensitive!
+						 * Hence the duplication in reading the buffer to avoid a function call. Previously a function call was not
+						 * being inlined by V8.
+						 */
 						for (; i < bytesRead; ++i) {
-							if (buffer[i] === LF) {
-								lineFinished(1 * byteOffsetMultiplier);
-							} else if (buffer[i] === CR) { // CR (Carriage Return)
-								if (i + 1 === bytesRead) {
-									lastBufferHadTraillingCR = true;
-								} else if (buffer[i + 1] === LF) {
-									lineFinished(2 * byteOffsetMultiplier);
-									i++;
+							if (buffer[i] === lfBytes[0] && (lfBytes.length === 1 || buffer[i + 1] === lfBytes[1])) {
+								lineFinished(1 * crlfCharSize);
+							} else if (buffer[i] === crBytes[0] && (crBytes.length === 1 || buffer[i + 1] === crBytes[1])) { // CR (Carriage Return)
+								if (i + crlfCharSize === bytesRead) {
+									lastBufferHadTrailingCR = true;
+								} else if (buffer[i + crlfCharSize] === lfBytes[0] && (lfBytes.length === 1 || buffer[i + crlfCharSize + 1] === lfBytes[1])) {
+									lineFinished(2 * crlfCharSize);
+									i += 2 * crlfCharSize - 1;
 								} else {
-									lineFinished(1 * byteOffsetMultiplier);
+									lineFinished(1 * crlfCharSize);
 								}
 							}
 						}
@@ -275,7 +284,7 @@ export class SearchWorkerEngine {
 
 				readFile(/*isFirstRead=*/true, (error: Error) => {
 					if (error) {
-						return reject(error);
+						return resolve(null);
 					}
 
 					if (line.length) {
@@ -283,11 +292,7 @@ export class SearchWorkerEngine {
 					}
 
 					fs.close(fd, (error: Error) => {
-						if (error) {
-							reject(error);
-						} else {
-							resolve(null);
-						}
+						resolve(null);
 					});
 				});
 			});

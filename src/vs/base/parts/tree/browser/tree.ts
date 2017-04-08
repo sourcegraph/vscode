@@ -11,10 +11,17 @@ import Mouse = require('vs/base/browser/mouseEvent');
 import Keyboard = require('vs/base/browser/keyboardEvent');
 import { INavigator } from 'vs/base/common/iterator';
 import { ScrollbarVisibility } from 'vs/base/common/scrollable';
+import Event from 'vs/base/common/event';
+import { IAction, IActionItem } from "vs/base/common/actions";
 
 export interface ITree extends Events.IEventEmitter {
 
 	emit(eventType: string, data?: any): void;
+
+	onDOMFocus: Event<void>;
+	onDOMBlur: Event<void>;
+	onHighlightChange: Event<void>;
+	onDispose: Event<void>;
 
 	/**
 	 * Returns the tree's DOM element.
@@ -358,6 +365,11 @@ export interface IDataSource {
 	 * Returns the element's parent in a promise.
 	 */
 	getParent(tree: ITree, element: any): WinJS.Promise;
+
+	/**
+	 * Returns whether an element should be expanded when first added to the tree.
+	 */
+	shouldAutoexpand?(tree: ITree, element: any): boolean;
 }
 
 export interface IRenderer {
@@ -642,9 +654,38 @@ export interface ITreeOptions {
 	useShadows?: boolean;
 	paddingOnRow?: boolean;
 	ariaLabel?: string;
+	keyboardSupport?: boolean;
 }
 
 export interface ITreeContext extends ITreeConfiguration {
 	tree: ITree;
 	options: ITreeOptions;
+}
+
+export interface IActionProvider {
+
+	/**
+	 * Returns whether or not the element has actions. These show up in place right to the element in the tree.
+	 */
+	hasActions(tree: ITree, element: any): boolean;
+
+	/**
+	 * Returns a promise of an array with the actions of the element that should show up in place right to the element in the tree.
+	 */
+	getActions(tree: ITree, element: any): WinJS.TPromise<IAction[]>;
+
+	/**
+	 * Returns whether or not the element has secondary actions. These show up once the user has expanded the element's action bar.
+	 */
+	hasSecondaryActions(tree: ITree, element: any): boolean;
+
+	/**
+	 * Returns a promise of an array with the secondary actions of the element that should show up once the user has expanded the element's action bar.
+	 */
+	getSecondaryActions(tree: ITree, element: any): WinJS.TPromise<IAction[]>;
+
+	/**
+	 * Returns an action item to render an action.
+	 */
+	getActionItem(tree: ITree, element: any, action: IAction): IActionItem;
 }

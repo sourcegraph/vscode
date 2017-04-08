@@ -12,7 +12,9 @@ import { CommonEditorConfiguration } from 'vs/editor/common/config/commonEditorC
 import { IDimension } from 'vs/editor/common/editorCommon';
 import { FontInfo, BareFontInfo } from 'vs/editor/common/config/fontInfo';
 import { ElementSizeObserver } from 'vs/editor/browser/config/elementSizeObserver';
-import { FastDomNode } from 'vs/base/browser/styleMutator';
+import { FastDomNode } from 'vs/base/browser/fastDomNode';
+import { CharWidthRequest, CharWidthRequestType, readCharWidths } from 'vs/editor/browser/config/charWidthReader';
+import { IStorageService, StorageScope } from 'vs/platform/storage/common/storage';
 
 class CSSBasedConfigurationCache {
 
@@ -25,25 +27,73 @@ class CSSBasedConfigurationCache {
 	}
 
 	public has(item: BareFontInfo): boolean {
-		return !!this._values[item.getId()];
+		let itemId = item.getId();
+		return !!this._values[itemId];
 	}
 
 	public get(item: BareFontInfo): FontInfo {
-		return this._values[item.getId()];
+		let itemId = item.getId();
+		return this._values[itemId];
 	}
 
 	public put(item: BareFontInfo, value: FontInfo): void {
-		this._keys[item.getId()] = item;
-		this._values[item.getId()] = value;
+		let itemId = item.getId();
+		this._keys[itemId] = item;
+		this._values[itemId] = value;
+	}
+
+	public remove(item: BareFontInfo): void {
+		let itemId = item.getId();
+		delete this._keys[itemId];
+		delete this._values[itemId];
 	}
 
 	public getKeys(): BareFontInfo[] {
 		return Object.keys(this._keys).map(id => this._keys[id]);
 	}
+
+	public getValues(): FontInfo[] {
+		return Object.keys(this._keys).map(id => this._values[id]);
+	}
 }
 
 export function readFontInfo(bareFontInfo: BareFontInfo): FontInfo {
 	return CSSBasedConfiguration.INSTANCE.readConfiguration(bareFontInfo);
+}
+
+export function restoreFontInfo(storageService: IStorageService): void {
+	let strStoredFontInfo = storageService.get('editorFontInfo', StorageScope.GLOBAL);
+	if (typeof strStoredFontInfo !== 'string') {
+		return;
+	}
+	let storedFontInfo: ISerializedFontInfo[] = null;
+	try {
+		storedFontInfo = JSON.parse(strStoredFontInfo);
+	} catch (err) {
+		return;
+	}
+	if (!Array.isArray(storedFontInfo)) {
+		return;
+	}
+	CSSBasedConfiguration.INSTANCE.restoreFontInfo(storedFontInfo);
+}
+
+export function saveFontInfo(storageService: IStorageService): void {
+	let knownFontInfo = CSSBasedConfiguration.INSTANCE.saveFontInfo();
+	storageService.store('editorFontInfo', JSON.stringify(knownFontInfo), StorageScope.GLOBAL);
+}
+
+export interface ISerializedFontInfo {
+	readonly zoomLevel: number;
+	readonly fontFamily: string;
+	readonly fontWeight: string;
+	readonly fontSize: number;
+	readonly lineHeight: number;
+	readonly isMonospace: boolean;
+	readonly typicalHalfwidthCharacterWidth: number;
+	readonly typicalFullwidthCharacterWidth: number;
+	readonly spaceWidth: number;
+	readonly maxDigitWidth: number;
 }
 
 class CSSBasedConfiguration extends Disposable {
@@ -70,6 +120,37 @@ class CSSBasedConfiguration extends Disposable {
 		super.dispose();
 	}
 
+	public saveFontInfo(): ISerializedFontInfo[] {
+		// Only save trusted font info (that has been measured in this running instance)
+		return this._cache.getValues().filter(item => item.isTrusted);
+	}
+
+	public restoreFontInfo(savedFontInfo: ISerializedFontInfo[]): void {
+		// Take all the saved font info and insert them in the cache without the trusted flag.
+		// The reason for this is that a font might have been installed on the OS in the meantime.
+		for (let i = 0, len = savedFontInfo.length; i < len; i++) {
+			let fontInfo = new FontInfo(savedFontInfo[i], false);
+			this._cache.put(fontInfo, fontInfo);
+		}
+
+		// Remove saved font info that does not have the trusted flag.
+		// (this forces it to be re-read).
+		setTimeout(() => {
+			let values = this._cache.getValues();
+			let somethingRemoved = false;
+			for (let i = 0, len = values.length; i < len; i++) {
+				let item = values[i];
+				if (!item.isTrusted) {
+					somethingRemoved = true;
+					this._cache.remove(item);
+				}
+			}
+			if (somethingRemoved) {
+				this._onDidChange.fire();
+			}
+		}, 5000);
+	}
+
 	public readConfiguration(bareFontInfo: BareFontInfo): FontInfo {
 		if (!this._cache.has(bareFontInfo)) {
 			let readConfig = CSSBasedConfiguration._actualReadConfiguration(bareFontInfo);
@@ -77,15 +158,17 @@ class CSSBasedConfiguration extends Disposable {
 			if (readConfig.typicalHalfwidthCharacterWidth <= 2 || readConfig.typicalFullwidthCharacterWidth <= 2 || readConfig.spaceWidth <= 2 || readConfig.maxDigitWidth <= 2) {
 				// Hey, it's Bug 14341 ... we couldn't read
 				readConfig = new FontInfo({
+					zoomLevel: browser.getZoomLevel(),
 					fontFamily: readConfig.fontFamily,
 					fontWeight: readConfig.fontWeight,
 					fontSize: readConfig.fontSize,
 					lineHeight: readConfig.lineHeight,
+					isMonospace: readConfig.isMonospace,
 					typicalHalfwidthCharacterWidth: Math.max(readConfig.typicalHalfwidthCharacterWidth, 5),
 					typicalFullwidthCharacterWidth: Math.max(readConfig.typicalFullwidthCharacterWidth, 5),
 					spaceWidth: Math.max(readConfig.spaceWidth, 5),
 					maxDigitWidth: Math.max(readConfig.maxDigitWidth, 5),
-				});
+				}, true);
 				this._installChangeMonitor();
 			}
 
@@ -124,31 +207,88 @@ class CSSBasedConfiguration extends Disposable {
 		}
 	}
 
+	private static createRequest(chr: string, type: CharWidthRequestType, all: CharWidthRequest[], monospace: CharWidthRequest[]): CharWidthRequest {
+		let result = new CharWidthRequest(chr, type);
+		all.push(result);
+		if (monospace) {
+			monospace.push(result);
+		}
+		return result;
+	}
+
 	private static _actualReadConfiguration(bareFontInfo: BareFontInfo): FontInfo {
-		let canvasElem = <HTMLCanvasElement>document.createElement('canvas');
-		let context = canvasElem.getContext('2d');
-		context.font = `normal normal normal normal ${bareFontInfo.fontSize}px / ${bareFontInfo.lineHeight}px ${bareFontInfo.fontFamily}`;
+		let all: CharWidthRequest[] = [];
+		let monospace: CharWidthRequest[] = [];
 
-		let typicalHalfwidthCharacter = context.measureText('n');
-		let typicalFullwidthCharacter = context.measureText('\uff4d');
-		let space = context.measureText(' ');
-		let digits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'].map(chr => context.measureText(chr));
+		const typicalHalfwidthCharacter = this.createRequest('n', CharWidthRequestType.Regular, all, monospace);
+		const typicalFullwidthCharacter = this.createRequest('\uff4d', CharWidthRequestType.Regular, all, null);
+		const space = this.createRequest(' ', CharWidthRequestType.Regular, all, monospace);
+		const digit0 = this.createRequest('0', CharWidthRequestType.Regular, all, monospace);
+		const digit1 = this.createRequest('1', CharWidthRequestType.Regular, all, monospace);
+		const digit2 = this.createRequest('2', CharWidthRequestType.Regular, all, monospace);
+		const digit3 = this.createRequest('3', CharWidthRequestType.Regular, all, monospace);
+		const digit4 = this.createRequest('4', CharWidthRequestType.Regular, all, monospace);
+		const digit5 = this.createRequest('5', CharWidthRequestType.Regular, all, monospace);
+		const digit6 = this.createRequest('6', CharWidthRequestType.Regular, all, monospace);
+		const digit7 = this.createRequest('7', CharWidthRequestType.Regular, all, monospace);
+		const digit8 = this.createRequest('8', CharWidthRequestType.Regular, all, monospace);
+		const digit9 = this.createRequest('9', CharWidthRequestType.Regular, all, monospace);
 
-		let maxDigitWidth = 0;
-		for (let i = 0, len = digits.length; i < len; i++) {
-			maxDigitWidth = Math.max(maxDigitWidth, digits[i].width);
+		// monospace test: used for whitespace rendering
+		this.createRequest('→', CharWidthRequestType.Regular, all, monospace);
+		this.createRequest('·', CharWidthRequestType.Regular, all, monospace);
+
+		// monospace test: some characters
+		this.createRequest('|', CharWidthRequestType.Regular, all, monospace);
+		this.createRequest('/', CharWidthRequestType.Regular, all, monospace);
+		this.createRequest('-', CharWidthRequestType.Regular, all, monospace);
+		this.createRequest('_', CharWidthRequestType.Regular, all, monospace);
+		this.createRequest('i', CharWidthRequestType.Regular, all, monospace);
+		this.createRequest('l', CharWidthRequestType.Regular, all, monospace);
+		this.createRequest('m', CharWidthRequestType.Regular, all, monospace);
+
+		// monospace italic test
+		this.createRequest('|', CharWidthRequestType.Italic, all, monospace);
+		this.createRequest('_', CharWidthRequestType.Italic, all, monospace);
+		this.createRequest('i', CharWidthRequestType.Italic, all, monospace);
+		this.createRequest('l', CharWidthRequestType.Italic, all, monospace);
+		this.createRequest('m', CharWidthRequestType.Italic, all, monospace);
+		this.createRequest('n', CharWidthRequestType.Italic, all, monospace);
+
+		// monospace bold test
+		this.createRequest('|', CharWidthRequestType.Bold, all, monospace);
+		this.createRequest('_', CharWidthRequestType.Bold, all, monospace);
+		this.createRequest('i', CharWidthRequestType.Bold, all, monospace);
+		this.createRequest('l', CharWidthRequestType.Bold, all, monospace);
+		this.createRequest('m', CharWidthRequestType.Bold, all, monospace);
+		this.createRequest('n', CharWidthRequestType.Bold, all, monospace);
+
+		readCharWidths(bareFontInfo, all);
+
+		const maxDigitWidth = Math.max(digit0.width, digit1.width, digit2.width, digit3.width, digit4.width, digit5.width, digit6.width, digit7.width, digit8.width, digit9.width);
+
+		let isMonospace = true;
+		let referenceWidth = monospace[0].width;
+		for (let i = 1, len = monospace.length; i < len; i++) {
+			const diff = referenceWidth - monospace[i].width;
+			if (diff < -0.001 || diff > 0.001) {
+				isMonospace = false;
+				break;
+			}
 		}
 
 		return new FontInfo({
+			zoomLevel: browser.getZoomLevel(),
 			fontFamily: bareFontInfo.fontFamily,
 			fontWeight: bareFontInfo.fontWeight,
 			fontSize: bareFontInfo.fontSize,
 			lineHeight: bareFontInfo.lineHeight,
+			isMonospace: isMonospace,
 			typicalHalfwidthCharacterWidth: typicalHalfwidthCharacter.width,
 			typicalFullwidthCharacterWidth: typicalFullwidthCharacter.width,
 			spaceWidth: space.width,
 			maxDigitWidth: maxDigitWidth
-		});
+		}, true);
 	}
 }
 
@@ -161,7 +301,7 @@ export class Configuration extends CommonEditorConfiguration {
 		domNode.style.lineHeight = fontInfo.lineHeight + 'px';
 	}
 
-	public static applyFontInfo(domNode: FastDomNode, fontInfo: BareFontInfo): void {
+	public static applyFontInfo(domNode: FastDomNode<HTMLElement>, fontInfo: BareFontInfo): void {
 		domNode.setFontFamily(fontInfo.fontFamily);
 		domNode.setFontWeight(fontInfo.fontWeight);
 		domNode.setFontSize(fontInfo.fontSize);
@@ -171,7 +311,7 @@ export class Configuration extends CommonEditorConfiguration {
 	constructor(options: any, referenceDomElement: HTMLElement = null) {
 		super(options, new ElementSizeObserver(referenceDomElement, () => this._onReferenceDomElementSizeChanged()));
 
-		this._register(CSSBasedConfiguration.INSTANCE.onDidChange(() => () => this._onCSSBasedConfigurationChanged()));
+		this._register(CSSBasedConfiguration.INSTANCE.onDidChange(() => this._onCSSBasedConfigurationChanged()));
 
 		if (this._configWithDefaults.getEditorOptions().automaticLayout) {
 			this._elementSizeObserver.startObserving();
@@ -197,7 +337,7 @@ export class Configuration extends CommonEditorConfiguration {
 		super.dispose();
 	}
 
-	protected _getEditorClassName(theme: string, fontLigatures: boolean): string {
+	protected _getEditorClassName(theme: string, fontLigatures: boolean, mouseStyle: 'text' | 'default' | 'copy'): string {
 		let extra = '';
 		if (browser.isIE) {
 			extra += 'ie ';
@@ -211,6 +351,11 @@ export class Configuration extends CommonEditorConfiguration {
 		}
 		if (fontLigatures) {
 			extra += 'enable-ligatures ';
+		}
+		if (mouseStyle === 'default') {
+			extra += 'mouse-default ';
+		} else if (mouseStyle === 'copy') {
+			extra += 'mouse-copy ';
 		}
 		return 'monaco-editor ' + extra + theme;
 	}
@@ -227,7 +372,15 @@ export class Configuration extends CommonEditorConfiguration {
 		return browser.canUseTranslate3d && browser.getZoomLevel() === 0;
 	}
 
+	protected _getPixelRatio(): number {
+		return browser.getPixelRatio();
+	}
+
 	protected readConfiguration(bareFontInfo: BareFontInfo): FontInfo {
 		return CSSBasedConfiguration.INSTANCE.readConfiguration(bareFontInfo);
+	}
+
+	protected getZoomLevel(): number {
+		return browser.getZoomLevel();
 	}
 }

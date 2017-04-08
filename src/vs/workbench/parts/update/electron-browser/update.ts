@@ -19,13 +19,13 @@ import { ReleaseNotesInput } from 'vs/workbench/parts/update/electron-browser/re
 import { IRequestService } from 'vs/platform/request/node/request';
 import { asText } from 'vs/base/node/request';
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
-import { Keybinding } from 'vs/base/common/keyCodes';
-import { KeybindingLabels } from 'vs/base/common/keybinding';
+import { KeybindingIO } from 'vs/workbench/services/keybinding/common/keybindingIO';
 import { IOpenerService } from 'vs/platform/opener/common/opener';
 import { IWorkbenchContribution } from 'vs/workbench/common/contributions';
 import { IStorageService, StorageScope } from 'vs/platform/storage/common/storage';
 import { IUpdateService } from 'vs/platform/update/common/update';
 import * as semver from 'semver';
+import { OS } from 'vs/base/common/platform';
 
 class ApplyUpdateAction extends Action {
 	constructor( @IUpdateService private updateService: IUpdateService) {
@@ -50,10 +50,10 @@ const releaseNotesCache: { [version: string]: TPromise<string>; } = Object.creat
 export function loadReleaseNotes(accessor: ServicesAccessor, version: string): TPromise<string> {
 	const requestService = accessor.get(IRequestService);
 	const keybindingService = accessor.get(IKeybindingService);
-	const match = /^(\d+\.\d)\./.exec(version);
+	const match = /^(\d+\.\d+)\./.exec(version);
 
 	if (!match) {
-		return TPromise.as(null);
+		return TPromise.wrapError('not found');
 	}
 
 	const versionLabel = match[1].replace(/\./g, '_');
@@ -63,29 +63,29 @@ export function loadReleaseNotes(accessor: ServicesAccessor, version: string): T
 
 	const patchKeybindings = (text: string): string => {
 		const kb = (match: string, kb: string) => {
-			const keybinding = keybindingService.lookupKeybindings(kb)[0];
+			const keybinding = keybindingService.lookupKeybinding(kb);
 
 			if (!keybinding) {
 				return unassigned;
 			}
 
-			return keybindingService.getLabelFor(keybinding);
+			return keybinding.getLabel();
 		};
 
 		const kbstyle = (match: string, kb: string) => {
-			const code = KeybindingLabels.fromUserSettingsLabel(kb);
-
-			if (!code) {
-				return unassigned;
-			}
-
-			const keybinding = new Keybinding(code);
+			const keybinding = KeybindingIO.readKeybinding(kb, OS);
 
 			if (!keybinding) {
 				return unassigned;
 			}
 
-			return keybindingService.getLabelFor(keybinding);
+			const resolvedKeybindings = keybindingService.resolveKeybinding(keybinding);
+
+			if (resolvedKeybindings.length === 0) {
+				return unassigned;
+			}
+
+			return resolvedKeybindings[0].getLabel();
 		};
 
 		return text
@@ -137,7 +137,7 @@ export abstract class AbstractShowReleaseNotesAction extends Action {
 		this.enabled = false;
 
 		return this.instantiationService.invokeFunction(loadReleaseNotes, this.version)
-			.then(text => this.editorService.openEditor(this.instantiationService.createInstance(ReleaseNotesInput, this.version, text)))
+			.then(text => this.editorService.openEditor(this.instantiationService.createInstance(ReleaseNotesInput, this.version, text), { pinned: true }))
 			.then(() => true)
 			.then(null, () => {
 				const action = this.instantiationService.createInstance(OpenLatestReleaseNotesInBrowserAction);
@@ -207,7 +207,7 @@ export class UpdateContribution implements IWorkbenchContribution {
 		if (product.releaseNotesUrl && lastVersion && pkg.version !== lastVersion) {
 			instantiationService.invokeFunction(loadReleaseNotes, pkg.version)
 				.then(
-				text => editorService.openEditor(instantiationService.createInstance(ReleaseNotesInput, pkg.version, text)),
+				text => editorService.openEditor(instantiationService.createInstance(ReleaseNotesInput, pkg.version, text), { pinned: true }),
 				() => {
 					messageService.show(Severity.Info, {
 						message: nls.localize('read the release notes', "Welcome to {0} v{1}! Would you like to read the Release Notes?", product.nameLong, pkg.version),

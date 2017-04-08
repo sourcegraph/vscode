@@ -8,6 +8,7 @@
 import { TPromise } from 'vs/base/common/winjs.base';
 import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
 import Event from 'vs/base/common/event';
+import { ITelemetryData } from 'vs/platform/telemetry/common/telemetry';
 
 export const IWindowsService = createDecorator<IWindowsService>('windowsService');
 
@@ -18,26 +19,31 @@ export interface IWindowsService {
 	onWindowOpen: Event<number>;
 	onWindowFocus: Event<number>;
 
-	openFileFolderPicker(windowId: number, forceNewWindow?: boolean): TPromise<void>;
-	openFilePicker(windowId: number, forceNewWindow?: boolean, path?: string): TPromise<void>;
-	openFolderPicker(windowId: number, forceNewWindow?: boolean): TPromise<void>;
+	openFileFolderPicker(windowId: number, forceNewWindow?: boolean, data?: ITelemetryData): TPromise<void>;
+	openFilePicker(windowId: number, forceNewWindow?: boolean, path?: string, data?: ITelemetryData): TPromise<void>;
+	openFolderPicker(windowId: number, forceNewWindow?: boolean, data?: ITelemetryData): TPromise<void>;
 	reloadWindow(windowId: number): TPromise<void>;
 	openDevTools(windowId: number): TPromise<void>;
 	toggleDevTools(windowId: number): TPromise<void>;
-	// TODO@joao: rename, shouldn't this be closeWindow?
-	// @ben: no, this actually leaves the window open but changes it to have no workspace opened
 	closeFolder(windowId: number): TPromise<void>;
 	toggleFullScreen(windowId: number): TPromise<void>;
 	setRepresentedFilename(windowId: number, fileName: string): TPromise<void>;
 	addToRecentlyOpen(paths: { path: string, isFile?: boolean }[]): TPromise<void>;
 	removeFromRecentlyOpen(paths: string[]): TPromise<void>;
+	clearRecentPathsList(): TPromise<void>;
 	getRecentlyOpen(windowId: number): TPromise<{ files: string[]; folders: string[]; }>;
 	focusWindow(windowId: number): TPromise<void>;
+	isFocused(windowId: number): TPromise<boolean>;
 	isMaximized(windowId: number): TPromise<boolean>;
 	maximizeWindow(windowId: number): TPromise<void>;
 	unmaximizeWindow(windowId: number): TPromise<void>;
 	setDocumentEdited(windowId: number, flag: boolean): TPromise<void>;
 	quit(): TPromise<void>;
+	relaunch(options: { addArgs?: string[], removeArgs?: string[] }): TPromise<void>;
+
+	// Shared process
+	whenSharedProcessReady(): TPromise<void>;
+	toggleSharedProcess(): TPromise<void>;
 
 	// Global methods
 	openWindow(paths: string[], options?: { forceNewWindow?: boolean, forceReuseWindow?: boolean }): TPromise<void>;
@@ -52,7 +58,7 @@ export interface IWindowsService {
 
 	// This needs to be handled from browser process to prevent
 	// foreground ordering issues on Windows
-	openExternal(url: string): TPromise<void>;
+	openExternal(url: string): TPromise<boolean>;
 
 	// TODO: this is a bit backwards
 	startCrashReporter(config: Electron.CrashReporterStartOptions): TPromise<void>;
@@ -65,9 +71,9 @@ export interface IWindowService {
 	_serviceBrand: any;
 
 	getCurrentWindowId(): number;
-	openFileFolderPicker(forceNewWindow?: boolean): TPromise<void>;
-	openFilePicker(forceNewWindow?: boolean, path?: string): TPromise<void>;
-	openFolderPicker(forceNewWindow?: boolean): TPromise<void>;
+	openFileFolderPicker(forceNewWindow?: boolean, data?: ITelemetryData): TPromise<void>;
+	openFilePicker(forceNewWindow?: boolean, path?: string, data?: ITelemetryData): TPromise<void>;
+	openFolderPicker(forceNewWindow?: boolean, data?: ITelemetryData): TPromise<void>;
 	reloadWindow(): TPromise<void>;
 	openDevTools(): TPromise<void>;
 	toggleDevTools(): TPromise<void>;
@@ -78,11 +84,14 @@ export interface IWindowService {
 	removeFromRecentlyOpen(paths: string[]): TPromise<void>;
 	getRecentlyOpen(): TPromise<{ files: string[]; folders: string[]; }>;
 	focusWindow(): TPromise<void>;
+	isFocused(): TPromise<boolean>;
 	setDocumentEdited(flag: boolean): TPromise<void>;
 	isMaximized(): TPromise<boolean>;
 	maximizeWindow(): TPromise<void>;
 	unmaximizeWindow(): TPromise<void>;
 }
+
+export type MenuBarVisibility = 'default' | 'visible' | 'toggle' | 'hidden';
 
 export interface IWindowSettings {
 	openFilesInNewWindow: 'on' | 'off' | 'default';
@@ -92,5 +101,6 @@ export interface IWindowSettings {
 	zoomLevel: number;
 	titleBarStyle: 'native' | 'custom';
 	autoDetectHighContrast: boolean;
-	menuBarVisibility: 'visible' | 'toggle' | 'hidden';
+	menuBarVisibility: MenuBarVisibility;
+	newWindowDimensions: 'default' | 'inherit' | 'maximized' | 'fullscreen';
 }

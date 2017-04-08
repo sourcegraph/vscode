@@ -11,27 +11,26 @@ import objects = require('vs/base/common/objects');
 import DOM = require('vs/base/browser/dom');
 import URI from 'vs/base/common/uri';
 import { MIME_BINARY } from 'vs/base/common/mime';
-import async = require('vs/base/common/async');
+import { once } from 'vs/base/common/functional';
 import paths = require('vs/base/common/paths');
 import errors = require('vs/base/common/errors');
 import { isString } from 'vs/base/common/types';
 import { IAction, ActionRunner as BaseActionRunner, IActionRunner } from 'vs/base/common/actions';
 import comparers = require('vs/base/common/comparers');
 import { InputBox } from 'vs/base/browser/ui/inputbox/inputBox';
-import { $, Builder } from 'vs/base/browser/builder';
-import platform = require('vs/base/common/platform');
+import { isMacintosh, isLinux } from 'vs/base/common/platform';
 import glob = require('vs/base/common/glob');
 import { FileLabel, IFileLabelOptions } from 'vs/workbench/browser/labels';
 import { IDisposable } from 'vs/base/common/lifecycle';
 import { ContributableActionProvider } from 'vs/workbench/browser/actionBarRegistry';
 import { IFilesConfiguration } from 'vs/workbench/parts/files/common/files';
 import { ITextFileService } from 'vs/workbench/services/textfile/common/textfiles';
-import { IFileOperationResult, FileOperationResult, IFileService } from 'vs/platform/files/common/files';
-import { DuplicateFileAction, ImportFileAction, PasteFileAction, keybindingForAction, IEditableData, IFileViewletState } from 'vs/workbench/parts/files/browser/fileActions';
-import { IDataSource, ITree, IElementCallback, IAccessibilityProvider, IRenderer, ContextMenuEvent, ISorter, IFilter, IDragAndDrop, IDragAndDropData, IDragOverReaction, DRAG_OVER_ACCEPT_BUBBLE_DOWN, DRAG_OVER_ACCEPT_BUBBLE_DOWN_COPY, DRAG_OVER_ACCEPT_BUBBLE_UP, DRAG_OVER_ACCEPT_BUBBLE_UP_COPY, DRAG_OVER_REJECT } from 'vs/base/parts/tree/browser/tree';
+import { IFileOperationResult, FileOperationResult, IFileService, isEqual, isEqualOrParent } from 'vs/platform/files/common/files';
+import { ResourceMap } from 'vs/base/common/map';
+import { DuplicateFileAction, ImportFileAction, IEditableData, IFileViewletState } from 'vs/workbench/parts/files/browser/fileActions';
+import { IDataSource, ITree, IAccessibilityProvider, IRenderer, ContextMenuEvent, ISorter, IFilter, IDragAndDrop, IDragAndDropData, IDragOverReaction, DRAG_OVER_ACCEPT_BUBBLE_DOWN, DRAG_OVER_ACCEPT_BUBBLE_DOWN_COPY, DRAG_OVER_ACCEPT_BUBBLE_UP, DRAG_OVER_ACCEPT_BUBBLE_UP_COPY, DRAG_OVER_REJECT } from 'vs/base/parts/tree/browser/tree';
 import { DesktopDragAndDropData, ExternalElementsDragAndDropData } from 'vs/base/parts/tree/browser/treeDnd';
 import { ClickBehavior, DefaultController } from 'vs/base/parts/tree/browser/treeDefaults';
-import { ActionsRenderer } from 'vs/base/parts/tree/browser/actionsRenderer';
 import { FileStat, NewStatPlaceholder } from 'vs/workbench/parts/files/common/explorerViewModel';
 import { DragMouseEvent, IMouseEvent } from 'vs/base/browser/mouseEvent';
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
@@ -45,12 +44,14 @@ import { IInstantiationService } from 'vs/platform/instantiation/common/instanti
 import { IMessageService, IConfirmation, Severity } from 'vs/platform/message/common/message';
 import { IProgressService } from 'vs/platform/progress/common/progress';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
-import { Keybinding, KeyCode, KeyMod } from 'vs/base/common/keyCodes';
+import { ResolvedKeybinding, KeyCode } from 'vs/base/common/keyCodes';
 import { IKeyboardEvent } from 'vs/base/browser/keyboardEvent';
 import { IMenuService, IMenu, MenuId } from 'vs/platform/actions/common/actions';
 import { fillInActions } from 'vs/platform/actions/browser/menuItemActionItem';
 import { IBackupFileService } from 'vs/workbench/services/backup/common/backup';
 import { ITextModelResolverService } from 'vs/editor/common/services/resolverService';
+import { attachInputBoxStyler } from 'vs/platform/theme/common/styler';
+import { IThemeService } from 'vs/platform/theme/common/themeService';
 
 export class FileDataSource implements IDataSource {
 	constructor(
@@ -111,7 +112,8 @@ export class FileDataSource implements IDataSource {
 		}
 
 		// Return if root reached
-		if (this.contextService.hasWorkspace() && stat.resource.toString() === this.contextService.getWorkspace().resource.toString()) {
+		const workspace = this.contextService.getWorkspace();
+		if (workspace && isEqual(stat.resource.fsPath, workspace.resource.fsPath)) {
 			return TPromise.as(null);
 		}
 
@@ -212,11 +214,11 @@ export class FileActionProvider extends ContributableActionProvider {
 
 export class FileViewletState implements IFileViewletState {
 	private _actionProvider: FileActionProvider;
-	private editableStats: { [resource: string]: IEditableData; };
+	private editableStats: ResourceMap<IEditableData>;
 
 	constructor() {
 		this._actionProvider = new FileActionProvider(this);
-		this.editableStats = Object.create(null);
+		this.editableStats = new ResourceMap<IEditableData>();
 	}
 
 	public get actionProvider(): FileActionProvider {
@@ -224,17 +226,17 @@ export class FileViewletState implements IFileViewletState {
 	}
 
 	public getEditableData(stat: FileStat): IEditableData {
-		return this.editableStats[stat.resource && stat.resource.toString()];
+		return this.editableStats.get(stat.resource);
 	}
 
 	public setEditable(stat: FileStat, editableData: IEditableData): void {
 		if (editableData) {
-			this.editableStats[stat.resource && stat.resource.toString()] = editableData;
+			this.editableStats.set(stat.resource, editableData);
 		}
 	}
 
 	public clearEditable(stat: FileStat): void {
-		delete this.editableStats[stat.resource && stat.resource.toString()];
+		this.editableStats.delete(stat.resource);
 	}
 }
 
@@ -252,62 +254,73 @@ export class ActionRunner extends BaseActionRunner implements IActionRunner {
 	}
 }
 
+export interface IFileTemplateData {
+	label: FileLabel;
+	container: HTMLElement;
+}
+
 // Explorer Renderer
-export class FileRenderer extends ActionsRenderer implements IRenderer {
+export class FileRenderer implements IRenderer {
 
 	private static ITEM_HEIGHT = 22;
+	private static FILE_TEMPLATE_ID = 'file';
 
 	private state: FileViewletState;
 
 	constructor(
 		state: FileViewletState,
-		actionRunner: IActionRunner,
 		@IContextViewService private contextViewService: IContextViewService,
-		@IInstantiationService private instantiationService: IInstantiationService
+		@IInstantiationService private instantiationService: IInstantiationService,
+		@IThemeService private themeService: IThemeService
 	) {
-		super({
-			actionProvider: state.actionProvider,
-			actionRunner: actionRunner
-		});
-
 		this.state = state;
 	}
 
-	public getContentHeight(tree: ITree, element: any): number {
+	public getHeight(tree: ITree, element: any): number {
 		return FileRenderer.ITEM_HEIGHT;
 	}
 
-	public renderContents(tree: ITree, stat: FileStat, domElement: HTMLElement, previousCleanupFn: IElementCallback): IElementCallback {
-		const el = $(domElement).clearChildren();
+	public getTemplateId(tree: ITree, element: any): string {
+		return FileRenderer.FILE_TEMPLATE_ID;
+	}
 
-		// File Rename/Add Input Field
+	public disposeTemplate(tree: ITree, templateId: string, templateData: IFileTemplateData): void {
+		templateData.label.dispose();
+	}
+
+	public renderTemplate(tree: ITree, templateId: string, container: HTMLElement): IFileTemplateData {
+		const label = this.instantiationService.createInstance(FileLabel, container, void 0);
+
+		return { label, container };
+	}
+
+	public renderElement(tree: ITree, stat: FileStat, templateId: string, templateData: IFileTemplateData): void {
 		const editableData: IEditableData = this.state.getEditableData(stat);
-		if (editableData) {
-			return this.renderInputBox(el, tree, stat, editableData);
+
+		// File Label
+		if (!editableData) {
+			templateData.label.element.style.display = 'block';
+			const extraClasses = ['explorer-item'];
+			templateData.label.setFile(stat.resource, { hidePath: true, isFolder: stat.isDirectory, extraClasses });
 		}
 
-		// Label
-		return this.renderLabel(el, stat);
+		// Input Box
+		else {
+			templateData.label.element.style.display = 'none';
+			this.renderInputBox(templateData.container, tree, stat, editableData);
+		}
 	}
 
-	private renderLabel(container: Builder, stat: FileStat): IElementCallback {
-		const label = this.instantiationService.createInstance(FileLabel, container.getHTMLElement(), void 0);
+	private renderInputBox(container: HTMLElement, tree: ITree, stat: FileStat, editableData: IEditableData): void {
 
-		const extraClasses = ['explorer-item'];
-		label.setFile(stat.resource, { hidePath: true, isFolder: stat.isDirectory, extraClasses });
-
-		return () => label.dispose();
-	}
-
-	private renderInputBox(container: Builder, tree: ITree, stat: FileStat, editableData: IEditableData): IElementCallback {
-		const label = this.instantiationService.createInstance(FileLabel, container.getHTMLElement(), void 0);
-
+		// Use a file label only for the icon next to the input box
+		const label = this.instantiationService.createInstance(FileLabel, container, void 0);
 		const extraClasses = ['explorer-item', 'explorer-item-edited'];
 		const isFolder = stat.isDirectory || (stat instanceof NewStatPlaceholder && stat.isDirectoryPlaceholder());
 		const labelOptions: IFileLabelOptions = { hidePath: true, hideLabel: true, isFolder, extraClasses };
 		label.setFile(stat.resource, labelOptions);
 
-		// Input field (when creating a new file or folder or renaming)
+		// Input field for name
 		const inputBox = new InputBox(label.element, this.contextViewService, {
 			validationOptions: {
 				validation: editableData.validator,
@@ -315,6 +328,7 @@ export class FileRenderer extends ActionsRenderer implements IRenderer {
 			},
 			ariaLabel: nls.localize('fileInputAriaLabel', "Type file name. Press Enter to confirm or Escape to cancel.")
 		});
+		const styler = attachInputBoxStyler(inputBox, this.themeService);
 
 		const parent = paths.dirname(stat.resource.fsPath);
 		inputBox.onDidChange(value => {
@@ -328,7 +342,7 @@ export class FileRenderer extends ActionsRenderer implements IRenderer {
 		inputBox.select({ start: 0, end: lastDot > 0 && !stat.isDirectory ? lastDot : value.length });
 		inputBox.focus();
 
-		const done = async.once((commit: boolean) => {
+		const done = once(commit => {
 			tree.clearHighlight();
 
 			if (commit && inputBox.value) {
@@ -338,6 +352,7 @@ export class FileRenderer extends ActionsRenderer implements IRenderer {
 			setTimeout(() => {
 				tree.DOMFocus();
 				lifecycle.dispose(toDispose);
+				container.removeChild(label.element);
 			}, 0);
 		});
 
@@ -352,13 +367,12 @@ export class FileRenderer extends ActionsRenderer implements IRenderer {
 					done(false);
 				}
 			}),
-			DOM.addDisposableListener(inputBox.inputElement, 'blur', () => {
+			DOM.addDisposableListener(inputBox.inputElement, DOM.EventType.BLUR, () => {
 				done(inputBox.isInputValid());
 			}),
-			label
+			label,
+			styler
 		];
-
-		return () => done(true);
 	}
 }
 
@@ -372,7 +386,6 @@ export class FileAccessibilityProvider implements IAccessibilityProvider {
 
 // Explorer Controller
 export class FileController extends DefaultController {
-	private didCatchEnterDown: boolean;
 	private state: FileViewletState;
 
 	private contributedContextMenu: IMenu;
@@ -387,36 +400,14 @@ export class FileController extends DefaultController {
 		@IContextKeyService contextKeyService: IContextKeyService,
 		@IKeybindingService private keybindingService: IKeybindingService
 	) {
-		super({ clickBehavior: ClickBehavior.ON_MOUSE_UP /* do not change to not break DND */ });
+		super({ clickBehavior: ClickBehavior.ON_MOUSE_UP /* do not change to not break DND */, keyboardSupport: false /* handled via IListService */ });
 
 		this.contributedContextMenu = menuService.createMenu(MenuId.ExplorerContext, contextKeyService);
-
-		this.didCatchEnterDown = false;
-
-		this.downKeyBindingDispatcher.set(platform.isMacintosh ? KeyMod.CtrlCmd | KeyCode.DownArrow : KeyCode.Enter, this.onEnterDown.bind(this));
-		this.upKeyBindingDispatcher.set(platform.isMacintosh ? KeyMod.CtrlCmd | KeyCode.DownArrow : KeyCode.Enter, this.onEnterUp.bind(this));
-		if (platform.isMacintosh) {
-			this.upKeyBindingDispatcher.set(KeyMod.WinCtrl | KeyCode.Enter, this.onModifierEnterUp.bind(this)); // Mac: somehow Cmd+Enter does not work
-		} else {
-			this.upKeyBindingDispatcher.set(KeyMod.CtrlCmd | KeyCode.Enter, this.onModifierEnterUp.bind(this)); // Mac: somehow Cmd+Enter does not work
-		}
-		this.downKeyBindingDispatcher.set(platform.isMacintosh ? KeyCode.Enter : KeyCode.F2, this.onF2.bind(this));
-		this.downKeyBindingDispatcher.set(KeyMod.CtrlCmd | KeyCode.KEY_C, this.onCopy.bind(this));
-		this.downKeyBindingDispatcher.set(KeyMod.CtrlCmd | KeyCode.KEY_V, this.onPaste.bind(this));
-
-		if (platform.isMacintosh) {
-			this.downKeyBindingDispatcher.set(KeyMod.CtrlCmd | KeyCode.UpArrow, this.onLeft.bind(this));
-			this.downKeyBindingDispatcher.set(KeyMod.CtrlCmd | KeyCode.Backspace, this.onDelete.bind(this));
-			this.downKeyBindingDispatcher.set(KeyMod.CtrlCmd | KeyMod.Alt | KeyCode.Backspace, this.onDelete.bind(this));
-		} else {
-			this.downKeyBindingDispatcher.set(KeyCode.Delete, this.onDelete.bind(this));
-			this.downKeyBindingDispatcher.set(KeyMod.Shift | KeyCode.Delete, this.onDelete.bind(this));
-		}
 
 		this.state = state;
 	}
 
-	/* protected */ public onLeftClick(tree: ITree, stat: FileStat, event: IMouseEvent, origin: string = 'mouse'): boolean {
+	public onLeftClick(tree: ITree, stat: FileStat, event: IMouseEvent, origin: string = 'mouse'): boolean {
 		const payload = { origin: origin };
 		const isDoubleClick = (origin === 'mouse' && event.detail === 2);
 
@@ -433,7 +424,8 @@ export class FileController extends DefaultController {
 		}
 
 		// Handle root
-		if (this.contextService.getWorkspace() && stat.resource.toString() === this.contextService.getWorkspace().resource.toString()) {
+		const workspace = this.contextService.getWorkspace();
+		if (workspace && isEqual(stat.resource.fsPath, workspace.resource.fsPath)) {
 			tree.clearFocus(payload);
 			tree.clearSelection(payload);
 
@@ -473,7 +465,7 @@ export class FileController extends DefaultController {
 			tree.setSelection([stat], payload);
 
 			if (!stat.isDirectory) {
-				this.openEditor(stat, preserveFocus, event && (event.ctrlKey || event.metaKey), isDoubleClick);
+				this.openEditor(stat, { preserveFocus, sideBySide: event && (event.ctrlKey || event.metaKey), pinned: isDoubleClick });
 			}
 		}
 
@@ -499,12 +491,12 @@ export class FileController extends DefaultController {
 			getAnchor: () => anchor,
 			getActions: () => {
 				return this.state.actionProvider.getSecondaryActions(tree, stat).then(actions => {
-					fillInActions(this.contributedContextMenu, stat.resource, actions);
+					fillInActions(this.contributedContextMenu, { arg: stat.resource }, actions);
 					return actions;
 				});
 			},
 			getActionItem: this.state.actionProvider.getActionItem.bind(this.state.actionProvider, tree, stat),
-			getKeyBinding: (a): Keybinding => keybindingForAction(a.id, this.keybindingService),
+			getKeyBinding: (a): ResolvedKeybinding => this.keybindingService.lookupKeybinding(a.id),
 			getActionsContext: (event) => {
 				return {
 					viewletState: this.state,
@@ -522,121 +514,12 @@ export class FileController extends DefaultController {
 		return true;
 	}
 
-	private onEnterDown(tree: ITree, event: IKeyboardEvent): boolean {
-		if (tree.getHighlight()) {
-			return false;
-		}
-
-		const payload = { origin: 'keyboard' };
-
-		const stat: FileStat = tree.getFocus();
-		if (stat) {
-
-			// Directory: Toggle expansion
-			if (stat.isDirectory) {
-				tree.toggleExpansion(stat);
-			}
-
-			// File: Open
-			else {
-				tree.setFocus(stat, payload);
-				this.openEditor(stat, false, false);
-			}
-		}
-
-		this.didCatchEnterDown = true;
-
-		return true;
-	}
-
-	private onEnterUp(tree: ITree, event: IKeyboardEvent): boolean {
-		if (!this.didCatchEnterDown || tree.getHighlight()) {
-			return false;
-		}
-
-		const stat: FileStat = tree.getFocus();
-		if (stat && !stat.isDirectory) {
-			this.openEditor(stat, false, false);
-		}
-
-		this.didCatchEnterDown = false;
-
-		return true;
-	}
-
-	private onModifierEnterUp(tree: ITree, event: IKeyboardEvent): boolean {
-		if (tree.getHighlight()) {
-			return false;
-		}
-
-		const stat: FileStat = tree.getFocus();
-		if (stat && !stat.isDirectory) {
-			this.openEditor(stat, false, true);
-		}
-
-		this.didCatchEnterDown = false;
-
-		return true;
-	}
-
-	private onCopy(tree: ITree, event: IKeyboardEvent): boolean {
-		const stat: FileStat = tree.getFocus();
-		if (stat) {
-			this.runAction(tree, stat, 'workbench.files.action.copyFile').done();
-
-			return true;
-		}
-
-		return false;
-	}
-
-	private onPaste(tree: ITree, event: IKeyboardEvent): boolean {
-		const stat: FileStat = tree.getFocus() || tree.getInput() /* root */;
-		if (stat) {
-			const pasteAction = this.instantiationService.createInstance(PasteFileAction, tree, stat);
-			if (pasteAction._isEnabled()) {
-				pasteAction.run().done(null, errors.onUnexpectedError);
-
-				return true;
-			}
-		}
-
-		return false;
-	}
-
-	private openEditor(stat: FileStat, preserveFocus: boolean, sideBySide: boolean, pinned = false): void {
+	public openEditor(stat: FileStat, options: { preserveFocus: boolean; sideBySide: boolean; pinned: boolean; }): void {
 		if (stat && !stat.isDirectory) {
 			this.telemetryService.publicLog('workbenchActionExecuted', { id: 'workbench.files.openFile', from: 'explorer' });
 
-			this.editorService.openEditor({ resource: stat.resource, options: { preserveFocus, pinned } }, sideBySide).done(null, errors.onUnexpectedError);
+			this.editorService.openEditor({ resource: stat.resource, options }, options.sideBySide).done(null, errors.onUnexpectedError);
 		}
-	}
-
-	private onF2(tree: ITree, event: IKeyboardEvent): boolean {
-		const stat: FileStat = tree.getFocus();
-
-		if (stat) {
-			this.runAction(tree, stat, 'workbench.files.action.triggerRename').done();
-
-			return true;
-		}
-
-		return false;
-	}
-
-	private onDelete(tree: ITree, event: IKeyboardEvent): boolean {
-		const stat: FileStat = tree.getFocus();
-		if (stat) {
-			this.runAction(tree, stat, 'workbench.files.action.moveFileToTrash', event).done();
-
-			return true;
-		}
-
-		return false;
-	}
-
-	private runAction(tree: ITree, stat: FileStat, id: string, event?: IKeyboardEvent): TPromise<any> {
-		return this.state.actionProvider.runAction(tree, stat, id, { event });
 	}
 }
 
@@ -650,10 +533,6 @@ export class FileSorter implements ISorter {
 
 		if (statB.isDirectory && !statA.isDirectory) {
 			return 1;
-		}
-
-		if (statA.isDirectory && statB.isDirectory) {
-			return statA.name.toLowerCase().localeCompare(statB.name.toLowerCase());
 		}
 
 		if (statA instanceof NewStatPlaceholder) {
@@ -705,7 +584,7 @@ export class FileFilter implements IFilter {
 
 		// Hide those that match Hidden Patterns
 		const siblingsFn = () => siblings && siblings.map(c => c.name);
-		if (glob.match(this.hiddenExpression, this.contextService.toWorkspaceRelativePath(stat.resource), siblingsFn)) {
+		if (glob.match(this.hiddenExpression, this.contextService.toWorkspaceRelativePath(stat.resource, true), siblingsFn)) {
 			return false; // hidden through pattern
 		}
 
@@ -787,7 +666,7 @@ export class FileDragAndDrop implements IDragAndDrop {
 			return DRAG_OVER_REJECT;
 		}
 
-		const isCopy = originalEvent && ((originalEvent.ctrlKey && !platform.isMacintosh) || (originalEvent.altKey && platform.isMacintosh));
+		const isCopy = originalEvent && ((originalEvent.ctrlKey && !isMacintosh) || (originalEvent.altKey && isMacintosh));
 		const fromDesktop = data instanceof DesktopDragAndDropData;
 
 		// Desktop DND
@@ -822,15 +701,15 @@ export class FileDragAndDrop implements IDragAndDrop {
 					return true; // NewStatPlaceholders can not be moved
 				}
 
-				if (source.resource.toString() === target.resource.toString()) {
+				if (isEqual(source.resource.fsPath, target.resource.fsPath)) {
 					return true; // Can not move anything onto itself
 				}
 
-				if (!isCopy && paths.dirname(source.resource.fsPath) === target.resource.fsPath) {
+				if (!isCopy && isEqual(paths.dirname(source.resource.fsPath), target.resource.fsPath)) {
 					return true; // Can not move a file to the same parent unless we copy
 				}
 
-				if (paths.isEqualOrParent(target.resource.fsPath, source.resource.fsPath)) {
+				if (isEqualOrParent(target.resource.fsPath, source.resource.fsPath, !isLinux /* ignorecase */)) {
 					return true; // Can not move a parent folder into one of its children
 				}
 
@@ -845,7 +724,8 @@ export class FileDragAndDrop implements IDragAndDrop {
 			return fromDesktop || isCopy ? DRAG_OVER_ACCEPT_BUBBLE_DOWN_COPY(true) : DRAG_OVER_ACCEPT_BUBBLE_DOWN(true);
 		}
 
-		if (target.resource.toString() !== this.contextService.getWorkspace().resource.toString()) {
+		const workspace = this.contextService.getWorkspace();
+		if (workspace && !isEqual(target.resource.fsPath, workspace.resource.fsPath)) {
 			return fromDesktop || isCopy ? DRAG_OVER_ACCEPT_BUBBLE_UP_COPY : DRAG_OVER_ACCEPT_BUBBLE_UP;
 		}
 
@@ -868,7 +748,7 @@ export class FileDragAndDrop implements IDragAndDrop {
 		// In-Explorer DND (Move/Copy file)
 		else {
 			const source: FileStat = data.getData()[0];
-			const isCopy = (originalEvent.ctrlKey && !platform.isMacintosh) || (originalEvent.altKey && platform.isMacintosh);
+			const isCopy = (originalEvent.ctrlKey && !isMacintosh) || (originalEvent.altKey && isMacintosh);
 
 			promise = tree.expand(target).then(() => {
 
@@ -891,12 +771,12 @@ export class FileDragAndDrop implements IDragAndDrop {
 				};
 
 				// 1. check for dirty files that are being moved and backup to new target
-				const dirty = this.textFileService.getDirty().filter(d => paths.isEqualOrParent(d.fsPath, source.resource.fsPath));
+				const dirty = this.textFileService.getDirty().filter(d => isEqualOrParent(d.fsPath, source.resource.fsPath, !isLinux /* ignorecase */));
 				return TPromise.join(dirty.map(d => {
 					let moved: URI;
 
 					// If the dirty file itself got moved, just reparent it to the target folder
-					if (source.resource.fsPath === d.fsPath) {
+					if (isEqual(source.resource.fsPath, d.fsPath)) {
 						moved = URI.file(paths.join(target.resource.fsPath, source.name));
 					}
 
@@ -934,7 +814,7 @@ export class FileDragAndDrop implements IDragAndDrop {
 
 								// Move with overwrite if the user confirms
 								if (this.messageService.confirm(confirm)) {
-									const targetDirty = this.textFileService.getDirty().filter(d => paths.isEqualOrParent(d.fsPath, targetResource.fsPath));
+									const targetDirty = this.textFileService.getDirty().filter(d => isEqualOrParent(d.fsPath, targetResource.fsPath, !isLinux /* ignorecase */));
 
 									// Make sure to revert all dirty in target first to be able to overwrite properly
 									return this.textFileService.revertAll(targetDirty, { soft: true /* do not attempt to load content from disk */ }).then(() => {

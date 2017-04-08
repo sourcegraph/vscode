@@ -17,9 +17,10 @@ import { IModeService } from 'vs/editor/common/services/modeService';
 import { TokenMetadata } from 'vs/editor/common/model/tokensBinaryEncoding';
 import { TokenizationRegistry, LanguageIdentifier, FontStyle, StandardTokenType, ITokenizationSupport, IState } from 'vs/editor/common/modes';
 import { CharCode } from 'vs/base/common/charCode';
-import { IStandaloneColorService } from 'vs/editor/common/services/standaloneColorService';
+import { IStandaloneThemeService } from 'vs/editor/common/services/standaloneThemeService';
 import { NULL_STATE, nullTokenize, nullTokenize2 } from 'vs/editor/common/modes/nullMode';
 import { Token } from 'vs/editor/common/core/token';
+import { Color } from 'vs/base/common/color';
 
 @editorContribution
 class InspectTokensController extends Disposable implements IEditorContribution {
@@ -31,18 +32,18 @@ class InspectTokensController extends Disposable implements IEditorContribution 
 	}
 
 	private _editor: ICodeEditor;
-	private _standaloneColorService: IStandaloneColorService;
+	private _standaloneThemeService: IStandaloneThemeService;
 	private _modeService: IModeService;
 	private _widget: InspectTokensWidget;
 
 	constructor(
 		editor: ICodeEditor,
-		@IStandaloneColorService standaloneColorService: IStandaloneColorService,
+		@IStandaloneThemeService standaloneColorService: IStandaloneThemeService,
 		@IModeService modeService: IModeService
 	) {
 		super();
 		this._editor = editor;
-		this._standaloneColorService = standaloneColorService;
+		this._standaloneThemeService = standaloneColorService;
 		this._modeService = modeService;
 		this._widget = null;
 
@@ -67,7 +68,7 @@ class InspectTokensController extends Disposable implements IEditorContribution 
 		if (!this._editor.getModel()) {
 			return;
 		}
-		this._widget = new InspectTokensWidget(this._editor, this._standaloneColorService, this._modeService);
+		this._widget = new InspectTokensWidget(this._editor, this._standaloneThemeService, this._modeService);
 	}
 
 	public stop(): void {
@@ -109,8 +110,8 @@ interface IDecodedMetadata {
 	languageIdentifier: LanguageIdentifier;
 	tokenType: StandardTokenType;
 	fontStyle: FontStyle;
-	foreground: string;
-	background: string;
+	foreground: Color;
+	background: Color;
 }
 
 function renderTokenText(tokenText: string): string {
@@ -161,10 +162,11 @@ class InspectTokensWidget extends Disposable implements IContentWidget {
 
 	private static _ID = 'editor.contrib.inspectTokensWidget';
 
+	// Editor.IContentWidget.allowEditorOverflow
 	public allowEditorOverflow = true;
 
 	private _editor: ICodeEditor;
-	private _standaloneColorService: IStandaloneColorService;
+	private _standaloneThemeService: IStandaloneThemeService;
 	private _modeService: IModeService;
 	private _tokenizationSupport: ITokenizationSupport;
 	private _model: IModel;
@@ -172,12 +174,12 @@ class InspectTokensWidget extends Disposable implements IContentWidget {
 
 	constructor(
 		editor: ICodeEditor,
-		standaloneColorService: IStandaloneColorService,
+		standaloneThemeService: IStandaloneThemeService,
 		modeService: IModeService
 	) {
 		super();
 		this._editor = editor;
-		this._standaloneColorService = standaloneColorService;
+		this._standaloneThemeService = standaloneThemeService;
 		this._modeService = modeService;
 		this._model = this._editor.getModel();
 		this._domNode = document.createElement('div');
@@ -235,8 +237,8 @@ class InspectTokensWidget extends Disposable implements IContentWidget {
 		result += `<tr><td class="tm-metadata-key">language</td><td class="tm-metadata-value">${escape(metadata.languageIdentifier.language)}</td>`;
 		result += `<tr><td class="tm-metadata-key">token type</td><td class="tm-metadata-value">${this._tokenTypeToString(metadata.tokenType)}</td>`;
 		result += `<tr><td class="tm-metadata-key">font style</td><td class="tm-metadata-value">${this._fontStyleToString(metadata.fontStyle)}</td>`;
-		result += `<tr><td class="tm-metadata-key">foreground</td><td class="tm-metadata-value">${metadata.foreground}</td>`;
-		result += `<tr><td class="tm-metadata-key">background</td><td class="tm-metadata-value">${metadata.background}</td>`;
+		result += `<tr><td class="tm-metadata-key">foreground</td><td class="tm-metadata-value">${metadata.foreground.toRGBHex()}</td>`;
+		result += `<tr><td class="tm-metadata-key">background</td><td class="tm-metadata-value">${metadata.background.toRGBHex()}</td>`;
 		result += `</tbody></table>`;
 
 		result += `<hr/>`;

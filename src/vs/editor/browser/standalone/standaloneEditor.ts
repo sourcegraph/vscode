@@ -6,7 +6,7 @@
 
 import 'vs/css!./media/standalone-tokens';
 import * as editorCommon from 'vs/editor/common/editorCommon';
-import { ContentWidgetPositionPreference, OverlayWidgetPositionPreference } from 'vs/editor/browser/editorBrowser';
+import { ICodeEditor, ContentWidgetPositionPreference, OverlayWidgetPositionPreference } from 'vs/editor/browser/editorBrowser';
 import { StandaloneEditor, IStandaloneCodeEditor, StandaloneDiffEditor, IStandaloneDiffEditor, IEditorConstructionOptions, IDiffEditorConstructionOptions } from 'vs/editor/browser/standalone/standaloneCodeEditor';
 import { ScrollbarVisibility } from 'vs/base/common/scrollable';
 import { IEditorOverrideServices, DynamicStandaloneServices, StaticServices } from 'vs/editor/browser/standalone/standaloneServices';
@@ -31,7 +31,7 @@ import { ICodeEditorService } from 'vs/editor/common/services/codeEditorService'
 import { IEditorWorkerService } from 'vs/editor/common/services/editorWorkerService';
 import { ITextModelResolverService } from 'vs/editor/common/services/resolverService';
 import { NULL_STATE, nullTokenize } from 'vs/editor/common/modes/nullMode';
-import { ITheme, IStandaloneColorService } from 'vs/editor/common/services/standaloneColorService';
+import { IStandaloneThemeData, IStandaloneThemeService } from 'vs/editor/common/services/standaloneThemeService';
 import { Token } from 'vs/editor/common/core/token';
 import { FontInfo, BareFontInfo } from 'vs/editor/common/config/fontInfo';
 
@@ -92,8 +92,19 @@ export function create(domElement: HTMLElement, options?: IEditorConstructionOpt
 			services.get(IContextKeyService),
 			services.get(IKeybindingService),
 			services.get(IContextViewService),
-			services.get(IStandaloneColorService)
+			services.get(IStandaloneThemeService)
 		);
+	});
+}
+
+/**
+ * Emitted when an editor is created.
+ * Creating a diff editor might cause this listener to be invoked with the two editors.
+ * @event
+ */
+export function onDidCreateEditor(listener: (codeEditor: ICodeEditor) => void): IDisposable {
+	return StaticServices.codeEditorService.get().onCodeEditorAdd((editor) => {
+		listener(<ICodeEditor>editor);
 	});
 }
 
@@ -112,12 +123,16 @@ export function createDiffEditor(domElement: HTMLElement, options?: IDiffEditorC
 			services.get(IContextKeyService),
 			services.get(IKeybindingService),
 			services.get(IContextViewService),
-			services.get(IEditorWorkerService)
+			services.get(IStandaloneThemeService),
+			services.get(IEditorWorkerService),
+			services.get(ICodeEditorService)
 		);
 	});
 }
 
 export interface IDiffNavigator {
+	revealFirst: boolean;
+
 	canNavigate(): boolean;
 	next(): void;
 	previous(): void;
@@ -230,7 +245,7 @@ export function createWebWorker<T>(opts: IWebWorkerOptions): MonacoWebWorker<T> 
  * Colorize the contents of `domNode` using attribute `data-lang`.
  */
 export function colorizeElement(domNode: HTMLElement, options: IColorizerElementOptions): TPromise<void> {
-	return Colorizer.colorizeElement(StaticServices.standaloneColorService.get(), StaticServices.modeService.get(), domNode, options);
+	return Colorizer.colorizeElement(StaticServices.standaloneThemeService.get(), StaticServices.modeService.get(), domNode, options);
 }
 
 /**
@@ -287,8 +302,8 @@ export function tokenize(text: string, languageId: string): Token[][] {
 /**
  * Define a new theme.
  */
-export function defineTheme(themeName: string, themeData: ITheme): void {
-	StaticServices.standaloneColorService.get().defineTheme(themeName, themeData);
+export function defineTheme(themeName: string, themeData: IStandaloneThemeData): void {
+	StaticServices.standaloneThemeService.get().defineTheme(themeName, themeData);
 }
 
 /**
@@ -298,8 +313,9 @@ export function createMonacoEditorAPI(): typeof monaco.editor {
 	return {
 		// methods
 		create: <any>create,
-		createDiffEditor: createDiffEditor,
-		createDiffNavigator: createDiffNavigator,
+		onDidCreateEditor: <any>onDidCreateEditor,
+		createDiffEditor: <any>createDiffEditor,
+		createDiffNavigator: <any>createDiffNavigator,
 
 		createModel: createModel,
 		setModelLanguage: setModelLanguage,
@@ -332,9 +348,11 @@ export function createMonacoEditorAPI(): typeof monaco.editor {
 		TextEditorCursorBlinkingStyle: editorCommon.TextEditorCursorBlinkingStyle,
 		ContentWidgetPositionPreference: ContentWidgetPositionPreference,
 		OverlayWidgetPositionPreference: OverlayWidgetPositionPreference,
+		RenderMinimap: editorCommon.RenderMinimap,
 
 		// classes
 		InternalEditorScrollbarOptions: <any>editorCommon.InternalEditorScrollbarOptions,
+		InternalEditorMinimapOptions: <any>editorCommon.InternalEditorMinimapOptions,
 		EditorWrappingInfo: <any>editorCommon.EditorWrappingInfo,
 		InternalEditorViewOptions: <any>editorCommon.InternalEditorViewOptions,
 		EditorContribOptions: <any>editorCommon.EditorContribOptions,
@@ -344,6 +362,7 @@ export function createMonacoEditorAPI(): typeof monaco.editor {
 		BareFontInfo: <any>BareFontInfo,
 		FontInfo: <any>FontInfo,
 		TextModelResolvedOptions: <any>editorCommon.TextModelResolvedOptions,
+		FindMatch: <any>editorCommon.FindMatch,
 
 		// vars
 		EditorType: editorCommon.EditorType,

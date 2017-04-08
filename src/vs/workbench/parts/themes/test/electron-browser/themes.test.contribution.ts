@@ -12,7 +12,7 @@ import { IModeService } from 'vs/editor/common/services/modeService';
 import pfs = require('vs/base/node/pfs');
 import { CommandsRegistry } from 'vs/platform/commands/common/commands';
 import { IInstantiationService, ServicesAccessor } from 'vs/platform/instantiation/common/instantiation';
-import { IThemeService, IThemeDocument } from 'vs/workbench/services/themes/common/themeService';
+import { IWorkbenchThemeService, IColorTheme } from 'vs/workbench/services/themes/common/workbenchThemeService';
 import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { toResource } from 'vs/workbench/common/editor';
 import { ITextMateService } from 'vs/editor/node/textMate/textMateService';
@@ -20,6 +20,7 @@ import { IGrammar, StackElement } from 'vscode-textmate';
 import { TokenizationRegistry } from 'vs/editor/common/modes';
 import { TokenMetadata } from 'vs/editor/common/model/tokensBinaryEncoding';
 import { ThemeRule, findMatchingThemeRule } from 'vs/editor/electron-browser/textMate/TMHelper';
+import { Color } from 'vs/base/common/color';
 
 interface IToken {
 	c: string;
@@ -29,7 +30,7 @@ interface IToken {
 
 interface IThemedToken {
 	text: string;
-	color: string;
+	color: Color;
 }
 
 interface IThemesResult {
@@ -40,43 +41,41 @@ interface IThemesResult {
 }
 
 class ThemeDocument {
-	private readonly _theme: IThemeDocument;
+	private readonly _theme: IColorTheme;
 	private readonly _cache: { [scopes: string]: ThemeRule; };
 	private readonly _defaultColor: string;
 
-	constructor(theme: IThemeDocument) {
+	constructor(theme: IColorTheme) {
 		this._theme = theme;
 		this._cache = Object.create(null);
 		this._defaultColor = '#000000';
-		for (let i = 0, len = this._theme.settings.length; i < len; i++) {
-			let rule = this._theme.settings[i];
+		for (let i = 0, len = this._theme.tokenColors.length; i < len; i++) {
+			let rule = this._theme.tokenColors[i];
 			if (!rule.scope) {
 				this._defaultColor = rule.settings.foreground;
 			}
 		}
 	}
 
-	private _generateExplanation(selector: string, color: string): string {
-		return `${selector}: ${color}`;
+	private _generateExplanation(selector: string, color: Color): string {
+		return `${selector}: ${color.toRGBAHex(true).toUpperCase()}`;
 	}
 
-	public explainTokenColor(scopes: string, color: string): string {
+	public explainTokenColor(scopes: string, color: Color): string {
 
 		let matchingRule = this._findMatchingThemeRule(scopes);
 		if (!matchingRule) {
-			let actual = color.toUpperCase();
-			let expected = this._defaultColor.toUpperCase();
+			let expected = Color.fromHex(this._defaultColor);
 			// No matching rule
-			if (actual !== expected) {
-				throw new Error(`[${this._theme.name}]: Unexpected color ${actual} for ${scopes}. Expected default ${expected}`);
+			if (!color.equals(expected)) {
+				throw new Error(`[${this._theme.label}]: Unexpected color ${color.toRGBAHex()} for ${scopes}. Expected default ${expected.toRGBAHex()}`);
 			}
 			return this._generateExplanation('default', color);
 		}
 
-		let actual = color.toUpperCase();
-		let expected = matchingRule.settings.foreground.toUpperCase();
-		if (actual !== expected) {
-			throw new Error(`[${this._theme.name}]: Unexpected color ${actual} for ${scopes}. Expected ${expected} coming in from ${matchingRule.rawSelector}`);
+		let expected = Color.fromHex(matchingRule.settings.foreground);
+		if (!color.equals(expected)) {
+			throw new Error(`[${this._theme.label}]: Unexpected color ${color.toRGBAHex()} for ${scopes}. Expected ${expected.toRGBAHex()} coming in from ${matchingRule.rawSelector}`);
 		}
 		return this._generateExplanation(matchingRule.rawSelector, color);
 	}
@@ -93,7 +92,7 @@ class Snapper {
 
 	constructor(
 		@IModeService private modeService: IModeService,
-		@IThemeService private themeService: IThemeService,
+		@IWorkbenchThemeService private themeService: IWorkbenchThemeService,
 		@ITextMateService private textMateService: ITextMateService
 	) {
 	}
@@ -114,11 +113,10 @@ class Snapper {
 				let tokenText = line.substring(startOffset, endOffset);
 
 				let color = TokenMetadata.getForeground(metadata);
-				let colorStr = colorMap[color];
 
 				result[resultLen++] = {
 					text: tokenText,
-					color: colorStr
+					color: colorMap[color]
 				};
 			}
 
@@ -183,18 +181,18 @@ class Snapper {
 			let defaultThemes = themeDatas.filter(themeData => !!getThemeName(themeData.id));
 			return TPromise.join(defaultThemes.map(defaultTheme => {
 				let themeId = defaultTheme.id;
-				return this.themeService.setColorTheme(themeId, false).then(success => {
+				return this.themeService.setColorTheme(themeId, null).then(success => {
 					if (success) {
 						let themeName = getThemeName(themeId);
 						result[themeName] = {
-							document: new ThemeDocument(this.themeService.getColorThemeDocument()),
+							document: new ThemeDocument(this.themeService.getColorTheme()),
 							tokens: this._themedTokenize(grammar, lines)
 						};
 					}
 				});
 			}));
 		}).then(_ => {
-			return this.themeService.setColorTheme(currentTheme, false).then(_ => {
+			return this.themeService.setColorTheme(currentTheme.id, null).then(_ => {
 				return result;
 			});
 		});
@@ -264,5 +262,6 @@ CommandsRegistry.registerCommand('_workbench.captureSyntaxTokens', function (acc
 	} else {
 		return process(resource);
 	}
+	return undefined;
 });
 

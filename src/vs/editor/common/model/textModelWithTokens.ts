@@ -21,6 +21,7 @@ import { LanguageConfigurationRegistry } from 'vs/editor/common/modes/languageCo
 import { LineTokens, LineToken } from 'vs/editor/common/core/lineTokens';
 import { getWordAtText } from 'vs/editor/common/model/wordHelper';
 import { TokenizationResult2 } from 'vs/editor/common/core/token';
+import { ITextSource, IRawTextSource } from 'vs/editor/common/model/textSource';
 
 class ModelTokensChangedEventBuilder {
 
@@ -63,7 +64,6 @@ export class TextModelWithTokens extends TextModel implements editorCommon.IToke
 
 	private _languageIdentifier: LanguageIdentifier;
 	private _tokenizationListener: IDisposable;
-	private _colorMap: string[];
 	private _tokenizationSupport: ITokenizationSupport;
 
 	private _invalidLineStartIndex: number;
@@ -71,14 +71,14 @@ export class TextModelWithTokens extends TextModel implements editorCommon.IToke
 
 	private _revalidateTokensTimeout: number;
 
-	constructor(allowedEventTypes: string[], rawText: editorCommon.IRawText, languageIdentifier: LanguageIdentifier) {
+	constructor(allowedEventTypes: string[], rawTextSource: IRawTextSource, creationOptions: editorCommon.ITextModelCreationOptions, languageIdentifier: LanguageIdentifier) {
 		allowedEventTypes.push(editorCommon.EventType.ModelTokensChanged);
 		allowedEventTypes.push(editorCommon.EventType.ModelLanguageChanged);
-		super(allowedEventTypes, rawText);
+		super(allowedEventTypes, rawTextSource, creationOptions);
 
 		this._languageIdentifier = languageIdentifier || NULL_LANGUAGE_IDENTIFIER;
 		this._tokenizationListener = TokenizationRegistry.onDidChange((e) => {
-			if (e.languages.indexOf(this._languageIdentifier.language) === -1) {
+			if (e.changedLanguages.indexOf(this._languageIdentifier.language) === -1) {
 				return;
 			}
 
@@ -108,7 +108,7 @@ export class TextModelWithTokens extends TextModel implements editorCommon.IToke
 		return false;
 	}
 
-	protected _resetValue(newValue: editorCommon.IRawText): void {
+	protected _resetValue(newValue: ITextSource): void {
 		super._resetValue(newValue);
 		// Cancel tokenization, clear all tokens and begin tokenizing
 		this._resetTokenizationState();
@@ -140,7 +140,6 @@ export class TextModelWithTokens extends TextModel implements editorCommon.IToke
 			}
 		}
 
-		this._colorMap = TokenizationRegistry.getColorMap();
 		this._lastState = null;
 		this._invalidLineStartIndex = 0;
 		this._beginBackgroundTokenization();
@@ -168,22 +167,26 @@ export class TextModelWithTokens extends TextModel implements editorCommon.IToke
 		return result;
 	}
 
-	public getLineTokens(lineNumber: number, inaccurateTokensAcceptable: boolean = false): LineTokens {
+	public forceTokenization(lineNumber: number): void {
 		if (lineNumber < 1 || lineNumber > this.getLineCount()) {
 			throw new Error('Illegal value ' + lineNumber + ' for `lineNumber`');
 		}
 
-		if (!inaccurateTokensAcceptable) {
-			this._withModelTokensChangedEventBuilder((eventBuilder) => {
-				this._updateTokensUntilLine(eventBuilder, lineNumber, true);
-			});
+		this._withModelTokensChangedEventBuilder((eventBuilder) => {
+			this._updateTokensUntilLine(eventBuilder, lineNumber);
+		});
+	}
+
+	public getLineTokens(lineNumber: number): LineTokens {
+		if (lineNumber < 1 || lineNumber > this.getLineCount()) {
+			throw new Error('Illegal value ' + lineNumber + ' for `lineNumber`');
 		}
 
 		return this._getLineTokens(lineNumber);
 	}
 
 	private _getLineTokens(lineNumber: number): LineTokens {
-		return this._lines[lineNumber - 1].getTokens(this._languageIdentifier.id, this._colorMap);
+		return this._lines[lineNumber - 1].getTokens(this._languageIdentifier.id);
 	}
 
 	public getLanguageIdentifier(): LanguageIdentifier {
@@ -224,10 +227,6 @@ export class TextModelWithTokens extends TextModel implements editorCommon.IToke
 			return this._languageIdentifier.id;
 		}
 		let { lineNumber, column } = this.validatePosition({ lineNumber: _lineNumber, column: _column });
-
-		this._withModelTokensChangedEventBuilder((eventBuilder) => {
-			this._updateTokensUntilLine(eventBuilder, lineNumber, true);
-		});
 
 		let lineTokens = this._getLineTokens(lineNumber);
 		let token = lineTokens.findTokenAtOffset(column - 1);
@@ -312,7 +311,7 @@ export class TextModelWithTokens extends TextModel implements editorCommon.IToke
 					}
 				}
 
-				this._updateTokensUntilLine(eventBuilder, lineNumber, false);
+				this._updateTokensUntilLine(eventBuilder, lineNumber);
 				tokenizedChars += currentCharsToTokenize;
 
 				// Skip the lines that got tokenized
@@ -327,7 +326,7 @@ export class TextModelWithTokens extends TextModel implements editorCommon.IToke
 		});
 	}
 
-	private _updateTokensUntilLine(eventBuilder: ModelTokensChangedEventBuilder, lineNumber: number, emitEvents: boolean): void {
+	private _updateTokensUntilLine(eventBuilder: ModelTokensChangedEventBuilder, lineNumber: number): void {
 		if (!this._tokenizationSupport) {
 			this._invalidLineStartIndex = this._lines.length;
 			return;

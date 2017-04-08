@@ -38,16 +38,19 @@ import { ITitleService } from 'vs/workbench/services/title/common/titleService';
 import { Registry } from 'vs/platform/platform';
 import { IWorkbenchActionRegistry, Extensions } from 'vs/workbench/common/actionRegistry';
 import { SyncActionDescriptor } from 'vs/platform/actions/common/actions';
-import { IThemeService, VS_HC_THEME, VS_DARK_THEME } from 'vs/workbench/services/themes/common/themeService';
+import { IWorkbenchThemeService, VS_HC_THEME, VS_DARK_THEME } from 'vs/workbench/services/themes/common/workbenchThemeService';
 import * as browser from 'vs/base/browser/browser';
-import { ReloadWindowAction, ToggleDevToolsAction, ShowStartupPerformance, OpenRecentAction } from 'vs/workbench/electron-browser/actions';
+import { ReloadWindowAction, ToggleDevToolsAction, ShowStartupPerformance, OpenRecentAction, ToggleSharedProcessAction } from 'vs/workbench/electron-browser/actions';
 import { KeyMod, KeyCode } from 'vs/base/common/keyCodes';
 import { ICommandService } from 'vs/platform/commands/common/commands';
 import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
 import { Position, IResourceInput } from 'vs/platform/editor/common/editor';
 import { IExtensionService } from 'vs/platform/extensions/common/extensions';
+import { KeyboardMapperFactory } from 'vs/workbench/services/keybinding/electron-browser/keybindingService';
+import { Themable, EDITOR_DRAG_AND_DROP_BACKGROUND } from 'vs/workbench/common/theme';
 
 import { remote, ipcRenderer as ipc, webFrame } from 'electron';
+import { highContrastOutline } from 'vs/platform/theme/common/colorRegistry';
 
 const dialog = remote.dialog;
 
@@ -62,7 +65,7 @@ const TextInputActions: IAction[] = [
 	new Action('editor.action.selectAll', nls.localize('selectAll', "Select All"), null, true, () => document.execCommand('selectAll') && TPromise.as(true))
 ];
 
-export class ElectronWindow {
+export class ElectronWindow extends Themable {
 
 	private static AUTO_SAVE_SETTING = 'files.autoSave';
 
@@ -80,7 +83,7 @@ export class ElectronWindow {
 		@IWindowService private windowService: IWindowService,
 		@IWorkspaceConfigurationService private configurationService: IWorkspaceConfigurationService,
 		@ITitleService private titleService: ITitleService,
-		@IThemeService private themeService: IThemeService,
+		@IWorkbenchThemeService protected themeService: IWorkbenchThemeService,
 		@IMessageService private messageService: IMessageService,
 		@IConfigurationEditingService private configurationEditingService: IConfigurationEditingService,
 		@ICommandService private commandService: ICommandService,
@@ -91,6 +94,8 @@ export class ElectronWindow {
 		@IEnvironmentService private environmentService: IEnvironmentService,
 		@IUntitledEditorService private untitledEditorService: IUntitledEditorService,
 	) {
+		super(themeService);
+
 		this.win = win;
 		this.windowId = win.id;
 
@@ -131,13 +136,35 @@ export class ElectronWindow {
 				// Find out if folders are dragged and show the appropiate feedback then
 				this.includesFolder(draggedExternalResources).done(includesFolder => {
 					if (includesFolder) {
+						const useOutline = this.isHighContrastTheme;
 						dropOverlay = $(window.document.getElementById(this.partService.getWorkbenchElementId()))
-							.div({ id: 'monaco-workbench-drop-overlay' })
+							.div({
+								id: 'monaco-workbench-drop-overlay'
+							})
+							.style({
+								backgroundColor: this.getColor(EDITOR_DRAG_AND_DROP_BACKGROUND),
+								outlineColor: useOutline ? this.getColor(highContrastOutline) : null,
+								outlineOffset: useOutline ? '-2px' : null,
+								outlineStyle: useOutline ? 'dashed' : null,
+								outlineWidth: useOutline ? '2px' : null
+							})
 							.on(DOM.EventType.DROP, (e: DragEvent) => {
 								DOM.EventHelper.stop(e, true);
 
 								this.focus(); // make sure this window has focus so that the open call reaches the right window!
-								this.windowsService.openWindow(draggedExternalResources.map(r => r.fsPath), { forceReuseWindow: true });
+
+								// Ask the user when opening a potential large number of folders
+								let doOpen = true;
+								if (draggedExternalResources.length > 20) {
+									doOpen = this.messageService.confirm({
+										message: nls.localize('confirmOpen', "Are you sure you want to open {0} folders?", draggedExternalResources.length),
+										primaryButton: nls.localize({ key: 'confirmOpenButton', comment: ['&& denotes a mnemonic'] }, "&&Open")
+									});
+								}
+
+								if (doOpen) {
+									this.windowsService.openWindow(draggedExternalResources.map(r => r.fsPath), { forceReuseWindow: true });
+								}
 
 								cleanUp();
 							})
@@ -201,7 +228,7 @@ export class ElectronWindow {
 			}
 
 			// Resolve keys using the keybinding service and send back to browser process
-			this.resolveKeybindings(actionIds).done((keybindings) => {
+			this.resolveKeybindings(actionIds).done(keybindings => {
 				if (keybindings.length) {
 					ipc.send('vscode:keybindingsResolved', JSON.stringify(keybindings));
 				}
@@ -235,40 +262,45 @@ export class ElectronWindow {
 		});
 
 		// Support toggling auto save
-		ipc.on('vscode.toggleAutoSave', (event) => {
+		ipc.on('vscode.toggleAutoSave', event => {
 			this.toggleAutoSave();
 		});
 
 		// Fullscreen Events
-		ipc.on('vscode:enterFullScreen', (event) => {
+		ipc.on('vscode:enterFullScreen', event => {
 			this.partService.joinCreation().then(() => {
 				browser.setFullscreen(true);
 			});
 		});
 
-		ipc.on('vscode:leaveFullScreen', (event) => {
+		ipc.on('vscode:leaveFullScreen', event => {
 			this.partService.joinCreation().then(() => {
 				browser.setFullscreen(false);
 			});
 		});
 
 		// High Contrast Events
-		ipc.on('vscode:enterHighContrast', (event) => {
+		ipc.on('vscode:enterHighContrast', event => {
 			const windowConfig = this.configurationService.getConfiguration<IWindowSettings>('window');
 			if (windowConfig && windowConfig.autoDetectHighContrast) {
 				this.partService.joinCreation().then(() => {
-					this.themeService.setColorTheme(VS_HC_THEME, false);
+					this.themeService.setColorTheme(VS_HC_THEME, null);
 				});
 			}
 		});
 
-		ipc.on('vscode:leaveHighContrast', (event) => {
+		ipc.on('vscode:leaveHighContrast', event => {
 			const windowConfig = this.configurationService.getConfiguration<IWindowSettings>('window');
 			if (windowConfig && windowConfig.autoDetectHighContrast) {
 				this.partService.joinCreation().then(() => {
-					this.themeService.setColorTheme(VS_DARK_THEME, false);
+					this.themeService.setColorTheme(VS_DARK_THEME, null);
 				});
 			}
+		});
+
+		// keyboard layout changed event
+		ipc.on('vscode:keyboardLayoutChanged', () => {
+			KeyboardMapperFactory.INSTANCE._onKeyboardLayoutChanged();
 		});
 
 		// Configuration changes
@@ -296,7 +328,7 @@ export class ElectronWindow {
 		});
 
 		// Context menu support in input/textarea
-		window.document.addEventListener('contextmenu', (e) => {
+		window.document.addEventListener('contextmenu', e => {
 			if (e.target instanceof HTMLElement) {
 				const target = <HTMLElement>e.target;
 				if (target.nodeName && (target.nodeName.toLowerCase() === 'input' || target.nodeName.toLowerCase() === 'textarea')) {
@@ -306,14 +338,7 @@ export class ElectronWindow {
 					this.contextMenuService.showContextMenu({
 						getAnchor: () => target,
 						getActions: () => TPromise.as(TextInputActions),
-						getKeyBinding: (action) => {
-							const opts = this.keybindingService.lookupKeybindings(action.id);
-							if (opts.length > 0) {
-								return opts[0]; // only take the first one
-							}
-
-							return null;
-						}
+						getKeyBinding: action => this.keybindingService.lookupKeybinding(action.id)
 					});
 				}
 			}
@@ -326,27 +351,31 @@ export class ElectronWindow {
 		workbenchActionsRegistry.registerWorkbenchAction(new SyncActionDescriptor(ReloadWindowAction, ReloadWindowAction.ID, ReloadWindowAction.LABEL, isDeveloping ? { primary: KeyMod.CtrlCmd | KeyCode.KEY_R } : void 0), 'Reload Window');
 		workbenchActionsRegistry.registerWorkbenchAction(new SyncActionDescriptor(ToggleDevToolsAction, ToggleDevToolsAction.ID, ToggleDevToolsAction.LABEL, isDeveloping ? { primary: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KEY_I, mac: { primary: KeyMod.CtrlCmd | KeyMod.Alt | KeyCode.KEY_I } } : void 0), 'Developer: Toggle Developer Tools', developerCategory);
 		workbenchActionsRegistry.registerWorkbenchAction(new SyncActionDescriptor(ShowStartupPerformance, ShowStartupPerformance.ID, ShowStartupPerformance.LABEL), 'Developer: Startup Performance', developerCategory);
+		workbenchActionsRegistry.registerWorkbenchAction(new SyncActionDescriptor(ToggleSharedProcessAction, ToggleSharedProcessAction.ID, ToggleSharedProcessAction.LABEL), 'Developer: Toggle Shared Process', developerCategory);
 
 		// Action registered here to prevent a keybinding conflict with reload window
 		const fileCategory = nls.localize('file', "File");
 		workbenchActionsRegistry.registerWorkbenchAction(new SyncActionDescriptor(OpenRecentAction, OpenRecentAction.ID, OpenRecentAction.LABEL, { primary: isDeveloping ? null : KeyMod.CtrlCmd | KeyCode.KEY_R, mac: { primary: KeyMod.WinCtrl | KeyCode.KEY_R } }), 'File: Open Recent', fileCategory);
 	}
 
-	private resolveKeybindings(actionIds: string[]): TPromise<{ id: string; binding: number; }[]> {
+	private resolveKeybindings(actionIds: string[]): TPromise<{ id: string; label: string, isNative: boolean; }[]> {
 		return this.partService.joinCreation().then(() => {
-			return arrays.coalesce(actionIds.map((id) => {
-				const bindings = this.keybindingService.lookupKeybindings(id);
+			return arrays.coalesce(actionIds.map(id => {
+				const binding = this.keybindingService.lookupKeybinding(id);
+				if (!binding) {
+					return null;
+				}
 
-				// return the first binding that can be represented by electron
-				for (let i = 0; i < bindings.length; i++) {
-					const binding = bindings[i];
-					const electronAccelerator = this.keybindingService.getElectronAcceleratorFor(binding);
-					if (electronAccelerator) {
-						return {
-							id: id,
-							binding: binding.value
-						};
-					}
+				// first try to resolve a native accelerator
+				const electronAccelerator = binding.getElectronAccelerator();
+				if (electronAccelerator) {
+					return { id, label: electronAccelerator, isNative: true };
+				}
+
+				// we need this fallback to support keybindings that cannot show in electron menus (e.g. chords)
+				const acceleratorLabel = binding.getLabel();
+				if (acceleratorLabel) {
+					return { id, label: acceleratorLabel, isNative: false };
 				}
 
 				return null;
@@ -433,7 +462,7 @@ export class ElectronWindow {
 			newAutoSaveValue = AutoSaveConfiguration.AFTER_DELAY;
 		}
 
-		this.configurationEditingService.writeConfiguration(ConfigurationTarget.USER, { key: ElectronWindow.AUTO_SAVE_SETTING, value: newAutoSaveValue }).done(null, (error) => this.messageService.show(Severity.Error, error));
+		this.configurationEditingService.writeConfiguration(ConfigurationTarget.USER, { key: ElectronWindow.AUTO_SAVE_SETTING, value: newAutoSaveValue }).done(null, error => this.messageService.show(Severity.Error, error));
 	}
 
 	private includesFolder(resources: URI[]): TPromise<boolean> {
