@@ -21,7 +21,7 @@ import Severity from 'vs/base/common/severity';
 import { IBackupFileService } from 'vs/workbench/services/backup/common/backup';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { IStorageService, StorageScope } from 'vs/platform/storage/common/storage';
-import { IPartService } from 'vs/workbench/services/part/common/partService';
+import { IPartService, Parts } from 'vs/workbench/services/part/common/partService';
 import { TextModelResolverService } from 'vs/workbench/services/textmodelResolver/common/textModelResolverService';
 import { ITextModelResolverService } from 'vs/editor/common/services/resolverService';
 import { IEditorInput, IEditorOptions, Position, Direction, IEditor, IResourceInput } from 'vs/platform/editor/common/editor';
@@ -332,6 +332,8 @@ export class TestPartService implements IPartService {
 	public getWorkbenchElementId(): string { return ''; }
 
 	public toggleZenMode(): void { }
+
+	public resizePart(part: Parts, sizeChange: number): void { }
 }
 
 export class TestStorageService extends EventEmitter implements IStorageService {
@@ -455,6 +457,10 @@ export class TestEditorGroupService implements IEditorGroupService {
 
 	public getGroupOrientation(): GroupOrientation {
 		return 'vertical';
+	}
+
+	public resizeGroup(position: Position, groupSizeChange: number): void {
+
 	}
 
 	public pinEditor(group: IEditorGroup, input: IEditorInput): void;
@@ -769,6 +775,10 @@ export class TestWindowService implements IWindowService {
 
 	public _serviceBrand: any;
 
+	isFocused(): TPromise<boolean> {
+		return TPromise.as(false);
+	}
+
 	getCurrentWindowId(): number {
 		return 0;
 	}
@@ -880,6 +890,10 @@ export class TestWindowsService implements IWindowsService {
 	onWindowOpen: Event<number>;
 	onWindowFocus: Event<number>;
 
+	isFocused(windowId: number): TPromise<boolean> {
+		return TPromise.as(false);
+	}
+
 	openFileFolderPicker(windowId: number, forceNewWindow?: boolean): TPromise<void> {
 		return TPromise.as(void 0);
 	}
@@ -912,6 +926,9 @@ export class TestWindowsService implements IWindowsService {
 		return TPromise.as(void 0);
 	}
 	removeFromRecentlyOpen(paths: string[]): TPromise<void> {
+		return TPromise.as(void 0);
+	}
+	clearRecentPathsList(): TPromise<void> {
 		return TPromise.as(void 0);
 	}
 	getRecentlyOpen(windowId: number): TPromise<{ files: string[]; folders: string[]; }> {
@@ -973,8 +990,8 @@ export class TestWindowsService implements IWindowsService {
 
 	// This needs to be handled from browser process to prevent
 	// foreground ordering issues on Windows
-	openExternal(url: string): TPromise<void> {
-		return TPromise.as(void 0);
+	openExternal(url: string): TPromise<boolean> {
+		return TPromise.as(true);
 	}
 
 	// TODO: this is a bit backwards

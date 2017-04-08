@@ -10,9 +10,9 @@ import * as path from 'path';
 import * as cp from 'child_process';
 import { rgPath } from 'vscode-ripgrep';
 
+import * as strings from 'vs/base/common/strings';
 import * as extfs from 'vs/base/node/extfs';
 import * as encoding from 'vs/base/node/encoding';
-import * as strings from 'vs/base/common/strings';
 import * as glob from 'vs/base/common/glob';
 import { ILineMatch, IProgress } from 'vs/platform/search/common/search';
 import { TPromise } from 'vs/base/common/winjs.base';
@@ -25,6 +25,8 @@ export class RipgrepEngine implements ISearchEngine<ISerializedFileMatch> {
 	private postProcessExclusions: glob.ParsedExpression;
 
 	private ripgrepParser: RipgrepParser;
+
+	private handleResultP: TPromise<any> = TPromise.wrap(null);
 
 	constructor(private config: IRawSearch) {
 	}
@@ -60,11 +62,13 @@ export class RipgrepEngine implements ISearchEngine<ISerializedFileMatch> {
 		this.ripgrepParser.on('result', (match: ISerializedFileMatch) => {
 			if (this.postProcessExclusions) {
 				const relativePath = path.relative(rootFolder, match.path);
-				(<TPromise<string>>this.postProcessExclusions(relativePath, undefined, () => getSiblings(match.path))).then(globMatch => {
-					if (!globMatch) {
-						onResult(match);
-					}
-				});
+				this.handleResultP = this.handleResultP
+					.then(() => (<TPromise<string>>this.postProcessExclusions(relativePath, undefined, () => getSiblings(match.path))))
+					.then(globMatch => {
+						if (!globMatch) {
+							onResult(match);
+						}
+					});
 			} else {
 				onResult(match);
 			}
@@ -88,16 +92,20 @@ export class RipgrepEngine implements ISearchEngine<ISerializedFileMatch> {
 		});
 
 		this.rgProc.on('close', code => {
-			this.rgProc = null;
-			// console.log(`closed with ${code}`);
+			// Trigger last result, then wait on async result handling
+			this.ripgrepParser.flush();
+			this.handleResultP.then(() => {
+				this.rgProc = null;
+				// console.log(`closed with ${code}`);
 
-			if (!this.isDone) {
-				this.isDone = true;
-				done(null, {
-					limitHit: false,
-					stats: null
-				});
-			}
+				if (!this.isDone) {
+					this.isDone = true;
+					done(null, {
+						limitHit: false,
+						stats: null
+					});
+				}
+			});
 		});
 	}
 }
@@ -106,8 +114,8 @@ export class RipgrepParser extends EventEmitter {
 	private static RESULT_REGEX = /^\u001b\[m(\d+)\u001b\[m:(.*)$/;
 	private static FILE_REGEX = /^\u001b\[m(.+)\u001b\[m$/;
 
-	private static MATCH_START_MARKER = '\u001b[m\u001b[31m';
-	private static MATCH_END_MARKER = '\u001b[m';
+	public static MATCH_START_MARKER = '\u001b[m\u001b[31m';
+	public static MATCH_END_MARKER = '\u001b[m';
 
 	private fileMatch: FileMatch;
 	private remainder: string;
@@ -123,8 +131,14 @@ export class RipgrepParser extends EventEmitter {
 		this.isDone = true;
 	}
 
+	public flush(): void {
+		if (this.fileMatch) {
+			this.onResult();
+		}
+	}
+
 	public handleData(data: string | Buffer): void {
-		// If the previous data chunk didn't end in a newline, append it to this chunk
+		// If the previous data chunk didn't end in a newline, prepend it to this chunk
 		const dataStr = this.remainder ?
 			this.remainder + data.toString() :
 			data.toString();
@@ -139,23 +153,18 @@ export class RipgrepParser extends EventEmitter {
 			}
 
 			let r: RegExpMatchArray;
-			if (!outputLine) {
-				if (this.fileMatch) {
-					this.onResult();
-				}
-			} else if (r = outputLine.match(RipgrepParser.RESULT_REGEX)) {
+			if (r = outputLine.match(RipgrepParser.RESULT_REGEX)) {
 				// Line is a result - add to collected results for the current file path
 				this.handleMatchLine(outputLine, parseInt(r[1]) - 1, r[2]);
 			} else if (r = outputLine.match(RipgrepParser.FILE_REGEX)) {
 				// Line is a file path - send all collected results for the previous file path
 				if (this.fileMatch) {
-					// TODO@Rob Check fileMatch against other exclude globs
 					this.onResult();
 				}
 
 				this.fileMatch = new FileMatch(path.join(this.rootFolder, r[1]));
 			} else {
-				// Line is malformed
+				// Line is empty (or malformed)
 			}
 		}
 	}
@@ -322,7 +331,7 @@ function globExprsToRgGlobs(patterns: glob.IExpression): { globArgs: string[], s
 }
 
 function getRgArgs(config: IRawSearch): { args: string[], siblingClauses: glob.IExpression } {
-	const args = ['--heading', '--line-number', '--color', 'ansi', '--colors', 'path:none', '--colors', 'line:none', '--colors', 'match:fg:red', '--colors', 'match:style:nobold'];
+	const args = ['--hidden', '--heading', '--line-number', '--color', 'ansi', '--colors', 'path:none', '--colors', 'line:none', '--colors', 'match:fg:red', '--colors', 'match:style:nobold'];
 	args.push(config.contentPattern.isCaseSensitive ? '--case-sensitive' : '--ignore-case');
 
 	if (config.includePattern) {
@@ -344,7 +353,7 @@ function getRgArgs(config: IRawSearch): { args: string[], siblingClauses: glob.I
 		args.push('--max-filesize', config.maxFilesize + '');
 	}
 
-	if (!config.useIgnoreFiles) {
+	if (config.disregardIgnoreFiles) {
 		// Don't use .gitignore or .ignore
 		args.push('--no-ignore');
 	}
@@ -353,26 +362,30 @@ function getRgArgs(config: IRawSearch): { args: string[], siblingClauses: glob.I
 	args.push('--follow');
 
 	// Set default encoding
-	if (config.fileEncoding) {
+	if (config.fileEncoding && config.fileEncoding !== 'utf8') {
 		args.push('--encoding', encoding.toCanonicalName(config.fileEncoding));
 	}
 
-	if (config.contentPattern.isRegExp) {
-		if (config.contentPattern.isWordMatch) {
-			args.push('--word-regexp');
-		}
-
+	let searchPatternAfterDoubleDashes: string;
+	if (config.contentPattern.isWordMatch) {
+		const regexp = strings.createRegExp(config.contentPattern.pattern, config.contentPattern.isRegExp, { wholeWord: config.contentPattern.isWordMatch });
+		args.push('--regexp', regexp.source);
+	} else if (config.contentPattern.isRegExp) {
 		args.push('--regexp', config.contentPattern.pattern);
 	} else {
-		if (config.contentPattern.isWordMatch) {
-			args.push('--word-regexp', '--regexp', strings.escapeRegExpCharacters(config.contentPattern.pattern));
-		} else {
-			args.push('--fixed-strings', config.contentPattern.pattern);
-		}
+		searchPatternAfterDoubleDashes = config.contentPattern.pattern;
+		args.push('--fixed-strings');
 	}
 
 	// Folder to search
-	args.push('--', './');
+	args.push('--');
+
+	if (searchPatternAfterDoubleDashes) {
+		// Put the query after --, in case the query starts with a dash
+		args.push(searchPatternAfterDoubleDashes);
+	}
+
+	args.push('./');
 
 	return { args, siblingClauses };
 }

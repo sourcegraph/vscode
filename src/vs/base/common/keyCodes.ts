@@ -5,7 +5,6 @@
 
 'use strict';
 
-import { IHTMLContentElement } from 'vs/base/common/htmlContent';
 import { OperatingSystem } from 'vs/base/common/platform';
 
 /**
@@ -514,6 +513,18 @@ export class SimpleKeybinding {
 			|| this.keyCode === KeyCode.Shift
 		);
 	}
+
+	/**
+	 * Does this keybinding refer to the key code of a modifier and it also has the modifier flag?
+	 */
+	public isDuplicateModifierCase(): boolean {
+		return (
+			(this.ctrlKey && this.keyCode === KeyCode.Ctrl)
+			|| (this.shiftKey && this.keyCode === KeyCode.Shift)
+			|| (this.altKey && this.keyCode === KeyCode.Alt)
+			|| (this.metaKey && this.keyCode === KeyCode.Meta)
+		);
+	}
 }
 
 export class ChordKeybinding {
@@ -539,13 +550,17 @@ export abstract class ResolvedKeybinding {
 	 */
 	public abstract getLabel(): string;
 	/**
+	 * Returns the UI label of the binding without modifiers
+	 */
+	public abstract getLabelWithoutModifiers(): string;
+	/**
 	 * This prints the binding in a format suitable for ARIA.
 	 */
 	public abstract getAriaLabel(): string;
 	/**
-	 * This prints the binding in a format suitable for displaying in the UI.
+	 * Returns the ARIA label of the bindings without modifiers
 	 */
-	public abstract getHTMLLabel(): IHTMLContentElement[];
+	public abstract getAriaLabelWithoutModifiers(): string;
 	/**
 	 * This prints the binding in a format suitable for electron's accelerators.
 	 * See https://github.com/electron/electron/blob/master/docs/api/accelerator.md
@@ -555,6 +570,10 @@ export abstract class ResolvedKeybinding {
 	 * This prints the binding in a format suitable for user settings.
 	 */
 	public abstract getUserSettingsLabel(): string;
+	/**
+	 * Is the user settings label reflecting the label?
+	 */
+	public abstract isWYSIWYG(): boolean;
 
 	/**
 	 * Is the binding a chord?
@@ -585,4 +604,8 @@ export abstract class ResolvedKeybinding {
 	 * Returns the firstPart, chordPart that should be used for dispatching.
 	 */
 	public abstract getDispatchParts(): [string, string];
+	/**
+	 * Returns the firstPart, chordPart of the keybinding
+	 */
+	public abstract getParts(): [ResolvedKeybinding, ResolvedKeybinding];
 }

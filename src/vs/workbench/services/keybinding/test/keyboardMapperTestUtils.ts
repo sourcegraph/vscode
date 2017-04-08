@@ -8,18 +8,21 @@
 import * as assert from 'assert';
 import { IHTMLContentElement } from 'vs/base/common/htmlContent';
 import { IKeyboardMapper } from 'vs/workbench/services/keybinding/common/keyboardMapper';
-import { Keybinding, ResolvedKeybinding } from 'vs/base/common/keyCodes';
+import { Keybinding, ResolvedKeybinding, SimpleKeybinding } from 'vs/base/common/keyCodes';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { readFile, writeFile } from 'vs/base/node/pfs';
 import { OperatingSystem } from 'vs/base/common/platform';
 import { IKeyboardEvent } from 'vs/platform/keybinding/common/keybinding';
+import { ScanCodeBinding } from 'vs/workbench/services/keybinding/common/scanCode';
 
 export interface IResolvedKeybinding {
 	label: string;
+	labelWithoutModifiers: string;
 	ariaLabel: string;
-	HTMLLabel: IHTMLContentElement[];
+	ariaLabelWithoutModifiers: string;
 	electronAccelerator: string;
 	userSettingsLabel: string;
+	isWYSIWYG: boolean;
 	isChord: boolean;
 	hasCtrlModifier: boolean;
 	hasShiftModifier: boolean;
@@ -31,10 +34,12 @@ export interface IResolvedKeybinding {
 function toIResolvedKeybinding(kb: ResolvedKeybinding): IResolvedKeybinding {
 	return {
 		label: kb.getLabel(),
+		labelWithoutModifiers: kb.getLabelWithoutModifiers(),
 		ariaLabel: kb.getAriaLabel(),
-		HTMLLabel: kb.getHTMLLabel(),
+		ariaLabelWithoutModifiers: kb.getAriaLabelWithoutModifiers(),
 		electronAccelerator: kb.getElectronAccelerator(),
 		userSettingsLabel: kb.getUserSettingsLabel(),
+		isWYSIWYG: kb.isWYSIWYG(),
 		isChord: kb.isChord(),
 		hasCtrlModifier: kb.hasCtrlModifier(),
 		hasShiftModifier: kb.hasShiftModifier(),
@@ -51,6 +56,11 @@ export function assertResolveKeybinding(mapper: IKeyboardMapper, keybinding: Key
 
 export function assertResolveKeyboardEvent(mapper: IKeyboardMapper, keyboardEvent: IKeyboardEvent, expected: IResolvedKeybinding): void {
 	let actual = toIResolvedKeybinding(mapper.resolveKeyboardEvent(keyboardEvent));
+	assert.deepEqual(actual, expected);
+}
+
+export function assertResolveUserBinding(mapper: IKeyboardMapper, firstPart: SimpleKeybinding | ScanCodeBinding, chordPart: SimpleKeybinding | ScanCodeBinding, expected: IResolvedKeybinding[]): void {
+	let actual: IResolvedKeybinding[] = mapper.resolveUserBinding(firstPart, chordPart).map(toIResolvedKeybinding);
 	assert.deepEqual(actual, expected);
 }
 
@@ -97,13 +107,13 @@ export function readRawMapping<T>(file: string): TPromise<T> {
 	});
 }
 
-export function assertMapping(mapper: IKeyboardMapper, file: string, done: (err?: any) => void): void {
+export function assertMapping(writeFileIfDifferent: boolean, mapper: IKeyboardMapper, file: string, done: (err?: any) => void): void {
 	const filePath = require.toUrl(`vs/workbench/services/keybinding/test/${file}`);
 
 	readFile(filePath).then((buff) => {
 		let expected = buff.toString();
 		const actual = mapper.dumpDebugInfo();
-		if (actual !== expected) {
+		if (actual !== expected && writeFileIfDifferent) {
 			writeFile(filePath, actual);
 		}
 		try {

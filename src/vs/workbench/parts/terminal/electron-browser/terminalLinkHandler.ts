@@ -37,9 +37,9 @@ export type XtermLinkMatcherValidationCallback = (uri: string, element: HTMLElem
 
 export class TerminalLinkHandler {
 	private _tooltipDisposables: IDisposable[] = [];
+	private _widgetManager: TerminalWidgetManager;
 
 	constructor(
-		private _widgetManager: TerminalWidgetManager,
 		private _xterm: any,
 		private _platform: platform.Platform,
 		@IWorkbenchEditorService private _editorService: IWorkbenchEditorService,
@@ -51,10 +51,22 @@ export class TerminalLinkHandler {
 		});
 	}
 
+	public setWidgetManager(widgetManager: TerminalWidgetManager): void {
+		this._widgetManager = widgetManager;
+	}
+
 	public registerCustomLinkHandler(regex: RegExp, handler: (uri: string) => void, matchIndex?: number, validationCallback?: XtermLinkMatcherValidationCallback): number {
+		const wrappedValidationCallback = (uri, element, callback) => {
+			this._addTooltipEventListeners(element);
+			if (validationCallback) {
+				validationCallback(uri, element, callback);
+			} else {
+				callback(true);
+			}
+		};
 		return this._xterm.registerLinkMatcher(regex, this._wrapLinkHandler(handler), {
 			matchIndex,
-			validationCallback,
+			validationCallback: wrappedValidationCallback,
 			priority: CUSTOM_LINK_PRIORITY
 		});
 	}
@@ -117,7 +129,7 @@ export class TerminalLinkHandler {
 		callback(true);
 	}
 
-	private _addTooltipEventListeners(element: HTMLElement) {
+	private _addTooltipEventListeners(element: HTMLElement): void {
 		let timeout = null;
 		let isMessageShowing = false;
 		this._tooltipDisposables.push(dom.addDisposableListener(element, dom.EventType.MOUSE_OVER, () => {

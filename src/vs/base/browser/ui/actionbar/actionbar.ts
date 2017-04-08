@@ -554,8 +554,7 @@ export class ActionBar extends EventEmitter implements IActionRunner {
 	}
 
 	public clear(): void {
-		// Do not dispose action items if they were provided from outside
-		this.items = this.options.actionItemProvider ? [] : lifecycle.dispose(this.items);
+		this.items = lifecycle.dispose(this.items);
 		$(this.actionsList).empty();
 	}
 
@@ -688,7 +687,7 @@ export class ActionBar extends EventEmitter implements IActionRunner {
 }
 
 export class SelectActionItem extends BaseActionItem {
-	private selectBox: SelectBox;
+	protected selectBox: SelectBox;
 	protected toDispose: lifecycle.IDisposable[];
 
 	constructor(ctx: any, action: IAction, options: string[], selected: number) {

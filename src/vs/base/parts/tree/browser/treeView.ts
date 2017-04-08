@@ -115,7 +115,7 @@ export class ViewItem implements IViewItem {
 	public needsRender: boolean;
 	public uri: string;
 	public unbindDragStart: Lifecycle.IDisposable;
-	public loadingPromise: WinJS.Promise;
+	public loadingTimer: number;
 
 	public _styles: any;
 	private _draggable: boolean;
@@ -488,6 +488,7 @@ export class TreeView extends HeightMap {
 		this.viewListeners.push(DOM.addDisposableListener(this.domNode, 'mousedown', (e) => this.onMouseDown(e)));
 		this.viewListeners.push(DOM.addDisposableListener(this.domNode, 'mouseup', (e) => this.onMouseUp(e)));
 		this.viewListeners.push(DOM.addDisposableListener(this.wrapper, 'click', (e) => this.onClick(e)));
+		this.viewListeners.push(DOM.addDisposableListener(this.wrapper, 'auxclick', (e) => this.onClick(e))); // >= Chrome 56
 		this.viewListeners.push(DOM.addDisposableListener(this.domNode, 'contextmenu', (e) => this.onContextMenu(e)));
 		this.viewListeners.push(DOM.addDisposableListener(this.wrapper, Touch.EventType.Tap, (e) => this.onTap(e)));
 		this.viewListeners.push(DOM.addDisposableListener(this.wrapper, Touch.EventType.Change, (e) => this.onTouchChange(e)));
@@ -815,10 +816,10 @@ export class TreeView extends HeightMap {
 		var viewItem = this.items[item.id];
 
 		if (viewItem) {
-			viewItem.loadingPromise = WinJS.TPromise.timeout(TreeView.LOADING_DECORATION_DELAY).then(() => {
-				viewItem.loadingPromise = null;
+			viewItem.loadingTimer = setTimeout(() => {
+				viewItem.loadingTimer = 0;
 				viewItem.loading = true;
-			});
+			}, TreeView.LOADING_DECORATION_DELAY);
 		}
 
 		if (!e.isNested) {
@@ -839,9 +840,9 @@ export class TreeView extends HeightMap {
 		var viewItem = this.items[item.id];
 
 		if (viewItem) {
-			if (viewItem.loadingPromise) {
-				viewItem.loadingPromise.cancel();
-				viewItem.loadingPromise = null;
+			if (viewItem.loadingTimer) {
+				clearTimeout(viewItem.loadingTimer);
+				viewItem.loadingTimer = 0;
 			}
 
 			viewItem.loading = false;

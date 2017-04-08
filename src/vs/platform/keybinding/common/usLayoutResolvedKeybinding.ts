@@ -4,9 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 'use strict';
 
-import { IHTMLContentElement } from 'vs/base/common/htmlContent';
 import { ResolvedKeybinding, KeyCode, KeyCodeUtils, USER_SETTINGS, Keybinding, KeybindingType, SimpleKeybinding } from 'vs/base/common/keyCodes';
-import { UILabelProvider, AriaLabelProvider, ElectronAcceleratorLabelProvider, UserSettingsLabelProvider } from 'vs/platform/keybinding/common/keybindingLabels';
+import { UILabelProvider, AriaLabelProvider, ElectronAcceleratorLabelProvider, UserSettingsLabelProvider, NO_MODIFIERS } from 'vs/platform/keybinding/common/keybindingLabels';
 import { OperatingSystem } from 'vs/base/common/platform';
 
 /**
@@ -49,22 +48,48 @@ export class USLayoutResolvedKeybinding extends ResolvedKeybinding {
 		return KeyCodeUtils.toString(keyCode);
 	}
 
+	private _getUILabelForKeybinding(keybinding: SimpleKeybinding): string {
+		if (!keybinding) {
+			return null;
+		}
+		if (keybinding.isDuplicateModifierCase()) {
+			return '';
+		}
+		return this._keyCodeToUILabel(keybinding.keyCode);
+	}
+
 	public getLabel(): string {
-		let firstPart = this._firstPart ? this._keyCodeToUILabel(this._firstPart.keyCode) : null;
-		let chordPart = this._chordPart ? this._keyCodeToUILabel(this._chordPart.keyCode) : null;
+		let firstPart = this._getUILabelForKeybinding(this._firstPart);
+		let chordPart = this._getUILabelForKeybinding(this._chordPart);
 		return UILabelProvider.toLabel(this._firstPart, firstPart, this._chordPart, chordPart, this._os);
 	}
 
+	public getLabelWithoutModifiers(): string {
+		let firstPart = this._getUILabelForKeybinding(this._firstPart);
+		let chordPart = this._getUILabelForKeybinding(this._chordPart);
+		return UILabelProvider.toLabel(NO_MODIFIERS, firstPart, NO_MODIFIERS, chordPart, this._os);
+	}
+
+	private _getAriaLabelForKeybinding(keybinding: SimpleKeybinding): string {
+		if (!keybinding) {
+			return null;
+		}
+		if (keybinding.isDuplicateModifierCase()) {
+			return '';
+		}
+		return KeyCodeUtils.toString(keybinding.keyCode);
+	}
+
 	public getAriaLabel(): string {
-		let firstPart = this._firstPart ? KeyCodeUtils.toString(this._firstPart.keyCode) : null;
-		let chordPart = this._chordPart ? KeyCodeUtils.toString(this._chordPart.keyCode) : null;
+		let firstPart = this._getAriaLabelForKeybinding(this._firstPart);
+		let chordPart = this._getAriaLabelForKeybinding(this._chordPart);
 		return AriaLabelProvider.toLabel(this._firstPart, firstPart, this._chordPart, chordPart, this._os);
 	}
 
-	public getHTMLLabel(): IHTMLContentElement[] {
-		let firstPart = this._firstPart ? this._keyCodeToUILabel(this._firstPart.keyCode) : null;
-		let chordPart = this._chordPart ? this._keyCodeToUILabel(this._chordPart.keyCode) : null;
-		return UILabelProvider.toHTMLLabel(this._firstPart, firstPart, this._chordPart, chordPart, this._os);
+	public getAriaLabelWithoutModifiers(): string {
+		let firstPart = this._getAriaLabelForKeybinding(this._firstPart);
+		let chordPart = this._getAriaLabelForKeybinding(this._chordPart);
+		return AriaLabelProvider.toLabel(NO_MODIFIERS, firstPart, NO_MODIFIERS, chordPart, this._os);
 	}
 
 	private _keyCodeToElectronAccelerator(keyCode: KeyCode): string {
@@ -87,21 +112,45 @@ export class USLayoutResolvedKeybinding extends ResolvedKeybinding {
 		return KeyCodeUtils.toString(keyCode);
 	}
 
+	private _getElectronAcceleratorLabelForKeybinding(keybinding: SimpleKeybinding): string {
+		if (!keybinding) {
+			return null;
+		}
+		if (keybinding.isDuplicateModifierCase()) {
+			return null;
+		}
+		return this._keyCodeToElectronAccelerator(keybinding.keyCode);
+	}
+
 	public getElectronAccelerator(): string {
 		if (this._chordPart !== null) {
 			// Electron cannot handle chords
 			return null;
 		}
 
-		let firstPart = this._firstPart ? this._keyCodeToElectronAccelerator(this._firstPart.keyCode) : null;
+		let firstPart = this._getElectronAcceleratorLabelForKeybinding(this._firstPart);
 		return ElectronAcceleratorLabelProvider.toLabel(this._firstPart, firstPart, null, null, this._os);
 	}
 
+	private _getUserSettingsLabelForKeybinding(keybinding: SimpleKeybinding): string {
+		if (!keybinding) {
+			return null;
+		}
+		if (keybinding.isDuplicateModifierCase()) {
+			return '';
+		}
+		return USER_SETTINGS.fromKeyCode(keybinding.keyCode);
+	}
+
 	public getUserSettingsLabel(): string {
-		let firstPart = this._firstPart ? USER_SETTINGS.fromKeyCode(this._firstPart.keyCode) : null;
-		let chordPart = this._chordPart ? USER_SETTINGS.fromKeyCode(this._chordPart.keyCode) : null;
+		let firstPart = this._getUserSettingsLabelForKeybinding(this._firstPart);
+		let chordPart = this._getUserSettingsLabelForKeybinding(this._chordPart);
 		let result = UserSettingsLabelProvider.toLabel(this._firstPart, firstPart, this._chordPart, chordPart, this._os);
-		return result.toLowerCase();
+		return (result ? result.toLowerCase() : result);
+	}
+
+	public isWYSIWYG(): boolean {
+		return true;
 	}
 
 	public isChord(): boolean {
@@ -134,6 +183,10 @@ export class USLayoutResolvedKeybinding extends ResolvedKeybinding {
 			return false;
 		}
 		return this._firstPart.metaKey;
+	}
+
+	public getParts(): [ResolvedKeybinding, ResolvedKeybinding] {
+		return [new USLayoutResolvedKeybinding(this._firstPart, this._os), this._chordPart ? new USLayoutResolvedKeybinding(this._chordPart, this._os) : null];
 	}
 
 	public getDispatchParts(): [string, string] {

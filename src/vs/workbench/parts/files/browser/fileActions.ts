@@ -20,7 +20,7 @@ import severity from 'vs/base/common/severity';
 import diagnostics = require('vs/base/common/diagnostics');
 import { Action, IAction } from 'vs/base/common/actions';
 import { MessageType, IInputValidator } from 'vs/base/browser/ui/inputbox/inputBox';
-import { ITree, IHighlightEvent } from 'vs/base/parts/tree/browser/tree';
+import { ITree, IHighlightEvent, IActionProvider } from 'vs/base/parts/tree/browser/tree';
 import { dispose, IDisposable } from 'vs/base/common/lifecycle';
 import { VIEWLET_ID } from 'vs/workbench/parts/files/common/files';
 import labels = require('vs/base/common/labels');
@@ -30,7 +30,6 @@ import { toResource, IEditorIdentifier, EditorInput } from 'vs/workbench/common/
 import { FileStat, NewStatPlaceholder } from 'vs/workbench/parts/files/common/explorerViewModel';
 import { ExplorerView } from 'vs/workbench/parts/files/browser/views/explorerView';
 import { ExplorerViewlet } from 'vs/workbench/parts/files/browser/explorerViewlet';
-import { IActionProvider } from 'vs/base/parts/tree/browser/actionsRenderer';
 import { IUntitledEditorService } from 'vs/workbench/services/untitled/common/untitledEditorService';
 import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { CollapseAction } from 'vs/workbench/browser/viewlet';
@@ -286,10 +285,11 @@ class RenameFileAction extends BaseRenameAction {
 	}
 
 	public runAction(newName: string): TPromise<any> {
-		let isDirtyCaseChange = false;
 
 		const dirty = this.textFileService.getDirty().filter(d => isEqualOrParent(d.fsPath, this.element.resource.fsPath, !isLinux /* ignorecase */));
-		const dirtyRenamed = dirty.map(d => {
+		const dirtyRenamed: URI[] = [];
+		return TPromise.join(dirty.map(d => {
+
 			const targetPath = paths.join(this.element.parent.resource.fsPath, newName);
 			let renamed: URI;
 
@@ -303,27 +303,9 @@ class RenameFileAction extends BaseRenameAction {
 				renamed = URI.file(paths.join(targetPath, d.fsPath.substr(this.element.resource.fsPath.length + 1)));
 			}
 
-			// Detect if any dirty file got renamed with different case
-			if (!isDirtyCaseChange && isEqual(d.fsPath, renamed.fsPath)) {
-				isDirtyCaseChange = true;
-			}
+			dirtyRenamed.push(renamed);
 
-			return renamed;
-		});
-
-		// Corner case in our backup story: A dirty resource is being renamed (either the file itself or one of its parent)
-		// to a different casing, but same path. Since our backup story is does not distinguish different casing on file
-		// systems that do not distinguish, we cannot backup the contents here and restore it later.
-		if (isDirtyCaseChange) {
-			const res = this.confirmDirtyCaseChange(dirty);
-			if (!res) {
-				return TPromise.as(null);
-			}
-		}
-
-		// 1. check for dirty files that are being moved and backup to new target
-		return TPromise.join(dirtyRenamed.map((renamed, index) => {
-			const model = this.textFileService.models.get(dirty[index]);
+			const model = this.textFileService.models.get(d);
 
 			return this.backupFileService.backupResource(renamed, model.getValue(), model.getVersionId());
 		}))
@@ -342,26 +324,6 @@ class RenameFileAction extends BaseRenameAction {
 			.then(() => {
 				return TPromise.join(dirtyRenamed.map(t => this.textModelResolverService.createModelReference(t)));
 			});
-	}
-
-	private confirmDirtyCaseChange(dirty: URI[]): boolean {
-		let message: string;
-		if (this.element.isDirectory) {
-			if (dirty.length === 1) {
-				message = nls.localize('dirtyMessageFolderOne', "You are renaming a folder with unsaved changes in 1 file. Do you want to continue?");
-			} else {
-				message = nls.localize('dirtyMessageFolder', "You are renaming a folder with unsaved changes in {0} files. Do you want to continue?", dirty.length);
-			}
-		} else {
-			message = nls.localize('dirtyMessageFile', "You are renaming a file with unsaved changes. Do you want to continue?");
-		}
-
-		return this.messageService.confirm({
-			message,
-			type: 'warning',
-			detail: nls.localize('dirtyWarning', "Your changes will be lost if you don't save them."),
-			primaryButton: nls.localize({ key: 'renameLabel', comment: ['&& denotes a mnemonic'] }, "&&Rename")
-		});
 	}
 }
 

@@ -19,6 +19,7 @@ import { ITelemetryData } from 'vs/platform/telemetry/common/telemetry';
 // TODO@Joao: remove this dependency, move all implementation to this class
 import { OpenContext } from 'vs/code/common/windows';
 import { IWindowsMainService } from 'vs/code/electron-main/windows';
+import { ILifecycleService } from "vs/code/electron-main/lifecycle";
 
 export interface ISharedProcess {
 	whenReady(): TPromise<void>;
@@ -38,7 +39,8 @@ export class WindowsService implements IWindowsService, IDisposable {
 		private sharedProcess: ISharedProcess,
 		@IWindowsMainService private windowsMainService: IWindowsMainService,
 		@IEnvironmentService private environmentService: IEnvironmentService,
-		@IURLService urlService: IURLService
+		@IURLService urlService: IURLService,
+		@ILifecycleService private lifecycleService: ILifecycleService
 	) {
 		chain(urlService.onOpenURL)
 			.filter(uri => uri.authority === 'file' && !!uri.path)
@@ -140,6 +142,11 @@ export class WindowsService implements IWindowsService, IDisposable {
 		return TPromise.as(null);
 	}
 
+	clearRecentPathsList(): TPromise<void> {
+		this.windowsMainService.clearRecentPathsList();
+		return TPromise.as(null);
+	}
+
 	getRecentlyOpen(windowId: number): TPromise<{ files: string[]; folders: string[]; }> {
 		const vscodeWindow = this.windowsMainService.getWindowById(windowId);
 
@@ -156,6 +163,16 @@ export class WindowsService implements IWindowsService, IDisposable {
 
 		if (vscodeWindow) {
 			vscodeWindow.win.focus();
+		}
+
+		return TPromise.as(null);
+	}
+
+	isFocused(windowId: number): TPromise<boolean> {
+		const vscodeWindow = this.windowsMainService.getWindowById(windowId);
+
+		if (vscodeWindow) {
+			return TPromise.as(vscodeWindow.win.isFocused());
 		}
 
 		return TPromise.as(null);
@@ -255,9 +272,8 @@ export class WindowsService implements IWindowsService, IDisposable {
 		return TPromise.as(null);
 	}
 
-	openExternal(url: string): TPromise<void> {
-		shell.openExternal(url);
-		return TPromise.as(null);
+	openExternal(url: string): TPromise<boolean> {
+		return TPromise.as(shell.openExternal(url));
 	}
 
 	startCrashReporter(config: Electron.CrashReporterStartOptions): TPromise<void> {
@@ -271,20 +287,8 @@ export class WindowsService implements IWindowsService, IDisposable {
 	}
 
 	relaunch(options: { addArgs?: string[], removeArgs?: string[] }): TPromise<void> {
-		const args = process.argv.slice(1);
-		if (options.addArgs) {
-			args.push(...options.addArgs);
-		}
-		if (options.removeArgs) {
-			for (const a of options.removeArgs) {
-				const idx = args.indexOf(a);
-				if (idx >= 0) {
-					args.splice(idx, 1);
-				}
-			}
-		}
-		app.quit();
-		app.once('quit', () => app.relaunch({ args }));
+		this.lifecycleService.relaunch(options);
+
 		return TPromise.as(null);
 	}
 

@@ -9,16 +9,6 @@ import { IDisposable, Disposable, dispose } from 'vs/base/common/lifecycle';
 import { IThemeService, ITheme } from 'vs/platform/theme/common/themeService';
 import { Color, RGBA } from 'vs/base/common/color';
 
-// < --- Workbench --- >
-
-export const WINDOW_FOREGROUND = registerColor('windowForeground', {
-	dark: '#CCCCCC',
-	light: '#6C6C6C',
-	hc: '#FFFFFF'
-}, nls.localize('windowForeground', "Overall window foreground color. This color is only used if not overridden by a component."));
-
-
-
 // < --- Tabs --- >
 
 export const TABS_CONTAINER_BACKGROUND = registerColor('tabsContainerBackground', {
@@ -26,12 +16,6 @@ export const TABS_CONTAINER_BACKGROUND = registerColor('tabsContainerBackground'
 	light: '#F3F3F3',
 	hc: null
 }, nls.localize('tabsContainerBackground', "Background color of the tabs container. Tabs are the containers for editors in the editor area. Multiple tabs can be opened in one editor group. There can be multiple editor groups."));
-
-export const NO_TABS_CONTAINER_BACKGROUND = registerColor('noTabsContainerBackground', {
-	dark: editorBackground,
-	light: editorBackground,
-	hc: editorBackground
-}, nls.localize('noTabsContainerBackground', "Background color of the editor title container when no tabs are enabled."));
 
 export const ACTIVE_TAB_BACKGROUND = registerColor('activeTabBackground', {
 	dark: editorBackground,
@@ -79,6 +63,12 @@ export const TAB_BORDER = registerColor('tabBorder', {
 
 // < --- Editors --- >
 
+export const EDITOR_HEADER_BACKGROUND = registerColor('editorHeaderBackground', {
+	dark: editorBackground,
+	light: editorBackground,
+	hc: editorBackground
+}, nls.localize('editorHeaderBackground', "Background color of the editor title header when no tabs are enabled."));
+
 export const EDITOR_GROUP_BORDER_COLOR = registerColor('editorGroupBorder', {
 	dark: '#444444',
 	light: '#E7E7E7',
@@ -89,13 +79,19 @@ export const EDITOR_GROUP_BACKGROUND = registerColor('editorGroupBackground', {
 	dark: '#2D2D2D',
 	light: '#ECECEC',
 	hc: null
-}, nls.localize('editorGroupBackground', "Backgrouund color of an editor group. Editor groups are the containers of editors."));
+}, nls.localize('editorGroupBackground', "Background color of an editor group. Editor groups are the containers of editors."));
 
 export const EDITOR_DRAG_AND_DROP_BACKGROUND = registerColor('editorDragAndDropBackground', {
 	dark: Color.fromRGBA(new RGBA(83, 89, 93)).transparent(0.5),
 	light: Color.fromRGBA(new RGBA(51, 153, 255)).transparent(0.18),
 	hc: null
 }, nls.localize('editorDragAndDropBackground', "Background color when dragging editors around."));
+
+export const EDITOR_SIDE_BY_SIDE_BORDER = registerColor('editorSideBySideBorder', {
+	dark: '#000000',
+	light: '#DDDDDD',
+	hc: null
+}, nls.localize('editorSideBySideBorder', "Border color to separate the details from the master side for side by side editors."));
 
 
 // < --- Panels --- >
@@ -106,11 +102,29 @@ export const PANEL_BACKGROUND = registerColor('panelBackground', {
 	hc: editorBackground
 }, nls.localize('panelBackground', "Panel background color. Panels are shown below the editor area and contain views like output and integrated terminal."));
 
-export const PANEL_BORDER_TOP_COLOR = registerColor('panelBorderTopColor', {
+export const PANEL_BORDER_TOP_COLOR = registerColor('panelTopBorder', {
 	dark: Color.fromRGBA(new RGBA(128, 128, 128)).transparent(0.35),
 	light: Color.fromRGBA(new RGBA(128, 128, 128)).transparent(0.35),
 	hc: highContrastBorder
-}, nls.localize('panelBorderTopColor', "Panel border color on the top separating to the editor. Panels are shown below the editor area and contain views like output and integrated terminal."));
+}, nls.localize('panelTopBorder', "Panel border color on the top separating to the editor. Panels are shown below the editor area and contain views like output and integrated terminal."));
+
+export const PANEL_ACTIVE_TITLE_COLOR = registerColor('panelActiveTitleForeground', {
+	dark: '#E7E7E7',
+	light: '#424242',
+	hc: Color.white
+}, nls.localize('panelActiveTitleForeground', "Title color for the active panel. Panels are shown below the editor area and contain views like output and integrated terminal."));
+
+export const PANEL_INACTIVE_TITLE_COLOR = registerColor('panelInactiveTitleForeground', {
+	dark: Color.fromRGBA(new RGBA(231, 231, 231)).transparent(0.5),
+	light: Color.fromRGBA(new RGBA(66, 66, 66)).transparent(0.75),
+	hc: Color.white
+}, nls.localize('panelInactiveTitleForeground', "Title color for the inactive panel. Panels are shown below the editor area and contain views like output and integrated terminal."));
+
+export const PANEL_ACTIVE_TITLE_BORDER = registerColor('panelActiveTitleBorder', {
+	dark: '#404047',
+	light: '#CCCEDA',
+	hc: highContrastBorder
+}, nls.localize('panelActiveTitleBorder', "Border color for the active panel title. Panels are shown below the editor area and contain views like output and integrated terminal."));
 
 
 
@@ -120,43 +134,43 @@ export const STATUS_BAR_FOREGROUND = registerColor('statusBarForeground', {
 	dark: '#FFFFFF',
 	light: '#FFFFFF',
 	hc: '#FFFFFF'
-}, nls.localize('statusBarForeground', "Status bar foreground color. The status bar is shown in the bottom of the window"));
+}, nls.localize('statusBarForeground', "Status bar foreground color. The status bar is shown in the bottom of the window."));
 
 export const STATUS_BAR_BACKGROUND = registerColor('statusBarBackground', {
 	dark: '#007ACC',
 	light: '#007ACC',
 	hc: null
-}, nls.localize('statusBarBackground', "Standard status bar background color. The status bar is shown in the bottom of the window"));
+}, nls.localize('statusBarBackground', "Standard status bar background color. The status bar is shown in the bottom of the window."));
 
 export const STATUS_BAR_NO_FOLDER_BACKGROUND = registerColor('statusBarNoFolderBackground', {
 	dark: '#68217A',
 	light: '#68217A',
 	hc: null
-}, nls.localize('statusBarNoFolderBackground', "Status bar background color when no folder is opened. The status bar is shown in the bottom of the window"));
+}, nls.localize('statusBarNoFolderBackground', "Status bar background color when no folder is opened. The status bar is shown in the bottom of the window."));
 
 export const STATUS_BAR_ITEM_ACTIVE_BACKGROUND = registerColor('statusBarItemActiveBackground', {
 	dark: Color.fromRGBA(new RGBA(255, 255, 255)).transparent(0.18),
 	light: Color.fromRGBA(new RGBA(255, 255, 255)).transparent(0.18),
 	hc: Color.fromRGBA(new RGBA(255, 255, 255)).transparent(0.18)
-}, nls.localize('statusBarItemActiveBackground', "Status bar item background color when clicking. The status bar is shown in the bottom of the window"));
+}, nls.localize('statusBarItemActiveBackground', "Status bar item background color when clicking. The status bar is shown in the bottom of the window."));
 
 export const STATUS_BAR_ITEM_HOVER_BACKGROUND = registerColor('statusBarItemHoverBackground', {
 	dark: Color.fromRGBA(new RGBA(255, 255, 255)).transparent(0.12),
 	light: Color.fromRGBA(new RGBA(255, 255, 255)).transparent(0.12),
 	hc: Color.fromRGBA(new RGBA(255, 255, 255)).transparent(0.12)
-}, nls.localize('statusBarItemHoverBackground', "Status bar item background color when hovering. The status bar is shown in the bottom of the window"));
+}, nls.localize('statusBarItemHoverBackground', "Status bar item background color when hovering. The status bar is shown in the bottom of the window."));
 
 export const STATUS_BAR_INFO_ITEM_BACKGROUND = registerColor('statusBarInfoItemBackground', {
 	dark: '#388A34',
 	light: '#388A34',
 	hc: '#3883A4'
-}, nls.localize('statusBarInfoItemBackground', "Status bar info item background color. The status bar is shown in the bottom of the window"));
+}, nls.localize('statusBarInfoItemBackground', "Status bar info item background color. The status bar is shown in the bottom of the window."));
 
 export const STATUS_BAR_INFO_ITEM_HOVER_BACKGROUND = registerColor('statusBarInfoItemHoverBackground', {
 	dark: '#369432',
 	light: '#369432',
 	hc: '#369432'
-}, nls.localize('statusBarInfoItemHoverBackground', "Status bar info item background color when hovering. The status bar is shown in the bottom of the window"));
+}, nls.localize('statusBarInfoItemHoverBackground', "Status bar info item background color when hovering. The status bar is shown in the bottom of the window."));
 
 
 
@@ -167,6 +181,24 @@ export const ACTIVITY_BAR_BACKGROUND = registerColor('activityBarBackground', {
 	light: '#2C2C2C',
 	hc: '#000000'
 }, nls.localize('activityBarBackground', "Activity bar background color. The activity bar is showing on the far left or right and allows to switch between views of the side bar."));
+
+export const ACTIVITY_BAR_DRAG_AND_DROP_BACKGROUND = registerColor('activityBarDragAndDropBackground', {
+	dark: '#403F3F',
+	light: '#403F3F',
+	hc: '#403F3F'
+}, nls.localize('activityBarDragAndDropBackground', "Drag and drop feedback color for the activity bar items. The activity bar is showing on the far left or right and allows to switch between views of the side bar."));
+
+export const ACTIVITY_BADGE_BACKGROUND = registerColor('activityBadgeBackground', {
+	dark: '#007ACC',
+	light: '#007ACC',
+	hc: '#000000'
+}, nls.localize('activityBadgeBackground', "Activity notification badge background color. The activity bar is showing on the far left or right and allows to switch between views of the side bar."));
+
+export const ACTIVITY_BADGE_FOREGROUND = registerColor('activityBadgeForeground', {
+	dark: Color.white,
+	light: Color.white,
+	hc: Color.white
+}, nls.localize('activityBadgeForeground', "Activity notification badge foreground color. The activity bar is showing on the far left or right and allows to switch between views of the side bar."));
 
 
 

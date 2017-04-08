@@ -30,7 +30,7 @@ import { IContextKeyService, IContextKey } from 'vs/platform/contextkey/common/c
 import { IContextMenuService, ContextSubMenu } from 'vs/platform/contextview/browser/contextView';
 import { DebugHoverWidget } from 'vs/workbench/parts/debug/electron-browser/debugHover';
 import { RemoveBreakpointAction, EditConditionalBreakpointAction, EnableBreakpointAction, DisableBreakpointAction, AddConditionalBreakpointAction } from 'vs/workbench/parts/debug/browser/debugActions';
-import { IDebugEditorContribution, IDebugService, State, IBreakpoint, EDITOR_CONTRIBUTION_ID, CONTEXT_BREAKPOINT_WIDGET_VISIBLE, IStackFrame, IDebugConfiguration, IExpression } from 'vs/workbench/parts/debug/common/debug';
+import { IDebugEditorContribution, IDebugService, State, IBreakpoint, EDITOR_CONTRIBUTION_ID, CONTEXT_BREAKPOINT_WIDGET_VISIBLE, IStackFrame, IDebugConfiguration, IExpression, IExceptionInfo } from 'vs/workbench/parts/debug/common/debug';
 import { BreakpointWidget } from 'vs/workbench/parts/debug/browser/breakpointWidget';
 import { ExceptionWidget } from 'vs/workbench/parts/debug/browser/exceptionWidget';
 import { FloatingClickWidget } from 'vs/workbench/parts/preferences/browser/preferencesWidgets';
@@ -215,6 +215,11 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 			this.updateInlineDecorations(sf);
 		}));
 		this.toDispose.push(this.editor.onDidScrollChange(() => this.hideHoverWidget));
+		this.toDispose.push(this.debugService.onDidChangeState((state: State) => {
+			if (state !== State.Stopped) {
+				this.toggleExceptionWidget();
+			}
+		}));
 	}
 
 	public getId(): string {
@@ -264,13 +269,11 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 		const model = this.editor.getModel();
 		if (model && sf && sf.source.uri.toString() === model.uri.toString()) {
 			this.editor.updateOptions({ hover: false });
+			this.toggleExceptionWidget();
 		} else {
 			this.editor.updateOptions({ hover: true });
 			this.hideHoverWidget();
 		}
-
-		// Handling exception
-		this.toggleExceptionWidget();
 
 		this.updateInlineDecorations(sf);
 	}
@@ -360,17 +363,21 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 		const sameUri = exceptionSf.source.uri.toString() === model.uri.toString();
 		if (this.exceptionWidget && !sameUri) {
 			this.closeExceptionWidget();
-		} else if (sameUri && focusedSf.thread.stoppedDetails && focusedSf.thread.stoppedDetails.reason === 'exception') {
-			this.showExceptionWidget(exceptionSf.lineNumber, exceptionSf.column);
+		} else if (sameUri) {
+			focusedSf.thread.exceptionInfo.then(exceptionInfo => {
+				if (exceptionInfo) {
+					this.showExceptionWidget(exceptionInfo, exceptionSf.lineNumber, exceptionSf.column);
+				}
+			});
 		}
 	}
 
-	private showExceptionWidget(lineNumber: number, column: number): void {
+	private showExceptionWidget(exceptionInfo: IExceptionInfo, lineNumber: number, column: number): void {
 		if (this.exceptionWidget) {
 			this.exceptionWidget.dispose();
 		}
 
-		this.exceptionWidget = this.instantiationService.createInstance(ExceptionWidget, this.editor, lineNumber);
+		this.exceptionWidget = this.instantiationService.createInstance(ExceptionWidget, this.editor, exceptionInfo, lineNumber);
 		this.exceptionWidget.show({ lineNumber, column }, 0);
 	}
 

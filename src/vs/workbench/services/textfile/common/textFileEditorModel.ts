@@ -129,14 +129,10 @@ export class TextFileEditorModel extends BaseTextEditorModel implements ITextFil
 
 	private onFileChanges(e: FileChangesEvent): void {
 
-		// Handle added if we are in orphan mode
-		if (this.inOrphanMode && e.contains(this.resource, FileChangeType.ADDED)) {
-			this.setOrphaned(false);
-		}
-
-		// Handle deletes
-		if (!this.inOrphanMode && e.contains(this.resource, FileChangeType.DELETED)) {
-			this.setOrphaned(true);
+		// Track ADD and DELETES for updates of this model to orphan-mode
+		const newInOrphanMode = e.contains(this.resource, FileChangeType.DELETED) && !e.contains(this.resource, FileChangeType.ADDED);
+		if (this.inOrphanMode !== newInOrphanMode) {
+			this.setOrphaned(newInOrphanMode);
 		}
 	}
 
@@ -274,7 +270,7 @@ export class TextFileEditorModel extends BaseTextEditorModel implements ITextFil
 					mtime: Date.now(),
 					etag: void 0,
 					value: '', /* will be filled later from backup */
-					encoding: this.fileService.getEncoding(this.resource)
+					encoding: this.fileService.getEncoding(this.resource, this.preferredEncoding)
 				};
 
 				return this.loadWithContent(content, backup);
@@ -697,10 +693,6 @@ export class TextFileEditorModel extends BaseTextEditorModel implements ITextFil
 	}
 
 	private doTouch(): TPromise<void> {
-		if (this.inOrphanMode) {
-			return TPromise.as(void 0); // do not create the file if this model is orphaned
-		}
-
 		return this.fileService.touchFile(this.resource).then(stat => {
 
 			// Updated resolved stat with updated stat since touching it might have changed mtime

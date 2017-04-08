@@ -511,7 +511,7 @@ export class VSCodeMenu {
 
 		if (folders.length || files.length) {
 			openRecentMenu.append(__separator__());
-			openRecentMenu.append(new MenuItem(this.likeAction('clearRecentlyOpened', { label: mnemonicLabel(nls.localize({ key: 'miClearItems', comment: ['&& denotes a mnemonic'] }, "&&Clear Items")), click: () => this.windowsService.clearRecentPathsList() }, false)));
+			openRecentMenu.append(this.createMenuItem(nls.localize({ key: 'miClearRecentOpen', comment: ['&& denotes a mnemonic'] }, "&&Clear Recent Files"), 'workbench.action.clearRecentFiles'));
 		}
 	}
 
@@ -828,7 +828,7 @@ export class VSCodeMenu {
 		const disableAllBreakpoints = this.createMenuItem(nls.localize({ key: 'miDisableAllBreakpoints', comment: ['&& denotes a mnemonic'] }, "Disable A&&ll Breakpoints"), 'workbench.debug.viewlet.action.disableAllBreakpoints');
 		const removeAllBreakpoints = this.createMenuItem(nls.localize({ key: 'miRemoveAllBreakpoints', comment: ['&& denotes a mnemonic'] }, "Remove &&All Breakpoints"), 'workbench.debug.viewlet.action.removeAllBreakpoints');
 
-		const installMoreDebuggers = this.createMenuItem(nls.localize({ key: 'miInstallMoreDebuggers', comment: ['&& denotes a mnemonic'] }, "&&Install More Debuggers..."), 'debug.installMoreDebuggers');
+		const installAdditionalDebuggers = this.createMenuItem(nls.localize({ key: 'miInstallAdditionalDebuggers', comment: ['&& denotes a mnemonic'] }, "&&Install Additional Debuggers..."), 'debug.installAdditionalDebuggers');
 		[
 			start,
 			startWithoutDebugging,
@@ -848,7 +848,7 @@ export class VSCodeMenu {
 			disableAllBreakpoints,
 			removeAllBreakpoints,
 			__separator__(),
-			installMoreDebuggers
+			installAdditionalDebuggers
 		].forEach(item => debugMenu.append(item));
 
 	}

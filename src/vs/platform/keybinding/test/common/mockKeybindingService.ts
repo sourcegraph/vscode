@@ -69,8 +69,12 @@ export class MockKeybindingService implements IKeybindingService {
 		return Event.None;
 	}
 
-	public getDefaultKeybindings(): string {
+	public getDefaultKeybindingsContent(): string {
 		return null;
+	}
+
+	public getDefaultKeybindings(): ResolvedKeybindingItem[] {
+		return [];
 	}
 
 	public getKeybindings(): ResolvedKeybindingItem[] {
@@ -90,6 +94,10 @@ export class MockKeybindingService implements IKeybindingService {
 			keyboardEvent.keyCode
 		);
 		return this.resolveKeybinding(keybinding)[0];
+	}
+
+	public resolveUserBinding(userBinding: string): ResolvedKeybinding[] {
+		return [];
 	}
 
 	public lookupKeybindings(commandId: string): ResolvedKeybinding[] {
