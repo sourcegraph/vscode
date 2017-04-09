@@ -30,7 +30,7 @@ export interface IEditorModel {
 	/**
 	 * Loads the model.
 	 */
-	load(): TPromise<IEditorModel>;
+	load(force?: boolean): TPromise<IEditorModel>;
 
 	/**
 	 * Dispose associated resources

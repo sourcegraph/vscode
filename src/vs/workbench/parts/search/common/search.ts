@@ -12,26 +12,42 @@ import { CommonEditorRegistry } from 'vs/editor/common/editorCommonExtensions';
 import { ISearchConfiguration } from 'vs/platform/search/common/search';
 import glob = require('vs/base/common/glob');
 import { SymbolInformation } from 'vs/editor/common/modes';
+import { IWorkspace } from 'vs/platform/workspace/common/workspace';
 
 export interface IWorkspaceSymbolProvider {
 	provideWorkspaceSymbols(search: string): TPromise<SymbolInformation[]>;
 	resolveWorkspaceSymbol?: (item: SymbolInformation) => TPromise<SymbolInformation>;
 }
 
+class SymbolProvider implements IWorkspaceSymbolProvider {
+
+	resolveWorkspaceSymbol?: (item: SymbolInformation) => TPromise<SymbolInformation>;
+
+	constructor(private provider: IWorkspaceSymbolProvider, public workspace?: IWorkspace) {
+		this.resolveWorkspaceSymbol = provider.resolveWorkspaceSymbol;
+	}
+
+	provideWorkspaceSymbols(search: string): TPromise<SymbolInformation[]> {
+		return this.provider.provideWorkspaceSymbols(search);
+	}
+}
+
 export namespace WorkspaceSymbolProviderRegistry {
 
-	const _supports: IWorkspaceSymbolProvider[] = [];
+	const _supports: SymbolProvider[] = [];
 
-	export function register(support: IWorkspaceSymbolProvider): IDisposable {
+	export function register(support: IWorkspaceSymbolProvider, workspace?: IWorkspace): IDisposable {
+		let supportProvider: SymbolProvider;
 
 		if (support) {
-			_supports.push(support);
+			supportProvider = new SymbolProvider(support, workspace);
+			_supports.push(supportProvider);
 		}
 
 		return {
 			dispose() {
-				if (support) {
-					let idx = _supports.indexOf(support);
+				if (supportProvider) {
+					let idx = _supports.indexOf(supportProvider);
 					if (idx >= 0) {
 						_supports.splice(idx, 1);
 						support = undefined;
@@ -41,16 +57,20 @@ export namespace WorkspaceSymbolProviderRegistry {
 		};
 	}
 
-	export function all(): IWorkspaceSymbolProvider[] {
-		return _supports.slice(0);
+	export function all(workspace?: IWorkspace): IWorkspaceSymbolProvider[] {
+		if (workspace) {
+			return _supports.filter(support => support.workspace && support.workspace.resource && support.workspace.resource.toString() === workspace.resource.toString());
+		}
+		return _supports.slice(0); // make a copy
 	}
 }
 
-export function getWorkspaceSymbols(query: string): TPromise<[IWorkspaceSymbolProvider, SymbolInformation[]][]> {
+
+export function getWorkspaceSymbols(query: string, workspace?: IWorkspace): TPromise<[IWorkspaceSymbolProvider, SymbolInformation[]][]> {
 
 	const result: [IWorkspaceSymbolProvider, SymbolInformation[]][] = [];
 
-	const promises = WorkspaceSymbolProviderRegistry.all().map(support => {
+	const promises = WorkspaceSymbolProviderRegistry.all(workspace).map(support => {
 		return support.provideWorkspaceSymbols(query).then(value => {
 			if (Array.isArray(value)) {
 				result.push([support, value]);
@@ -66,6 +86,7 @@ CommonEditorRegistry.registerLanguageCommand('_executeWorkspaceSymbolProvider', 
 	if (typeof query !== 'string') {
 		throw illegalArgument();
 	}
+	// TODO(john): send current workspace for query
 	return getWorkspaceSymbols(query);
 });
 

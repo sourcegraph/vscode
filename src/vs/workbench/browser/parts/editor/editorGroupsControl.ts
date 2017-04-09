@@ -213,7 +213,7 @@ export class EditorGroupsControl extends Themable implements IEditorGroupsContro
 
 	private registerListeners(): void {
 		this.toUnbind.push(this.stacks.onModelChanged(e => this.onStacksChanged(e)));
-		this.toUnbind.push(this.editorGroupService.onTabOptionsChanged(options => this.updateTabOptions(options, true)));
+		this.toUnbind.push(this.editorGroupService.onTabOptionsChanged(options => this.updateTabOptions(options, false)));
 		this.extensionService.onReady().then(() => this.onExtensionsReady());
 	}
 

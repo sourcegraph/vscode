@@ -43,7 +43,9 @@ declare let self: any;
 export const LANGUAGE_DEFAULT = 'en';
 
 // OS detection
-if (typeof process === 'object') {
+// We add the check for process.title because webpack injects a process
+// variable, causing this check to mistakenly succeed in the web browser.
+if (typeof process === 'object' && !(process as any).browser) {
 	_isWindows = (process.platform === 'win32');
 	_isMacintosh = (process.platform === 'darwin');
 	_isLinux = (process.platform === 'linux');

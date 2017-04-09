@@ -229,7 +229,7 @@ export class TextFileEditorModelManager implements ITextFileEditorModelManager {
 			if (!refresh) {
 				modelPromise = TPromise.as(model);
 			} else {
-				modelPromise = model.load();
+				modelPromise = model.load(refresh);
 			}
 		}
 

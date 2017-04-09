@@ -27,7 +27,6 @@ import { ExtHostHeapService } from 'vs/workbench/api/node/extHostHeapService';
 import { ExtHostStatusBar } from 'vs/workbench/api/node/extHostStatusBar';
 import { ExtHostCommands } from 'vs/workbench/api/node/extHostCommands';
 import { ExtHostOutputService } from 'vs/workbench/api/node/extHostOutputService';
-import { ExtHostTerminalService } from 'vs/workbench/api/node/extHostTerminalService';
 import { ExtHostMessageService } from 'vs/workbench/api/node/extHostMessageService';
 import { ExtHostEditors } from 'vs/workbench/api/node/extHostTextEditors';
 import { ExtHostLanguages } from 'vs/workbench/api/node/extHostLanguages';
@@ -101,6 +100,8 @@ export function createApiFactory(
 	contextService: IWorkspaceContextService,
 	telemetryService: ITelemetryService
 ): IExtensionApiFactory {
+	const currWorkspace = contextService.getWorkspace();
+	const workspacePath = currWorkspace && currWorkspace.resource ? currWorkspace.resource.toString() : undefined;
 
 	// Addressable instances
 	const col = new InstanceCollection();
@@ -113,12 +114,12 @@ export function createApiFactory(
 	const extHostExplorers = col.define(ExtHostContext.ExtHostExplorers).set<ExtHostTreeExplorers>(new ExtHostTreeExplorers(threadService, extHostCommands));
 	const extHostConfiguration = col.define(ExtHostContext.ExtHostConfiguration).set<ExtHostConfiguration>(new ExtHostConfiguration(threadService.get(MainContext.MainThreadConfiguration), initData.configuration));
 	const extHostDiagnostics = col.define(ExtHostContext.ExtHostDiagnostics).set<ExtHostDiagnostics>(new ExtHostDiagnostics(threadService));
-	const languageFeatures = col.define(ExtHostContext.ExtHostLanguageFeatures).set<ExtHostLanguageFeatures>(new ExtHostLanguageFeatures(threadService, extHostDocuments, extHostCommands, extHostHeapService, extHostDiagnostics));
+	const languageFeatures = col.define(ExtHostContext.ExtHostLanguageFeatures).set<ExtHostLanguageFeatures>(new ExtHostLanguageFeatures(initData.seqId, threadService, extHostDocuments, extHostCommands, extHostHeapService, extHostDiagnostics));
 	const extHostFileSystemEvent = col.define(ExtHostContext.ExtHostFileSystemEventService).set<ExtHostFileSystemEventService>(new ExtHostFileSystemEventService());
 	const extHostQuickOpen = col.define(ExtHostContext.ExtHostQuickOpen).set<ExtHostQuickOpen>(new ExtHostQuickOpen(threadService));
-	const extHostTerminalService = col.define(ExtHostContext.ExtHostTerminalService).set<ExtHostTerminalService>(new ExtHostTerminalService(threadService));
 	const extHostSCM = col.define(ExtHostContext.ExtHostSCM).set<ExtHostSCM>(new ExtHostSCM(threadService, extHostCommands));
 	const extHostTask = col.define(ExtHostContext.ExtHostTask).set<ExtHostTask>(new ExtHostTask(threadService));
+	const extHostWorkspace = col.define(ExtHostContext.ExtHostWorkspace).set<ExtHostWorkspace>(new ExtHostWorkspace(threadService, workspacePath));
 	col.define(ExtHostContext.ExtHostExtensionService).set(extensionService);
 	col.finish(false, threadService);
 
@@ -127,8 +128,6 @@ export function createApiFactory(
 	const extHostStatusBar = new ExtHostStatusBar(threadService);
 	const extHostProgress = new ExtHostProgress(threadService.get(MainContext.MainThreadProgress));
 	const extHostOutputService = new ExtHostOutputService(threadService);
-	const workspacePath = contextService.hasWorkspace() ? contextService.getWorkspace().resource.fsPath : undefined;
-	const extHostWorkspace = new ExtHostWorkspace(threadService, workspacePath);
 	const extHostLanguages = new ExtHostLanguages(threadService);
 
 	// Register API-ish commands
@@ -142,8 +141,6 @@ export function createApiFactory(
 				extension.enableProposedApi = false;
 				console.warn('PROPOSED API is only available when developing an extension');
 
-			} else {
-				console.warn(`${extension.name} (${extension.id}) uses PROPOSED API which is subject to change and removal without notice`);
 			}
 		}
 
@@ -235,13 +232,13 @@ export function createApiFactory(
 				return score(selector, <any>document.uri, document.languageId);
 			},
 			registerCodeActionsProvider(selector: vscode.DocumentSelector, provider: vscode.CodeActionProvider): vscode.Disposable {
-				return languageFeatures.registerCodeActionProvider(selector, provider);
+				return languageFeatures.registerCodeActionProvider(selector, provider, currWorkspace);
 			},
 			registerCodeLensProvider(selector: vscode.DocumentSelector, provider: vscode.CodeLensProvider): vscode.Disposable {
-				return languageFeatures.registerCodeLensProvider(selector, provider);
+				return languageFeatures.registerCodeLensProvider(selector, provider, currWorkspace);
 			},
 			registerDefinitionProvider(selector: vscode.DocumentSelector, provider: vscode.DefinitionProvider): vscode.Disposable {
-				return languageFeatures.registerDefinitionProvider(selector, provider);
+				return languageFeatures.registerDefinitionProvider(selector, provider, currWorkspace);
 			},
 			registerImplementationProvider(selector: vscode.DocumentSelector, provider: vscode.ImplementationProvider): vscode.Disposable {
 				return languageFeatures.registerImplementationProvider(selector, provider);
@@ -250,40 +247,43 @@ export function createApiFactory(
 				return languageFeatures.registerTypeDefinitionProvider(selector, provider);
 			},
 			registerHoverProvider(selector: vscode.DocumentSelector, provider: vscode.HoverProvider): vscode.Disposable {
-				return languageFeatures.registerHoverProvider(selector, provider);
+				return languageFeatures.registerHoverProvider(selector, provider, currWorkspace);
 			},
 			registerDocumentHighlightProvider(selector: vscode.DocumentSelector, provider: vscode.DocumentHighlightProvider): vscode.Disposable {
-				return languageFeatures.registerDocumentHighlightProvider(selector, provider);
+				return languageFeatures.registerDocumentHighlightProvider(selector, provider, currWorkspace);
 			},
 			registerReferenceProvider(selector: vscode.DocumentSelector, provider: vscode.ReferenceProvider): vscode.Disposable {
-				return languageFeatures.registerReferenceProvider(selector, provider);
+				return languageFeatures.registerReferenceProvider(selector, provider, currWorkspace);
+			},
+			registerWorkspaceReferenceProvider(selector: vscode.DocumentSelector, provider: vscode.WorkspaceReferenceProvider): vscode.Disposable {
+				return languageFeatures.registerWorkspaceReferenceProvider(selector, provider, currWorkspace);
 			},
 			registerRenameProvider(selector: vscode.DocumentSelector, provider: vscode.RenameProvider): vscode.Disposable {
-				return languageFeatures.registerRenameProvider(selector, provider);
+				return languageFeatures.registerRenameProvider(selector, provider, currWorkspace);
 			},
 			registerDocumentSymbolProvider(selector: vscode.DocumentSelector, provider: vscode.DocumentSymbolProvider): vscode.Disposable {
-				return languageFeatures.registerDocumentSymbolProvider(selector, provider);
+				return languageFeatures.registerDocumentSymbolProvider(selector, provider, currWorkspace);
 			},
 			registerWorkspaceSymbolProvider(provider: vscode.WorkspaceSymbolProvider): vscode.Disposable {
-				return languageFeatures.registerWorkspaceSymbolProvider(provider);
+				return languageFeatures.registerWorkspaceSymbolProvider(provider, currWorkspace);
 			},
 			registerDocumentFormattingEditProvider(selector: vscode.DocumentSelector, provider: vscode.DocumentFormattingEditProvider): vscode.Disposable {
-				return languageFeatures.registerDocumentFormattingEditProvider(selector, provider);
+				return languageFeatures.registerDocumentFormattingEditProvider(selector, provider, currWorkspace);
 			},
 			registerDocumentRangeFormattingEditProvider(selector: vscode.DocumentSelector, provider: vscode.DocumentRangeFormattingEditProvider): vscode.Disposable {
-				return languageFeatures.registerDocumentRangeFormattingEditProvider(selector, provider);
+				return languageFeatures.registerDocumentRangeFormattingEditProvider(selector, provider, currWorkspace);
 			},
 			registerOnTypeFormattingEditProvider(selector: vscode.DocumentSelector, provider: vscode.OnTypeFormattingEditProvider, firstTriggerCharacter: string, ...moreTriggerCharacters: string[]): vscode.Disposable {
-				return languageFeatures.registerOnTypeFormattingEditProvider(selector, provider, [firstTriggerCharacter].concat(moreTriggerCharacters));
+				return languageFeatures.registerOnTypeFormattingEditProvider(selector, provider, [firstTriggerCharacter].concat(moreTriggerCharacters), currWorkspace);
 			},
 			registerSignatureHelpProvider(selector: vscode.DocumentSelector, provider: vscode.SignatureHelpProvider, ...triggerCharacters: string[]): vscode.Disposable {
-				return languageFeatures.registerSignatureHelpProvider(selector, provider, triggerCharacters);
+				return languageFeatures.registerSignatureHelpProvider(selector, provider, triggerCharacters, currWorkspace);
 			},
 			registerCompletionItemProvider(selector: vscode.DocumentSelector, provider: vscode.CompletionItemProvider, ...triggerCharacters: string[]): vscode.Disposable {
-				return languageFeatures.registerCompletionItemProvider(selector, provider, triggerCharacters);
+				return languageFeatures.registerCompletionItemProvider(selector, provider, triggerCharacters, currWorkspace);
 			},
 			registerDocumentLinkProvider(selector: vscode.DocumentSelector, provider: vscode.DocumentLinkProvider): vscode.Disposable {
-				return languageFeatures.registerDocumentLinkProvider(selector, provider);
+				return languageFeatures.registerDocumentLinkProvider(selector, provider, currWorkspace);
 			},
 			setLanguageConfiguration: (language: string, configuration: vscode.LanguageConfiguration): vscode.Disposable => {
 				return languageFeatures.setLanguageConfiguration(language, configuration);
@@ -319,8 +319,8 @@ export function createApiFactory(
 			onDidChangeTextEditorViewColumn(listener, thisArg?, disposables?) {
 				return extHostEditors.onDidChangeTextEditorViewColumn(listener, thisArg, disposables);
 			},
-			onDidCloseTerminal(listener, thisArg?, disposables?) {
-				return extHostTerminalService.onDidCloseTerminal(listener, thisArg, disposables);
+			onDidCloseTerminal(listener, thisArg?, disposables?): any {
+				throw new Error('ExtHostTerminalService is not available');
 			},
 			showInformationMessage(message, first, ...rest) {
 				return extHostMessageService.showMessage(Severity.Info, message, first, rest);
@@ -353,10 +353,7 @@ export function createApiFactory(
 				return extHostOutputService.createOutputChannel(name);
 			},
 			createTerminal(nameOrOptions: vscode.TerminalOptions | string, shellPath?: string, shellArgs?: string[]): vscode.Terminal {
-				if (typeof nameOrOptions === 'object') {
-					return extHostTerminalService.createTerminalFromOptions(<vscode.TerminalOptions>nameOrOptions);
-				}
-				return extHostTerminalService.createTerminal(<string>nameOrOptions, shellPath, shellArgs);
+				throw new Error('ExtHostTerminalService is not available');
 			},
 			// proposed API
 			sampleFunction: proposedApiFunction(extension, () => {
@@ -429,6 +426,9 @@ export function createApiFactory(
 			onDidChangeTextDocument: (listener, thisArgs?, disposables?) => {
 				return extHostDocuments.onDidChangeDocument(listener, thisArgs, disposables);
 			},
+			onDidRevertTextDocument: (listener, thisArgs?, disposables?) => {
+				return extHostDocuments.onDidRevertDocument(listener, thisArgs, disposables);
+			},
 			onDidSaveTextDocument: (listener, thisArgs?, disposables?) => {
 				return extHostDocuments.onDidSaveDocument(listener, thisArgs, disposables);
 			},
@@ -437,6 +437,15 @@ export function createApiFactory(
 			},
 			onDidChangeConfiguration: (listener: () => any, thisArgs?: any, disposables?: extHostTypes.Disposable[]) => {
 				return extHostConfiguration.onDidChangeConfiguration(listener, thisArgs, disposables);
+			},
+			setWorkspace: (resource, state) => {
+				return extHostWorkspace.$setWorkspace(URI.parse(resource.toString()), state);
+			},
+			setWorkspaceState: (state) => {
+				return extHostWorkspace.$setWorkspaceState(state);
+			},
+			onDidUpdateWorkspace: (listener, thisArgs?, disposables?) => {
+				return extHostWorkspace.onDidUpdateWorkspace(listener, thisArgs, disposables);
 			},
 			getConfiguration: (section?: string): vscode.WorkspaceConfiguration => {
 				return extHostConfiguration.getConfiguration(section);

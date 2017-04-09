@@ -84,7 +84,9 @@ export class InstantiationService implements IInstantiationService {
 		let canceledError: Error;
 
 		return new TPromise((c, e, p) => {
-			require([descriptor.moduleName], (_module?: any) => {
+			// HACK: Don't let webpack rewrite this require call; we provide a global require ourselves
+			// that we want this to use.
+			(global as any).require([descriptor.moduleName], (_module?: any) => {
 				if (canceledError) {
 					e(canceledError);
 				}

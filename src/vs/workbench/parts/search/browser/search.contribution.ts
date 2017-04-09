@@ -103,6 +103,17 @@ class ShowAllSymbolsAction extends QuickOpenAction {
 	}
 }
 
+const OPEN_REPO_ACTION_ID = 'workbench.action.openRepo';
+const OPEN_REPO_ACTION_LABEL = nls.localize('goToRepository', "Go to Repository...");
+const ALL_REPOS_PREFIX = '!';
+
+class OpenRepoAction extends QuickOpenAction {
+
+	constructor(actionId: string, actionLabel: string, @IQuickOpenService quickOpenService: IQuickOpenService) {
+		super(actionId, actionLabel, ALL_REPOS_PREFIX, quickOpenService);
+	}
+}
+
 // Register Viewlet
 Registry.as<ViewletRegistry>(ViewletExtensions.Viewlets).registerViewlet(new ViewletDescriptor(
 	'vs/workbench/parts/search/browser/searchViewlet',
@@ -143,6 +154,7 @@ registry.registerWorkbenchAction(new SyncActionDescriptor(searchActions.ToggleWh
 registry.registerWorkbenchAction(new SyncActionDescriptor(searchActions.ToggleRegexAction, Constants.ToggleRegexActionId, '', ToggleRegexKeybinding, ContextKeyExpr.and(Constants.SearchViewletVisibleKey, Constants.SearchInputBoxFocussedKey)), '');
 
 registry.registerWorkbenchAction(new SyncActionDescriptor(ShowAllSymbolsAction, ACTION_ID, ACTION_LABEL, { primary: KeyMod.CtrlCmd | KeyCode.KEY_T }), 'Go to Symbol in Workspace...');
+registry.registerWorkbenchAction(new SyncActionDescriptor(OpenRepoAction, OPEN_REPO_ACTION_ID, OPEN_REPO_ACTION_LABEL), 'Go to Repository...');
 
 // Contribute to Explorer Viewer
 const actionBarRegistry = Registry.as<IActionBarRegistry>(ActionBarExtensions.Actionbar);
@@ -168,6 +180,21 @@ Registry.as<IQuickOpenRegistry>(QuickOpenExtensions.Quickopen).registerQuickOpen
 				prefix: ALL_SYMBOLS_PREFIX,
 				needsEditor: false,
 				description: nls.localize('openSymbolDescriptionNormal', "Go to Symbol in Workspace")
+			}
+		]
+	)
+);
+
+Registry.as<IQuickOpenRegistry>(QuickOpenExtensions.Quickopen).registerQuickOpenHandler(
+	new QuickOpenHandlerDescriptor(
+		'vs/workbench/parts/search/browser/openAnythingHandler',
+		'OpenRepoHandler',
+		ALL_REPOS_PREFIX,
+		[
+			{
+				prefix: ALL_REPOS_PREFIX,
+				needsEditor: false,
+				description: nls.localize('openRepositoryDescriptionNormal', "Go to Repository")
 			}
 		]
 	)

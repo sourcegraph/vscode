@@ -121,3 +121,5 @@ import 'vs/workbench/parts/themes/test/electron-browser/themes.test.contribution
 import 'vs/workbench/parts/watermark/electron-browser/watermark';
 
 import 'vs/workbench/parts/welcome/overlay/browser/welcomeOverlay';
+
+import 'vs/workbench/parts/content/overlay/dynamicOverlay';

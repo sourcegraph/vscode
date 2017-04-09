@@ -21,6 +21,7 @@ import { IWorkspaceSymbolProvider } from 'vs/workbench/parts/search/common/searc
 import { asWinJsPromise } from 'vs/base/common/async';
 import { MainContext, MainThreadLanguageFeaturesShape, ExtHostLanguageFeaturesShape, ObjectIdentifier } from './extHost.protocol';
 import { regExpLeadsToEndlessLoop } from 'vs/base/common/strings';
+import { IWorkspace } from 'vs/platform/workspace/common/workspace';
 
 // --- adapter
 
@@ -242,16 +243,50 @@ class ReferenceAdapter {
 		this._provider = provider;
 	}
 
-	provideReferences(resource: URI, position: IPosition, context: modes.ReferenceContext): TPromise<modes.Location[]> {
-		let doc = this._documents.getDocumentData(resource).document;
-		let pos = TypeConverters.toPosition(position);
+	provideReferences(resource: URI, position: IPosition, context: modes.ReferenceContext, progress: (locations: modes.Location[]) => void): TPromise<modes.Location[]> {
+		const doc = this._documents.getDocumentData(resource).document;
+		const pos = TypeConverters.toPosition(position);
 
-		return asWinJsPromise(token => this._provider.provideReferences(doc, pos, context, token)).then(value => {
-			if (Array.isArray(value)) {
-				return value.map(TypeConverters.location.from);
+		const convertLocations = (locations: vscode.Location[]) => {
+			if (Array.isArray(locations)) {
+				return locations.map(TypeConverters.location.from);
 			}
 			return undefined;
-		});
+		};
+		const convertedProgress = (locations: vscode.Location[]) => {
+			const convertedLocations = convertLocations(locations);
+			if (convertedLocations) {
+				progress(convertedLocations);
+			}
+		};
+		return asWinJsPromise(token => this._provider.provideReferences(doc, pos, context, token, convertedProgress)).then(convertLocations);
+	}
+}
+
+class WorkspaceReferenceAdapter {
+
+	constructor(private _provider: vscode.WorkspaceReferenceProvider) {
+	}
+
+	provideWorkspaceReferences(resource: URI, query: modes.ISymbolDescriptor, hints: { [hint: string]: any }, progress: (references: modes.IReferenceInformation[]) => void): TPromise<modes.IReferenceInformation[]> {
+		const convertReferences = (references: vscode.ReferenceInformation[]) => {
+			if (Array.isArray(references)) {
+				return references.map(reference => {
+					return <modes.IReferenceInformation>{
+						reference: TypeConverters.location.from(reference.reference),
+						symbol: reference.symbol
+					};
+				});
+			}
+			return undefined;
+		};
+		const convertedProgress = (references: vscode.ReferenceInformation[]) => {
+			const convertedReferences = convertReferences(references);
+			if (convertedReferences) {
+				progress(convertedReferences);
+			}
+		};
+		return asWinJsPromise(token => this._provider.provideWorkspaceReferences(query, hints, token, convertedProgress)).then(convertReferences);
 	}
 }
 
@@ -670,7 +705,7 @@ class LinkProviderAdapter {
 }
 
 type Adapter = OutlineAdapter | CodeLensAdapter | DefinitionAdapter | HoverAdapter
-	| DocumentHighlightAdapter | ReferenceAdapter | QuickFixAdapter | DocumentFormattingAdapter
+	| DocumentHighlightAdapter | ReferenceAdapter | WorkspaceReferenceAdapter | QuickFixAdapter | DocumentFormattingAdapter
 	| RangeFormattingAdapter | OnTypeFormattingAdapter | NavigateTypeAdapter | RenameAdapter
 	| SuggestAdapter | SignatureHelpAdapter | LinkProviderAdapter | ImplementationAdapter | TypeDefinitionAdapter;
 
@@ -678,6 +713,7 @@ export class ExtHostLanguageFeatures extends ExtHostLanguageFeaturesShape {
 
 	private static _handlePool: number = 0;
 
+	private _seqId: number;
 	private _proxy: MainThreadLanguageFeaturesShape;
 	private _documents: ExtHostDocuments;
 	private _commands: ExtHostCommands;
@@ -686,6 +722,7 @@ export class ExtHostLanguageFeatures extends ExtHostLanguageFeaturesShape {
 	private _adapter = new Map<number, Adapter>();
 
 	constructor(
+		seqId: number,
 		threadService: IThreadService,
 		documents: ExtHostDocuments,
 		commands: ExtHostCommands,
@@ -693,6 +730,7 @@ export class ExtHostLanguageFeatures extends ExtHostLanguageFeaturesShape {
 		diagnostics: ExtHostDiagnostics
 	) {
 		super();
+		this._seqId = seqId;
 		this._proxy = threadService.get(MainContext.MainThreadLanguageFeatures);
 		this._documents = documents;
 		this._commands = commands;
@@ -708,7 +746,7 @@ export class ExtHostLanguageFeatures extends ExtHostLanguageFeaturesShape {
 	}
 
 	private _nextHandle(): number {
-		return ExtHostLanguageFeatures._handlePool++;
+		return this._seqId + ExtHostLanguageFeatures._handlePool++;
 	}
 
 	private _withAdapter<A, R>(handle: number, ctor: { new (...args: any[]): A }, callback: (adapter: A) => TPromise<R>): TPromise<R> {
@@ -721,10 +759,10 @@ export class ExtHostLanguageFeatures extends ExtHostLanguageFeaturesShape {
 
 	// --- outline
 
-	registerDocumentSymbolProvider(selector: vscode.DocumentSelector, provider: vscode.DocumentSymbolProvider): vscode.Disposable {
+	registerDocumentSymbolProvider(selector: vscode.DocumentSelector, provider: vscode.DocumentSymbolProvider, workspace?: IWorkspace): vscode.Disposable {
 		const handle = this._nextHandle();
 		this._adapter.set(handle, new OutlineAdapter(this._documents, provider));
-		this._proxy.$registerOutlineSupport(handle, selector);
+		this._proxy.$registerOutlineSupport(handle, selector, workspace);
 		return this._createDisposable(handle);
 	}
 
@@ -734,12 +772,12 @@ export class ExtHostLanguageFeatures extends ExtHostLanguageFeaturesShape {
 
 	// --- code lens
 
-	registerCodeLensProvider(selector: vscode.DocumentSelector, provider: vscode.CodeLensProvider): vscode.Disposable {
+	registerCodeLensProvider(selector: vscode.DocumentSelector, provider: vscode.CodeLensProvider, workspace?: IWorkspace): vscode.Disposable {
 		const handle = this._nextHandle();
 		const eventHandle = typeof provider.onDidChangeCodeLenses === 'function' ? this._nextHandle() : undefined;
 
 		this._adapter.set(handle, new CodeLensAdapter(this._documents, this._commands.converter, this._heapService, provider));
-		this._proxy.$registerCodeLensSupport(handle, selector, eventHandle);
+		this._proxy.$registerCodeLensSupport(handle, selector, eventHandle, workspace);
 		let result = this._createDisposable(handle);
 
 		if (eventHandle !== undefined) {
@@ -760,10 +798,10 @@ export class ExtHostLanguageFeatures extends ExtHostLanguageFeaturesShape {
 
 	// --- declaration
 
-	registerDefinitionProvider(selector: vscode.DocumentSelector, provider: vscode.DefinitionProvider): vscode.Disposable {
+	registerDefinitionProvider(selector: vscode.DocumentSelector, provider: vscode.DefinitionProvider, workspace?: IWorkspace): vscode.Disposable {
 		const handle = this._nextHandle();
 		this._adapter.set(handle, new DefinitionAdapter(this._documents, provider));
-		this._proxy.$registerDeclaractionSupport(handle, selector);
+		this._proxy.$registerDeclaractionSupport(handle, selector, workspace);
 		return this._createDisposable(handle);
 	}
 
@@ -795,10 +833,10 @@ export class ExtHostLanguageFeatures extends ExtHostLanguageFeaturesShape {
 
 	// --- extra info
 
-	registerHoverProvider(selector: vscode.DocumentSelector, provider: vscode.HoverProvider): vscode.Disposable {
+	registerHoverProvider(selector: vscode.DocumentSelector, provider: vscode.HoverProvider, workspace?: IWorkspace): vscode.Disposable {
 		const handle = this._nextHandle();
 		this._adapter.set(handle, new HoverAdapter(this._documents, provider));
-		this._proxy.$registerHoverProvider(handle, selector);
+		this._proxy.$registerHoverProvider(handle, selector, workspace);
 		return this._createDisposable(handle);
 	}
 
@@ -808,10 +846,10 @@ export class ExtHostLanguageFeatures extends ExtHostLanguageFeaturesShape {
 
 	// --- occurrences
 
-	registerDocumentHighlightProvider(selector: vscode.DocumentSelector, provider: vscode.DocumentHighlightProvider): vscode.Disposable {
+	registerDocumentHighlightProvider(selector: vscode.DocumentSelector, provider: vscode.DocumentHighlightProvider, workspace?: IWorkspace): vscode.Disposable {
 		const handle = this._nextHandle();
 		this._adapter.set(handle, new DocumentHighlightAdapter(this._documents, provider));
-		this._proxy.$registerDocumentHighlightProvider(handle, selector);
+		this._proxy.$registerDocumentHighlightProvider(handle, selector, workspace);
 		return this._createDisposable(handle);
 	}
 
@@ -821,23 +859,42 @@ export class ExtHostLanguageFeatures extends ExtHostLanguageFeaturesShape {
 
 	// --- references
 
-	registerReferenceProvider(selector: vscode.DocumentSelector, provider: vscode.ReferenceProvider): vscode.Disposable {
+	registerReferenceProvider(selector: vscode.DocumentSelector, provider: vscode.ReferenceProvider, workspace?: IWorkspace): vscode.Disposable {
 		const handle = this._nextHandle();
 		this._adapter.set(handle, new ReferenceAdapter(this._documents, provider));
-		this._proxy.$registerReferenceSupport(handle, selector);
+		this._proxy.$registerReferenceSupport(handle, selector, workspace);
 		return this._createDisposable(handle);
 	}
 
-	$provideReferences(handle: number, resource: URI, position: IPosition, context: modes.ReferenceContext): TPromise<modes.Location[]> {
-		return this._withAdapter(handle, ReferenceAdapter, adapter => adapter.provideReferences(resource, position, context));
+	$provideReferences(handle: number, progressHandle: number, resource: URI, position: IPosition, context: modes.ReferenceContext): TPromise<modes.Location[]> {
+		const progress = (locations: modes.Location[]) => {
+			this._proxy.$notifyProvideReferencesProgress(handle, progressHandle, locations);
+		};
+		return this._withAdapter(handle, ReferenceAdapter, adapter => adapter.provideReferences(resource, position, context, progress));
+	}
+
+	// --- workspace references
+
+	registerWorkspaceReferenceProvider(selector: vscode.DocumentSelector, provider: vscode.WorkspaceReferenceProvider, workspace?: IWorkspace): vscode.Disposable {
+		const handle = this._nextHandle();
+		this._adapter.set(handle, new WorkspaceReferenceAdapter(provider));
+		this._proxy.$registerWorkspaceReferenceSupport(handle, selector, workspace);
+		return this._createDisposable(handle);
+	}
+
+	$provideWorkspaceReferences(handle: number, progressHandle: number, resource: URI, query: modes.ISymbolDescriptor, hints: { [hint: string]: any }): TPromise<modes.IReferenceInformation[]> {
+		const progress = (references: modes.IReferenceInformation[]) => {
+			this._proxy.$notifyProvideWorkspaceReferencesProgress(handle, progressHandle, references);
+		};
+		return this._withAdapter(handle, WorkspaceReferenceAdapter, adapter => adapter.provideWorkspaceReferences(resource, query, hints, progress));
 	}
 
 	// --- quick fix
 
-	registerCodeActionProvider(selector: vscode.DocumentSelector, provider: vscode.CodeActionProvider): vscode.Disposable {
+	registerCodeActionProvider(selector: vscode.DocumentSelector, provider: vscode.CodeActionProvider, workspace?: IWorkspace): vscode.Disposable {
 		const handle = this._nextHandle();
 		this._adapter.set(handle, new QuickFixAdapter(this._documents, this._commands.converter, this._diagnostics, this._heapService, provider));
-		this._proxy.$registerQuickFixSupport(handle, selector);
+		this._proxy.$registerQuickFixSupport(handle, selector, workspace);
 		return this._createDisposable(handle);
 	}
 
@@ -847,10 +904,10 @@ export class ExtHostLanguageFeatures extends ExtHostLanguageFeaturesShape {
 
 	// --- formatting
 
-	registerDocumentFormattingEditProvider(selector: vscode.DocumentSelector, provider: vscode.DocumentFormattingEditProvider): vscode.Disposable {
+	registerDocumentFormattingEditProvider(selector: vscode.DocumentSelector, provider: vscode.DocumentFormattingEditProvider, workspace?: IWorkspace): vscode.Disposable {
 		const handle = this._nextHandle();
 		this._adapter.set(handle, new DocumentFormattingAdapter(this._documents, provider));
-		this._proxy.$registerDocumentFormattingSupport(handle, selector);
+		this._proxy.$registerDocumentFormattingSupport(handle, selector, workspace);
 		return this._createDisposable(handle);
 	}
 
@@ -858,10 +915,10 @@ export class ExtHostLanguageFeatures extends ExtHostLanguageFeaturesShape {
 		return this._withAdapter(handle, DocumentFormattingAdapter, adapter => adapter.provideDocumentFormattingEdits(resource, options));
 	}
 
-	registerDocumentRangeFormattingEditProvider(selector: vscode.DocumentSelector, provider: vscode.DocumentRangeFormattingEditProvider): vscode.Disposable {
+	registerDocumentRangeFormattingEditProvider(selector: vscode.DocumentSelector, provider: vscode.DocumentRangeFormattingEditProvider, workspace?: IWorkspace): vscode.Disposable {
 		const handle = this._nextHandle();
 		this._adapter.set(handle, new RangeFormattingAdapter(this._documents, provider));
-		this._proxy.$registerRangeFormattingSupport(handle, selector);
+		this._proxy.$registerRangeFormattingSupport(handle, selector, workspace);
 		return this._createDisposable(handle);
 	}
 
@@ -869,10 +926,10 @@ export class ExtHostLanguageFeatures extends ExtHostLanguageFeaturesShape {
 		return this._withAdapter(handle, RangeFormattingAdapter, adapter => adapter.provideDocumentRangeFormattingEdits(resource, range, options));
 	}
 
-	registerOnTypeFormattingEditProvider(selector: vscode.DocumentSelector, provider: vscode.OnTypeFormattingEditProvider, triggerCharacters: string[]): vscode.Disposable {
+	registerOnTypeFormattingEditProvider(selector: vscode.DocumentSelector, provider: vscode.OnTypeFormattingEditProvider, triggerCharacters: string[], workspace?: IWorkspace): vscode.Disposable {
 		const handle = this._nextHandle();
 		this._adapter.set(handle, new OnTypeFormattingAdapter(this._documents, provider));
-		this._proxy.$registerOnTypeFormattingSupport(handle, selector, triggerCharacters);
+		this._proxy.$registerOnTypeFormattingSupport(handle, selector, triggerCharacters, workspace);
 		return this._createDisposable(handle);
 	}
 
@@ -882,10 +939,10 @@ export class ExtHostLanguageFeatures extends ExtHostLanguageFeaturesShape {
 
 	// --- navigate types
 
-	registerWorkspaceSymbolProvider(provider: vscode.WorkspaceSymbolProvider): vscode.Disposable {
+	registerWorkspaceSymbolProvider(provider: vscode.WorkspaceSymbolProvider, workspace?: IWorkspace): vscode.Disposable {
 		const handle = this._nextHandle();
 		this._adapter.set(handle, new NavigateTypeAdapter(provider, this._heapService));
-		this._proxy.$registerNavigateTypeSupport(handle);
+		this._proxy.$registerNavigateTypeSupport(handle, workspace);
 		return this._createDisposable(handle);
 	}
 
@@ -899,10 +956,10 @@ export class ExtHostLanguageFeatures extends ExtHostLanguageFeaturesShape {
 
 	// --- rename
 
-	registerRenameProvider(selector: vscode.DocumentSelector, provider: vscode.RenameProvider): vscode.Disposable {
+	registerRenameProvider(selector: vscode.DocumentSelector, provider: vscode.RenameProvider, workspace?: IWorkspace): vscode.Disposable {
 		const handle = this._nextHandle();
 		this._adapter.set(handle, new RenameAdapter(this._documents, provider));
-		this._proxy.$registerRenameSupport(handle, selector);
+		this._proxy.$registerRenameSupport(handle, selector, workspace);
 		return this._createDisposable(handle);
 	}
 
@@ -912,10 +969,10 @@ export class ExtHostLanguageFeatures extends ExtHostLanguageFeaturesShape {
 
 	// --- suggestion
 
-	registerCompletionItemProvider(selector: vscode.DocumentSelector, provider: vscode.CompletionItemProvider, triggerCharacters: string[]): vscode.Disposable {
+	registerCompletionItemProvider(selector: vscode.DocumentSelector, provider: vscode.CompletionItemProvider, triggerCharacters: string[], workspace?: IWorkspace): vscode.Disposable {
 		const handle = this._nextHandle();
 		this._adapter.set(handle, new SuggestAdapter(this._documents, this._commands.converter, this._heapService, provider));
-		this._proxy.$registerSuggestSupport(handle, selector, triggerCharacters);
+		this._proxy.$registerSuggestSupport(handle, selector, triggerCharacters, workspace);
 		return this._createDisposable(handle);
 	}
 
@@ -929,10 +986,10 @@ export class ExtHostLanguageFeatures extends ExtHostLanguageFeaturesShape {
 
 	// --- parameter hints
 
-	registerSignatureHelpProvider(selector: vscode.DocumentSelector, provider: vscode.SignatureHelpProvider, triggerCharacters: string[]): vscode.Disposable {
+	registerSignatureHelpProvider(selector: vscode.DocumentSelector, provider: vscode.SignatureHelpProvider, triggerCharacters: string[], workspace?: IWorkspace): vscode.Disposable {
 		const handle = this._nextHandle();
 		this._adapter.set(handle, new SignatureHelpAdapter(this._documents, provider));
-		this._proxy.$registerSignatureHelpProvider(handle, selector, triggerCharacters);
+		this._proxy.$registerSignatureHelpProvider(handle, selector, triggerCharacters, workspace);
 		return this._createDisposable(handle);
 	}
 
@@ -942,10 +999,10 @@ export class ExtHostLanguageFeatures extends ExtHostLanguageFeaturesShape {
 
 	// --- links
 
-	registerDocumentLinkProvider(selector: vscode.DocumentSelector, provider: vscode.DocumentLinkProvider): vscode.Disposable {
+	registerDocumentLinkProvider(selector: vscode.DocumentSelector, provider: vscode.DocumentLinkProvider, workspace?: IWorkspace): vscode.Disposable {
 		const handle = this._nextHandle();
 		this._adapter.set(handle, new LinkProviderAdapter(this._documents, provider));
-		this._proxy.$registerDocumentLinkProvider(handle, selector);
+		this._proxy.$registerDocumentLinkProvider(handle, selector, workspace);
 		return this._createDisposable(handle);
 	}
 

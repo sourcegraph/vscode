@@ -5,16 +5,42 @@
 
 'use strict';
 
+import URI from 'vs/base/common/uri';
 import Event, { Emitter } from 'vs/base/common/event';
 import { IDisposable } from 'vs/base/common/lifecycle';
 import { IReadOnlyModel } from 'vs/editor/common/editorCommon';
 import { LanguageSelector, score } from 'vs/editor/common/modes/languageSelector';
+import { IWorkspace } from 'vs/platform/workspace/common/workspace';
 
 interface Entry<T> {
 	selector: LanguageSelector;
+	workspace: IWorkspace;
 	provider: T;
 	_score: number;
 	_time: number;
+}
+
+
+/**
+ * The minimal set of methods from IReadOnlyModel required for registration.
+ */
+export interface Model {
+	/**
+	 * Only basic mode supports allowed on this model because it is simply too large.
+	 * (tokenization is allowed and other basic supports)
+	 * @internal
+	 */
+	isTooLargeForHavingARichMode(): boolean;
+
+	/**
+	 * Gets the resource associated with this editor model.
+	 */
+	readonly uri: URI;
+
+	/**
+	 * Get the language associated with this model.
+	 */
+	getModeId(): string;
 }
 
 export default class LanguageFeatureRegistry<T> {
@@ -30,10 +56,11 @@ export default class LanguageFeatureRegistry<T> {
 		return this._onDidChange.event;
 	}
 
-	register(selector: LanguageSelector, provider: T): IDisposable {
+	register(selector: LanguageSelector, provider: T, workspace?: IWorkspace): IDisposable {
 
 		let entry: Entry<T> = {
 			selector,
+			workspace: workspace ? workspace : null,
 			provider,
 			_score: -1,
 			_time: this._clock++
@@ -141,6 +168,22 @@ export default class LanguageFeatureRegistry<T> {
 
 		for (let entry of this._entries) {
 			entry._score = score(entry.selector, model.uri, model.getLanguageIdentifier().language);
+
+			// Ignore entries whose (non-empty) workspace doesn't match the currently requested resource.
+			// Prevents multiple requests from being made to extension host if multiple extension hosts have
+			// registered a provider.
+			const modelUriInWorkspace = () => {
+				return model.uri.toString().indexOf(entry.workspace.resource.toString()) === 0;
+			};
+			const modelUriIsWorkspace = () => {
+				return model.uri.toString() === entry.workspace.resource.toString();
+			};
+			const modelUriIsSubpathOfWorkspace = () => {
+				return modelUriInWorkspace() && model.uri.toString()[entry.workspace.resource.toString().length] === '/';
+			};
+			if (entry.workspace && !modelUriIsWorkspace() && !modelUriIsSubpathOfWorkspace()) {
+				entry._score = 0;
+			}
 		}
 
 		// needs sorting

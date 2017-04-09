@@ -132,6 +132,14 @@ export default class URI {
 			} else if (URI._driveLetterPath.test(this._path)) {
 				// windows drive letter: file:///c:/far/boo
 				value = this._path[1].toLowerCase() + this._path.substr(2);
+			} else if (this._fragment) {
+				// Sourcegraph uses a git-based URI scheme which requires us to change
+				// vscode's default behavior for setting filepath. (The filepath for our URIs
+				// is the fragment, not the path).
+				value = this._path.replace(/^\//, '');
+				if (this._fragment) {
+					value += '/' + this.fragment;
+				}
 			} else {
 				// other path
 				value = this._path;

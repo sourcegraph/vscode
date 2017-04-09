@@ -8,7 +8,7 @@ import 'vs/css!./keybindingLabel';
 import { IDisposable } from 'vs/base/common/lifecycle';
 import { equals } from 'vs/base/common/objects';
 import { OperatingSystem } from 'vs/base/common/platform';
-import { ResolvedKeybinding } from 'vs/base/common/keycodes';
+import { ResolvedKeybinding } from 'vs/base/common/keyCodes';
 import { UILabelProvider } from 'vs/platform/keybinding/common/keybindingLabels';
 import * as dom from 'vs/base/browser/dom';
 

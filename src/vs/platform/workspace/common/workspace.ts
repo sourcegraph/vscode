@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 'use strict';
 
+import Event, { Emitter } from 'vs/base/common/event';
 import URI from 'vs/base/common/uri';
 import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
 import paths = require('vs/base/common/paths');
@@ -42,6 +43,23 @@ export interface IWorkspaceContextService {
 	 * Given a workspace relative path, returns the resource with the absolute path.
 	 */
 	toResource: (workspaceRelativePath: string) => URI;
+
+	/**
+	 * Sets the workspace object. This may happen to e.g. handle cross-repo j2d.
+	 */
+	setWorkspace(workspace: IWorkspace): void;
+
+	/**
+	 * Attempts to get the workspace from the registry instead of using the default.
+	 */
+	tryGetWorkspaceFromRegistry(resource: URI): IWorkspace | undefined;
+
+	/**
+	 * Registers (but doesn't change) a workspace (unless overwrite is 'true').
+	 */
+	registerWorkspace(workspace: IWorkspace, overwrite?: boolean): void;
+
+	onWorkspaceUpdated: Event<IWorkspace>;
 }
 
 export interface IWorkspace {
@@ -51,6 +69,11 @@ export interface IWorkspace {
 	 * of the workspace on disk.
 	 */
 	resource: URI;
+
+	/**
+	 * the current revision state of the workspace.
+	 */
+	revState?: IWorkspaceRevState;
 
 	/**
 	 * the unique identifier of the workspace. if the workspace is deleted and recreated
@@ -65,14 +88,26 @@ export interface IWorkspace {
 	name?: string;
 }
 
+export interface IWorkspaceRevState {
+	commitID?: string;
+	branch?: string;
+	zapRev?: string; // the original (possibly fuzzy) Zap rev
+	zapRef?: string; // the full (non-fuzzy) Zap ref name
+}
+
 export class WorkspaceContextService implements IWorkspaceContextService {
 
 	public _serviceBrand: any;
 
 	private workspace: IWorkspace;
+	private workspaceEmitter: Emitter<IWorkspace>;
+	private workspaceRegistry: { [key: string]: IWorkspace } = {};
 
 	constructor(workspace: IWorkspace) {
 		this.workspace = workspace;
+		this.workspaceEmitter = new Emitter<IWorkspace>();
+		const workspaceRegistryKey = workspace.resource.toString();
+		this.workspaceRegistry[workspaceRegistryKey] = workspace;
 	}
 
 	public getWorkspace(): IWorkspace {
@@ -105,5 +140,39 @@ export class WorkspaceContextService implements IWorkspaceContextService {
 		}
 
 		return null;
+	}
+
+	public tryGetWorkspaceFromRegistry(resource: URI): IWorkspace | undefined {
+		const resourceString = resource.toString();
+		for (const registryKey of Object.keys(this.workspaceRegistry)) {
+			// The resource must be identical to the workspace or a subpath of workspace.
+			// Select the closest match, e.g. for `file://github.com/gorilla/muxy/file`
+			// match `file://github.com/gorilla/muxy` not `github.com/gorilla/mux`.
+			if (resourceString.indexOf(registryKey) !== -1) {
+				if (resourceString === registryKey || resourceString.substr(registryKey.length)[0] === '/') {
+					return this.workspaceRegistry[registryKey];
+				}
+			}
+		}
+		return undefined;
+	}
+
+	public setWorkspace(workspace: IWorkspace): void {
+		this.workspace = workspace;
+		const workspaceRegistryKey = workspace.resource.toString();
+		this.workspaceRegistry[workspaceRegistryKey] = workspace;
+		this.workspaceEmitter.fire(workspace);
+	}
+
+	public registerWorkspace(workspace: IWorkspace, overwrite?: boolean): void {
+		const workspaceRegistryKey = workspace.resource.toString();
+		if (this.workspaceRegistry[workspaceRegistryKey] && !overwrite) {
+			return;
+		}
+		this.workspaceRegistry[workspaceRegistryKey] = workspace;
+	}
+
+	public get onWorkspaceUpdated(): Event<IWorkspace> {
+		return this.workspaceEmitter.event;
 	}
 }
