@@ -24,25 +24,48 @@ import { FindInput } from 'vs/base/browser/ui/findinput/findInput';
 import { QueryType, ISearchQuery } from 'vs/platform/search/common/search';
 import { ISearchWorkbenchService, FileMatch } from 'vs/workbench/parts/search/common/searchModel';
 import { FileMatchView } from 'vs/workbench/parts/search/page/browser/fileMatchView';
+import { Action } from 'vs/base/common/actions';
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
 import * as dom from 'vs/base/browser/dom';
 import { IKeyboardEvent } from 'vs/base/browser/keyboardEvent';
 import { KeyCode } from 'vs/base/common/keyCodes';
-
+import { TPromise } from 'vs/base/common/winjs.base';
+import { ICommandService } from 'vs/platform/commands/common/commands';
 
 export class SearchPageContribution implements IWorkbenchContribution {
 
 	constructor(
 		@IPartService partService: IPartService,
 		@IInstantiationService instantiationService: IInstantiationService,
+		@ICommandService commandService: ICommandService,
 	) {
-		partService.joinCreation().then(() => instantiationService.createInstance(SearchPage));
+		commandService.executeCommand(SearchPageAction.ID);
 	}
 
 	public getId() {
-		return 'sg.searchPage';
+		return 'sg.contrib.showSearchPage';
 	}
 
+}
+
+export class SearchPageAction extends Action {
+
+	constructor(
+		id: string,
+		label: string,
+		@IInstantiationService private instantiationService: IInstantiationService
+	) {
+		super(id, label);
+	}
+
+	static ID = 'sg.showSearchPage';
+
+	static LABEL = 'Search';
+
+	run(): TPromise<void> {
+		this.instantiationService.createInstance(SearchPage);
+		return TPromise.wrap<void>(void 0);
+	};
 }
 
 class SearchPage {
@@ -63,18 +86,18 @@ class SearchPage {
 		this.create();
 	}
 
-	private create() {
+	create() {
 		const uri = URI.parse(require.toUrl('./sg_search'))
 			.with({
 				scheme: Schemas.walkThrough,
 				query: JSON.stringify({ moduleId: 'vs/workbench/parts/search/page/browser/sg_search' })
 			});
-		const input = this.instantiationService.createInstance(WalkThroughInput, localize('search.title', "Search"), '', uri, null, container => this.onReady(container));
+		const input = this.instantiationService.createInstance(WalkThroughInput, localize('search.title', "Search"), '', uri, null, container => this.render(container));
 		this.editorService.openEditor(input, { pinned: true }, Position.ONE)
 			.then(null, onUnexpectedError);
 	}
 
-	private onReady(container: HTMLElement): void {
+	render(container: HTMLElement): void {
 		$(container).div({ style: { textAlign: 'center', marginBottom: '50px' } }, tip => {
 			tip.innerHtml('Tip: Continue typing terms separated by spaces to refine your search');
 		});
@@ -86,13 +109,13 @@ class SearchPage {
 		});
 	}
 
-	private keyDown = (e: IKeyboardEvent) => {
+	keyDown = (e: IKeyboardEvent) => {
 		if (e.keyCode === KeyCode.Enter) {
 			this.startSearch();
 		}
 	}
 
-	private startSearch(): void {
+	startSearch(): void {
 		const query: ISearchQuery = {
 			folderResources: [this.contextService.getWorkspace().resource],
 			type: QueryType.Text,
@@ -110,41 +133,41 @@ class SearchPage {
 		this.search(query);
 	}
 
-	private search(query: ISearchQuery): void {
+	search(query: ISearchQuery): void {
 		this.searchService.searchModel.cancelSearch();
 		this.renderLoading();
 		this.searchService.searchModel.search(query)
 			.done(this.onComplete, this.onError);
 	}
 
-	private onComplete = () => {
+	onComplete = () => {
 		this.fileMatches = this.searchService.searchModel.searchResult.matches();
 		this.renderResults();
 	}
 
-	private renderResults(): void {
+	renderResults(): void {
 		dom.clearNode(this.resultContainer.getHTMLElement());
 		this.resultContainer.div({}, parent => {
 			this.fileMatches.forEach(fileMatch => {
 				parent.div({}, div => {
-					new FileMatchView(div, fileMatch);
+					this.instantiationService.createInstance(FileMatchView, div, fileMatch);
 				});
 			});
 		});
 	}
 
-	private renderLoading(): void {
+	renderLoading(): void {
 		dom.clearNode(this.resultContainer.getHTMLElement());
 		this.resultContainer.div({}, div => {
 			div.innerHtml('loading');
 		});
 	}
 
-	private renderEmpty(): void {
+	renderEmpty(): void {
 		dom.clearNode(this.resultContainer.getHTMLElement());
 	}
 
-	private onError = (e) => {
+	onError = (e) => {
 		console.error(e);
 	}
 
