@@ -10,8 +10,6 @@ import { WalkThroughInput } from 'vs/workbench/parts/welcome/walkThrough/node/wa
 import 'vs/css!./searchPage';
 import URI from 'vs/base/common/uri';
 import { $, Builder } from 'vs/base/browser/builder';
-import { IWorkbenchContribution } from 'vs/workbench/common/contributions';
-import { IPartService } from 'vs/workbench/services/part/common/partService';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { Position } from 'vs/platform/editor/common/editor';
@@ -30,23 +28,6 @@ import * as dom from 'vs/base/browser/dom';
 import { IKeyboardEvent } from 'vs/base/browser/keyboardEvent';
 import { KeyCode } from 'vs/base/common/keyCodes';
 import { TPromise } from 'vs/base/common/winjs.base';
-import { ICommandService } from 'vs/platform/commands/common/commands';
-
-export class SearchPageContribution implements IWorkbenchContribution {
-
-	constructor(
-		@IPartService partService: IPartService,
-		@IInstantiationService instantiationService: IInstantiationService,
-		@ICommandService commandService: ICommandService,
-	) {
-		commandService.executeCommand(SearchPageAction.ID);
-	}
-
-	public getId() {
-		return 'sg.contrib.showSearchPage';
-	}
-
-}
 
 export class SearchPageAction extends Action {
 
