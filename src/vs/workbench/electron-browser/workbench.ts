@@ -21,7 +21,7 @@ import { BackupFileService } from 'vs/workbench/services/backup/node/backupFileS
 import { IBackupFileService } from 'vs/workbench/services/backup/common/backup';
 import { toErrorMessage } from 'vs/base/common/errorMessage';
 import { Registry } from 'vs/platform/platform';
-import { isWindows, isLinux, isMacintosh } from 'vs/base/common/platform';
+import { isWindows, isLinux, isMacintosh, isWeb } from 'vs/base/common/platform';
 import { IOptions } from 'vs/workbench/common/options';
 import { Position as EditorPosition } from 'vs/platform/editor/common/editor';
 import { IWorkbenchContributionsRegistry, Extensions as WorkbenchExtensions } from 'vs/workbench/common/contributions';
@@ -669,12 +669,12 @@ export class Workbench implements IPartService {
 	}
 
 	private getCustomTitleBarStyle(): 'custom' {
-		if (!isMacintosh) {
+		if (!isMacintosh && !isWeb) {
 			return null; // custom title bar is only supported on Mac currently
 		}
 
 		const isDev = !this.environmentService.isBuilt || this.environmentService.isExtensionDevelopment;
-		if (isDev) {
+		if (isMacintosh && isDev) {
 			return null; // not enabled when developing due to https://github.com/electron/electron/issues/3647
 		}
 
