@@ -171,7 +171,7 @@ export class SearchViewlet extends Viewlet {
 			true;
 
 		this.queryDetails = this.searchWidgetsContainer.div({ 'class': ['query-details'] }, (builder) => {
-			builder.div({ 'class': 'more', 'tabindex': 0, 'role': 'button', 'title': nls.localize('moreSearch', "Toggle Search Details") })
+			builder.div({ 'style': { display: 'none' }, 'class': 'more', 'tabindex': 0, 'role': 'button', 'title': nls.localize('moreSearch', "Toggle Search Details") })
 				.on(dom.EventType.CLICK, (e) => {
 					dom.EventHelper.stop(e);
 					this.toggleQueryDetails(true);
@@ -1043,7 +1043,7 @@ export class SearchViewlet extends Viewlet {
 				} else if (hasExcludes) {
 					message = nls.localize('noResultsExcludes', "No results found excluding '{0}' - ", excludePattern);
 				} else {
-					message = nls.localize('noResultsFound', "No results found. Review your settings for configured exclusions - ");
+					message = nls.localize('noResultsFound', "No results found.");
 				}
 
 				// Indicate as status to ARIA
@@ -1075,20 +1075,6 @@ export class SearchViewlet extends Viewlet {
 						this.inputPatternIncludes.setValue('');
 
 						this.onQueryChanged(true);
-					});
-				} else {
-					$(p).a({
-						'class': ['pointer', 'prominent'],
-						'tabindex': '0',
-						text: nls.localize('openSettings.message', "Open Settings")
-					}).on(dom.EventType.CLICK, (e: MouseEvent) => {
-						dom.EventHelper.stop(e, false);
-
-						if (this.contextService.hasWorkspace()) {
-							this.preferencesService.openWorkspaceSettings().done(() => null, errors.onUnexpectedError);
-						} else {
-							this.preferencesService.openGlobalSettings().done(() => null, errors.onUnexpectedError);
-						}
 					});
 				}
 

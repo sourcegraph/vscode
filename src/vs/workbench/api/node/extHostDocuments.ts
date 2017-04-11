@@ -27,11 +27,13 @@ export class ExtHostDocuments extends ExtHostDocumentsShape {
 	private _onDidAddDocument = new Emitter<vscode.TextDocument>();
 	private _onDidRemoveDocument = new Emitter<vscode.TextDocument>();
 	private _onDidChangeDocument = new Emitter<vscode.TextDocumentChangeEvent>();
+	private _onDidRevertDocument = new Emitter<string>();
 	private _onDidSaveDocument = new Emitter<vscode.TextDocument>();
 
 	readonly onDidAddDocument: Event<vscode.TextDocument> = this._onDidAddDocument.event;
 	readonly onDidRemoveDocument: Event<vscode.TextDocument> = this._onDidRemoveDocument.event;
 	readonly onDidChangeDocument: Event<vscode.TextDocumentChangeEvent> = this._onDidChangeDocument.event;
+	readonly onDidRevertDocument: Event<string> = this._onDidRevertDocument.event;
 	readonly onDidSaveDocument: Event<vscode.TextDocument> = this._onDidSaveDocument.event;
 
 	private _toDispose: IDisposable[];
@@ -182,6 +184,7 @@ export class ExtHostDocuments extends ExtHostDocumentsShape {
 	public $acceptModelReverted(strURL: string): void {
 		let document = this._documentsAndEditors.getDocument(strURL);
 		document._acceptIsDirty(false);
+		this._onDidRevertDocument.fire(strURL);
 	}
 
 	public $acceptModelChanged(strURL: string, events: editorCommon.IModelContentChangedEvent2[], isDirty: boolean): void {

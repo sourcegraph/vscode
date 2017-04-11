@@ -175,7 +175,7 @@ export class TextFileEditorModelManager implements ITextFileEditorModelManager {
 			if (!options || !options.reload) {
 				modelPromise = TPromise.as(model);
 			} else {
-				modelPromise = model.load();
+				modelPromise = model.load(); // TODO(sourcegraph): used to use model.load(options.reload)
 			}
 		}
 

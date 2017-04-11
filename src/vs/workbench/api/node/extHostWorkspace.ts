@@ -4,26 +4,30 @@
  *--------------------------------------------------------------------------------------------*/
 'use strict';
 
+import Event, { Emitter } from 'vs/base/common/event';
 import URI from 'vs/base/common/uri';
 import { normalize } from 'vs/base/common/paths';
 import { relative } from 'path';
 import { IThreadService } from 'vs/workbench/services/thread/common/threadService';
+import { IWorkspace } from 'vs/platform/workspace/common/workspace';
 import { IResourceEdit } from 'vs/editor/common/services/bulkEdit';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { fromRange, EndOfLine } from 'vs/workbench/api/node/extHostTypeConverters';
-import { MainContext, MainThreadWorkspaceShape } from './extHost.protocol';
+import { ExtHostWorkspaceShape, MainContext, MainThreadWorkspaceShape } from './extHost.protocol';
 import * as vscode from 'vscode';
 
-export class ExtHostWorkspace {
+export class ExtHostWorkspace implements ExtHostWorkspaceShape {
 
 	private static _requestIdPool = 0;
 
 	private _proxy: MainThreadWorkspaceShape;
 	private _workspacePath: string;
+	private _workspaceEmitter: Emitter<IWorkspace>;
 
 	constructor(threadService: IThreadService, workspacePath: string) {
 		this._proxy = threadService.get(MainContext.MainThreadWorkspace);
 		this._workspacePath = workspacePath;
+		this._workspaceEmitter = new Emitter<IWorkspace>();
 	}
 
 	getPath(): string {
@@ -88,4 +92,24 @@ export class ExtHostWorkspace {
 
 		return this._proxy.$applyWorkspaceEdit(resourceEdits);
 	}
+
+	get onDidUpdateWorkspace(): Event<IWorkspace> {
+		return this._workspaceEmitter.event;
+	}
+
+	$setWorkspace(resource: URI, state: { commitID?: string, branch?: string, zapRef?: string }): TPromise<void> {
+		this._proxy.$setWorkspace(resource, state);
+		return TPromise.as(void 0);
+	}
+
+	$setWorkspaceState(state: { commitID?: string, branch?: string, zapRef?: string }): TPromise<void> {
+		this._proxy.$setWorkspaceState(state);
+		return TPromise.as(void 0);
+	}
+
+	$onDidUpdateWorkspace(workspace: IWorkspace): TPromise<void> {
+		this._workspaceEmitter.fire(workspace);
+		return TPromise.as(void 0);
+	}
+
 }

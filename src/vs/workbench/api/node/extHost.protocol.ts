@@ -49,6 +49,7 @@ export interface IEnvironment {
 }
 
 export interface IInitData {
+	seqId: number; // sequence id for extension hosts (one host per workspace)
 	parentPid: number;
 	environment: IEnvironment;
 	contextService: {
@@ -126,6 +127,8 @@ export abstract class MainThreadDocumentsShape {
 	$onVirtualDocumentChange(uri: URI, value: ITextSource): void { throw ni(); }
 	$unregisterTextContentProvider(handle: number): void { throw ni(); }
 	$trySaveDocument(uri: URI): TPromise<boolean> { throw ni(); }
+	$tryRevertAll(uris: URI[]): TPromise<boolean> { throw ni(); }
+	$tryDeleteDocument(uri: URI): TPromise<void> { throw ni(); }
 }
 
 export abstract class MainThreadEditorsShape {
@@ -153,24 +156,37 @@ export abstract class MainThreadErrorsShape {
 
 export abstract class MainThreadLanguageFeaturesShape {
 	$unregister(handle: number): TPromise<any> { throw ni(); }
-	$registerOutlineSupport(handle: number, selector: vscode.DocumentSelector): TPromise<any> { throw ni(); }
-	$registerCodeLensSupport(handle: number, selector: vscode.DocumentSelector, eventHandle: number): TPromise<any> { throw ni(); }
-	$emitCodeLensEvent(eventHandle: number, event?: any): TPromise<any> { throw ni(); }
-	$registerDeclaractionSupport(handle: number, selector: vscode.DocumentSelector): TPromise<any> { throw ni(); }
-	$registerImplementationSupport(handle: number, selector: vscode.DocumentSelector): TPromise<any> { throw ni(); }
-	$registerTypeDefinitionSupport(handle: number, selector: vscode.DocumentSelector): TPromise<any> { throw ni(); }
-	$registerHoverProvider(handle: number, selector: vscode.DocumentSelector): TPromise<any> { throw ni(); }
-	$registerDocumentHighlightProvider(handle: number, selector: vscode.DocumentSelector): TPromise<any> { throw ni(); }
-	$registerReferenceSupport(handle: number, selector: vscode.DocumentSelector): TPromise<any> { throw ni(); }
-	$registerQuickFixSupport(handle: number, selector: vscode.DocumentSelector): TPromise<any> { throw ni(); }
-	$registerDocumentFormattingSupport(handle: number, selector: vscode.DocumentSelector): TPromise<any> { throw ni(); }
-	$registerRangeFormattingSupport(handle: number, selector: vscode.DocumentSelector): TPromise<any> { throw ni(); }
-	$registerOnTypeFormattingSupport(handle: number, selector: vscode.DocumentSelector, autoFormatTriggerCharacters: string[]): TPromise<any> { throw ni(); }
-	$registerNavigateTypeSupport(handle: number): TPromise<any> { throw ni(); }
-	$registerRenameSupport(handle: number, selector: vscode.DocumentSelector): TPromise<any> { throw ni(); }
-	$registerSuggestSupport(handle: number, selector: vscode.DocumentSelector, triggerCharacters: string[]): TPromise<any> { throw ni(); }
-	$registerSignatureHelpProvider(handle: number, selector: vscode.DocumentSelector, triggerCharacter: string[]): TPromise<any> { throw ni(); }
-	$registerDocumentLinkProvider(handle: number, selector: vscode.DocumentSelector): TPromise<any> { throw ni(); }
+	$registerOutlineSupport(handle: number, selector: vscode.DocumentSelector, workspace?: IWorkspace): TPromise<any> { throw ni(); }
+	$registerCodeLensSupport(handle: number, selector: vscode.DocumentSelector, eventHandle: number, workspace?: IWorkspace): TPromise<any> { throw ni(); }
+	$emitCodeLensEvent(eventHandle: number, event?: any, workspace?: IWorkspace): TPromise<any> { throw ni(); }
+	$registerDeclaractionSupport(handle: number, selector: vscode.DocumentSelector, workspace?: IWorkspace): TPromise<any> { throw ni(); }
+	$registerImplementationSupport(handle: number, selector: vscode.DocumentSelector, workspace?: IWorkspace): TPromise<any> { throw ni(); }
+	$registerTypeDefinitionSupport(handle: number, selector: vscode.DocumentSelector, workspace?: IWorkspace): TPromise<any> { throw ni(); }
+	$registerHoverProvider(handle: number, selector: vscode.DocumentSelector, workspace?: IWorkspace): TPromise<any> { throw ni(); }
+	$registerDocumentHighlightProvider(handle: number, selector: vscode.DocumentSelector, workspace?: IWorkspace): TPromise<any> { throw ni(); }
+	$registerReferenceSupport(handle: number, selector: vscode.DocumentSelector, workspace?: IWorkspace): TPromise<any> { throw ni(); }
+	/**
+	 * While the main thread is waiting for a call to ExtHostLanguageFeaturesShape.$provideReferences to resolve,
+	 * the extension may call this method to notify the main thread of intermediate results.
+	 * This function is an implementation detail since it is not possible to serialize callbacks (functions) over the
+	 * communication channel between the extension host and the main thread.
+	 *
+	 * vscode.d.ts exposes a higher level API with a progress callback.
+	 */
+	$notifyProvideReferencesProgress(handle: number, progressHandle: number, locations: modes.Location[]): TPromise<any> { throw ni(); }
+
+	$registerWorkspaceReferenceSupport(handle: number, selector: vscode.DocumentSelector, workspace?: IWorkspace): TPromise<any> { throw ni(); }
+	$notifyProvideWorkspaceReferencesProgress(handle: number, progressHandle: number, references: modes.IReferenceInformation[]): TPromise<any> { throw ni(); }
+
+	$registerQuickFixSupport(handle: number, selector: vscode.DocumentSelector, workspace?: IWorkspace): TPromise<any> { throw ni(); }
+	$registerDocumentFormattingSupport(handle: number, selector: vscode.DocumentSelector, workspace?: IWorkspace): TPromise<any> { throw ni(); }
+	$registerRangeFormattingSupport(handle: number, selector: vscode.DocumentSelector, workspace?: IWorkspace): TPromise<any> { throw ni(); }
+	$registerOnTypeFormattingSupport(handle: number, selector: vscode.DocumentSelector, autoFormatTriggerCharacters: string[], workspace?: IWorkspace): TPromise<any> { throw ni(); }
+	$registerNavigateTypeSupport(handle: number, workspace?: IWorkspace): TPromise<any> { throw ni(); }
+	$registerRenameSupport(handle: number, selector: vscode.DocumentSelector, workspace?: IWorkspace): TPromise<any> { throw ni(); }
+	$registerSuggestSupport(handle: number, selector: vscode.DocumentSelector, triggerCharacters: string[], workspace?: IWorkspace): TPromise<any> { throw ni(); }
+	$registerSignatureHelpProvider(handle: number, selector: vscode.DocumentSelector, triggerCharacter: string[], workspace?: IWorkspace): TPromise<any> { throw ni(); }
+	$registerDocumentLinkProvider(handle: number, selector: vscode.DocumentSelector, workspace?: IWorkspace): TPromise<any> { throw ni(); }
 	$setLanguageConfiguration(handle: number, languageId: string, configuration: vscode.LanguageConfiguration): TPromise<any> { throw ni(); }
 }
 
@@ -237,6 +253,8 @@ export abstract class MainThreadWorkspaceShape {
 	$cancelSearch(requestId: number): Thenable<boolean> { throw ni(); }
 	$saveAll(includeUntitled?: boolean): Thenable<boolean> { throw ni(); }
 	$applyWorkspaceEdit(edits: IResourceEdit[]): TPromise<boolean> { throw ni(); }
+	$setWorkspace(resource: URI, state?: { commitID?: string, branch?: string, zapRef?: string }): TPromise<any> { throw ni(); }
+	$setWorkspaceState(state?: { commitID?: string, branch?: string, zapRef?: string }): TPromise<any> { throw ni(); }
 }
 
 export abstract class MainThreadTaskShape {
@@ -290,6 +308,10 @@ export abstract class ExtHostCommandsShape {
 	$getContributedCommandHandlerDescriptions(): TPromise<{ [id: string]: string | ICommandHandlerDescription }> { throw ni(); }
 }
 
+export abstract class ExtHostWorkspaceShape {
+	$onDidUpdateWorkspace(workspace: IWorkspace): TPromise<any> { throw ni(); }
+}
+
 export abstract class ExtHostConfigurationShape {
 	$acceptConfigurationChanged(values: IWorkspaceConfigurationValues) { throw ni(); }
 }
@@ -330,9 +352,9 @@ export interface ITextEditorPositionData {
 	[id: string]: EditorPosition;
 }
 export abstract class ExtHostEditorsShape {
-	$acceptOptionsChanged(id: string, opts: IResolvedTextEditorConfiguration): void { throw ni(); }
-	$acceptSelectionsChanged(id: string, event: ISelectionChangeEvent): void { throw ni(); }
-	$acceptEditorPositionData(data: ITextEditorPositionData): void { throw ni(); }
+	$acceptOptionsChanged(id: string, opts: IResolvedTextEditorConfiguration, document?: URI): void { throw ni(); }
+	$acceptSelectionsChanged(id: string, event: ISelectionChangeEvent, document?: URI): void { throw ni(); }
+	$acceptEditorPositionData(data: ITextEditorPositionData, document?: URI): void { throw ni(); }
 }
 
 export interface IDocumentsAndEditorsDelta {
@@ -396,7 +418,8 @@ export abstract class ExtHostLanguageFeaturesShape {
 	$provideTypeDefinition(handle: number, resource: URI, position: editorCommon.IPosition): TPromise<modes.Definition> { throw ni(); }
 	$provideHover(handle: number, resource: URI, position: editorCommon.IPosition): TPromise<modes.Hover> { throw ni(); }
 	$provideDocumentHighlights(handle: number, resource: URI, position: editorCommon.IPosition): TPromise<modes.DocumentHighlight[]> { throw ni(); }
-	$provideReferences(handle: number, resource: URI, position: editorCommon.IPosition, context: modes.ReferenceContext): TPromise<modes.Location[]> { throw ni(); }
+	$provideReferences(handle: number, progressHandle: number, resource: URI, position: editorCommon.IPosition, context: modes.ReferenceContext): TPromise<modes.Location[]> { throw ni(); }
+	$provideWorkspaceReferences(handle: number, progressHandle: number, resource: URI, query: modes.ISymbolDescriptor, hints: { [hint: string]: any }): TPromise<modes.IReferenceInformation[]> { throw ni(); }
 	$provideCodeActions(handle: number, resource: URI, range: editorCommon.IRange): TPromise<modes.CodeAction[]> { throw ni(); }
 	$provideDocumentFormattingEdits(handle: number, resource: URI, options: modes.FormattingOptions): TPromise<editorCommon.ISingleEditOperation[]> { throw ni(); }
 	$provideDocumentRangeFormattingEdits(handle: number, resource: URI, range: editorCommon.IRange, options: modes.FormattingOptions): TPromise<editorCommon.ISingleEditOperation[]> { throw ni(); }
@@ -461,6 +484,7 @@ export const MainContext = {
 
 export const ExtHostContext = {
 	ExtHostCommands: createExtId<ExtHostCommandsShape>('ExtHostCommands', ExtHostCommandsShape),
+	ExtHostWorkspace: createExtId<ExtHostWorkspaceShape>('ExtHostWorkspace', ExtHostWorkspaceShape),
 	ExtHostConfiguration: createExtId<ExtHostConfigurationShape>('ExtHostConfiguration', ExtHostConfigurationShape),
 	ExtHostDiagnostics: createExtId<ExtHostDiagnosticsShape>('ExtHostDiagnostics', ExtHostDiagnosticsShape),
 	ExtHostDocumentsAndEditors: createExtId<ExtHostDocumentsAndEditorsShape>('ExtHostDocumentsAndEditors', ExtHostDocumentsAndEditorsShape),

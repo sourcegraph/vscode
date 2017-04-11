@@ -623,7 +623,7 @@ export class FileDragAndDrop implements IDragAndDrop {
 
 	public getDragURI(tree: ITree, stat: FileStat): string {
 		if (stat.isDirectory) {
-			return URI.from({ scheme: 'folder', path: stat.resource.fsPath }).toString(); // indicates that we are dragging a folder
+			return URI.from({ scheme: 'folder', path: stat.resource.fsPath, authority: stat.resource.authority }).toString(); // indicates that we are dragging a folder
 		}
 
 		return stat.resource.toString();

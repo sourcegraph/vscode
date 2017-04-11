@@ -84,6 +84,10 @@ export class TestContextService implements IWorkspaceContextService {
 		this.workspace = workspace;
 	}
 
+	public onWorkspaceUpdated(listener: (workspace: IWorkspace) => void): IDisposable {
+		throw new Error('not implemented');
+	}
+
 	public getOptions() {
 		return this.options;
 	}
@@ -106,6 +110,14 @@ export class TestContextService implements IWorkspaceContextService {
 
 	public toResource(workspaceRelativePath: string): URI {
 		return URI.file(paths.join('C:\\', workspaceRelativePath));
+	}
+
+	public tryGetWorkspaceFromRegistry(resource: URI): IWorkspace | undefined {
+		return this.workspace;
+	}
+
+	public registerWorkspace(workspace: IWorkspace, overwrite?: boolean): void {
+
 	}
 }
 

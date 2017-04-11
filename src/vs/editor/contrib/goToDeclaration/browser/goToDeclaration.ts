@@ -482,14 +482,7 @@ class GotoDefinitionWithMouseEditorContribution implements editorCommon.IEditorC
 					if (model && model.textEditorModel) {
 						const editorModel = model.textEditorModel;
 						let from = Math.max(1, result.range.startLineNumber);
-						let to: number;
-
-						// if we have a range, take that into consideration for the "to" position, otherwise fallback to MAX_SOURCE_PREVIEW_LINES
-						if (!Range.isEmpty(result.range)) {
-							to = Math.min(result.range.endLineNumber, result.range.startLineNumber + GotoDefinitionWithMouseEditorContribution.MAX_SOURCE_PREVIEW_LINES, editorModel.getLineCount());
-						} else {
-							to = Math.min(from + GotoDefinitionWithMouseEditorContribution.MAX_SOURCE_PREVIEW_LINES, editorModel.getLineCount());
-						}
+						let to = Math.min(from + GotoDefinitionWithMouseEditorContribution.MAX_SOURCE_PREVIEW_LINES, editorModel.getLineCount());
 
 						let source = editorModel.getValueInRange({
 							startLineNumber: from,

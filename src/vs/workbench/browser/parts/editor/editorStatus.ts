@@ -13,7 +13,6 @@ import strings = require('vs/base/common/strings');
 import paths = require('vs/base/common/paths');
 import types = require('vs/base/common/types');
 import uri from 'vs/base/common/uri';
-import errors = require('vs/base/common/errors');
 import { IStatusbarItem } from 'vs/workbench/browser/parts/statusbar/statusbar';
 import { Action } from 'vs/base/common/actions';
 import { language, LANGUAGE_DEFAULT } from 'vs/base/common/platform';
@@ -248,11 +247,6 @@ export class EditorStatus implements IStatusbarItem {
 	private state: State;
 	private element: HTMLElement;
 	private tabFocusModeElement: HTMLElement;
-	private indentationElement: HTMLElement;
-	private selectionElement: HTMLElement;
-	private encodingElement: HTMLElement;
-	private eolElement: HTMLElement;
-	private modeElement: HTMLElement;
 	private metadataElement: HTMLElement;
 	private toDispose: IDisposable[];
 	private activeEditorListeners: IDisposable[];
@@ -281,31 +275,6 @@ export class EditorStatus implements IStatusbarItem {
 		this.tabFocusModeElement.onclick = () => this.onTabFocusModeClick();
 		this.tabFocusModeElement.textContent = nlsTabFocusMode;
 		hide(this.tabFocusModeElement);
-
-		this.selectionElement = append(this.element, $('a.editor-status-selection'));
-		this.selectionElement.title = nls.localize('gotoLine', "Go to Line");
-		this.selectionElement.onclick = () => this.onSelectionClick();
-		hide(this.selectionElement);
-
-		this.indentationElement = append(this.element, $('a.editor-status-indentation'));
-		this.indentationElement.title = nls.localize('indentation', "Indentation");
-		this.indentationElement.onclick = () => this.onIndentationClick();
-		hide(this.indentationElement);
-
-		this.encodingElement = append(this.element, $('a.editor-status-encoding'));
-		this.encodingElement.title = nls.localize('selectEncoding', "Select Encoding");
-		this.encodingElement.onclick = () => this.onEncodingClick();
-		hide(this.encodingElement);
-
-		this.eolElement = append(this.element, $('a.editor-status-eol'));
-		this.eolElement.title = nls.localize('selectEOL', "Select End of Line Sequence");
-		this.eolElement.onclick = () => this.onEOLClick();
-		hide(this.eolElement);
-
-		this.modeElement = append(this.element, $('a.editor-status-mode'));
-		this.modeElement.title = nls.localize('selectLanguageMode', "Select Language Mode");
-		this.modeElement.onclick = () => this.onModeClick();
-		hide(this.modeElement);
 
 		this.metadataElement = append(this.element, $('span.editor-status-metadata'));
 		this.metadataElement.title = nls.localize('fileInfo', "File Information");
@@ -361,51 +330,6 @@ export class EditorStatus implements IStatusbarItem {
 			}
 		}
 
-		if (changed.indentation) {
-			if (this.state.indentation) {
-				this.indentationElement.textContent = this.state.indentation;
-				show(this.indentationElement);
-			} else {
-				hide(this.indentationElement);
-			}
-		}
-
-		if (changed.selectionStatus) {
-			if (this.state.selectionStatus) {
-				this.selectionElement.textContent = this.state.selectionStatus;
-				show(this.selectionElement);
-			} else {
-				hide(this.selectionElement);
-			}
-		}
-
-		if (changed.encoding) {
-			if (this.state.encoding) {
-				this.encodingElement.textContent = this.state.encoding;
-				show(this.encodingElement);
-			} else {
-				hide(this.encodingElement);
-			}
-		}
-
-		if (changed.EOL) {
-			if (this.state.EOL) {
-				this.eolElement.textContent = this.state.EOL === '\r\n' ? nlsEOLCRLF : nlsEOLLF;
-				show(this.eolElement);
-			} else {
-				hide(this.eolElement);
-			}
-		}
-
-		if (changed.mode) {
-			if (this.state.mode) {
-				this.modeElement.textContent = this.state.mode;
-				show(this.modeElement);
-			} else {
-				hide(this.modeElement);
-			}
-		}
-
 		if (changed.metadata) {
 			if (this.state.metadata) {
 				this.metadataElement.textContent = this.state.metadata;
@@ -438,37 +362,6 @@ export class EditorStatus implements IStatusbarItem {
 		}
 
 		return null;
-	}
-
-	private onModeClick(): void {
-		const action = this.instantiationService.createInstance(ChangeModeAction, ChangeModeAction.ID, ChangeModeAction.LABEL);
-
-		action.run().done(null, errors.onUnexpectedError);
-		action.dispose();
-	}
-
-	private onIndentationClick(): void {
-		const action = this.instantiationService.createInstance(ChangeIndentationAction, ChangeIndentationAction.ID, ChangeIndentationAction.LABEL);
-		action.run().done(null, errors.onUnexpectedError);
-		action.dispose();
-	}
-
-	private onSelectionClick(): void {
-		this.quickOpenService.show(':'); // "Go to line"
-	}
-
-	private onEOLClick(): void {
-		const action = this.instantiationService.createInstance(ChangeEOLAction, ChangeEOLAction.ID, ChangeEOLAction.LABEL);
-
-		action.run().done(null, errors.onUnexpectedError);
-		action.dispose();
-	}
-
-	private onEncodingClick(): void {
-		const action = this.instantiationService.createInstance(ChangeEncodingAction, ChangeEncodingAction.ID, ChangeEncodingAction.LABEL);
-
-		action.run().done(null, errors.onUnexpectedError);
-		action.dispose();
 	}
 
 	private onTabFocusModeClick(): void {

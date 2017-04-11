@@ -205,6 +205,7 @@ export class SearchWidget extends Widget {
 		this.toggleReplaceButton.icon = 'toggle-replace-button collapse';
 		this.toggleReplaceButton.addListener2('click', () => this.onToggleReplaceButton());
 		this.toggleReplaceButton.getElement().title = nls.localize('search.replace.toggle.button.title', "Toggle Replace");
+		this.toggleReplaceButton.getElement().style.display = 'none';
 	}
 
 	private renderSearchInput(parent: HTMLElement, options: ISearchWidgetOptions): void {

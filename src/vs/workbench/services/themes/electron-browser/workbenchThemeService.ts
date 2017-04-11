@@ -45,8 +45,8 @@ import { Color } from "vs/base/common/color";
 
 // implementation
 
-const DEFAULT_THEME_ID = 'vs-dark vscode-theme-defaults-themes-dark_plus-json';
-const DEFAULT_THEME_SETTING_VALUE = 'Default Dark+';
+const DEFAULT_THEME_ID = 'vs-dark sourcegraph-theme-sourcegraph-sourcegraph_dark-json';
+const DEFAULT_THEME_SETTING_VALUE = 'Sourcegraph Dark';
 
 const PERSISTED_THEME_STORAGE_KEY = 'colorThemeData';
 

@@ -14,7 +14,7 @@ import { IConfigurationRegistry, Extensions as ConfigurationExtensions } from 'v
 import { IWorkbenchActionRegistry, Extensions } from 'vs/workbench/common/actionRegistry';
 import { KeyMod, KeyChord, KeyCode } from 'vs/base/common/keyCodes';
 import { isWindows, isLinux, isMacintosh } from 'vs/base/common/platform';
-import { CloseEditorAction, KeybindingsReferenceAction, OpenDocumentationUrlAction, OpenIntroductoryVideosUrlAction, ReportIssueAction, ReportPerformanceIssueAction, ZoomResetAction, ZoomOutAction, ZoomInAction, ToggleFullScreenAction, ToggleMenuBarAction, CloseFolderAction, CloseWindowAction, SwitchWindow, NewWindowAction, CloseMessagesAction, NavigateUpAction, NavigateDownAction, NavigateLeftAction, NavigateRightAction, IncreaseViewSizeAction, DecreaseViewSizeAction } from 'vs/workbench/electron-browser/actions';
+import { CloseEditorAction, KeybindingsReferenceAction, ReportIssueAction, ReportPerformanceIssueAction, ToggleFullScreenAction, ToggleMenuBarAction, CloseFolderAction, CloseWindowAction, SwitchWindow, NewWindowAction, CloseMessagesAction, NavigateUpAction, NavigateDownAction, NavigateLeftAction, NavigateRightAction, IncreaseViewSizeAction, DecreaseViewSizeAction } from 'vs/workbench/electron-browser/actions';
 import { MessagesVisibleContext } from 'vs/workbench/electron-browser/workbench';
 import { IJSONSchema } from 'vs/base/common/jsonSchema';
 import { registerCommands } from 'vs/workbench/electron-browser/commands';
@@ -38,29 +38,6 @@ if (!!product.reportIssueUrl) {
 if (KeybindingsReferenceAction.AVAILABLE) {
 	workbenchActionsRegistry.registerWorkbenchAction(new SyncActionDescriptor(KeybindingsReferenceAction, KeybindingsReferenceAction.ID, KeybindingsReferenceAction.LABEL, { primary: KeyChord(KeyMod.CtrlCmd | KeyCode.KEY_K, KeyMod.CtrlCmd | KeyCode.KEY_R) }), 'Help: Keyboard Shortcuts Reference', helpCategory);
 }
-if (OpenDocumentationUrlAction.AVAILABLE) {
-	workbenchActionsRegistry.registerWorkbenchAction(new SyncActionDescriptor(OpenDocumentationUrlAction, OpenDocumentationUrlAction.ID, OpenDocumentationUrlAction.LABEL), 'Help: Documentation', helpCategory);
-}
-if (OpenIntroductoryVideosUrlAction.AVAILABLE) {
-	workbenchActionsRegistry.registerWorkbenchAction(new SyncActionDescriptor(OpenIntroductoryVideosUrlAction, OpenIntroductoryVideosUrlAction.ID, OpenIntroductoryVideosUrlAction.LABEL), 'Help: Introductory Videos', helpCategory);
-}
-workbenchActionsRegistry.registerWorkbenchAction(
-	new SyncActionDescriptor(ZoomInAction, ZoomInAction.ID, ZoomInAction.LABEL, {
-		primary: KeyMod.CtrlCmd | KeyCode.US_EQUAL,
-		secondary: [KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.US_EQUAL, KeyMod.CtrlCmd | KeyCode.NUMPAD_ADD]
-	}), 'View: Zoom In', viewCategory);
-workbenchActionsRegistry.registerWorkbenchAction(
-	new SyncActionDescriptor(ZoomOutAction, ZoomOutAction.ID, ZoomOutAction.LABEL, {
-		primary: KeyMod.CtrlCmd | KeyCode.US_MINUS,
-		secondary: [KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.US_MINUS, KeyMod.CtrlCmd | KeyCode.NUMPAD_SUBTRACT],
-		linux: { primary: KeyMod.CtrlCmd | KeyCode.US_MINUS, secondary: [KeyMod.CtrlCmd | KeyCode.NUMPAD_SUBTRACT] }
-	}), 'View: Zoom Out', viewCategory
-);
-workbenchActionsRegistry.registerWorkbenchAction(
-	new SyncActionDescriptor(ZoomResetAction, ZoomResetAction.ID, ZoomResetAction.LABEL, {
-		primary: KeyMod.CtrlCmd | KeyCode.NUMPAD_0
-	}), 'View: Reset Zoom', viewCategory
-);
 workbenchActionsRegistry.registerWorkbenchAction(new SyncActionDescriptor(CloseMessagesAction, CloseMessagesAction.ID, CloseMessagesAction.LABEL, { primary: KeyCode.Escape, secondary: [KeyMod.Shift | KeyCode.Escape] }, MessagesVisibleContext), 'Close Notification Messages');
 workbenchActionsRegistry.registerWorkbenchAction(new SyncActionDescriptor(CloseEditorAction, CloseEditorAction.ID, CloseEditorAction.LABEL, { primary: KeyMod.CtrlCmd | KeyCode.KEY_W, win: { primary: KeyMod.CtrlCmd | KeyCode.F4, secondary: [KeyMod.CtrlCmd | KeyCode.KEY_W] } }), 'View: Close Editor', viewCategory);
 workbenchActionsRegistry.registerWorkbenchAction(new SyncActionDescriptor(ToggleFullScreenAction, ToggleFullScreenAction.ID, ToggleFullScreenAction.LABEL, { primary: KeyCode.F11, mac: { primary: KeyMod.CtrlCmd | KeyMod.WinCtrl | KeyCode.KEY_F } }), 'View: Toggle Full Screen', viewCategory);
@@ -86,7 +63,7 @@ configurationRegistry.registerConfiguration({
 		'workbench.editor.showTabs': {
 			'type': 'boolean',
 			'description': nls.localize('showEditorTabs', "Controls if opened editors should show in tabs or not."),
-			'default': true
+			'default': false
 		},
 		'workbench.editor.tabCloseButton': {
 			'type': 'string',
@@ -102,7 +79,7 @@ configurationRegistry.registerConfiguration({
 		'workbench.editor.enablePreview': {
 			'type': 'boolean',
 			'description': nls.localize('enablePreview', "Controls if opened editors show as preview. Preview editors are reused until they are kept (e.g. via double click or editing)."),
-			'default': true
+			'default': false
 		},
 		'workbench.editor.enablePreviewFromQuickOpen': {
 			'type': 'boolean',
@@ -123,7 +100,7 @@ configurationRegistry.registerConfiguration({
 		'workbench.quickOpen.closeOnFocusLost': {
 			'type': 'boolean',
 			'description': nls.localize('closeOnFocusLost', "Controls if Quick Open should close automatically once it loses focus."),
-			'default': true
+			'default': false
 		},
 		'workbench.settings.openDefaultSettings': {
 			'type': 'boolean',
@@ -143,7 +120,7 @@ configurationRegistry.registerConfiguration({
 		},
 		'workbench.activityBar.visible': {
 			'type': 'boolean',
-			'default': true,
+			'default': false,
 			'description': nls.localize('activityBarVisibility', "Controls the visibility of the activity bar in the workbench.")
 		},
 		'workbench.editor.closeOnFileDelete': {

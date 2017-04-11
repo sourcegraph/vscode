@@ -7,7 +7,6 @@
 import 'vs/css!./referencesWidget';
 import * as nls from 'vs/nls';
 import { onUnexpectedError } from 'vs/base/common/errors';
-import { getPathLabel } from 'vs/base/common/labels';
 import Event, { Emitter } from 'vs/base/common/event';
 import { IDisposable, dispose, Disposables, IReference } from 'vs/base/common/lifecycle';
 import { Schemas } from 'vs/base/common/network';
@@ -158,7 +157,7 @@ class DecorationsManager implements IDisposable {
 	}
 }
 
-class DataSource implements tree.IDataSource {
+export class DataSource implements tree.IDataSource {
 
 	constructor(
 		@ITextModelResolverService private _textModelResolverService: ITextModelResolverService
@@ -215,7 +214,18 @@ class DataSource implements tree.IDataSource {
 	}
 }
 
-class Controller extends DefaultController {
+/**
+ * RevealedReference wraps an optional OneReference.
+ * This allows RevealedReference to be passed around (i.e. to Controller)
+ * and updates to the reference can be seen.
+ */
+export type RevealedReference = { ref: OneReference | undefined };
+
+export class Controller extends DefaultController {
+
+	constructor(private _expandedElements: { [id: string]: FileReferences }, private _revealedReference: RevealedReference) {
+		super();
+	}
 
 	static Events = {
 		FOCUSED: 'events/custom/focused',
@@ -265,11 +275,17 @@ class Controller extends DefaultController {
 		return super.onClick(tree, element, event);
 	}
 
-	private _expandCollapse(tree: tree.ITree, element: any): boolean {
+	private _expandCollapse(tree: tree.ITree, element: FileReferences): boolean {
 
 		if (tree.isExpanded(element)) {
+			delete this._expandedElements[element.id];
+			if (this._revealedReference.ref && this._revealedReference.ref.parent.id === element.id) {
+				// If the revealed reference is a child of the element being collapsed, then it should no longer be revealed.
+				this._revealedReference.ref = undefined;
+			}
 			tree.collapse(element).done(null, onUnexpectedError);
 		} else {
+			this._expandedElements[element.id] = element;
 			tree.expand(element).done(null, onUnexpectedError);
 		}
 		return true;
@@ -339,7 +355,7 @@ class Controller extends DefaultController {
 	}
 }
 
-class Renderer extends LegacyRenderer {
+export class Renderer extends LegacyRenderer {
 	private _contextService: IWorkspaceContextService;
 
 	constructor( @IWorkspaceContextService contextService: IWorkspaceContextService) {
@@ -489,6 +505,12 @@ export class ReferenceWidget extends PeekViewWidget {
 	private _model: ReferencesModel;
 	private _decorationsManager: DecorationsManager;
 
+	/**
+	 * Map of FileRefereces by id.
+	 */
+	private _expandedElements: { [id: string]: FileReferences } = {};
+	private _revealedReference: RevealedReference = { ref: undefined };
+
 	private _disposeOnNewModel: IDisposable[] = [];
 	private _callOnDispose: IDisposable[] = [];
 	private _onDidSelectReference = new Emitter<SelectionEvent>();
@@ -605,7 +627,7 @@ export class ReferenceWidget extends PeekViewWidget {
 				dataSource: this._instantiationService.createInstance(DataSource),
 				renderer: this._instantiationService.createInstance(Renderer),
 				//sorter: new Sorter(),
-				controller: new Controller()
+				controller: new Controller(this._expandedElements, this._revealedReference)
 			};
 
 			var options = {
@@ -647,14 +669,23 @@ export class ReferenceWidget extends PeekViewWidget {
 		this._preview.layout();
 	}
 
+	public isTreeInDefaultState(): boolean {
+		const expandedCount = Object.keys(this._expandedElements).length;
+		return this._revealedReference.ref === undefined && expandedCount === 0;
+	}
+
 	public setSelection(selection: OneReference): TPromise<any> {
 		return this._revealReference(selection);
 	}
 
-	public setModel(newModel: ReferencesModel): TPromise<any> {
+	public setModel(newModel: ReferencesModel, incrementalUpdate: boolean = false): TPromise<any> {
 		// clean up
 		this._disposeOnNewModel = dispose(this._disposeOnNewModel);
 		this._model = newModel;
+		if (!incrementalUpdate) {
+			this._expandedElements = {};
+			this._revealedReference.ref = undefined;
+		}
 		if (this._model) {
 			return this._onNewModel();
 		}
@@ -715,7 +746,16 @@ export class ReferenceWidget extends PeekViewWidget {
 
 		// pick input and a reference to begin with
 		const input = this._model.groups.length === 1 ? this._model.groups[0] : this._model;
-		return this._tree.setInput(input);
+		return this._tree.setInput(input).then(() => {
+			// Apply any saved state (for incremental updates).
+			for (const key in this._expandedElements) {
+				const element = this._expandedElements[key];
+				this._tree.expand(element).done(null, onUnexpectedError);
+			}
+			if (this._revealedReference.ref) {
+				this._revealReference(this._revealedReference.ref);
+			}
+		});
 	}
 
 	private _getFocusedReference(): OneReference {
@@ -731,10 +771,16 @@ export class ReferenceWidget extends PeekViewWidget {
 	}
 
 	private _revealReference(reference: OneReference) {
+		this._revealedReference.ref = reference;
 
 		// Update widget header
 		if (reference.uri.scheme !== Schemas.inMemory) {
-			this.setTitle(reference.name, getPathLabel(reference.directory, this._contextService));
+			const file = reference.uri;
+			const path = file.path + '/' + file.fragment;
+			const dirs = path.split('/');
+			dirs.splice(0, 1);
+			const base = dirs.pop();
+			this.setTitle(base, dirs.join('/'));
 		} else {
 			this.setTitle(nls.localize('peekView.alternateTitle', "References"));
 		}

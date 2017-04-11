@@ -123,6 +123,7 @@ export interface IWorkbenchCallbacks {
 
 const Identifiers = {
 	WORKBENCH_CONTAINER: 'workbench.main.container',
+	MODALOVERLAY: 'workbench.modaloverlay',
 	TITLEBAR_PART: 'workbench.parts.titlebar',
 	ACTIVITYBAR_PART: 'workbench.parts.activitybar',
 	SIDEBAR_PART: 'workbench.parts.sidebar',
@@ -945,6 +946,10 @@ export class Workbench implements IPartService {
 		// Create Workbench DIV Off-DOM
 		this.workbenchContainer = $('.monaco-workbench-container');
 		this.workbench = $().div({ 'class': 'monaco-workbench ' + (isWindows ? 'windows' : isLinux ? 'linux' : 'mac'), id: Identifiers.WORKBENCH_CONTAINER }).appendTo(this.workbenchContainer);
+		$(this.workbench).div({
+			'class': 'workbench-modal-overlay', id: Identifiers.MODALOVERLAY,
+			'style': { 'visibility': 'hidden', 'position': 'absolute', 'top': 0, 'left': 0, 'width': '100%', 'height': '100%', 'z-index': 4, 'background-color': 'rgba(0,0,0,.5)' }
+		});
 	}
 
 	private renderWorkbench(): void {

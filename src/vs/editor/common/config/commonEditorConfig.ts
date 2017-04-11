@@ -963,7 +963,7 @@ const editorConfiguration: IConfigurationNode = {
 		},
 		'diffEditor.renderSideBySide': {
 			'type': 'boolean',
-			'default': true,
+			'default': false,
 			'description': nls.localize('sideBySide', "Controls if the diff editor shows the diff side by side or inline")
 		},
 		'diffEditor.ignoreTrimWhitespace': {

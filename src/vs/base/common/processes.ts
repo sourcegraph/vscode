@@ -115,7 +115,7 @@ export namespace Config {
 		/**
 		 * Index signature
 		 */
-		[key: string]: string | string[] | IStringDictionary<string>;
+		[key: string]: undefined | string | string[] | IStringDictionary<string>;
 	}
 
 	export interface BaseExecutable {

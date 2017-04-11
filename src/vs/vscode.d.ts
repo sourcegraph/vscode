@@ -143,6 +143,20 @@ declare module 'vscode' {
 		readonly eol: EndOfLine;
 
 		/**
+		 * Revert the underlying file.
+		 *
+		 * @return A promise that will resolve to true when the file
+		 * has been saved. If the file was not dirty or the save failed,
+		 * will return false.
+		 */
+		revert(): Thenable<boolean>;
+
+		/**
+		 * Delete the underlying file.
+		 */
+		delete(): Thenable<void>;
+
+		/**
 		 * The number of lines in this document.
 		 */
 		readonly lineCount: number;
@@ -1212,6 +1226,9 @@ declare module 'vscode' {
 		dispose(): void;
 	}
 
+	// TODO(nick): document and use everywhere
+	export type ProgressCallback<T> = (value: T) => void;
+
 	/**
 	 * Represents a type which can release resources, such
 	 * as event listening or a timer.
@@ -2004,10 +2021,56 @@ declare module 'vscode' {
 		 * @param position The position at which the command was invoked.
 		 * @param context
 		 * @param token A cancellation token.
+		 * @param progress A callback that the implementation MAY call to send intermediate results.
+		 * This allows the UI to start showing these results to the user.
+		 * Calls to `progress` should only include results that have not been passed to previous calls to `progress`.
+		 * Calls to `progress` after the call to `provideReferences` has resolved will be ignored.
+		 * The order of data sent via `progress` does not matter. The results will be sorted before being displayed to the user.
 		 * @return An array of locations or a thenable that resolves to such. The lack of a result can be
 		 * signaled by returning `undefined`, `null`, or an empty array.
 		 */
-		provideReferences(document: TextDocument, position: Position, context: ReferenceContext, token: CancellationToken): ProviderResult<Location[]>;
+		provideReferences(document: TextDocument, position: Position, context: ReferenceContext, token: CancellationToken, progress: ProgressCallback<Location[]>): ProviderResult<Location[]>;
+	}
+
+	/**
+	 * Represents information about a programming construct that can be used to
+	 * identify and locate the construct's symbol. The identification does not have
+	 * to be unique, but it should be as unique as possible. It is up to the
+	 * language server to define the schema of this object.
+	 *
+	 * In contrast to `SymbolInformation`, `SymbolDescriptor` includes more concrete,
+	 * language-specific, metadata about the symbol.
+	 */
+	export interface SymbolDescriptor {
+		/**
+		 * A list of properties of a symbol that can be used to identify or locate
+		 * it.
+		 */
+		[attr: string]: any
+	}
+
+	/**
+	 * Represents information about a reference to programming constructs like
+	 * variables, classes, interfaces, etc.
+	 */
+	export interface ReferenceInformation {
+		/**
+		 * The location in the workspace where the `symbol` is referenced.
+		 */
+		reference: Location;
+
+		/**
+		 * Metadata about the symbol that can be used to identify or locate its
+		 * definition.
+		 */
+		symbol: SymbolDescriptor;
+	}
+
+	export interface WorkspaceReferenceProvider {
+		/**
+		 * Implements https://github.com/sourcegraph/language-server-protocol/blob/master/extension-workspace-references.md
+		 */
+		provideWorkspaceReferences(query: SymbolDescriptor, hints: { [hint: string]: any }, token: CancellationToken, progress: ProgressCallback<ReferenceInformation[]>): ProviderResult<ReferenceInformation[]>;
 	}
 
 	/**
@@ -4178,6 +4241,11 @@ declare module 'vscode' {
 		export const onDidChangeTextDocument: Event<TextDocumentChangeEvent>;
 
 		/**
+		 * An event that is emitted when a [text document](#TextDocument) is changed.
+		 */
+		export const onDidRevertTextDocument: Event<string>;
+
+		/**
 		 * An event that is emitted when a [text document](#TextDocument) will be saved to disk.
 		 *
 		 * *Note 1:* Subscribers can delay saving by registering asynchronous work. For the sake of data integrity the editor
@@ -4196,6 +4264,21 @@ declare module 'vscode' {
 		 * An event that is emitted when a [text document](#TextDocument) is saved to disk.
 		 */
 		export const onDidSaveTextDocument: Event<TextDocument>;
+
+		/**
+		 * A method used to set workspace.
+		 */
+		export function setWorkspace(resource: Uri, state?: { zapRef?: string, branch?: string, commitID?: string }): void;
+
+		/**
+		 * A method used to set workspace state.
+		 */
+		export function setWorkspaceState(state?: { zapRef?: string, branch?: string, commitID?: string }): void;
+
+		/**
+		 * An event that is emitted when the active workspace is updated.
+		 */
+		export const onDidUpdateWorkspace: Event<{ resource: Uri, revState?: { zapRef?: string, branch?: string, commitID?: string } }>;
 
 		/**
 		 * Get a configuration object.
@@ -4442,6 +4525,19 @@ declare module 'vscode' {
 		 * @return A [disposable](#Disposable) that unregisters this provider when being disposed.
 		 */
 		export function registerReferenceProvider(selector: DocumentSelector, provider: ReferenceProvider): Disposable;
+
+		/**
+		 * Register an external reference provider.
+		 *
+		 * Multiple providers can be registered for a language. In that case providers are asked in
+		 * parallel and the results are merged. A failing provider (rejected promise or exception) will
+		 * not cause a failure of the whole operation.
+		 *
+		 * @param selector A selector that defines the documents this provider is applicable to.
+		 * @param provider A reference provider.
+		 * @return A [disposable](#Disposable) that unregisters this provider when being disposed.
+		 */
+		export function registerWorkspaceReferenceProvider(selector: DocumentSelector, provider: WorkspaceReferenceProvider): Disposable;
 
 		/**
 		 * Register a reference provider.

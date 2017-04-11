@@ -71,10 +71,10 @@ class ConfigClass implements IConfiguration {
 			fontLigatures: false,
 			disableTranslate3d: false,
 			disableMonospaceOptimizations: false,
-			hideCursorInOverviewRuler: false,
-			scrollBeyondLastLine: true,
+			hideCursorInOverviewRuler: true,
+			scrollBeyondLastLine: false,
 			automaticLayout: false,
-			wordWrap: 'off',
+			wordWrap: 'on',
 			wordWrapColumn: 80,
 			wordWrapMinified: true,
 			wrappingIndent: 'same',
@@ -109,7 +109,7 @@ class ConfigClass implements IConfiguration {
 			renderWhitespace: 'none',
 			renderControlCharacters: false,
 			renderIndentGuides: false,
-			renderLineHighlight: 'line',
+			renderLineHighlight: 'none',
 			useTabStops: true,
 			matchBrackets: true,
 			dragAndDrop: false,
@@ -121,7 +121,7 @@ class ConfigClass implements IConfiguration {
 			fontSize: (
 				platform.isMacintosh ? 12 : 14
 			),
-			lineHeight: 0
+			lineHeight: 21
 		};
 	}
 }

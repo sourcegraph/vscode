@@ -65,6 +65,8 @@ export class MockContextKeyService implements IContextKeyService {
 export class MockKeybindingService implements IKeybindingService {
 	public _serviceBrand: any;
 
+	public dispose(): void { }
+
 	public get onDidUpdateKeybindings(): Event<IKeybindingEvent> {
 		return Event.None;
 	}

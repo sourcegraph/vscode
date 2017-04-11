@@ -8,6 +8,7 @@ import { Registry } from 'vs/platform/platform';
 import nls = require('vs/nls');
 import URI from 'vs/base/common/uri';
 import { Action, IAction } from 'vs/base/common/actions';
+import { IUntitledEditorService } from 'vs/workbench/services/untitled/common/untitledEditorService';
 import { IEditorQuickOpenEntry, IQuickOpenRegistry, Extensions as QuickOpenExtensions, QuickOpenHandlerDescriptor } from 'vs/workbench/browser/quickopen';
 import { StatusbarItemDescriptor, StatusbarAlignment, IStatusbarRegistry, Extensions as StatusExtensions } from 'vs/workbench/browser/parts/statusbar/statusbar';
 import { EditorDescriptor } from 'vs/workbench/browser/parts/editor/baseEditor';
@@ -29,11 +30,10 @@ import { SyncActionDescriptor } from 'vs/platform/actions/common/actions';
 import { SyncDescriptor } from 'vs/platform/instantiation/common/descriptors';
 import { KeyMod, KeyChord, KeyCode } from 'vs/base/common/keyCodes';
 import {
-	CloseEditorsInGroupAction, CloseEditorsInOtherGroupsAction, CloseAllEditorsAction, MoveGroupLeftAction, MoveGroupRightAction, SplitEditorAction, JoinTwoGroupsAction, KeepEditorAction, CloseOtherEditorsInGroupAction, OpenToSideAction, RevertAndCloseEditorAction,
+	CloseEditorsInGroupAction, CloseEditorsInOtherGroupsAction, CloseAllEditorsAction, MoveGroupLeftAction, MoveGroupRightAction, SplitEditorAction, JoinTwoGroupsAction, KeepEditorAction, CloseOtherEditorsInGroupAction, RevertAndCloseEditorAction,
 	NavigateBetweenGroupsAction, FocusActiveGroupAction, FocusFirstGroupAction, FocusSecondGroupAction, FocusThirdGroupAction, EvenGroupWidthsAction, MaximizeGroupAction, MinimizeOtherGroupsAction, FocusPreviousGroup, FocusNextGroup, ShowEditorsInGroupOneAction,
-	toEditorQuickOpenEntry, CloseLeftEditorsInGroupAction, CloseRightEditorsInGroupAction, OpenNextEditor, OpenPreviousEditor, NavigateBackwardsAction, NavigateForwardAction, ReopenClosedEditorAction, OpenPreviousRecentlyUsedEditorInGroupAction, NAVIGATE_IN_GROUP_ONE_PREFIX,
-	OpenPreviousEditorFromHistoryAction, ShowAllEditorsAction, NAVIGATE_ALL_EDITORS_GROUP_PREFIX, ClearEditorHistoryAction, ShowEditorsInGroupTwoAction, MoveEditorRightInGroupAction, OpenNextEditorInGroup, OpenPreviousEditorInGroup,
-	NAVIGATE_IN_GROUP_TWO_PREFIX, ShowEditorsInGroupThreeAction, NAVIGATE_IN_GROUP_THREE_PREFIX, FocusLastEditorInStackAction, OpenNextRecentlyUsedEditorInGroupAction, MoveEditorToPreviousGroupAction, MoveEditorToNextGroupAction, MoveEditorLeftInGroupAction, ClearRecentFilesAction
+	toEditorQuickOpenEntry, CloseLeftEditorsInGroupAction, CloseRightEditorsInGroupAction, OpenNextEditor, OpenPreviousEditor, NavigateBackwardsAction, NavigateForwardAction, ReopenClosedEditorAction, OpenPreviousRecentlyUsedEditorInGroupAction,
+	OpenPreviousEditorFromHistoryAction, ShowAllEditorsAction, ClearEditorHistoryAction, ShowEditorsInGroupTwoAction, MoveEditorRightInGroupAction, OpenNextEditorInGroup, OpenPreviousEditorInGroup, ShowEditorsInGroupThreeAction, FocusLastEditorInStackAction, OpenNextRecentlyUsedEditorInGroupAction, MoveEditorToPreviousGroupAction, MoveEditorToNextGroupAction, MoveEditorLeftInGroupAction, ClearRecentFilesAction
 } from 'vs/workbench/browser/parts/editor/editorActions';
 import * as editorCommands from 'vs/workbench/browser/parts/editor/editorCommands';
 import { IWorkbenchEditorService } from "vs/workbench/services/editor/common/editorService";
@@ -215,8 +215,6 @@ registry.registerWorkbenchAction(new SyncActionDescriptor(ChangeEOLAction, Chang
 registry.registerWorkbenchAction(new SyncActionDescriptor(ChangeEncodingAction, ChangeEncodingAction.ID, ChangeEncodingAction.LABEL), 'Change File Encoding');
 
 export class QuickOpenActionContributor extends ActionBarContributor {
-	private openToSideActionInstance: OpenToSideAction;
-
 	constructor( @IInstantiationService private instantiationService: IInstantiationService) {
 		super();
 	}
@@ -228,20 +226,7 @@ export class QuickOpenActionContributor extends ActionBarContributor {
 	}
 
 	public getActions(context: any): IAction[] {
-		const actions: Action[] = [];
-
-		const entry = this.getEntry(context);
-		if (entry) {
-			if (!this.openToSideActionInstance) {
-				this.openToSideActionInstance = this.instantiationService.createInstance(OpenToSideAction);
-			} else {
-				this.openToSideActionInstance.updateClass();
-			}
-
-			actions.push(this.openToSideActionInstance);
-		}
-
-		return actions;
+		return [];
 	}
 
 	private getEntry(context: any): IEditorQuickOpenEntry {
@@ -255,64 +240,6 @@ export class QuickOpenActionContributor extends ActionBarContributor {
 
 const actionBarRegistry = Registry.as<IActionBarRegistry>(ActionBarExtensions.Actionbar);
 actionBarRegistry.registerActionBarContributor(Scope.VIEWER, QuickOpenActionContributor);
-
-Registry.as<IQuickOpenRegistry>(QuickOpenExtensions.Quickopen).registerQuickOpenHandler(
-	new QuickOpenHandlerDescriptor(
-		'vs/workbench/browser/parts/editor/editorPicker',
-		'GroupOnePicker',
-		NAVIGATE_IN_GROUP_ONE_PREFIX,
-		[
-			{
-				prefix: NAVIGATE_IN_GROUP_ONE_PREFIX,
-				needsEditor: false,
-				description: nls.localize('groupOnePicker', "Show Editors in First Group")
-			},
-			{
-				prefix: NAVIGATE_IN_GROUP_TWO_PREFIX,
-				needsEditor: false,
-				description: nls.localize('groupTwoPicker', "Show Editors in Second Group")
-			},
-			{
-				prefix: NAVIGATE_IN_GROUP_THREE_PREFIX,
-				needsEditor: false,
-				description: nls.localize('groupThreePicker', "Show Editors in Third Group")
-			}
-		]
-	)
-);
-
-Registry.as<IQuickOpenRegistry>(QuickOpenExtensions.Quickopen).registerQuickOpenHandler(
-	new QuickOpenHandlerDescriptor(
-		'vs/workbench/browser/parts/editor/editorPicker',
-		'GroupTwoPicker',
-		NAVIGATE_IN_GROUP_TWO_PREFIX,
-		[]
-	)
-);
-
-Registry.as<IQuickOpenRegistry>(QuickOpenExtensions.Quickopen).registerQuickOpenHandler(
-	new QuickOpenHandlerDescriptor(
-		'vs/workbench/browser/parts/editor/editorPicker',
-		'GroupThreePicker',
-		NAVIGATE_IN_GROUP_THREE_PREFIX,
-		[]
-	)
-);
-
-Registry.as<IQuickOpenRegistry>(QuickOpenExtensions.Quickopen).registerQuickOpenHandler(
-	new QuickOpenHandlerDescriptor(
-		'vs/workbench/browser/parts/editor/editorPicker',
-		'AllEditorsPicker',
-		NAVIGATE_ALL_EDITORS_GROUP_PREFIX,
-		[
-			{
-				prefix: NAVIGATE_ALL_EDITORS_GROUP_PREFIX,
-				needsEditor: false,
-				description: nls.localize('allEditorsPicker', "Show All Opened Editors")
-			}
-		]
-	)
-);
 
 // Register Editor Actions
 const category = nls.localize('view', "View");

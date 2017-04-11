@@ -16,7 +16,7 @@ import { GotoSymbolAction, GOTO_SYMBOL_PREFIX, SCOPE_PREFIX } from 'vs/workbench
 import { ShowAllCommandsAction, ALL_COMMANDS_PREFIX } from 'vs/workbench/parts/quickopen/browser/commandsHandler';
 import { GotoLineAction, GOTO_LINE_PREFIX } from 'vs/workbench/parts/quickopen/browser/gotoLineHandler';
 import { HELP_PREFIX } from 'vs/workbench/parts/quickopen/browser/helpHandler';
-import { VIEW_PICKER_PREFIX, OpenViewPickerAction, QuickOpenViewPickerAction } from 'vs/workbench/parts/quickopen/browser/viewPickerHandler';
+import { OpenViewPickerAction, QuickOpenViewPickerAction } from 'vs/workbench/parts/quickopen/browser/viewPickerHandler';
 
 // Register Actions
 let registry = <IWorkbenchActionRegistry>Registry.as(ActionExtensions.WorkbenchActions);
@@ -41,14 +41,16 @@ registry.registerWorkbenchAction(new SyncActionDescriptor(QuickOpenViewPickerAct
 
 // Register Quick Open Handler
 
-Registry.as<IQuickOpenRegistry>(QuickOpenExtensions.Quickopen).registerQuickOpenHandler(
-	new QuickOpenHandlerDescriptor(
-		'vs/workbench/parts/quickopen/browser/commandsHandler',
-		'CommandsHandler',
-		ALL_COMMANDS_PREFIX,
-		nls.localize('commandsHandlerDescriptionDefault', "Show and Run Commands")
-	)
-);
+if (localStorage.getItem('quickOpenCommands') !== null) {
+	Registry.as<IQuickOpenRegistry>(QuickOpenExtensions.Quickopen).registerQuickOpenHandler(
+		new QuickOpenHandlerDescriptor(
+			'vs/workbench/parts/quickopen/browser/commandsHandler',
+			'CommandsHandler',
+			ALL_COMMANDS_PREFIX,
+			nls.localize('commandsHandlerDescriptionDefault', "Show and Run Commands")
+		)
+	);
+}
 
 Registry.as<IQuickOpenRegistry>(QuickOpenExtensions.Quickopen).registerQuickOpenHandler(
 	new QuickOpenHandlerDescriptor(
@@ -91,20 +93,5 @@ Registry.as<IQuickOpenRegistry>(QuickOpenExtensions.Quickopen).registerQuickOpen
 		'HelpHandler',
 		HELP_PREFIX,
 		nls.localize('helpDescription', "Show Help")
-	)
-);
-
-Registry.as<IQuickOpenRegistry>(QuickOpenExtensions.Quickopen).registerQuickOpenHandler(
-	new QuickOpenHandlerDescriptor(
-		'vs/workbench/parts/quickopen/browser/viewPickerHandler',
-		'ViewPickerHandler',
-		VIEW_PICKER_PREFIX,
-		[
-			{
-				prefix: VIEW_PICKER_PREFIX,
-				needsEditor: false,
-				description: nls.localize('viewPickerDescription', "Open View")
-			}
-		]
 	)
 );

@@ -299,6 +299,12 @@ export interface ITextFileService extends IDisposable {
 	revertAll(resources?: URI[], options?: IRevertOptions): TPromise<ITextFileOperationResult>;
 
 	/**
+	 * Delete the provided resource
+	 * @param resource the resource to delete
+	 */
+	delete(resource: URI): TPromise<void>;
+
+	/**
 	 * Brings up the confirm dialog to either save, don't save or cancel.
 	 *
 	 * @param resources the resources of the files to ask for confirmation or null if

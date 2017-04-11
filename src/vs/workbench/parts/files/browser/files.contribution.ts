@@ -185,7 +185,7 @@ configurationRegistry.registerConfiguration({
 		'files.exclude': {
 			'type': 'object',
 			'description': nls.localize('exclude', "Configure glob patterns for excluding files and folders."),
-			'default': { '**/.git': true, '**/.svn': true, '**/.hg': true, '**/CVS': true, '**/.DS_Store': true },
+			'default': { '**/.git': true, '**/.svn': true, '**/.hg': true, '**/CVS': true, '**/.DS_Store': true, 'node_modules': true, 'bower_components': true, 'vendor': true, 'dist': true, 'out': true, 'Godeps': true, 'third_party': true, },
 			'additionalProperties': {
 				'anyOf': [
 					{
@@ -227,7 +227,7 @@ configurationRegistry.registerConfiguration({
 				'\n',
 				'\r\n'
 			],
-			'default': (platform.isLinux || platform.isMacintosh) ? '\n' : '\r\n',
+			'default': '\n',
 			'description': nls.localize('eol', "The default end of line character."),
 		},
 		'files.trimTrailingWhitespace': {
@@ -306,7 +306,7 @@ configurationRegistry.registerConfiguration({
 		'explorer.openEditors.visible': {
 			'type': 'number',
 			'description': nls.localize({ key: 'openEditorsVisible', comment: ['Open is an adjective'] }, "Number of editors shown in the Open Editors pane. Set it to 0 to hide the pane."),
-			'default': 9
+			'default': 0
 		},
 		'explorer.openEditors.dynamicHeight': {
 			'type': 'boolean',
@@ -321,7 +321,7 @@ configurationRegistry.registerConfiguration({
 		'explorer.enableDragAndDrop': {
 			'type': 'boolean',
 			'description': nls.localize('enableDragAndDrop', "Controls if the explorer should allow to move files and folders via drag and drop."),
-			'default': true
+			'default': false
 		}
 	}
 });
