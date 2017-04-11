@@ -119,8 +119,8 @@ export class MainThreadWorkspace extends MainThreadWorkspaceShape {
 		return TPromise.as(void 0);
 	}
 
-	$setWorkspaceState(state?: IWorkspaceRevState): TPromise<void> {
-		this._contextService.setWorkspace(assign({}, this._contextService.getWorkspace(), { revState: state }));
+	$setWorkspaceState(workspace: URI, state?: IWorkspaceRevState): TPromise<void> {
+		this._contextService.registerWorkspace({ resource: workspace, revState: state });
 		return TPromise.as(void 0);
 	}
 }

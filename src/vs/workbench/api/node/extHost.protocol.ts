@@ -252,7 +252,7 @@ export abstract class MainThreadWorkspaceShape {
 	$saveAll(includeUntitled?: boolean): Thenable<boolean> { throw ni(); }
 	$applyWorkspaceEdit(edits: IResourceEdit[]): TPromise<boolean> { throw ni(); }
 	$setWorkspace(resource: URI, state?: { commitID?: string, branch?: string, zapRef?: string }): TPromise<any> { throw ni(); }
-	$setWorkspaceState(state?: { commitID?: string, branch?: string, zapRef?: string }): TPromise<any> { throw ni(); }
+	$setWorkspaceState(workspace: URI, state?: { commitID?: string, branch?: string, zapRef?: string }): TPromise<any> { throw ni(); }
 }
 
 export abstract class MainProcessExtensionServiceShape {

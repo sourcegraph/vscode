@@ -415,8 +415,8 @@ export function createApiFactory(initData: IInitData, threadService: IThreadServ
 			setWorkspace: (resource, state) => {
 				return extHostWorkspace.$setWorkspace(URI.parse(resource.toString()), state);
 			},
-			setWorkspaceState: (state) => {
-				return extHostWorkspace.$setWorkspaceState(state);
+			setWorkspaceState: (workspace, state) => {
+				return extHostWorkspace.$setWorkspaceState(URI.parse(workspace.toString()), state);
 			},
 			onDidUpdateWorkspace: (listener, thisArgs?, disposables?) => {
 				return extHostWorkspace.onDidUpdateWorkspace(listener, thisArgs, disposables);
