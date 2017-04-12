@@ -15,12 +15,12 @@ import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/edi
 import { Position } from 'vs/platform/editor/common/editor';
 import { onUnexpectedError } from 'vs/base/common/errors';
 import { localize } from 'vs/nls';
-import { Schemas } from 'vs/base/common/network';
+import { Schemas, xhr } from 'vs/base/common/network';
 import { ILifecycleService } from 'vs/platform/lifecycle/common/lifecycle';
 import { IDisposable, dispose } from 'vs/base/common/lifecycle';
 import { FindInput } from 'vs/base/browser/ui/findinput/findInput';
-import { QueryType, ISearchQuery } from 'vs/platform/search/common/search';
-import { ISearchWorkbenchService, FileMatch } from 'vs/workbench/parts/search/common/searchModel';
+import { QueryType, ISearchQuery, IFileMatch, ILineMatch } from 'vs/platform/search/common/search';
+import { ISearchWorkbenchService } from 'vs/workbench/parts/search/common/searchModel';
 import { FileMatchView } from 'vs/workbench/parts/search/page/browser/fileMatchView';
 import { Action } from 'vs/base/common/actions';
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
@@ -28,6 +28,8 @@ import * as dom from 'vs/base/browser/dom';
 import { IKeyboardEvent } from 'vs/base/browser/keyboardEvent';
 import { KeyCode } from 'vs/base/common/keyCodes';
 import { TPromise } from 'vs/base/common/winjs.base';
+import { ICodeEditorService } from 'vs/editor/common/services/codeEditorService';
+import { IPartService } from 'vs/workbench/services/part/common/partService';
 
 export class SearchPageAction extends Action {
 
@@ -49,11 +51,18 @@ export class SearchPageAction extends Action {
 	};
 }
 
+interface SearchResult {
+	hasNextPage: boolean;
+	results: {
+		resource: string;
+		lineMatches: ILineMatch[];
+	}[];
+}
+
 class SearchPage {
 
 	private disposables: IDisposable[] = [];
 	private findInput: FindInput;
-	private fileMatches: FileMatch[];
 	private resultContainer: Builder;
 
 	constructor(
@@ -62,6 +71,9 @@ class SearchPage {
 		@ISearchWorkbenchService private searchService: ISearchWorkbenchService,
 		@ILifecycleService private lifecycleService: ILifecycleService,
 		@IWorkspaceContextService private contextService: IWorkspaceContextService,
+		@ICodeEditorService private codeEditorService: ICodeEditorService,
+		@IPartService private partService: IPartService,
+
 	) {
 		this.disposables.push(lifecycleService.onShutdown(() => this.dispose()));
 		this.create();
@@ -114,27 +126,29 @@ class SearchPage {
 		this.search(query);
 	}
 
-	search(query: ISearchQuery): void {
-		this.searchService.searchModel.cancelSearch();
-		this.renderLoading();
-		this.searchService.searchModel.search(query)
-			.done(this.onComplete, this.onError);
+	searchComplete(data: SearchResult): void {
+		this.renderResults(data.results.map(fm => {
+			return {
+				resource: URI.parse(fm.resource),
+				lineMatches: fm.lineMatches,
+			};
+		}));
 	}
 
-	onComplete = () => {
-		this.fileMatches = this.searchService.searchModel.searchResult.matches();
-		this.renderResults();
-	}
-
-	renderResults(): void {
+	renderResults(fileMatches: IFileMatch[]): void {
 		dom.clearNode(this.resultContainer.getHTMLElement());
 		this.resultContainer.div({}, parent => {
-			this.fileMatches.forEach(fileMatch => {
+			fileMatches.forEach(fileMatch => {
 				parent.div({}, div => {
 					this.instantiationService.createInstance(FileMatchView, div, fileMatch);
 				});
 			});
 		});
+		this.layout();
+	}
+
+	layout(): void {
+		this.partService.layout();
 	}
 
 	renderLoading(): void {
@@ -154,5 +168,64 @@ class SearchPage {
 
 	dispose(): void {
 		this.disposables = dispose(this.disposables);
+	}
+
+	search(query: ISearchQuery): void {
+		const body = this.getQueryBody(query);
+		xhr({
+			url: 'https://sourcegraph.com/.api/graphql',
+			type: 'POST',
+			data: JSON.stringify(body),
+			responseType: 'json',
+		}).then(resp => {
+			console.log(resp);
+			debugger;
+			const data = resp.response.data.root.searchRepos;
+			this.searchComplete(data);
+		}, (err) => {
+			console.error(err);
+		});
+	}
+
+	getQueryBody(query: ISearchQuery): any {
+		return {
+			query: `query SearchText(
+				$pattern: String!,
+				$maxResults: Int!,
+				$isRegExp: Boolean!,
+				$isWordMatch: Boolean!,
+				$repositories: [String!]!,
+				$isCaseSensitive: Boolean!,
+			) {
+				root {
+					searchRepos(
+						repositories: $repositories,
+						query: {
+							pattern: $pattern,
+							isRegExp: $isRegExp,
+							maxResults: $maxResults,
+							isWordMatch: $isWordMatch,
+							isCaseSensitive: $isCaseSensitive,
+					}) {
+						hasNextPage
+						results {
+							resource
+							lineMatches {
+								preview
+								lineNumber
+								offsetAndLengths
+							}
+						}
+					}
+				}
+			}`,
+			variables: {
+				...query.contentPattern,
+				isMultiline: false,
+				repositories: ['github.com/kubernetes/kubernetes'],
+				maxResults: 500,
+			},
+			operationName: 'SearchText',
+		};
 	}
 }
