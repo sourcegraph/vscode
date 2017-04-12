@@ -123,6 +123,7 @@ class SearchPage {
 			this.renderEmpty();
 			return;
 		}
+		this.renderLoading();
 		this.search(query);
 	}
 
@@ -178,8 +179,6 @@ class SearchPage {
 			data: JSON.stringify(body),
 			responseType: 'json',
 		}).then(resp => {
-			console.log(resp);
-			debugger;
 			const data = resp.response.data.root.searchRepos;
 			this.searchComplete(data);
 		}, (err) => {
