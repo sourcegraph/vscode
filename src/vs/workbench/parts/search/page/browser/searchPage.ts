@@ -30,6 +30,7 @@ import { KeyCode } from 'vs/base/common/keyCodes';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { ICodeEditorService } from 'vs/editor/common/services/codeEditorService';
 import { IPartService } from 'vs/workbench/services/part/common/partService';
+import { RepoFilter } from 'vs/workbench/parts/search/page/browser/searchFilters';
 
 export class SearchPageAction extends Action {
 
@@ -59,11 +60,17 @@ export interface SearchResult {
 	}[];
 }
 
+export interface IRepoFilter {
+	onChange(cb: (repos: string[]) => void): void;
+}
+
 export class SearchPage {
 
-	private disposables: IDisposable[] = [];
-	private findInput: FindInput;
-	private resultContainer: Builder;
+	disposables: IDisposable[] = [];
+	findInput: FindInput;
+	resultContainer: Builder;
+	repoFilter: IRepoFilter;
+	reposToSearch: string[];
 
 	constructor(
 		@IWorkbenchEditorService private editorService: IWorkbenchEditorService,
@@ -90,16 +97,54 @@ export class SearchPage {
 			.then(null, onUnexpectedError);
 	}
 
-	render(container: HTMLElement): void {
-		$(container).div({ style: { textAlign: 'center', marginBottom: '50px' } }, tip => {
-			tip.innerHtml('Tip: Continue typing terms separated by spaces to refine your search');
+	render(parent: HTMLElement): void {
+		$(parent).div({}, container => {
+			this.findInput = new FindInput(container.getHTMLElement(), null, { width: 798, label: '' });
+			this.findInput.onDidOptionChange(this.startSearch);
+			this.findInput.onKeyDown(this.keyDown);
+			this.renderResultContainer(container);
 		});
-		this.findInput = new FindInput(container, null, { width: 798, label: '' });
-		this.findInput.onDidOptionChange(this.startSearch);
-		this.findInput.onKeyDown(this.keyDown);
-		$(container).div({}, c => {
-			this.resultContainer = c;
+	}
+
+	renderResultContainer(parent: Builder): void {
+		parent.div({
+			style: {
+				display: 'flex',
+				justifyContent: 'space-between',
+				overflow: 'scroll'
+			}
+		}, results => {
+			results.div({
+				style: {
+					width: '600px'
+				}
+			}, c => {
+				this.resultContainer = c;
+			});
+			results.div({
+				style: {
+					width: '200px'
+				}
+			}, refine => {
+				refine.safeInnerHtml('Refine your search:');
+				refine.div({}, repoFilter => {
+					this.renderRepoFilter(repoFilter);
+				});
+				// refine.div({}, langFilter => {
+				// 	this.renderLangFilter(langFilter);
+				// });
+			});
 		});
+	}
+
+	renderRepoFilter(parent: Builder): void {
+		this.repoFilter = new RepoFilter(parent);
+		this.repoFilter.onChange(this.reposChanged);
+	}
+
+	reposChanged(reposToSearch: string[]): void {
+		this.reposToSearch = reposToSearch;
+		this.startSearch();
 	}
 
 	keyDown = (e: IKeyboardEvent) => {
