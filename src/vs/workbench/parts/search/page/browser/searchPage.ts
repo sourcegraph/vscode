@@ -59,7 +59,7 @@ interface SearchResult {
 	}[];
 }
 
-class SearchPage {
+export class SearchPage {
 
 	private disposables: IDisposable[] = [];
 	private findInput: FindInput;
