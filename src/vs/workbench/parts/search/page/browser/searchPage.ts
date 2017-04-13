@@ -51,7 +51,7 @@ export class SearchPageAction extends Action {
 	};
 }
 
-interface SearchResult {
+export interface SearchResult {
 	hasNextPage: boolean;
 	results: {
 		resource: string;
