@@ -30,7 +30,7 @@ import { KeyCode } from 'vs/base/common/keyCodes';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { ICodeEditorService } from 'vs/editor/common/services/codeEditorService';
 import { IPartService } from 'vs/workbench/services/part/common/partService';
-import { RepoFilter } from 'vs/workbench/parts/search/page/browser/searchFilters';
+import { RepoFilteredChecklist, IFilteredChecklist } from 'vs/workbench/parts/search/page/browser/searchFilters';
 
 export class SearchPageAction extends Action {
 
@@ -69,7 +69,7 @@ export class SearchPage {
 	disposables: IDisposable[] = [];
 	findInput: FindInput;
 	resultContainer: Builder;
-	repoFilter: IRepoFilter;
+	repoFilter: IFilteredChecklist;
 	reposToSearch: string[];
 
 	constructor(
@@ -138,8 +138,8 @@ export class SearchPage {
 	}
 
 	renderRepoFilter(parent: Builder): void {
-		this.repoFilter = new RepoFilter(parent);
-		this.repoFilter.onChange(this.reposChanged);
+		this.repoFilter = new RepoFilteredChecklist(parent);
+		this.repoFilter.selectionChanged(this.reposChanged);
 	}
 
 	reposChanged(reposToSearch: string[]): void {
