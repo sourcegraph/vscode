@@ -30,7 +30,7 @@ import { KeyCode } from 'vs/base/common/keyCodes';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { ICodeEditorService } from 'vs/editor/common/services/codeEditorService';
 import { IPartService } from 'vs/workbench/services/part/common/partService';
-import { RepoFilteredChecklist, IFilteredChecklist } from 'vs/workbench/parts/search/page/browser/searchFilters';
+import { RepoSelector, IFilteredChecklist, LangSelector } from 'vs/workbench/parts/search/page/browser/searchFilters';
 
 export class SearchPageAction extends Action {
 
@@ -127,22 +127,22 @@ export class SearchPage {
 				}
 			}, refine => {
 				refine.safeInnerHtml('Refine your search:');
-				refine.div({}, repoFilter => {
-					this.renderRepoFilter(repoFilter);
+				refine.div({}, filter => {
+					const repoFilter = new RepoSelector(filter);
+					repoFilter.selectionChanged(this.reposChanged);
 				});
-				// refine.div({}, langFilter => {
-				// 	this.renderLangFilter(langFilter);
-				// });
+				refine.div({}, filter => {
+					const langFilter = new LangSelector(filter);
+					langFilter.selectionChanged(this.langsChanged);
+				});
 			});
 		});
 	}
 
-	renderRepoFilter(parent: Builder): void {
-		this.repoFilter = new RepoFilteredChecklist(parent);
-		this.repoFilter.selectionChanged(this.reposChanged);
+	langsChanged = (langsToSearch: string[]) => {
 	}
 
-	reposChanged(reposToSearch: string[]): void {
+	reposChanged = (reposToSearch: string[]) => {
 		this.reposToSearch = reposToSearch;
 		this.startSearch();
 	}
