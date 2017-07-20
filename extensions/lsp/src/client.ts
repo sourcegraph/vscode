@@ -10,7 +10,7 @@ import { v4 as uuidV4 } from 'uuid';
 import { MessageTrace, webSocketStreamOpener } from './connection';
 import { Language, getLanguage, getLanguageForResource, isEnabled } from './languages';
 import { registerMultiWorkspaceProviders } from './multiWorkspace';
-// import { registerFuzzyDefinitionProvider } from './fuzzyDefinition';
+import { registerFuzzyDefinitionProvider } from './fuzzyDefinition';
 
 export function activateLSP(): vscode.Disposable {
 	const toDispose: vscode.Disposable[] = []; // things that should live for this extension's lifetime
@@ -104,8 +104,7 @@ function activateForLanguage(lang: Language, toDispose: vscode.Disposable[]): vo
 	toDispose.push(client.start());
 
 	toDispose.push(registerMultiWorkspaceProviders(lang.mode, lang.allLanguageIds, client));
-	// TODO(beyang): re-enable this after ensuring this doesn't pollute authentic j2d results
-	// toDispose.push(registerFuzzyDefinitionProvider(lang.mode, client));
+	toDispose.push(registerFuzzyDefinitionProvider(lang.mode, client));
 }
 
 const REUSE_BACKEND_LANG_SERVERS = true;
