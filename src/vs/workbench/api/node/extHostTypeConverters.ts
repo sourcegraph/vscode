@@ -242,8 +242,9 @@ export function toSymbolInformation(bearing: modes.SymbolInformation): types.Sym
 
 
 export const location = {
-	from(value: vscode.Location): modes.Location {
+	from(value: vscode.ScoredLocation): modes.ScoredLocation {
 		return {
+			score: value.score,
 			range: value.range && fromRange(value.range),
 			uri: <URI>value.uri
 		};

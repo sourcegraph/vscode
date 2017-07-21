@@ -10,21 +10,28 @@ import { TPromise } from 'vs/base/common/winjs.base';
 import { IReadOnlyModel } from 'vs/editor/common/editorCommon';
 import { CommonEditorRegistry } from 'vs/editor/common/editorCommonExtensions';
 import LanguageFeatureRegistry from 'vs/editor/common/modes/languageFeatureRegistry';
-import { DefinitionProviderRegistry, ImplementationProviderRegistry, TypeDefinitionProviderRegistry, Location } from 'vs/editor/common/modes';
+import { DefinitionProviderRegistry, ImplementationProviderRegistry, TypeDefinitionProviderRegistry, Location, ScoredLocation } from 'vs/editor/common/modes';
 import { CancellationToken } from 'vs/base/common/cancellation';
 import { asWinJsPromise } from 'vs/base/common/async';
 import { Position } from 'vs/editor/common/core/position';
 
-function outputResults(promises: TPromise<Location | Location[]>[]) {
-	return TPromise.join(promises).then(allReferences => {
-		let result: Location[] = [];
-		for (let references of allReferences) {
-			if (Array.isArray(references)) {
-				result.push(...references);
-			} else if (references) {
-				result.push(references);
+function outputResults(promises: TPromise<ScoredLocation | ScoredLocation[]>[]) {
+	return TPromise.join(promises).then(allDefinitions => {
+		let result: ScoredLocation[] = [];
+		for (let definitions of allDefinitions) {
+			if (Array.isArray(definitions)) {
+				result.push(...definitions);
+			} else if (definitions) {
+				result.push(definitions);
 			}
 		}
+
+		// If there are exact results, filter out fuzzy results.
+		const exactResult = result.filter(location => location.score === undefined || location.score >= 1);
+		if (exactResult.length > 0) {
+			return exactResult;
+		}
+
 		return result;
 	});
 }
@@ -33,7 +40,7 @@ function getDefinitions<T>(
 	model: IReadOnlyModel,
 	position: Position,
 	registry: LanguageFeatureRegistry<T>,
-	provide: (provider: T, model: IReadOnlyModel, position: Position, token: CancellationToken) => Location | Location[] | Thenable<Location | Location[]>
+	provide: (provider: T, model: IReadOnlyModel, position: Position, token: CancellationToken) => ScoredLocation | ScoredLocation[] | Thenable<ScoredLocation | ScoredLocation[]>
 ): TPromise<Location[]> {
 	const provider = registry.ordered(model);
 

@@ -1759,11 +1759,23 @@ declare module 'vscode' {
 	}
 
 	/**
+	 * A location with a confidence score attached to it.
+	 */
+	interface ScoredLocation extends Location {
+		/**
+		 * score is a number in the range [0, 1]. A score of 1 indicates
+		 * we have 100% confidence in the location. If score is not set,
+		 * it should implicitly be assumed to be 1.
+		 */
+		score?: number;
+	}
+
+	/**
 	 * The definition of a symbol represented as one or many [locations](#Location).
 	 * For most programming languages there is only one location at which a symbol is
 	 * defined.
 	 */
-	export type Definition = Location | Location[];
+	export type Definition = ScoredLocation | ScoredLocation[];
 
 	/**
 	 * The definition provider interface defines the contract between extensions and

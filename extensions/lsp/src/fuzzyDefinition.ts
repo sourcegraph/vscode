@@ -55,7 +55,10 @@ class FuzzyDefinitionProvider implements vscode.DefinitionProvider {
 			query: word
 		}).then((results: SymbolInformation[]) => {
 			return results.filter(r => r.name === word)
-				.map(r => this.client.protocol2CodeConverter.asLocation(r.location));
+				.map(r => {
+					const loc = this.client.protocol2CodeConverter.asLocation(r.location);
+					return { ...loc, score: 0.5 };
+				});
 		});
 	}
 }
