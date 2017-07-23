@@ -6,7 +6,7 @@ if [ ! -f pat ]; then
 fi
 
 docker run \
-  -e VSTS_ACCOUNT="monacotools" \
+  -e VSTS_ACCOUNT="${VSTS_ACCOUNT-monacotools}" \
   -e VSTS_TOKEN="$(cat pat)" \
   -e VSTS_AGENT="tb-lnx-x64-local" \
   -e VSTS_POOL="linux-x64" \

@@ -177,20 +177,24 @@ async function publish(commit: string, quality: string, platform: string, type: 
 	const blobService = azure.createBlobService(storageAccount, process.env['AZURE_STORAGE_ACCESS_KEY_2'])
 		.withFilter(new azure.ExponentialRetryPolicyFilter(20));
 
-	const mooncakeBlobService = azure.createBlobService(storageAccount, process.env['MOONCAKE_STORAGE_ACCESS_KEY'], `${storageAccount}.blob.core.chinacloudapi.cn`)
-		.withFilter(new azure.ExponentialRetryPolicyFilter(20));
+	let mooncakeBlobService: azure.BlobService | undefined;
+	const useMooncake = !!process.env['MOONCAKE_STORAGE_ACCESS_KEY'];
+	if (useMooncake) {
+		mooncakeBlobService = azure.createBlobService(storageAccount, process.env['MOONCAKE_STORAGE_ACCESS_KEY'], `${storageAccount}.blob.core.chinacloudapi.cn`)
+			.withFilter(new azure.ExponentialRetryPolicyFilter(20));
 
-	// mooncake is fussy and far away, this is needed!
-	mooncakeBlobService.defaultClientRequestTimeoutInMs = 10 * 60 * 1000;
+		// mooncake is fussy and far away, this is needed!
+		mooncakeBlobService.defaultClientRequestTimeoutInMs = 10 * 60 * 1000;
+	}
 
 	await Promise.all([
 		assertContainer(blobService, quality),
-		assertContainer(mooncakeBlobService, quality)
+		useMooncake ? assertContainer(mooncakeBlobService, quality) : Promise.resolve(void 0)
 	]);
 
 	const [blobExists, moooncakeBlobExists] = await Promise.all([
 		doesAssetExist(blobService, quality, blobName),
-		doesAssetExist(mooncakeBlobService, quality, blobName)
+		useMooncake ? doesAssetExist(mooncakeBlobService, quality, blobName) : Promise.resolve(false)
 	]);
 
 	const promises = [];
@@ -199,7 +203,7 @@ async function publish(commit: string, quality: string, platform: string, type: 
 		promises.push(uploadBlob(blobService, quality, blobName, file));
 	}
 
-	if (!moooncakeBlobExists) {
+	if (useMooncake && !moooncakeBlobExists) {
 		promises.push(uploadBlob(mooncakeBlobService, quality, blobName, file));
 	}
 
@@ -222,7 +226,7 @@ async function publish(commit: string, quality: string, platform: string, type: 
 		platform: platform,
 		type: type,
 		url: `${process.env['AZURE_CDN_URL']}/${quality}/${blobName}`,
-		mooncakeUrl: `${process.env['MOONCAKE_CDN_URL']}/${quality}/${blobName}`,
+		mooncakeUrl: useMooncake ? `${process.env['MOONCAKE_CDN_URL']}/${quality}/${blobName}` : undefined,
 		hash: sha1hash,
 		sha256hash
 	};
