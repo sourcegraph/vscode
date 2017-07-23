@@ -18,7 +18,7 @@ import { SyncActionDescriptor } from 'vs/platform/actions/common/actions';
 import { Separator } from 'vs/base/browser/ui/actionbar/actionbar';
 import { Scope, IActionBarRegistry, Extensions as ActionBarExtensions, ActionBarContributor } from 'vs/workbench/browser/actions';
 import { IWorkbenchActionRegistry, Extensions as ActionExtensions } from 'vs/workbench/common/actionRegistry';
-import { QuickOpenHandlerDescriptor, IQuickOpenRegistry, Extensions as QuickOpenExtensions } from 'vs/workbench/browser/quickopen';
+import { QuickOpenHandlerDescriptor, IQuickOpenRegistry, Extensions as QuickOpenExtensions, QuickOpenAction } from 'vs/workbench/browser/quickopen';
 import { KeybindingsRegistry } from 'vs/platform/keybinding/common/keybindingsRegistry';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
@@ -268,6 +268,17 @@ class ShowAllSymbolsAction extends Action {
 	}
 }
 
+const OPEN_REPO_ACTION_ID = 'workbench.action.openRepo';
+const OPEN_REPO_ACTION_LABEL = nls.localize('goToRepository', "Go to Repository...");
+const ALL_REPOS_PREFIX = 'repo ';
+
+class OpenRepoAction extends QuickOpenAction {
+
+	constructor(actionId: string, actionLabel: string, @IQuickOpenService quickOpenService: IQuickOpenService) {
+		super(actionId, actionLabel, ALL_REPOS_PREFIX, quickOpenService);
+	}
+}
+
 // Register Viewlet
 import 'vs/workbench/parts/search/browser/sourcegraphSearchViewlet'; // ensure it's in the synchronous bundle
 Registry.as<ViewletRegistry>(ViewletExtensions.Viewlets).registerViewlet(new ViewletDescriptor(
@@ -299,6 +310,7 @@ registry.registerWorkbenchAction(new SyncActionDescriptor(searchActions.ToggleWh
 registry.registerWorkbenchAction(new SyncActionDescriptor(searchActions.ToggleRegexAction, Constants.ToggleRegexActionId, '', ToggleRegexKeybinding, ContextKeyExpr.and(Constants.SearchViewletVisibleKey, Constants.SearchInputBoxFocussedKey)), '');
 
 registry.registerWorkbenchAction(new SyncActionDescriptor(ShowAllSymbolsAction, ACTION_ID, ACTION_LABEL, { primary: KeyMod.CtrlCmd | KeyCode.KEY_T }), 'Go to Symbol in Workspace...');
+registry.registerWorkbenchAction(new SyncActionDescriptor(OpenRepoAction, OPEN_REPO_ACTION_ID, OPEN_REPO_ACTION_LABEL, { primary: KeyMod.Alt | KeyCode.KEY_R }), 'Go to Repository...');
 
 // Contribute to Explorer Viewer
 const actionBarRegistry = Registry.as<IActionBarRegistry>(ActionBarExtensions.Actionbar);
@@ -326,6 +338,23 @@ Registry.as<IQuickOpenRegistry>(QuickOpenExtensions.Quickopen).registerQuickOpen
 				prefix: ALL_SYMBOLS_PREFIX,
 				needsEditor: false,
 				description: nls.localize('openSymbolDescriptionNormal', "Go to Symbol in Workspace")
+			}
+		]
+	)
+);
+
+import 'vs/workbench/parts/search/browser/openRepoHandler'; // ensure it's in the synchronous bundle
+Registry.as<IQuickOpenRegistry>(QuickOpenExtensions.Quickopen).registerQuickOpenHandler(
+	new QuickOpenHandlerDescriptor(
+		'vs/workbench/parts/search/browser/openRepoHandler',
+		'OpenAnyWorkspaceHandler',
+		ALL_REPOS_PREFIX,
+		'',
+		[
+			{
+				prefix: ALL_REPOS_PREFIX,
+				needsEditor: false,
+				description: nls.localize('openRepositoryDescriptionNormal', "Go to Repository")
 			}
 		]
 	)
