@@ -48,6 +48,11 @@ export class RequestService implements IRequestService {
 			options.headers = assign(options.headers || {}, { 'Proxy-Authorization': this.authorization });
 		}
 
+		// This header is required for the Sourcegraph API to allow
+		// the use of cookie auth (to protect against CSRF).
+		// TODO(sqs) find a cleaner way to apply this header
+		options.headers = assign(options.headers || {}, { 'X-Requested-By': '_' /* any value suffices */ });
+
 		return requestFn(options);
 	}
 }
