@@ -19,9 +19,13 @@ import { tokenizeToString } from 'vs/editor/common/modes/textToHtmlTokenizer';
 import { ICodeEditor } from 'vs/editor/browser/editorBrowser';
 import { getHover } from '../common/hover';
 import { HoverOperation, IHoverComputer } from './hoverOperation';
-import { ContentHoverWidget } from './hoverWidgets';
-import { textToMarkedString, MarkedString } from 'vs/base/common/htmlContent';
+import { SourcegraphHoverWidget } from './sourcegraphHoverWidget';
+import { textToMarkedString, markedStringsEquals, MarkedString } from 'vs/base/common/htmlContent';
 import { ModelDecorationOptions } from 'vs/editor/common/model/textModelWithDecorations';
+import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
+import { IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
+
+const loadingMessage = textToMarkedString(nls.localize('modesContentHover.loading', "Loading..."));
 
 class ModesContentComputer implements IHoverComputer<Hover[]> {
 
@@ -116,12 +120,12 @@ class ModesContentComputer implements IHoverComputer<Hover[]> {
 	private _getLoadingMessage(): Hover {
 		return {
 			range: this._range,
-			contents: [textToMarkedString(nls.localize('modesContentHover.loading', "Loading..."))]
+			contents: [loadingMessage]
 		};
 	}
 }
 
-export class ModesContentHoverWidget extends ContentHoverWidget {
+export class ModesContentHoverWidget extends SourcegraphHoverWidget {
 
 	static ID = 'editor.contrib.modesContentHoverWidget';
 
@@ -135,8 +139,8 @@ export class ModesContentHoverWidget extends ContentHoverWidget {
 	private _modeService: IModeService;
 	private _shouldFocus: boolean;
 
-	constructor(editor: ICodeEditor, openerService: IOpenerService, modeService: IModeService) {
-		super(ModesContentHoverWidget.ID, editor);
+	constructor(private telemetryService: ITelemetryService, editor: ICodeEditor, openerService: IOpenerService, modeService: IModeService, private contextKeyService: IContextKeyService) {
+		super(ModesContentHoverWidget.ID, editor, contextKeyService);
 
 		this._computer = new ModesContentComputer(this._editor);
 		this._highlightDecorations = [];
@@ -194,6 +198,9 @@ export class ModesContentHoverWidget extends ContentHoverWidget {
 					}
 				}
 				if (filteredMessages.length > 0) {
+					if (hoverContentsEquals(filteredMessages, this._messages)) {
+						return;
+					}
 					this._renderMessages(range, filteredMessages);
 				} else {
 					this.hide();
@@ -227,11 +234,13 @@ export class ModesContentHoverWidget extends ContentHoverWidget {
 	}
 
 	private _renderMessages(renderRange: Range, messages: Hover[]): void {
-
 		// update column from which to show
 		var renderColumn = Number.MAX_VALUE,
 			highlightRange = messages[0].range,
 			fragment = document.createDocumentFragment();
+
+		// PATCH(Sourcegraph): allow j2d, refs, search via tooltip buttons
+		const isLoading = messages.length === 1 && messages[0].contents[0] === loadingMessage;
 
 		messages.forEach((msg) => {
 			if (!msg.range) {
@@ -267,9 +276,11 @@ export class ModesContentHoverWidget extends ContentHoverWidget {
 		});
 
 		// show
+		this.telemetryService.publicLog('editor.contentHoverWidgetDisplayed');
 		this.showAt(new Position(renderRange.startLineNumber, renderColumn), this._shouldFocus);
 
-		this.updateContents(fragment);
+		// PATCH(Sourcegraph): allow j2d, refs, search via tooltip buttons
+		this.updateContents(fragment, isLoading);
 
 		this._isChangingDecorations = true;
 		this._highlightDecorations = this._editor.deltaDecorations(this._highlightDecorations, [{
@@ -282,4 +293,16 @@ export class ModesContentHoverWidget extends ContentHoverWidget {
 	private static _DECORATION_OPTIONS = ModelDecorationOptions.register({
 		className: 'hoverHighlight'
 	});
+}
+
+function hoverContentsEquals(first: Hover[], second: Hover[]): boolean {
+	if ((!first && second) || (first && !second) || first.length !== second.length) {
+		return false;
+	}
+	for (let i = 0; i < first.length; i++) {
+		if (!markedStringsEquals(first[i].contents, second[i].contents)) {
+			return false;
+		}
+	}
+	return true;
 }

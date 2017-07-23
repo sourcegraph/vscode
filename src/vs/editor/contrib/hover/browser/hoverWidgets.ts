@@ -19,7 +19,7 @@ export class ContentHoverWidget extends Widget implements editorBrowser.IContent
 	private _id: string;
 	protected _editor: editorBrowser.ICodeEditor;
 	private _isVisible: boolean;
-	private _containerDomNode: HTMLElement;
+	protected _containerDomNode: HTMLElement;
 	private _domNode: HTMLElement;
 	protected _showAtPosition: Position;
 	private _stoleFocus: boolean;

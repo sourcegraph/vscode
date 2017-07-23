@@ -19,6 +19,17 @@
 	line-height: 1.5em;
 }
 
+.monaco-editor-hover > .hover-row > .hoverButton {
+	cursor: pointer;
+	flex: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 30px;
+	visibility: visible;
+	outline: none !important;
+}
+
 .monaco-editor-hover.hidden {
 	display: none;
 }
@@ -37,6 +48,10 @@
 
 .monaco-editor-hover .hover-row {
 	padding: 4px 5px;
+}
+
+.monaco-editor-hover > .hover-row.action-bar {
+	padding: 0;
 }
 
 .monaco-editor-hover p,
