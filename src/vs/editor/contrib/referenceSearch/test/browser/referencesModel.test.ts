@@ -22,7 +22,7 @@ suite('references', function () {
 		}, {
 			uri: URI.file('/src/can'),
 			range: new Range(1, 1, 1, 1)
-		}]);
+		}], '/');
 
 		let ref = model.nearestReference(URI.file('/src/can'), new Position(1, 1));
 		assert.equal(ref.uri.path, '/src/can');
@@ -35,6 +35,38 @@ suite('references', function () {
 
 		ref = model.nearestReference(URI.file('/out/obj/can2222'), new Position(1, 1));
 		assert.equal(ref.uri.path, '/out/obj/can2');
+	});
+
+	test('multiWorkspaceSorting', function () {
+		const model = new ReferencesModel([{
+			uri: URI.file('/other2/b'),
+			range: new Range(1, 1, 1, 1)
+		}, {
+			uri: URI.file('/other2/a'),
+			range: new Range(1, 1, 1, 1)
+		}, {
+			uri: URI.file('/other1/b'),
+			range: new Range(1, 1, 1, 1)
+		}, {
+			uri: URI.file('/other1/a'),
+			range: new Range(1, 1, 1, 1)
+		}, {
+			uri: URI.file('/xcurrent/b'),
+			range: new Range(1, 1, 1, 1)
+		}, {
+			uri: URI.file('/xcurrent/a'),
+			range: new Range(1, 1, 1, 1)
+		}], '/xcurrent');
+
+		const paths = model.references.map(ref => ref.uri.path);
+		assert.deepEqual(paths, [
+			'/xcurrent/a',
+			'/xcurrent/b',
+			'/other1/a',
+			'/other1/b',
+			'/other2/a',
+			'/other2/b'
+		]);
 	});
 
 });

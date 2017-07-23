@@ -25,6 +25,7 @@ import { ContextKeyExpr } from 'vs/platform/contextkey/common/contextkey';
 import { MessageController } from './messageController';
 import * as corePosition from 'vs/editor/common/core/position';
 import { EditorContextKeys } from 'vs/editor/common/editorContextKeys';
+import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
 
 export class DefinitionActionConfig {
 
@@ -50,6 +51,7 @@ export class DefinitionAction extends EditorAction {
 	public run(accessor: ServicesAccessor, editor: editorCommon.ICommonCodeEditor): TPromise<void> {
 		const messageService = accessor.get(IMessageService);
 		const editorService = accessor.get(IEditorService);
+		const currentWorkspacePath = accessor.get(IWorkspaceContextService).getWorkspace().roots[0].path;
 
 		const model = editor.getModel();
 		const pos = editor.getPosition();
@@ -97,7 +99,7 @@ export class DefinitionAction extends EditorAction {
 
 			} else {
 				// handle multile results
-				this._onResult(editorService, editor, new ReferencesModel(result));
+				this._onResult(editorService, editor, new ReferencesModel(result, currentWorkspacePath));
 			}
 
 		}, (err) => {

@@ -9,6 +9,7 @@ import * as assert from 'assert';
 import { TestInstantiationService } from 'vs/platform/instantiation/test/common/instantiationServiceMock';
 import { setUnexpectedErrorHandler, errorHandler } from 'vs/base/common/errors';
 import URI from 'vs/base/common/uri';
+import * as TypeConverters from 'vs/workbench/api/node/extHostTypeConverters';
 import * as types from 'vs/workbench/api/node/extHostTypes';
 import * as EditorCommon from 'vs/editor/common/editorCommon';
 import { Model as EditorModel } from 'vs/editor/common/model/model';
@@ -26,7 +27,7 @@ import { IHeapService } from 'vs/workbench/api/electron-browser/mainThreadHeapSe
 import { ExtHostDocuments } from 'vs/workbench/api/node/extHostDocuments';
 import { ExtHostDocumentsAndEditors } from 'vs/workbench/api/node/extHostDocumentsAndEditors';
 import { getDocumentSymbols } from 'vs/editor/contrib/quickOpen/common/quickOpen';
-import { DocumentSymbolProviderRegistry, DocumentHighlightKind } from 'vs/editor/common/modes';
+import { DocumentSymbolProviderRegistry, DocumentHighlightKind, Location } from 'vs/editor/common/modes';
 import { getCodeLensData } from 'vs/editor/contrib/codelens/browser/codelens';
 import { getDefinitionsAtPosition, getImplementationsAtPosition, getTypeDefinitionsAtPosition } from 'vs/editor/contrib/goToDeclaration/browser/goToDeclaration';
 import { getHover } from 'vs/editor/contrib/hover/common/hover';
@@ -579,13 +580,14 @@ suite('ExtHostLanguageFeatures', function () {
 
 		return threadService.sync().then(() => {
 
-			return provideReferences(model, new EditorPosition(1, 2)).then(value => {
+			const value: Location[] = [];
+			return provideReferences(model, new EditorPosition(1, 2)).then(() => {
 				assert.equal(value.length, 2);
 
 				let [first, second] = value;
 				assert.equal(first.uri.path, '/second');
 				assert.equal(second.uri.path, '/first');
-			});
+			}, undefined, progress => value.push(...progress));
 		});
 	});
 
@@ -599,13 +601,14 @@ suite('ExtHostLanguageFeatures', function () {
 
 		return threadService.sync().then(() => {
 
-			return provideReferences(model, new EditorPosition(1, 2)).then(value => {
+			const value: Location[] = [];
+			return provideReferences(model, new EditorPosition(1, 2)).then(() => {
 				assert.equal(value.length, 1);
 
 				let [item] = value;
 				assert.deepEqual(item.range, { startLineNumber: 1, startColumn: 1, endLineNumber: 1, endColumn: 1 });
 				assert.equal(item.uri.toString(), model.uri.toString());
-			});
+			}, undefined, progress => value.push(...progress));
 
 		});
 	});
@@ -625,10 +628,43 @@ suite('ExtHostLanguageFeatures', function () {
 
 		return threadService.sync().then(() => {
 
-			return provideReferences(model, new EditorPosition(1, 2)).then(value => {
+			const value: Location[] = [];
+			return provideReferences(model, new EditorPosition(1, 2)).then(() => {
 				assert.equal(value.length, 1);
-			});
+			}, undefined, progress => value.push(...progress));
 
+		});
+	});
+
+	test('References, progress', function () {
+
+		const locations: vscode.Location[] = [
+			new types.Location(URI.parse('ref://the/first'), new types.Range(0, 0, 0, 0)),
+			new types.Location(URI.parse('ref://the/second'), new types.Range(1, 1, 1, 1)),
+			new types.Location(URI.parse('ref://the/third'), new types.Range(2, 2, 2, 2)),
+		];
+		const modeLocations = locations.map(TypeConverters.location.from);
+
+		disposables.push(extHost.registerReferenceProvider(defaultSelector, <vscode.ReferenceProvider>{
+			provideReferences(document: any, position: any, context: any, token: any, progress: (locations: vscode.Location[]) => void): vscode.ProviderResult<vscode.Location[]> {
+				progress(locations.slice(0, 1));
+				progress(locations.slice(1, 3));
+				return locations;
+			}
+		}));
+
+		return threadService.sync().then(() => {
+			const values: Location[] = [];
+			return provideReferences(model, new EditorPosition(1, 2)).then(() => {
+				assert.equal(values.length, 3);
+				values.forEach((actual, index) => {
+					const expected = modeLocations[index];
+					assert.deepEqual(actual.range, expected.range);
+					assert.equal(actual.uri.toString(), expected.uri.toString());
+				});
+			}, undefined, (progress: Location[]) => {
+				values.push(...progress);
+			});
 		});
 	});
 
