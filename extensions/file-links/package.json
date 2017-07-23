@@ -1,0 +1,69 @@
+{
+  "name": "file-links",
+  "displayName": "File links",
+  "description": "Displays links to the current file on the repo host and other relevant sites",
+  "categories": [
+    "Other"
+  ],
+  "main": "./out/main",
+  "version": "0.0.1",
+  "publisher": "sourcegraph",
+  "engines": {
+    "vscode": "*"
+  },
+  "activationEvents": [
+    "onCommand:file-links.goToGitHub",
+    "onCommand:file-links.goToImmutableRevision"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "file-links.goToGitHub",
+        "title": "View on GitHub",
+        "icon": {
+          "dark": "media/github-icon-dark.svg",
+          "light": "media/github-icon-light.svg"
+        }
+      },
+      {
+        "command": "file-links.goToImmutableRevision",
+        "title": "Go to Immutable Revision"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "when": "resourceScheme == repo && resourceAuthority == github.com",
+          "command": "file-links.goToGitHub",
+          "group": "file-links"
+        }
+      ],
+      "editor/title": [
+        {
+          "when": "resourceScheme == repo && resourceAuthority == github.com",
+          "command": "file-links.goToGitHub",
+          "group": "navigation"
+        },
+        {
+          "when": "resourceScheme == repo",
+          "command": "file-links.goToImmutableRevision",
+          "group": "file"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "file-links.goToImmutableRevision",
+        "key": "alt+y",
+        "when": "resourceScheme == repo"
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "gulp compile-extension:file-links",
+    "watch": "gulp watch-extension:file-links"
+  },
+  "devDependencies": {
+    "@types/node": "^7.0.12"
+  }
+}
