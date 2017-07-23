@@ -178,6 +178,9 @@ export class FeedbackDropdown extends Dropdown {
 		$('div').append($('a').attr('target', '_blank').attr('href', this.requestFeatureLink).text(nls.localize("request a missing feature", "Request a missing feature")).attr('tabindex', '0'))
 			.appendTo($contactUsContainer);
 
+		$('div').append($('a').attr('target', '_blank').attr('href', 'mailto:support@sourcegraph.com').text(nls.localize("email", "Email us")).attr('tabindex', '0'))
+			.appendTo($contactUsContainer);
+
 		this.remainingCharacterCount = $('span.char-counter').text(this.getCharCountText(0));
 
 		$('h3').text(nls.localize("tell us why?", "Tell us why?"))

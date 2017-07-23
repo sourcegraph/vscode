@@ -18,8 +18,8 @@ import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace
 class TwitterFeedbackService implements IFeedbackService {
 
 	private static TWITTER_URL: string = 'https://twitter.com/intent/tweet';
-	private static VIA_NAME: string = 'code';
-	private static HASHTAGS: string[] = ['HappyCoding'];
+	private static VIA_NAME: string = 'srcgraph';
+	private static HASHTAGS: string[] = ['CodeConnected'];
 
 	private combineHashTagsAsString(): string {
 		return TwitterFeedbackService.HASHTAGS.join(',');
