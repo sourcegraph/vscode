@@ -26,6 +26,8 @@ import { TelemetryService, ITelemetryServiceConfig } from 'vs/platform/telemetry
 import { resolveCommonProperties } from 'vs/platform/telemetry/node/commonProperties';
 import { IRequestService } from 'vs/platform/request/node/request';
 import { RequestService } from 'vs/platform/request/node/requestService';
+import { IRemoteService } from 'vs/platform/remote/node/remote';
+import { RemoteService } from 'vs/platform/remote/node/remoteService';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { ConfigurationService } from 'vs/platform/configuration/node/configurationService';
 import { AppInsightsAppender } from 'vs/platform/telemetry/node/appInsightsAppender';
@@ -166,6 +168,7 @@ export function main(argv: ParsedArgs): TPromise<void> {
 			const services = new ServiceCollection();
 			services.set(IConfigurationService, new SyncDescriptor(ConfigurationService));
 			services.set(IRequestService, new SyncDescriptor(RequestService));
+			services.set(IRemoteService, new SyncDescriptor(RemoteService));
 			services.set(IExtensionManagementService, new SyncDescriptor(ExtensionManagementService));
 			services.set(IExtensionGalleryService, new SyncDescriptor(ExtensionGalleryService));
 			services.set(IChoiceService, new SyncDescriptor(ChoiceCliService));

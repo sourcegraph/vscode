@@ -440,6 +440,9 @@ export function createApiFactory(
 			getConfiguration: (section?: string): vscode.WorkspaceConfiguration => {
 				return extHostConfiguration.getConfiguration(section);
 			},
+			extractResourceInfo(resource: vscode.Uri | string): { workspace: string, repo: string, revisionSpecifier?: string, relativePath?: string } | undefined {
+				return extHostWorkspace.extractResourceInfo(resource as (string | URI));
+			},
 			getConfiguration2: proposedApiFunction(extension, (section?: string, resource?: vscode.Uri): vscode.WorkspaceConfiguration => {
 				return extHostConfiguration.getConfiguration2(section, <URI>resource);
 			}),
@@ -453,6 +456,10 @@ export function createApiFactory(
 
 		// namespace: scm
 		const scm: typeof vscode.scm = {
+			// PATCH(sourcegraph): expose activeProvider
+			get activeProvider() {
+				return extHostSCM.activeProvider;
+			},
 			get inputBox() {
 				return extHostSCM.inputBox;
 			},

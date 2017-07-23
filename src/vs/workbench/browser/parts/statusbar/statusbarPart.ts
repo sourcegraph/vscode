@@ -43,6 +43,7 @@ export class StatusbarPart extends Part implements IStatusbarService {
 	private toDispose: IDisposable[];
 	private statusItemsContainer: Builder;
 	private statusMsgDispose: IDisposable;
+	private entriesAddedBeforeContentAreaCreated: [IStatusbarEntry, StatusbarAlignment, number, IDisposable | undefined][];
 
 	constructor(
 		id: string,
@@ -56,6 +57,22 @@ export class StatusbarPart extends Part implements IStatusbarService {
 	}
 
 	public addEntry(entry: IStatusbarEntry, alignment: StatusbarAlignment, priority: number = 0): IDisposable {
+
+		if (!this.statusItemsContainer) {
+			if (!this.entriesAddedBeforeContentAreaCreated) {
+				this.entriesAddedBeforeContentAreaCreated = [];
+			}
+			const arg: [IStatusbarEntry, StatusbarAlignment, number, IDisposable | undefined] = [entry, alignment, priority, undefined];
+			this.entriesAddedBeforeContentAreaCreated.push(arg);
+			return {
+				dispose: () => {
+					if (arg[3]) { arg[3].dispose(); }
+					if (this.entriesAddedBeforeContentAreaCreated) {
+						this.entriesAddedBeforeContentAreaCreated = this.entriesAddedBeforeContentAreaCreated.filter(v => v !== arg);
+					}
+				},
+			};
+		}
 
 		// Render entry in status bar
 		const el = this.doCreateStatusItem(alignment, priority);
@@ -129,6 +146,14 @@ export class StatusbarPart extends Part implements IStatusbarService {
 
 			return dispose;
 		}));
+
+		if (this.entriesAddedBeforeContentAreaCreated) {
+			this.entriesAddedBeforeContentAreaCreated.forEach(arg => {
+				// Set disposable so original addEntry caller disposes of the now-added entry.
+				arg[3] = this.addEntry(arg[0], arg[1], arg[2]);
+			});
+			this.entriesAddedBeforeContentAreaCreated = undefined;
+		}
 
 		return this.statusItemsContainer;
 	}

@@ -29,6 +29,8 @@ import { IWindowsMainService, IOpenConfiguration, IWindowsCountChangedEvent } fr
 import { IHistoryMainService } from "vs/platform/history/common/history";
 import { IProcessEnvironment, isLinux, isMacintosh, isWindows } from 'vs/base/common/platform';
 import { TPromise } from "vs/base/common/winjs.base";
+import { parseFragment } from 'vs/base/common/urlRoutes';
+import { extractResourceInfo } from 'vs/platform/workspace/common/resource';
 import { IWorkspacesMainService, IWorkspaceIdentifier, ISingleFolderWorkspaceIdentifier, IWorkspaceSavedEvent, WORKSPACE_FILTER, isSingleFolderWorkspaceIdentifier } from "vs/platform/workspaces/common/workspaces";
 import { IInstantiationService } from "vs/platform/instantiation/common/instantiation";
 import { mnemonicButtonLabel } from "vs/base/common/labels";
@@ -806,6 +808,28 @@ export class WindowsManager implements IWindowsMainService {
 	private parsePath(anyPath: string, options?: { ignoreFileNotFound?: boolean, gotoLineMode?: boolean, forceOpenWorkspaceAsFile?: boolean; }): IWindowToOpen {
 		if (!anyPath) {
 			return null;
+		}
+
+		let uri = URI.parse(anyPath);
+
+		const selection = parseFragment(uri.fragment).selection;
+		uri = uri.with({ fragment: null });
+
+		const info = extractResourceInfo(uri);
+		if (uri.scheme) {
+			if (!info) {
+				return null; // path not found
+			}
+
+			if (info.relativePath) {
+				return {
+					filePath: uri.toString(),
+					folderPath: info.workspace.toString(),
+					lineNumber: selection ? selection.startLineNumber : void 0,
+					columnNumber: selection ? selection.startColumn : void 0
+				};
+			}
+			return { folderPath: info.workspace.toString() };
 		}
 
 		let parsedPath: IPathWithLineAndColumn;

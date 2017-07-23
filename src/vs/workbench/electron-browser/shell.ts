@@ -26,6 +26,8 @@ import { NullTelemetryService, configurationTelemetry, lifecycleTelemetry } from
 import { loadExperiments } from 'vs/platform/telemetry/common/experiments';
 import { ITelemetryAppenderChannel, TelemetryAppenderClient } from 'vs/platform/telemetry/common/telemetryIpc';
 import { TelemetryService, ITelemetryServiceConfig } from 'vs/platform/telemetry/common/telemetryService';
+import { IRemoteService } from 'vs/platform/remote/node/remote';
+import { RemoteService } from 'vs/platform/remote/node/remoteService';
 import { IdleMonitor, UserStatus } from 'vs/platform/telemetry/browser/idleMonitor';
 import ErrorTelemetry from 'vs/platform/telemetry/browser/errorTelemetry';
 import { ElectronWindow } from 'vs/workbench/electron-browser/window';
@@ -38,7 +40,7 @@ import { MessageService } from 'vs/workbench/services/message/electron-browser/m
 import { IRequestService } from 'vs/platform/request/node/request';
 import { RequestService } from 'vs/platform/request/electron-browser/requestService';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
-import { SearchService } from 'vs/workbench/services/search/node/searchService';
+import { RemoteSearchService } from 'vs/workbench/services/search/node/remoteSearchService';
 import { LifecycleService } from 'vs/workbench/services/lifecycle/electron-browser/lifecycleService';
 import { MainThreadService } from 'vs/workbench/services/thread/electron-browser/threadService';
 import { MarkerService } from 'vs/platform/markers/common/markerService';
@@ -361,12 +363,13 @@ export class WorkbenchShell {
 
 		serviceCollection.set(ITextMateService, new SyncDescriptor(TextMateService));
 
-		serviceCollection.set(ISearchService, new SyncDescriptor(SearchService));
+		serviceCollection.set(ISearchService, new SyncDescriptor(RemoteSearchService));
 
 		serviceCollection.set(ICodeEditorService, new SyncDescriptor(CodeEditorServiceImpl));
 
 		serviceCollection.set(IIntegrityService, new SyncDescriptor(IntegrityServiceImpl));
 
+		serviceCollection.set(IRemoteService, new SyncDescriptor(RemoteService));
 		return [instantiationService, serviceCollection];
 	}
 

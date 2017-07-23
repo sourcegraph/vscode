@@ -116,3 +116,7 @@ import 'vs/workbench/parts/themes/test/electron-browser/themes.test.contribution
 import 'vs/workbench/parts/watermark/electron-browser/watermark';
 
 import 'vs/workbench/parts/welcome/overlay/browser/welcomeOverlay';
+
+import 'vs/workbench/services/files/node/remoteRepoContentProvider';
+import 'vs/workbench/services/scm/electron-browser/remoteGitProvider.contribution';
+

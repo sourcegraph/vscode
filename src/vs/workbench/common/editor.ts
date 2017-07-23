@@ -15,6 +15,7 @@ import { IEditorInput, IEditorModel, IEditorOptions, ITextEditorOptions, IBaseRe
 import { SyncDescriptor } from 'vs/platform/instantiation/common/descriptors';
 import { IInstantiationService, IConstructorSignature0 } from 'vs/platform/instantiation/common/instantiation';
 import { RawContextKey } from 'vs/platform/contextkey/common/contextkey';
+import { isFileLikeResource } from 'vs/platform/files/common/files';
 
 export const TextCompareEditorVisible = new RawContextKey<boolean>('textCompareEditorVisible', false);
 
@@ -873,7 +874,7 @@ export function toResource(editor: IEditorInput, options?: IResourceOptions): UR
 		includeUntitled = (options.filter === 'untitled');
 	}
 
-	if (includeFiles && resource.scheme === 'file') {
+	if (includeFiles && isFileLikeResource(resource)) {
 		return resource;
 	}
 

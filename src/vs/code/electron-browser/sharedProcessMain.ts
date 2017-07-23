@@ -22,6 +22,8 @@ import { IConfigurationService } from 'vs/platform/configuration/common/configur
 import { ConfigurationService } from 'vs/platform/configuration/node/configurationService';
 import { IRequestService } from 'vs/platform/request/node/request';
 import { RequestService } from 'vs/platform/request/electron-browser/requestService';
+import { IRemoteService } from 'vs/platform/remote/node/remote';
+import { RemoteService } from 'vs/platform/remote/node/remoteService';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { combinedAppender, NullTelemetryService } from 'vs/platform/telemetry/common/telemetryUtils';
 import { resolveCommonProperties } from 'vs/platform/telemetry/node/commonProperties';
@@ -70,6 +72,7 @@ function main(server: Server, initData: ISharedProcessInitData): void {
 	services.set(IEnvironmentService, new SyncDescriptor(EnvironmentService, initData.args, process.execPath));
 	services.set(IConfigurationService, new SyncDescriptor(ConfigurationService));
 	services.set(IRequestService, new SyncDescriptor(RequestService));
+	services.set(IRemoteService, new SyncDescriptor(RemoteService));
 
 	const windowsChannel = server.getChannel('windows', { route: () => 'main' });
 	const windowsService = new WindowsChannelClient(windowsChannel);

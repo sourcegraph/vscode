@@ -5,12 +5,14 @@
 'use strict';
 
 import URI from 'vs/base/common/uri';
+import { Schemas } from 'vs/base/common/network';
 import Event, { Emitter } from 'vs/base/common/event';
 import { normalize } from 'vs/base/common/paths';
 import { delta } from 'vs/base/common/arrays';
 import { relative, basename } from 'path';
 import { Workspace } from 'vs/platform/workspace/common/workspace';
 import { IThreadService } from 'vs/workbench/services/thread/common/threadService';
+import { extractResourceInfo } from 'vs/platform/workspace/common/resource';
 import { IResourceEdit } from 'vs/editor/common/services/bulkEdit';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { fromRange, EndOfLine } from 'vs/workbench/api/node/extHostTypeConverters';
@@ -114,7 +116,8 @@ export class ExtHostWorkspace extends ExtHostWorkspaceShape {
 		if (roots.length === 0) {
 			return undefined;
 		}
-		return roots[0].fsPath;
+		// PATCH(sourcegraph): return full root URI
+		return (roots[0].scheme === Schemas.file) ? roots[0].fsPath : roots[0].toString();
 	}
 
 	getRelativePath(pathOrUri: string | vscode.Uri): string {
@@ -201,6 +204,17 @@ export class ExtHostWorkspace extends ExtHostWorkspaceShape {
 		}
 
 		return this._proxy.$applyWorkspaceEdit(resourceEdits);
+	}
+
+	extractResourceInfo(resource: URI | string): { workspace: string, repo: string, revisionSpecifier?: string, relativePath?: string } | undefined {
+		const info = extractResourceInfo(resource);
+		if (!info) { return undefined; }
+		return {
+			workspace: info.workspace.toString(),
+			repo: info.repo,
+			revisionSpecifier: info.revisionSpecifier,
+			relativePath: info.relativePath,
+		};
 	}
 
 	// --- EXPERIMENT: workspace resolver

@@ -27,6 +27,10 @@
 			"project": "vscode-workbench"
 		},
 		{
+			"name": "vs/workbench/services/scm",
+			"project": "vscode-workbench"
+		},
+		{
 			"name": "vs/workbench/parts/cli",
 			"project": "vscode-workbench"
 		},

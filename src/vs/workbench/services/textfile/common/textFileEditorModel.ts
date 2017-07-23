@@ -12,7 +12,6 @@ import { onUnexpectedError } from 'vs/base/common/errors';
 import { guessMimeTypes } from 'vs/base/common/mime';
 import { toErrorMessage } from 'vs/base/common/errorMessage';
 import URI from 'vs/base/common/uri';
-import * as assert from 'vs/base/common/assert';
 import { IDisposable, dispose } from 'vs/base/common/lifecycle';
 import paths = require('vs/base/common/paths');
 import diagnostics = require('vs/base/common/diagnostics');
@@ -89,8 +88,6 @@ export class TextFileEditorModel extends BaseTextEditorModel implements ITextFil
 		@IWorkspaceContextService private contextService: IWorkspaceContextService,
 	) {
 		super(modelService, modeService);
-
-		assert.ok(resource.scheme === 'file', 'TextFileEditorModel can only handle file:// resources.');
 
 		this.resource = resource;
 		this.toDispose = [];

@@ -10,7 +10,7 @@ import Event, { Emitter } from 'vs/base/common/event';
 import { asWinJsPromise } from 'vs/base/common/async';
 import { IThreadService } from 'vs/workbench/services/thread/common/threadService';
 import { ExtHostCommands, CommandsConverter } from 'vs/workbench/api/node/extHostCommands';
-import { MainContext, MainThreadSCMShape, SCMRawResource } from './extHost.protocol';
+import { ExtHostSCMShape, MainContext, MainThreadSCMShape, SCMProviderFeatures, SCMProviderRegistration, SCMRawResource } from './extHost.protocol';
 import * as vscode from 'vscode';
 
 function getIconPath(decorations: vscode.SourceControlResourceThemableDecorations) {
@@ -245,21 +245,93 @@ class ExtHostSourceControl implements vscode.SourceControl {
 		return this._groups.get(handle);
 	}
 
+	get revision(): vscode.SCMRevision {
+		// TODO(sqs): support this
+		return null;
+	}
+
+	setRevision(revision: vscode.SCMRevision): TPromise<vscode.SCMRevision> {
+		throw new Error('extension SCM providers do not yet support the SCM revision API');
+	}
+
 	dispose(): void {
 		this._proxy.$unregisterSourceControl(this._handle);
 	}
+}
+
+/**
+* Represents an ISCMProvider registered in the main process.
+*/
+class ExtHostSourceControlMirror implements vscode.SourceControl {
+
+	private _id: string;
+	private _label: string;
+	private _data: SCMProviderFeatures;
+
+	get id(): string {
+		return this._id;
+	}
+
+	get label(): string {
+		return this._label;
+	}
+
+	get count(): number | undefined {
+		return this._data.count;
+	}
+
+	get quickDiffProvider(): vscode.QuickDiffProvider | undefined { return undefined; }
+
+	get commitTemplate(): string | undefined { return undefined; }
+
+	get acceptInputCommand(): vscode.Command | undefined { return undefined; }
+
+	get statusBarCommands(): vscode.Command[] | undefined { return undefined; }
+
+	constructor(
+		private _handle: number,
+		private _proxy: MainThreadSCMShape,
+		_data: SCMProviderRegistration,
+	) {
+		this._id = _data.id;
+		this._label = _data.label;
+		this._data = _data;
+	}
+
+	createResourceGroup(id: string, label: string): ExtHostSourceControlResourceGroup {
+		throw new Error('invalid operation on non-extension SourceControl');
+	}
+
+	getResourceGroup(handle: GroupHandle): ExtHostSourceControlResourceGroup | undefined {
+		throw new Error('invalid operation on non-extension SourceControl');
+	}
+
+	get revision(): vscode.SCMRevision {
+		return this._data.revision;
+	}
+
+	setRevision(revision: vscode.SCMRevision): TPromise<vscode.SCMRevision> {
+		return this._proxy.$setRevision(this._handle, revision);
+	}
+
+	$onUpdate(data: SCMProviderFeatures): void {
+		this._data = data;
+	}
+
+	dispose(): void { }
 }
 
 type ProviderHandle = number;
 type GroupHandle = number;
 type ResourceStateHandle = number;
 
-export class ExtHostSCM {
+export class ExtHostSCM extends ExtHostSCMShape {
 
 	private static _handlePool: number = 0;
 
 	private _proxy: MainThreadSCMShape;
 	private _sourceControls: Map<ProviderHandle, ExtHostSourceControl> = new Map<ProviderHandle, ExtHostSourceControl>();
+	private _sourceControlsMain: Map<ProviderHandle, ExtHostSourceControlMirror> = new Map<ProviderHandle, ExtHostSourceControlMirror>();
 
 	private _onDidChangeActiveProvider = new Emitter<vscode.SourceControl>();
 	get onDidChangeActiveProvider(): Event<vscode.SourceControl> { return this._onDidChangeActiveProvider.event; }
@@ -274,6 +346,7 @@ export class ExtHostSCM {
 		threadService: IThreadService,
 		private _commands: ExtHostCommands
 	) {
+		super();
 		this._proxy = threadService.get(MainContext.MainThreadSCM);
 		this._inputBox = new ExtHostSCMInputBox(this._proxy);
 
@@ -329,8 +402,12 @@ export class ExtHostSCM {
 		});
 	}
 
-	$onActiveSourceControlChange(handle: number): TPromise<void> {
-		this._activeProvider = this._sourceControls.get(handle);
+	$onActiveSourceControlChange(handle: number, main: boolean): TPromise<void> {
+		if (main) {
+			this._activeProvider = this._sourceControlsMain.get(handle);
+		} else {
+			this._activeProvider = this._sourceControls.get(handle);
+		}
 		return TPromise.as(null);
 	}
 
@@ -341,6 +418,23 @@ export class ExtHostSCM {
 
 	$onInputBoxAcceptChanges(): TPromise<void> {
 		this._inputBox.$onInputBoxAcceptChanges();
+		return TPromise.as(null);
+	}
+
+	$onSourceControlRegistered(handle: number, data: SCMProviderRegistration): TPromise<void> {
+		const sourceControl = new ExtHostSourceControlMirror(handle, this._proxy, data);
+		this._sourceControlsMain.set(handle, sourceControl);
+
+		return TPromise.as(null);
+	}
+
+	$onSourceControlUpdated(handle: number, data: SCMProviderFeatures): TPromise<void> {
+		const sourceControl = this._sourceControlsMain.get(handle);
+
+		if (sourceControl) {
+			sourceControl.$onUpdate(data);
+		}
+
 		return TPromise.as(null);
 	}
 }

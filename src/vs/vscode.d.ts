@@ -4863,6 +4863,13 @@ declare module 'vscode' {
 		export const onDidChangeConfiguration: Event<void>;
 
 		/**
+		 * Returns information about a resource inside a workspace (which can differ from
+		 * the active workspace). If the URI's scheme is not 'repo' or 'gitremote', it
+		 * returns undefined.
+		 */
+		export function extractResourceInfo(resource: Uri | string): { workspace: string, repo: string, revisionSpecifier?: string, relativePath?: string } | undefined;
+
+		/**
 		 * Register a task provider.
 		 *
 		 * @param type The task kind type this provider is registered for.

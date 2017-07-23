@@ -134,6 +134,34 @@ declare module 'vscode' {
 		export function registerDiffInformationCommand(command: string, callback: (diff: LineChange[], ...args: any[]) => any, thisArg?: any): Disposable;
 	}
 
+	/**
+	 * PATCH(sourcegraph): See ISCMRevision for canonical documentation for this type.
+	 */
+	export interface SCMRevision {
+		readonly specifier?: string;
+		readonly rawSpecifier?: string;
+		readonly id?: string;
+	}
+
+	export interface SourceControl {
+		/**
+		 * PATCH(sourcegraph): See ISCMProvider for canonical documentation for these fields.
+		 */
+		revision?: SCMRevision;
+		setRevision(revision: SCMRevision): Thenable<SCMRevision>;
+	}
+
+	export namespace scm {
+
+		/**
+		 * The currently active source control provider, or undefined if there is none.
+		 */
+		export let activeProvider: SourceControl | undefined;
+	}
+
+	/**
+	 * Namespace for dealing with debug sessions.
+	 */
 	export namespace debug {
 
 		/**

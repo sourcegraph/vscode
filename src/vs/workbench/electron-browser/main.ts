@@ -113,15 +113,29 @@ function openWorkbench(configuration: IWindowConfiguration): TPromise<void> {
 function createAndInitializeWorkspaceService(configuration: IWindowConfiguration, environmentService: EnvironmentService, workspacesService: IWorkspacesService): TPromise<WorkspaceService> {
 	return validateWorkspacePath(configuration).then(() => {
 		const workspaceConfigPath = configuration.workspace ? uri.file(configuration.workspace.configPath) : null;
-		const folderPath = configuration.folderPath ? uri.file(configuration.folderPath) : null;
+		let folderPath: uri | null = null;
+		if (configuration.folderPath) {
+			folderPath = uri.parse(configuration.folderPath);
+			if (!folderPath.scheme) {
+				folderPath = uri.file(configuration.folderPath);
+			}
+		}
 		const workspaceService = (workspaceConfigPath || configuration.folderPath) ? new WorkspaceServiceImpl(workspaceConfigPath, folderPath, environmentService, workspacesService) : new EmptyWorkspaceServiceImpl(environmentService);
 
-		return workspaceService.initialize().then(() => workspaceService, error => new EmptyWorkspaceServiceImpl(environmentService));
+		return workspaceService.initialize().then(() => workspaceService, error => {
+			console.error('Failed to initialize workspace:', error);
+			return new EmptyWorkspaceServiceImpl(environmentService);
+		});
 	});
 }
 
 function validateWorkspacePath(configuration: IWindowConfiguration): TPromise<void> {
 	if (!configuration.folderPath) {
+		return TPromise.as(null);
+	}
+	// repo:// URIs are always considered valid, they cannot be realpath'd
+	const folderPath = uri.parse(configuration.folderPath);
+	if (folderPath.scheme) {
 		return TPromise.as(null);
 	}
 

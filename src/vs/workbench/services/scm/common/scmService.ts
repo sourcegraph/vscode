@@ -52,6 +52,9 @@ export class SCMService implements ISCMService {
 	private _providers: ISCMProvider[] = [];
 	get providers(): ISCMProvider[] { return [...this._providers]; }
 
+	private _onDidRegisterProvider = new Emitter<ISCMProvider>();
+	get onDidRegisterProvider(): Event<ISCMProvider> { return this._onDidRegisterProvider.event; }
+
 	private _onDidChangeProvider = new Emitter<ISCMProvider>();
 	get onDidChangeProvider(): Event<ISCMProvider> { return this._onDidChangeProvider.event; }
 
@@ -88,6 +91,7 @@ export class SCMService implements ISCMService {
 
 	registerSCMProvider(provider: ISCMProvider): IDisposable {
 		this._providers.push(provider);
+		this._onDidRegisterProvider.fire(provider);
 
 		const defaultProviderId = this.storageService.get(DefaultSCMProviderIdStorageKey, StorageScope.WORKSPACE);
 

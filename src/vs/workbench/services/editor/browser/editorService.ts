@@ -239,7 +239,7 @@ export class WorkbenchEditorService implements IWorkbenchEditorService {
 		const resourceInput = <IResourceInput>input;
 
 		// Files support
-		if (resourceInput.resource instanceof URI && resourceInput.resource.scheme === network.Schemas.file) {
+		if (resourceInput.resource instanceof URI && (resourceInput.resource.scheme === network.Schemas.file || resourceInput.resource.scheme === network.Schemas.remoteRepo)) {
 			return this.createOrGet(resourceInput.resource, this.instantiationService, resourceInput.label, resourceInput.description, resourceInput.encoding);
 		}
 
@@ -273,7 +273,7 @@ export class WorkbenchEditorService implements IWorkbenchEditorService {
 		}
 
 		let input: ICachedEditorInput;
-		if (resource.scheme === network.Schemas.file) {
+		if (resource.scheme === network.Schemas.file || resource.scheme === network.Schemas.remoteRepo) {
 			input = this.fileInputFactory.createFileInput(resource, encoding, instantiationService);
 		} else {
 			input = instantiationService.createInstance(ResourceEditorInput, label, description, resource);

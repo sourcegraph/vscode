@@ -36,6 +36,7 @@ import { IPickOpenEntry, IPickOptions } from 'vs/platform/quickOpen/common/quick
 import { SaveReason } from 'vs/workbench/services/textfile/common/textfiles';
 import { TextEditorCursorStyle } from 'vs/editor/common/config/editorOptions';
 import { EndOfLine, TextEditorLineNumbersStyle } from 'vs/workbench/api/node/extHostTypes';
+import { ISCMRevision } from 'vs/workbench/services/scm/common/scm';
 
 
 import { TaskSet } from 'vs/workbench/parts/tasks/common/tasks';
@@ -324,6 +325,7 @@ export interface SCMProviderFeatures {
 	commitTemplate?: string;
 	acceptInputCommand?: modes.Command;
 	statusBarCommands?: modes.Command[];
+	revision?: ISCMRevision;
 }
 
 export interface SCMGroupFeatures {
@@ -351,6 +353,8 @@ export abstract class MainThreadSCMShape {
 	$unregisterGroup(sourceControlHandle: number, handle: number): void { throw ni(); }
 
 	$setInputBoxValue(value: string): void { throw ni(); }
+
+	$setRevision(handle: number, revision: ISCMRevision): TPromise<ISCMRevision> { throw ni(); }
 }
 
 export type DebugSessionUUID = string;
@@ -507,11 +511,18 @@ export abstract class ExtHostTerminalServiceShape {
 	$acceptTerminalProcessId(id: number, processId: number): void { throw ni(); }
 }
 
+export interface SCMProviderRegistration extends SCMProviderFeatures {
+	id: string;
+	label: string;
+}
+
 export abstract class ExtHostSCMShape {
 	$provideOriginalResource(sourceControlHandle: number, uri: URI): TPromise<URI> { throw ni(); }
-	$onActiveSourceControlChange(sourceControlHandle: number): TPromise<void> { throw ni(); }
+	$onActiveSourceControlChange(sourceControlHandle: number, main: boolean): TPromise<void> { throw ni(); }
 	$onInputBoxValueChange(value: string): TPromise<void> { throw ni(); }
 	$onInputBoxAcceptChanges(): TPromise<void> { throw ni(); }
+	$onSourceControlRegistered(handle: number, data: SCMProviderRegistration): TPromise<void> { throw ni(); }
+	$onSourceControlUpdated(handle: number, data: SCMProviderFeatures): TPromise<void> { throw ni(); }
 }
 
 export abstract class ExtHostTaskShape {

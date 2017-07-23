@@ -41,6 +41,7 @@ import { Position, IResourceInput, IUntitledResourceInput, IEditor } from 'vs/pl
 import { IExtensionService } from 'vs/platform/extensions/common/extensions';
 import { KeyboardMapperFactory } from 'vs/workbench/services/keybinding/electron-browser/keybindingService';
 import { Themable, EDITOR_DRAG_AND_DROP_BACKGROUND } from 'vs/workbench/common/theme';
+import { ISCMRevision, ISCMService } from 'vs/workbench/services/scm/common/scm';
 
 import { ipcRenderer as ipc, webFrame } from 'electron';
 import { activeContrastBorder } from 'vs/platform/theme/common/colorRegistry';
@@ -80,7 +81,8 @@ export class ElectronWindow extends Themable {
 		@IContextMenuService private contextMenuService: IContextMenuService,
 		@IKeybindingService private keybindingService: IKeybindingService,
 		@IEnvironmentService private environmentService: IEnvironmentService,
-		@ITelemetryService private telemetryService: ITelemetryService
+		@ITelemetryService private telemetryService: ITelemetryService,
+		@ISCMService private scmService: ISCMService
 	) {
 		super(themeService);
 
@@ -196,6 +198,11 @@ export class ElectronWindow extends Themable {
 	}
 
 	private setup(): void {
+
+		ipc.on('vscode:scm:setRevision', (event, revision: ISCMRevision) => {
+			const scmProvider = this.scmService.activeProvider;
+			scmProvider.setRevision(revision).done(null, err => this.messageService.show(Severity.Error, err));
+		});
 
 		// Support runAction event
 		ipc.on('vscode:runAction', (event, actionId: string) => {

@@ -36,6 +36,10 @@ export namespace Schemas {
 
 	export const https: string = 'https';
 
+	export const remoteRepo: string = 'repo';
+
+	export const remoteGitRepo: string = 'gitremote';
+
 	export const file: string = 'file';
 
 	export const untitled: string = 'untitled';

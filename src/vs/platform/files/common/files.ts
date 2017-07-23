@@ -13,6 +13,7 @@ import { isLinux } from 'vs/base/common/platform';
 import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
 import Event from 'vs/base/common/event';
 import { beginsWithIgnoreCase } from 'vs/base/common/strings';
+import { Schemas } from 'vs/base/common/network';
 
 export const IFileService = createDecorator<IFileService>('fileService');
 
@@ -334,6 +335,16 @@ export function indexOf(path: string, candidate: string, ignoreCase?: boolean): 
 	}
 
 	return path.indexOf(candidate);
+}
+
+const fileLikeSchemes = [Schemas.file, Schemas.remoteRepo, Schemas.remoteGitRepo];
+
+export function isFileLikeResource(resource: URI | string): boolean {
+	if (typeof resource === 'string') {
+		// Avoid URI-parsing resource to avoid needing to handle exceptions here.
+		return fileLikeSchemes.some(scheme => resource.indexOf(scheme + '://') === 0);
+	}
+	return fileLikeSchemes.indexOf(resource.scheme) !== -1;
 }
 
 export interface IBaseStat {

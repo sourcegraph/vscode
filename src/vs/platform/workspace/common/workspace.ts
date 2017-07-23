@@ -5,6 +5,7 @@
 'use strict';
 
 import URI from 'vs/base/common/uri';
+import { Schemas } from 'vs/base/common/network';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
 import * as paths from 'vs/base/common/paths';
@@ -78,8 +79,8 @@ export interface IWorkspaceContextService {
 export interface ILegacyWorkspace {
 
 	/**
-	 * the full uri of the workspace. this is a file:// URL to the location
-	 * of the workspace on disk.
+	 * the full uri of the workspace. this is a URI to the location
+	 * of the workspace.
 	 */
 	resource: URI;
 
@@ -133,7 +134,10 @@ export class LegacyWorkspace implements ILegacyWorkspace {
 
 	public toResource(workspaceRelativePath: string, root?: URI): URI {
 		if (typeof workspaceRelativePath === 'string') {
-			return URI.file(paths.join(root ? root.fsPath : this._resource.fsPath, workspaceRelativePath));
+			if (this._resource.scheme === Schemas.file) {
+				return URI.file(paths.join(root ? root.fsPath : this._resource.fsPath, workspaceRelativePath));
+			}
+			return (root || this._resource).with({ path: paths.join(root ? root.path : this._resource.path, workspaceRelativePath) });
 		}
 
 		return null;
