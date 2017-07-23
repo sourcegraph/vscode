@@ -1,0 +1,19 @@
+{
+	"name": "theme-sourcegraph",
+	"displayName": "Sourcegraph Themes",
+	"description": "The Sourcegraph dark theme",
+	"categories": [ "Themes" ],
+	"version": "0.0.1",
+	"publisher": "sourcegraph",
+	"engines": { "vscode": "*" },
+	"contributes": {
+		"themes": [
+			{
+				"id": "Sourcegraph Dark",
+				"label": "Dark (Sourcegraph)",
+				"uiTheme": "vs-dark",
+				"path": "./sourcegraph_dark.json"
+			}
+		]
+	}
+}
