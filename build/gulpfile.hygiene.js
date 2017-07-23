@@ -128,6 +128,7 @@ const copyrightHeader = [
 	' *  Licensed under the MIT License. See License.txt in the project root for license information.',
 	' *--------------------------------------------------------------------------------------------*/'
 ].join('\n');
+const sourcegraphCopyrightHeader = copyrightHeader.replace(/Microsoft Corporation/, 'Sourcegraph');
 
 function reportFailures(failures) {
 	failures.forEach(failure => {
@@ -191,7 +192,8 @@ const hygiene = exports.hygiene = (some, options) => {
 	});
 
 	const copyrights = es.through(function (file) {
-		if (file.contents.toString('utf8').indexOf(copyrightHeader) !== 0) {
+		const contents = file.contents.toString('utf8');
+		if (contents.indexOf(copyrightHeader) !== 0 && contents.indexOf(sourcegraphCopyrightHeader) !== 0) {
 			console.error(file.relative + ': Missing or bad copyright statement');
 			errorCount++;
 		}
