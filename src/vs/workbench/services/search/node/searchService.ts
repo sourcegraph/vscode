@@ -31,8 +31,8 @@ export class SearchService implements ISearchService {
 		@IModelService private modelService: IModelService,
 		@IUntitledEditorService private untitledEditorService: IUntitledEditorService,
 		@IEnvironmentService environmentService: IEnvironmentService,
-		@IWorkspaceContextService private contextService: IWorkspaceContextService,
-		@IConfigurationService private configurationService: IConfigurationService
+		@IWorkspaceContextService protected contextService: IWorkspaceContextService,
+		@IConfigurationService protected configurationService: IConfigurationService
 	) {
 		this.diskSearch = new DiskSearch(!environmentService.isBuilt || environmentService.verbose);
 	}

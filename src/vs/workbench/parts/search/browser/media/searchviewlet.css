@@ -27,6 +27,7 @@
 }
 
 .search-viewlet .search-widget .search-container,
+.search-viewlet .search-widget .folder-container,
 .search-viewlet .search-widget .replace-container {
 	margin-left: 17px;
 }
@@ -45,6 +46,15 @@
 	margin-top: 6px;
 	position: relative;
 	display: inline-flex;
+}
+
+/* PATCH(sourcegraph): always hide replace; we don't use it */
+.search-viewlet .search-widget .replace-container {
+	display: none !important;
+}
+.search-viewlet .action-replace,
+.search-viewlet .action-replace-all {
+	display: none !important;
 }
 
 .search-viewlet .search-widget .replace-container.disabled {
@@ -137,6 +147,7 @@
 	opacity: 0.7;
 }
 
+.search-viewlet .folder-container h4,
 .search-viewlet .query-details.more h4 {
 	text-overflow: ellipsis;
 	overflow: hidden;
@@ -145,6 +156,16 @@
 	margin: 0;
 	font-size: 11px;
 	font-weight: normal;
+}
+
+.search-viewlet .search-profile-picker-widget textarea {
+	border: none;
+	padding: 4px;
+	width: calc(100% - 8px); /* subtract horizontal padding */
+	line-height: inherit;
+	font-size: inherit;
+	font-family: inherit;
+	resize: vertical;
 }
 
 .search-viewlet .messages {
@@ -269,12 +290,14 @@
 	margin-right: 12px;
 }
 
+/* PATCH(sourcegraph) We don't show actions on results, so do not hide
 .search-viewlet > .results > .monaco-tree .monaco-tree-row:hover .content .filematch .monaco-count-badge,
 .search-viewlet > .results > .monaco-tree .monaco-tree-row:hover .content .linematch .monaco-count-badge,
 .search-viewlet > .results > .monaco-tree.focused .monaco-tree-row.focused .content .filematch .monaco-count-badge,
 .search-viewlet > .results > .monaco-tree.focused .monaco-tree-row.focused .content .linematch .monaco-count-badge {
 		display: none;
 }
+*/
 
 .search-viewlet .focused .monaco-tree-row.selected:not(.highlighted) > .content.actions .action-remove,
 .vs-dark .monaco-workbench .search-viewlet .focused .monaco-tree-row.selected:not(.highlighted) > .content.actions .action-remove {

@@ -9,7 +9,7 @@ import { TPromise } from 'vs/base/common/winjs.base';
 import { onUnexpectedError, illegalArgument } from 'vs/base/common/errors';
 import { IDisposable } from 'vs/base/common/lifecycle';
 import { CommonEditorRegistry } from 'vs/editor/common/editorCommonExtensions';
-import { ISearchConfiguration } from 'vs/platform/search/common/search';
+import { ISearchConfiguration, ISearchProfile } from 'vs/platform/search/common/search';
 import glob = require('vs/base/common/glob');
 import { SymbolInformation } from 'vs/editor/common/modes';
 import { IEditorGroupService } from 'vs/workbench/services/group/common/groupService';
@@ -82,6 +82,7 @@ export interface IWorkbenchSearchConfiguration extends ISearchConfiguration {
 		useRipgrep: boolean,
 		useIgnoreFilesByDefault: boolean,
 		alwaysIncludeFolderMatches: boolean,
+		profiles: ISearchProfile[],
 	};
 }
 

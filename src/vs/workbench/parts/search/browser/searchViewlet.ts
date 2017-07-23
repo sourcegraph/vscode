@@ -33,7 +33,7 @@ import { Viewlet } from 'vs/workbench/browser/viewlet';
 import { Match, FileMatch, SearchModel, FileMatchOrMatch, IChangeEvent, ISearchWorkbenchService } from 'vs/workbench/parts/search/common/searchModel';
 import { QueryBuilder } from 'vs/workbench/parts/search/common/queryBuilder';
 import { MessageType } from 'vs/base/browser/ui/inputbox/inputBox';
-import { ISearchProgressItem, ISearchComplete, ISearchQuery, IQueryOptions, ISearchConfiguration } from 'vs/platform/search/common/search';
+import { ISearchProgressItem, ISearchComplete, ISearchQuery, IQueryOptions, ISearchConfiguration, IPatternInfo } from 'vs/platform/search/common/search';
 import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { IStorageService, StorageScope } from 'vs/platform/storage/common/storage';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
@@ -85,13 +85,13 @@ export class SearchViewlet extends Viewlet {
 
 	private actionRegistry: { [key: string]: Action; };
 	private tree: ITree;
-	private viewletSettings: any;
+	protected viewletSettings: any;
 	private domNode: Builder;
 	private messages: Builder;
 	private searchWidgetsContainer: Builder;
-	private searchWidget: SearchWidget;
+	protected searchWidget: SearchWidget;
 	private size: Dimension;
-	private queryDetails: HTMLElement;
+	protected queryDetails: HTMLElement;
 	private inputPatternExcludes: ExcludePatternInputWidget;
 	private inputPatternIncludes: PatternInputWidget;
 	private results: Builder;
@@ -110,9 +110,9 @@ export class SearchViewlet extends Viewlet {
 		@IMessageService private messageService: IMessageService,
 		@IStorageService private storageService: IStorageService,
 		@IContextViewService private contextViewService: IContextViewService,
-		@IInstantiationService private instantiationService: IInstantiationService,
-		@IConfigurationService private configurationService: IConfigurationService,
-		@IWorkspaceContextService private contextService: IWorkspaceContextService,
+		@IInstantiationService protected instantiationService: IInstantiationService,
+		@IConfigurationService protected configurationService: IConfigurationService,
+		@IWorkspaceContextService protected contextService: IWorkspaceContextService,
 		@ISearchWorkbenchService private searchWorkbenchService: ISearchWorkbenchService,
 		@IContextKeyService private contextKeyService: IContextKeyService,
 		@IReplaceService private replaceService: IReplaceService,
@@ -120,7 +120,7 @@ export class SearchViewlet extends Viewlet {
 		@IPreferencesService private preferencesService: IPreferencesService,
 		@IListService private listService: IListService,
 		@IThemeService protected themeService: IThemeService,
-		@IOutputService private outputService: IOutputService
+		@IOutputService private outputService: IOutputService,
 	) {
 		super(Constants.VIEWLET_ID, telemetryService, themeService);
 
@@ -786,7 +786,7 @@ export class SearchViewlet extends Viewlet {
 		return null;
 	}
 
-	private showsFileTypes(): boolean {
+	protected showsFileTypes(): boolean {
 		return dom.hasClass(this.queryDetails, 'more');
 	}
 
@@ -929,7 +929,9 @@ export class SearchViewlet extends Viewlet {
 			includePattern
 		};
 
-		const folderResources = this.contextService.hasWorkspace() ? this.contextService.getWorkspace().roots : [];
+		// Allow subclass to modify list of folder resources without affecting ContextService
+		const folderResources = (this.contextService.hasWorkspace() ? this.contextService.getWorkspace().roots : []).concat();
+		this.onQueryChangedCreate(content, folderResources, options);
 		let query: ISearchQuery;
 		// try {
 		query = this.queryBuilder.text(content, folderResources, options);
@@ -943,6 +945,11 @@ export class SearchViewlet extends Viewlet {
 			this.searchWidget.focus(false); // focus back to input field
 		}
 	}
+
+	/**
+	 * Subclasses can override this modify the query options before they are used.
+	 */
+	protected onQueryChangedCreate(contentPattern: IPatternInfo, folderResources: URI[], options: IQueryOptions): void { }
 
 	private onQueryTriggered(query: ISearchQuery, excludePatternText: string, includePatternText: string): void {
 		this.viewModel.cancelSearch();
@@ -1201,7 +1208,7 @@ export class SearchViewlet extends Viewlet {
 		}
 	}
 
-	private searchWithoutFolderMessage(div: Builder): void {
+	protected searchWithoutFolderMessage(div: Builder): void {
 		$(div).p({ text: nls.localize('searchWithoutFolder', "You have not yet opened a folder. Only open files are currently searched - ") })
 			.asContainer().a({
 				'class': ['pointer', 'prominent'],
@@ -1236,7 +1243,7 @@ export class SearchViewlet extends Viewlet {
 		this.currentSelectedFileMatch = null;
 	}
 
-	private onFocus(lineMatch: any, preserveFocus?: boolean, sideBySide?: boolean, pinned?: boolean): TPromise<any> {
+	protected onFocus(lineMatch: any, preserveFocus?: boolean, sideBySide?: boolean, pinned?: boolean): TPromise<any> {
 		if (!(lineMatch instanceof Match)) {
 			this.viewModel.searchResult.rangeHighlightDecorations.removeHighlightRange();
 			return TPromise.as(true);

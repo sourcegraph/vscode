@@ -354,7 +354,7 @@ export class SearchWidget extends Widget {
 		}
 	}
 
-	private submitSearch(refresh: boolean = true): void {
+	protected submitSearch(refresh: boolean = true): void {
 		if (this.searchInput.getValue()) {
 			this._onSearchSubmit.fire(refresh);
 		}

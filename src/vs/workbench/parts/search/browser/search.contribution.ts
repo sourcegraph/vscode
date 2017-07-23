@@ -235,6 +235,8 @@ class ExplorerViewerActionContributor extends ActionBarContributor {
 	}
 }
 
+CommandsRegistry.registerCommand(searchActions.FindInFolderResourcesAction.ID, searchActions.findInFolderResourcesCommand);
+
 const ACTION_ID = 'workbench.action.showAllSymbols';
 const ACTION_LABEL = nls.localize('showTriggerActions', "Go to Symbol in Workspace...");
 const ALL_SYMBOLS_PREFIX = '#';
@@ -267,9 +269,10 @@ class ShowAllSymbolsAction extends Action {
 }
 
 // Register Viewlet
+import 'vs/workbench/parts/search/browser/sourcegraphSearchViewlet'; // ensure it's in the synchronous bundle
 Registry.as<ViewletRegistry>(ViewletExtensions.Viewlets).registerViewlet(new ViewletDescriptor(
-	'vs/workbench/parts/search/browser/searchViewlet',
-	'SearchViewlet',
+	'vs/workbench/parts/search/browser/sourcegraphSearchViewlet', // SOURCEGRAPH PATCH: use our viewlet instead
+	'SourcegraphSearchViewlet', // SOURCEGRAPH PATCH: user our viewlet instead
 	Constants.VIEWLET_ID,
 	nls.localize('name', "Search"),
 	'search',
@@ -384,6 +387,88 @@ configurationRegistry.registerConfiguration({
 			'type': 'boolean',
 			'description': nls.localize('search.quickOpen.includeSymbols', "Configure to include results from a global symbol search in the file results for Quick Open."),
 			'default': false
-		}
+		},
+		'search.profiles': {
+			'type': 'array',
+			'description': nls.localize('search.profiles', "Configure profiles for searching groups of repositories"),
+			'default': [
+				{
+					'name': 'Go',
+					'description': 'Repositories part of the Go Programming Language project.',
+					'workspaces': ['github.com/golang/go', 'github.com/golang/net', 'github.com/golang/tools', 'github.com/golang/crypto', 'github.com/golang/sys', 'github.com/golang/arch', 'github.com/golang/sync'],
+				},
+				{
+					'name': 'Angular',
+					'description': 'Repositories part of the Angular 2 Framework project.',
+					'workspaces': ['github.com/angular/angular', 'github.com/angular/material2', 'github.com/angular/angular-cli'],
+				},
+				{
+					'name': 'vscode',
+					'description': 'Repositories related to the Visual Studio Code project. Taken from https://github.com/Microsoft/vscode/wiki/Related-Projects',
+					'workspaces': ['github.com/Microsoft/vscode',
+						// Core Repositories
+						'github.com/Microsoft/monaco-editor', 'github.com/Microsoft/vscode-node-debug2', 'github.com/Microsoft/vscode-filewatcher-windows', 'github.com/Microsoft/vscode-extension-vscode', 'github.com/Microsoft/vscode-languageserver-node', 'github.com/Microsoft/vscode-textmate', 'github.com/Microsoft/vscode-loader',
+						// SDK Tools
+						'github.com/Microsoft/vscode-generator-code', 'github.com/Microsoft/vscode-vsce',
+						// Documentation
+						'github.com/Microsoft/vscode-docs',
+						// Languages
+						'github.com/Microsoft/language-server-protocol', 'github.com/OmniSharp/omnisharp-vscode', 'github.com/Microsoft/vscode-go', 'github.com/Microsoft/vscode-latex', 'github.com/Microsoft/vscode-css-languageservice', 'github.com/Microsoft/vscode-json-languageservice', 'github.com/Microsoft/vscode-html-languageservice',
+						// Linters
+						'github.com/Microsoft/vscode-jscs', 'github.com/Microsoft/vscode-tslint', 'github.com/Microsoft/vscode-eslint', 'github.com/Microsoft/vscode-jshint',
+						// Themes
+						'github.com/Microsoft/vscode-themes'
+					],
+				},
+				{
+					'name': 'Dropwizard',
+					'description': 'Repositories related to the Dropwizard project.',
+					'workspaces': ['github.com/dropwizard/dropwizard',
+						// Jetty for HTTP servin'.
+						'github.com/eclipse/jetty.project',
+						// Jersey for REST modelin'.
+						'github.com/jersey/jersey',
+						// Jackson for JSON parsin' and generatin'.
+						'github.com/FasterXML/jackson-core', 'github.com/FasterXML/jackson-annotations', 'github.com/FasterXML/jackson-databind',
+						// Logback for loggin'.
+						'github.com/qos-ch/logback',
+						// Hibernate Validator for validatin'.
+						'github.com/hibernate/hibernate-validator',
+						// Metrics for figurin' out what your application is doin' in production.
+						'github.com/dropwizard/metrics',
+						// JDBI and Hibernate for databasin'.
+						'github.com/jdbi/jdbi', 'github.com/hibernate/hibernate-orm',
+						// Liquibase for migratin'.
+						'github.com/liquibase/liquibase',
+					],
+				},
+				{
+					'name': 'Kubernetes',
+					'description': 'Projects part of the Kubernetes Container Orchestartion project.',
+					'workspaces': ['github.com/kubernetes/kubernetes', 'github.com/kubernetes/contrib', 'github.com/kubernetes/charts', 'github.com/kubernetes/client-go'],
+				},
+			],
+			'items': {
+				'type': 'object',
+				'required': ['name', 'workspaces'],
+				'properties': {
+					'name': {
+						'type': 'string',
+						'description': nls.localize('search.profiles.name', "A search profile's name."),
+					},
+					'description': {
+						'type': 'string',
+						'description': nls.localize('search.profiles.description', "An optional description of the search profile."),
+					},
+					'workspaces': {
+						'type': 'array',
+						'description': nls.localize('search.profiles.workspaces', "Workspaces to search for this profile."),
+						'items': {
+							'type': 'string'
+						}
+					}
+				}
+			}
+		},
 	}
 });

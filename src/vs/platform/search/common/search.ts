@@ -11,6 +11,7 @@ import * as objects from 'vs/base/common/objects';
 import { IExpression } from 'vs/base/common/glob';
 import { IFilesConfiguration } from 'vs/platform/files/common/files';
 import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
+import Event from 'vs/base/common/event';
 
 export const ID = 'searchService';
 
@@ -146,12 +147,33 @@ export class LineMatch implements ILineMatch {
 	}
 }
 
+// A search profile
+export interface ISearchProfile {
+	// The name of the profile.
+	name: string;
+	// A list of workspaces to search.
+	workspaces: string[];
+	// An optional description of the profile.
+	description?: string;
+}
+
+export const ISearchProfileService = createDecorator<ISearchProfileService>('searchProfileService');
+
+export interface ISearchProfileService {
+	_serviceBrand: any;
+
+	readonly onDidSearchProfilesChange: Event<void>;
+	getSearchProfiles(): ISearchProfile[];
+	getProfileForWorkspaces(workspaces: string[]): ISearchProfile;
+}
+
 export interface ISearchConfiguration extends IFilesConfiguration {
 	search: {
 		exclude: IExpression;
 		useRipgrep: boolean;
 		useIgnoreFilesByDefault: boolean;
 		alwaysIncludeFolderMatches: boolean;
+		profiles: ISearchProfile[];
 	};
 	editor: {
 		wordSeparators: string;

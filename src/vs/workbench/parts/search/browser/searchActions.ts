@@ -28,6 +28,7 @@ import { ServicesAccessor, IInstantiationService } from 'vs/platform/instantiati
 import { IListService } from 'vs/platform/list/browser/listService';
 import { explorerItemToFileResource } from 'vs/workbench/parts/files/common/files';
 import { OS } from 'vs/base/common/platform';
+import { SourcegraphSearchViewlet } from 'vs/workbench/parts/search/browser/sourcegraphSearchViewlet';
 
 export function isSearchViewletFocussed(viewletService: IViewletService): boolean {
 	let activeViewlet = viewletService.getActiveViewlet();
@@ -216,6 +217,18 @@ export class FindInFilesAction extends FindOrReplaceInFilesAction {
 	}
 }
 
+export class RunQueryAction {
+
+	constructor( @IViewletService private viewletService: IViewletService) { }
+
+	public run(query: string): TPromise<any> {
+		return this.viewletService.openViewlet(Constants.VIEWLET_ID, true).then((viewlet: SourcegraphSearchViewlet) => {
+			viewlet.searchAndReplaceWidget.searchInput.setValue(query);
+			viewlet.onQueryChanged(true, true, false);
+		});
+	}
+}
+
 export class ReplaceInFilesAction extends FindOrReplaceInFilesAction {
 
 	public static ID = 'workbench.action.replaceInFiles';
@@ -290,6 +303,41 @@ export const findInFolderCommand = (accessor: ServicesAccessor, resource?: URI) 
 		if (resource) {
 			viewlet.searchInFolder(resource);
 		}
+	}).done(null, errors.onUnexpectedError);
+};
+
+export class FindInFolderResourcesAction extends Action {
+
+	public static ID = 'search.action.findInFolderResources';
+
+	private folderResources?: string[];
+
+	constructor(folderResources: (string | URI)[], @IInstantiationService private instantiationService: IInstantiationService) {
+		super(FindInFolderResourcesAction.ID, nls.localize('findInFolderResources', "Find in Folder Resources"));
+
+		if (folderResources) {
+			this.folderResources = folderResources.map(resource => URI.isUri(resource) ? resource.toString() : resource);
+		}
+	}
+
+	public run(event?: any): TPromise<any> {
+		return this.instantiationService.invokeFunction.apply(this.instantiationService, [findInFolderResourcesCommand, this.folderResources]);
+	}
+}
+
+export const findInFolderResourcesCommand = (accessor: ServicesAccessor, folderResources?: (string | URI)[], query?: string, regexp?: boolean) => {
+	const viewletService = accessor.get(IViewletService);
+	viewletService.openViewlet(Constants.VIEWLET_ID, false).then((viewlet: SourcegraphSearchViewlet) => {
+		if (folderResources) {
+			viewlet.searchInFolderResources(folderResources.map(resource => URI.isUri(resource) ? resource.toString() : resource));
+		}
+		if (regexp === true || regexp === false) {
+			viewlet.searchAndReplaceWidget.searchInput.setRegex(regexp);
+		}
+		if (query) {
+			viewlet.searchAndReplaceWidget.searchInput.setValue(query);
+		}
+		viewlet.onQueryChanged(true);
 	}).done(null, errors.onUnexpectedError);
 };
 

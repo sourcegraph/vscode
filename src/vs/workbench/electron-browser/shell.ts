@@ -28,6 +28,7 @@ import { ITelemetryAppenderChannel, TelemetryAppenderClient } from 'vs/platform/
 import { TelemetryService, ITelemetryServiceConfig } from 'vs/platform/telemetry/common/telemetryService';
 import { IRemoteService } from 'vs/platform/remote/node/remote';
 import { RemoteService } from 'vs/platform/remote/node/remoteService';
+import { SearchProfileService } from "vs/workbench/services/search/common/searchProfileService";
 import { IdleMonitor, UserStatus } from 'vs/platform/telemetry/browser/idleMonitor';
 import ErrorTelemetry from 'vs/platform/telemetry/browser/errorTelemetry';
 import { ElectronWindow } from 'vs/workbench/electron-browser/window';
@@ -63,7 +64,7 @@ import { IMarkerService } from 'vs/platform/markers/common/markers';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 import { IMessageService, IChoiceService, Severity } from 'vs/platform/message/common/message';
 import { ChoiceChannel } from 'vs/platform/message/common/messageIpc';
-import { ISearchService } from 'vs/platform/search/common/search';
+import { ISearchService, ISearchProfileService } from 'vs/platform/search/common/search';
 import { IThreadService } from 'vs/workbench/services/thread/common/threadService';
 import { ICommandService } from 'vs/platform/commands/common/commands';
 import { CommandService } from 'vs/platform/commands/common/commandService';
@@ -370,6 +371,8 @@ export class WorkbenchShell {
 		serviceCollection.set(IIntegrityService, new SyncDescriptor(IntegrityServiceImpl));
 
 		serviceCollection.set(IRemoteService, new SyncDescriptor(RemoteService));
+		serviceCollection.set(ISearchProfileService, new SyncDescriptor(SearchProfileService));
+
 		return [instantiationService, serviceCollection];
 	}
 

@@ -8,8 +8,7 @@ import * as paths from 'vs/base/common/paths';
 import * as DOM from 'vs/base/browser/dom';
 import { Disposable } from 'vs/base/common/lifecycle';
 import { TPromise } from 'vs/base/common/winjs.base';
-import { IAction, IActionRunner } from 'vs/base/common/actions';
-import { ActionBar } from 'vs/base/browser/ui/actionbar/actionbar';
+import { IActionRunner } from 'vs/base/common/actions';
 import { CountBadge } from 'vs/base/browser/ui/countBadge/countBadge';
 import { FileLabel } from 'vs/workbench/browser/labels';
 import { ITree, IDataSource, ISorter, IAccessibilityProvider, IFilter, IRenderer } from 'vs/base/parts/tree/browser/tree';
@@ -17,7 +16,6 @@ import { Match, SearchResult, FileMatch, FileMatchOrMatch, SearchModel, FolderMa
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
 import { Range } from 'vs/editor/common/core/range';
 import { SearchViewlet } from 'vs/workbench/parts/search/browser/searchViewlet';
-import { RemoveAction, ReplaceAllAction, ReplaceAction } from 'vs/workbench/parts/search/browser/searchActions';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { attachBadgeStyler } from 'vs/platform/theme/common/styler';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
@@ -79,6 +77,8 @@ export class SearchDataSource implements IDataSource {
 			value = this.includeFolderMatch ? element.parent() : element.parent().parent();
 		} else if (element instanceof FolderMatch) {
 			value = element.parent();
+		} else if (element instanceof FolderMatch) {
+			value = element.parent();
 		}
 
 		return TPromise.as(value);
@@ -120,7 +120,9 @@ interface IFolderMatchTemplate {
 interface IFileMatchTemplate {
 	label: FileLabel;
 	badge: CountBadge;
-	actions: ActionBar;
+
+	// PATCH(sourcegraph) Do not use actions
+	//actions: ActionBar;
 }
 
 interface IMatchTemplate {
@@ -129,7 +131,9 @@ interface IMatchTemplate {
 	match: HTMLElement;
 	replace: HTMLElement;
 	after: HTMLElement;
-	actions: ActionBar;
+
+	// PATCH(sourcegraph) Do not want to show actions
+	//actions: ActionBar;
 }
 
 export class SearchRenderer extends Disposable implements IRenderer {
@@ -143,7 +147,7 @@ export class SearchRenderer extends Disposable implements IRenderer {
 		private viewlet: SearchViewlet,
 		@IWorkspaceContextService private contextService: IWorkspaceContextService,
 		@IInstantiationService private instantiationService: IInstantiationService,
-		@IThemeService private themeService: IThemeService
+		@IThemeService private themeService: IThemeService,
 	) {
 		super();
 	}
@@ -202,8 +206,9 @@ export class SearchRenderer extends Disposable implements IRenderer {
 		const label = this.instantiationService.createInstance(FileLabel, fileMatchElement, void 0);
 		const badge = new CountBadge(DOM.append(fileMatchElement, DOM.$('.badge')));
 		this._register(attachBadgeStyler(badge, this.themeService));
-		const actions = new ActionBar(fileMatchElement, { animated: false });
-		return { label, badge, actions };
+		// PATCH(sourcegraph) Do not show actions
+		//const actions = new ActionBar(fileMatchElement, { animated: false });
+		return { label, badge };
 	}
 
 	private renderMatchTemplate(tree: ITree, templateId: string, container: HTMLElement): IMatchTemplate {
@@ -214,7 +219,8 @@ export class SearchRenderer extends Disposable implements IRenderer {
 		const match = DOM.append(parent, DOM.$('span.findInFileMatch'));
 		const replace = DOM.append(parent, DOM.$('span.replaceMatch'));
 		const after = DOM.append(parent, DOM.$('span'));
-		const actions = new ActionBar(container, { animated: false });
+		// PATCH(sourcegraph) Do not want to show actions
+		//const actions = new ActionBar(container, { animated: false });
 
 		return {
 			parent,
@@ -222,7 +228,7 @@ export class SearchRenderer extends Disposable implements IRenderer {
 			match,
 			replace,
 			after,
-			actions
+			//actions
 		};
 	}
 
@@ -245,6 +251,8 @@ export class SearchRenderer extends Disposable implements IRenderer {
 		templateData.badge.setCount(count);
 		templateData.badge.setTitleFormat(count > 1 ? nls.localize('searchMatches', "{0} matches found", count) : nls.localize('searchMatch', "{0} match found", count));
 
+		// PATCH(sourcegraph) Do not want to show actions
+		/*
 		let input = <SearchResult>tree.getInput();
 		templateData.actions.clear();
 
@@ -254,6 +262,7 @@ export class SearchRenderer extends Disposable implements IRenderer {
 		}
 		actions.push(new RemoveAction(tree, fileMatch));
 		templateData.actions.push(actions, { icon: true, label: false });
+		*/
 	}
 
 	private renderMatch(tree: ITree, match: Match, templateData: IMatchTemplate): void {
@@ -268,12 +277,15 @@ export class SearchRenderer extends Disposable implements IRenderer {
 		templateData.after.textContent = preview.after;
 		templateData.parent.title = (preview.before + (replace ? match.replaceString : preview.inside) + preview.after).trim().substr(0, 999);
 
+		// PATCH(sourcegraph) Do not want to show actions
+		/*
 		templateData.actions.clear();
 		if (searchModel.isReplaceActive()) {
 			templateData.actions.push([this.instantiationService.createInstance(ReplaceAction, tree, match, this.viewlet), new RemoveAction(tree, match)], { icon: true, label: false });
 		} else {
 			templateData.actions.push([new RemoveAction(tree, match)], { icon: true, label: false });
 		}
+		*/
 	}
 
 	public disposeTemplate(tree: ITree, templateId: string, templateData: any): void {
