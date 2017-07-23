@@ -151,6 +151,7 @@ export interface ISearchConfiguration extends IFilesConfiguration {
 		exclude: IExpression;
 		useRipgrep: boolean;
 		useIgnoreFilesByDefault: boolean;
+		alwaysIncludeFolderMatches: boolean;
 	};
 	editor: {
 		wordSeparators: string;

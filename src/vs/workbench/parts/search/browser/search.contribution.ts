@@ -375,6 +375,11 @@ configurationRegistry.registerConfiguration({
 			'description': nls.localize('useIgnoreFilesByDefault', "Controls whether to use .gitignore and .ignore files by default when searching in a new workspace."),
 			'default': false
 		},
+		'search.alwaysIncludeFolderMatches': {
+			'type': 'boolean',
+			'description': nls.localize('alwaysIncludeFolderMatches', "Controls whether search results are always grouped by root folder."),
+			'default': true
+		},
 		'search.quickOpen.includeSymbols': {
 			'type': 'boolean',
 			'description': nls.localize('search.quickOpen.includeSymbols', "Configure to include results from a global symbol search in the file results for Quick Open."),
