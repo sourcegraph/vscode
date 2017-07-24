@@ -292,7 +292,9 @@ export class ConfigurationManager implements IConfigurationManager {
 	}
 
 	private initLaunches(): void {
-		this.launches = this.contextService.getWorkspace().roots.map(root => this.instantiationService.createInstance(Launch, this, root));
+		if (this.contextService.hasWorkspace()) {
+			this.launches = this.contextService.getWorkspace().roots.map(root => this.instantiationService.createInstance(Launch, this, root));
+		}
 	}
 
 	public getLaunches(): ILaunch[] {
