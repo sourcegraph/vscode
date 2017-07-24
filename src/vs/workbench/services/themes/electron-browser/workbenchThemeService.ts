@@ -51,7 +51,7 @@ const PERSISTED_THEME_STORAGE_KEY = 'colorThemeData';
 const defaultThemeExtensionId = 'vscode-theme-defaults';
 const oldDefaultThemeExtensionId = 'vscode-theme-colorful-defaults';
 
-const DEFAULT_ICON_THEME_SETTING_VALUE = 'vs-seti';
+const DEFAULT_ICON_THEME_SETTING_VALUE = 'vs-minimal';
 const fileIconsEnabledClass = 'file-icons-enabled';
 
 const themingRegistry = Registry.as<IThemingRegistry>(ThemingExtensions.ThemingContribution);
