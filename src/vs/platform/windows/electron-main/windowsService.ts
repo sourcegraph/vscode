@@ -9,6 +9,7 @@ import { TPromise } from 'vs/base/common/winjs.base';
 import { IDisposable, dispose } from 'vs/base/common/lifecycle';
 import { assign } from 'vs/base/common/objects';
 import URI from 'vs/base/common/uri';
+import product from 'vs/platform/node/product';
 import { IWindowsService, OpenContext, INativeOpenDialogOptions } from 'vs/platform/windows/common/windows';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 import { shell, crashReporter, app } from 'electron';
@@ -42,7 +43,14 @@ export class WindowsService implements IWindowsService, IDisposable {
 		chain(urlService.onOpenURL)
 			.filter(uri => uri.authority === 'file' && !!uri.path)
 			.map(uri => URI.file(uri.fsPath))
-			.on(this.openFileForURI, this, this.disposables);
+			.on(this.openForURI, this, this.disposables);
+
+		// Catch resource URLs (code:open?resource=URI to open the resource at URI)
+		chain(urlService.onOpenURL)
+			.filter(uri => uri.scheme === product.urlProtocol && uri.path === 'open' &&
+				uri.query && /^resource=/.test(uri.query))
+			.map(uri => URI.parse(decodeURIComponent(uri.query.replace(/^resource=/, ''))))
+			.on(this.openForURI, this, this.disposables);
 
 		// Catch extension URLs when there are no windows open
 		chain(urlService.onOpenURL)
@@ -344,9 +352,9 @@ export class WindowsService implements IWindowsService, IDisposable {
 		return TPromise.as(null);
 	}
 
-	private openFileForURI(uri: URI): TPromise<void> {
+	private openForURI(uri: URI): TPromise<void> {
 		const cli = assign(Object.create(null), this.environmentService.args, { goto: true });
-		const pathsToOpen = [uri.fsPath];
+		const pathsToOpen = [uri.toString()];
 
 		this.windowsMainService.open({ context: OpenContext.API, cli, pathsToOpen });
 		return TPromise.as(null);

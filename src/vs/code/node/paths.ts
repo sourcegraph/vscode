@@ -11,24 +11,56 @@ import * as strings from 'vs/base/common/strings';
 import * as paths from 'vs/base/common/paths';
 import * as platform from 'vs/base/common/platform';
 import * as types from 'vs/base/common/types';
+import product from 'vs/platform/node/product';
+import URI from 'vs/base/common/uri';
+import { Schemas } from 'vs/base/common/network';
 import { ParsedArgs } from 'vs/platform/environment/common/environment';
 import { realpathSync } from 'vs/base/node/extfs';
 
 export function validatePaths(args: ParsedArgs): ParsedArgs {
 
 	// Realpath/normalize paths and watch out for goto line mode
-	const paths = doValidatePaths(args._, args.goto);
+	const { paths, urls } = doValidatePaths(args._, args.goto);
 
 	// Update environment
 	args._ = paths;
 	args.diff = args.diff && paths.length === 2;
 
+	// Treat code: URIs as though they were passed via --open-url, not as path args.
+	if (urls.length) {
+		let openURL = args['open-url'];
+		if (!openURL) {
+			openURL = urls;
+		} else if (types.isString(openURL)) {
+			openURL = [openURL, ...urls];
+		} else {
+			openURL = [...openURL, ...urls];
+		}
+		args['open-url'] = openURL;
+	}
+
 	return args;
 }
 
-function doValidatePaths(args: string[], gotoLineMode?: boolean): string[] {
+function doValidatePaths(args: string[], gotoLineMode?: boolean): { paths: string[], urls: string[] } {
+	const pathArgs: string[] = [];
+	const urlArgs: string[] = [];
 	const cwd = process.env['VSCODE_CWD'] || process.cwd();
-	const result = args.map(arg => {
+	args.forEach(arg => {
+		const resource = URI.parse(arg);
+		if (resource.scheme) {
+			if (resource.scheme === Schemas.file) {
+				// Strip file:// and proceed with opening file normally.
+				arg = resource.toString();
+			} else if (resource.scheme === product.urlProtocol) {
+				urlArgs.push(resource.toString());
+				return;
+			} else {
+				pathArgs.push(resource.toString());
+				return;
+			}
+		}
+
 		let pathCandidate = String(arg);
 
 		let parsedPath: IPathWithLineAndColumn;
@@ -52,21 +84,22 @@ function doValidatePaths(args: string[], gotoLineMode?: boolean): string[] {
 
 		const basename = path.basename(realPath);
 		if (basename /* can be empty if code is opened on root */ && !paths.isValidBasename(basename)) {
-			return null; // do not allow invalid file names
+			return; // do not allow invalid file names
 		}
 
 		if (gotoLineMode) {
 			parsedPath.path = realPath;
-			return toPath(parsedPath);
+			pathArgs.push(toPath(parsedPath));
+			return;
 		}
 
-		return realPath;
+		pathArgs.push(realPath);
 	});
 
 	const caseInsensitive = platform.isWindows || platform.isMacintosh;
-	const distinct = arrays.distinct(result, e => e && caseInsensitive ? e.toLowerCase() : e);
+	const distinct = arrays.distinct(pathArgs, e => e && caseInsensitive ? e.toLowerCase() : e);
 
-	return arrays.coalesce(distinct);
+	return { paths: arrays.coalesce(distinct), urls: urlArgs };
 }
 
 function preparePath(cwd: string, p: string): string {

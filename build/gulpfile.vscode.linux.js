@@ -55,6 +55,7 @@ function prepareDebPackage(arch) {
 			.pipe(replace('@@NAME_LONG@@', product.nameLong))
 			.pipe(replace('@@NAME_SHORT@@', product.nameShort))
 			.pipe(replace('@@NAME@@', product.applicationName))
+			.pipe(replace('@@URL_PROTOCOL@@', product.urlProtocol))
 			.pipe(rename('usr/share/applications/' + product.applicationName + '.desktop'));
 
 		const appdata = gulp.src('resources/linux/code.appdata.xml', { base: '.' })
@@ -131,6 +132,7 @@ function prepareRpmPackage(arch) {
 			.pipe(replace('@@NAME_LONG@@', product.nameLong))
 			.pipe(replace('@@NAME_SHORT@@', product.nameShort))
 			.pipe(replace('@@NAME@@', product.applicationName))
+			.pipe(replace('@@URL_PROTOCOL@@', product.urlProtocol))
 			.pipe(rename('BUILD/usr/share/applications/' + product.applicationName + '.desktop'));
 
 		const appdata = gulp.src('resources/linux/code.appdata.xml', { base: '.' })
@@ -204,6 +206,7 @@ function prepareFlatpak(arch) {
 			.pipe(replace('@@NAME_LONG@@', product.nameLong))
 			.pipe(replace('@@NAME_SHORT@@', product.nameShort))
 			.pipe(replace('@@NAME@@', product.applicationName))
+			.pipe(replace('@@URL_PROTOCOL@@', product.urlProtocol))
 			.pipe(rename('share/applications/' + flatpakManifest.appId + '.desktop')));
 
 		all.push(gulp.src('resources/linux/code.appdata.xml', { base: '.' })

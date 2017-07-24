@@ -8,7 +8,7 @@ Type=Application
 StartupNotify=true
 StartupWMClass=@@NAME_SHORT@@
 Categories=Utility;TextEditor;Development;IDE;
-MimeType=text/plain;inode/directory;
+MimeType=text/plain;inode/directory;x-scheme-handler/@@URL_PROTOCOL@@;
 Actions=new-window;
 Keywords=sourcegraph;src;
 

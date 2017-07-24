@@ -420,7 +420,7 @@ export class ElectronWindow extends Themable {
 
 	private toInputs(paths: IPath[], isNew: boolean): IResourceInputType[] {
 		return paths.map(p => {
-			const resource = URI.file(p.filePath);
+			const resource = URI.parse(p.filePath);
 			let input: IResourceInput | IUntitledResourceInput;
 			if (isNew) {
 				input = { filePath: resource.fsPath, options: { pinned: true } } as IUntitledResourceInput;
