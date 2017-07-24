@@ -46,7 +46,7 @@ export class SearchProfilePickerWidget extends Widget {
 	}
 
 	public create(parent: Builder): void {
-		this._register(this.selectBox.onDidSelect(s => { this.selected = s; }));
+		this._register(this.selectBox.onDidSelect(s => { this.selected = s.selected; }));
 		parent.element('h4', { text: localize('searchProfilePicker.title', "Repositories to search") });
 		parent.div({ class: 'search-profile-picker-widget' }, div => {
 			this.container = div.getHTMLElement();

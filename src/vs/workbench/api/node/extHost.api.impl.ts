@@ -85,7 +85,7 @@ export function createApiFactory(
 	const extHostDocumentSaveParticipant = col.define(ExtHostContext.ExtHostDocumentSaveParticipant).set<ExtHostDocumentSaveParticipant>(new ExtHostDocumentSaveParticipant(extHostDocuments, threadService.get(MainContext.MainThreadWorkspace)));
 	const extHostEditors = col.define(ExtHostContext.ExtHostEditors).set<ExtHostEditors>(new ExtHostEditors(threadService, extHostDocumentsAndEditors));
 	const extHostCommands = col.define(ExtHostContext.ExtHostCommands).set<ExtHostCommands>(new ExtHostCommands(threadService, extHostHeapService));
-	const extHostTreeViews = col.define(ExtHostContext.ExtHostTreeViews).set<ExtHostTreeViews>(new ExtHostTreeViews(threadService, extHostCommands));
+	const extHostTreeViews = col.define(ExtHostContext.ExtHostTreeViews).set<ExtHostTreeViews>(new ExtHostTreeViews(threadService.get(MainContext.MainThreadTreeViews), extHostCommands));
 	const extHostWorkspace = col.define(ExtHostContext.ExtHostWorkspace).set<ExtHostWorkspace>(new ExtHostWorkspace(threadService, initData.workspace));
 	const extHostConfiguration = col.define(ExtHostContext.ExtHostConfiguration).set<ExtHostConfiguration>(new ExtHostConfiguration(threadService.get(MainContext.MainThreadConfiguration), extHostWorkspace, initData.configuration));
 	const extHostDiagnostics = col.define(ExtHostContext.ExtHostDiagnostics).set<ExtHostDiagnostics>(new ExtHostDiagnostics(threadService));
@@ -482,8 +482,8 @@ export function createApiFactory(
 			startDebugging: proposedApiFunction(extension, (folder: vscode.WorkspaceFolder | undefined, nameOrConfig: string | vscode.DebugConfiguration) => {
 				return extHostDebugService.startDebugging(folder, nameOrConfig);
 			}),
-			startDebugSession(config: vscode.DebugConfiguration) {
-				return extHostDebugService.startDebugSession(config);
+			startDebugSession(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration) {
+				return extHostDebugService.startDebugSession(folder, config);
 			},
 			onDidStartDebugSession(listener, thisArg?, disposables?) {
 				return extHostDebugService.onDidStartDebugSession(listener, thisArg, disposables);
