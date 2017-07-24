@@ -18,7 +18,7 @@ import { IStorageService, StorageScope } from 'vs/platform/storage/common/storag
 import pkg from 'vs/platform/node/package';
 import product from 'vs/platform/node/product';
 
-const PROBABILITY = 0.15;
+const PROBABILITY = 1.0;
 const SESSION_COUNT_KEY = 'nps/sessionCount';
 const LAST_SESSION_DATE_KEY = 'nps/lastSessionDate';
 const SKIP_VERSION_KEY = 'nps/skipVersion';

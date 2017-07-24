@@ -17,10 +17,10 @@ if hash desktop-file-install 2>/dev/null; then
 	desktop-file-install /usr/share/applications/@@NAME@@.desktop
 fi
 
-if [ "@@NAME@@" != "code-oss" ]; then
+if [ "@@NAME@@" != "src-oss" ]; then
 	# Remove the legacy bin command if this is the stable build
-	if [ "@@NAME@@" = "code" ]; then
-		rm -f /usr/local/bin/code
+	if [ "@@NAME@@" = "src" ]; then
+		rm -f /usr/local/bin/src
 	fi
 
 	# Register apt repository
@@ -31,34 +31,46 @@ if [ "@@NAME@@" != "code-oss" ]; then
 	APT_DIR=$(get_apt_config_value Dir)
 	APT_ETC=$APT_DIR$(get_apt_config_value Dir::Etc)
 	APT_SOURCE_PARTS=$APT_ETC/$(get_apt_config_value Dir::Etc::sourceparts)
-	CODE_SOURCE_PART=$APT_SOURCE_PARTS/vscode.list
+	CODE_SOURCE_PART=$APT_SOURCE_PARTS/sourcegraph.list
 
 	APT_TRUSTED_PARTS=$APT_ETC/$(get_apt_config_value Dir::Etc::trustedparts)
-	CODE_TRUSTED_PART=$APT_TRUSTED_PARTS/microsoft.gpg
+	CODE_TRUSTED_PART=$APT_TRUSTED_PARTS/sourcegraph.gpg
 
-	# Sourced from https://packages.microsoft.com/keys/microsoft.asc
+	# Sourced from https://sourcegraph-packages.storage.googleapis.com/keys/sourcegraph.asc
 	if [ ! -f $CODE_TRUSTED_PART ]; then
 		echo "-----BEGIN PGP PUBLIC KEY BLOCK-----
-Version: GnuPG v1.4.7 (GNU/Linux)
+Version: GnuPG v1
 
-mQENBFYxWIwBCADAKoZhZlJxGNGWzqV+1OG1xiQeoowKhssGAKvd+buXCGISZJwT
-LXZqIcIiLP7pqdcZWtE9bSc7yBY2MalDp9Liu0KekywQ6VVX1T72NPf5Ev6x6DLV
-7aVWsCzUAF+eb7DC9fPuFLEdxmOEYoPjzrQ7cCnSV4JQxAqhU4T6OjbvRazGl3ag
-OeizPXmRljMtUUttHQZnRhtlzkmwIrUivbfFPD+fEoHJ1+uIdfOzZX8/oKHKLe2j
-H632kvsNzJFlROVvGLYAk2WRcLu+RjjggixhwiB+Mu/A8Tf4V6b+YppS44q8EvVr
-M+QvY7LNSOffSO6Slsy9oisGTdfE39nC7pVRABEBAAG0N01pY3Jvc29mdCAoUmVs
-ZWFzZSBzaWduaW5nKSA8Z3Bnc2VjdXJpdHlAbWljcm9zb2Z0LmNvbT6JATUEEwEC
-AB8FAlYxWIwCGwMGCwkIBwMCBBUCCAMDFgIBAh4BAheAAAoJEOs+lK2+EinPGpsH
-/32vKy29Hg51H9dfFJMx0/a/F+5vKeCeVqimvyTM04C+XENNuSbYZ3eRPHGHFLqe
-MNGxsfb7C7ZxEeW7J/vSzRgHxm7ZvESisUYRFq2sgkJ+HFERNrqfci45bdhmrUsy
-7SWw9ybxdFOkuQoyKD3tBmiGfONQMlBaOMWdAsic965rvJsd5zYaZZFI1UwTkFXV
-KJt3bp3Ngn1vEYXwijGTa+FXz6GLHueJwF0I7ug34DgUkAFvAs8Hacr2DRYxL5RJ
-XdNgj4Jd2/g6T9InmWT0hASljur+dJnzNiNCkbn9KbX7J/qK1IbR8y560yRmFsU+
-NdCFTW7wY0Fb1fWJ+/KTsC4=
-=J6gs
+mQENBFlwM1oBCADann5taMPPMAXS2DF6+3MZnYZHT+1WxAFMO4yQS/33bZdy730z
+IjrT0mw7AaZd/Kzx+s/KskxJR80FMXGeivEGbVnLXUsXepUiSdg4vIKrgxzCEnBr
+22zMaM3BqgTZHOMM7LEmmpIgjVoACLQhRQ8nPoRUSTfxNjMjHgvmunsnl1O4odap
+TsFruLobD/06ewyaYai3uV3AyrJ6uJaSi1pPXY9CKUvKS0ZOByJAQyqNX4pOBIVG
+PF4ut/gRasyMoTeRJZbOMZj2QqWWry181eYSAq+vRph0SBoMkCL1nbeDqppr86va
+fShBTjRUpTpXJodRQMvJ9hOHjoIuM8H/rg1lABEBAAG0OFNvdXJjZWdyYXBoIChy
+ZWxlYXNlIHNpZ25pbmcpIDxzZWN1cml0eUBzb3VyY2VncmFwaC5jb20+iQE4BBMB
+AgAiBQJZcDNaAhsDBgsJCAcDAgYVCAIJCgsEFgIDAQIeAQIXgAAKCRDz0IuoZEhe
+0n30B/9BEETCputYYxfBtigGLECcPYRVDlQh2OZ6GDqzm87XG7sUZI6JRnqYIyGw
+w/dTM7pk8sKEEeMnCnrco/ipUaR7fZuoaFvqi41R/braeVHTmNY6rbYvXo2WTxLN
+1Kflk+TKM2/aJWg2IdODyiOOEf6fCJdgZPvcFnFaxO5dbx6KSv3O5PCIPZBNrXo4
+RtImGvrv67yFtfi1G+egTWm0vC3taPxHNbXy7T5Ue40YTv0ctLrb91/3Jm/MKPgl
+ZSbfk/ePflKYKFSMVWQiZlFL1aT9RLYsmAp/UIPsO/B2djjLgjmghOqePqtqkPgL
+aoCd88o4YgiOpA+3bVH2jkySKXVcuQENBFlwM1oBCADFob8T4mU3snI3/hFI91vh
+RbV6nAYhXnVD4O0kICdj+CztXVznPGcm1U24lmPoUbsajim7rhNdY9f026lJOK0Z
+ZmnYE2SxQwgimGXrM3C8wTK1g/tWfoNpuyBkRBBE1EM3aoBmWFipPwidVoEnsOsH
+fqA34dJ2xyuzpMiJXqWNZYnfp2468WbuVqvRM7IwibFeJ2rrDfyoudmKFAyXAOLa
+VMDvgrMgtqlBp9bWD6tGYh3b/qhKgVgOBxe1nHsk/xbTJijY8m0OXwJx/y1mE+K5
+cHfFdYRebLpn9hI3v+gvJB4urlDOLwkPodUJhdZwqnNVezhxouRhLmSw4jahQq4B
+ABEBAAGJAR8EGAECAAkFAllwM1oCGwwACgkQ89CLqGRIXtIKeAf/Ypoj2vhUioNF
+vATPQXKZ7xDMyCi2ZqO6Nqf3fFUZKz5pbHnRdfo/PsIfEaSbQKDjkDEHFq86w4Y7
+nUx849Hr8HBJ7Eq/1tb6AXFoTG6XtcC6PVWDmjpAMCGjQ2ITp8QtnIttGdUjjgj8
+D/06pqKiS1/mjVhkt2OnztOzAf0vm+/XgCt18eo3g1rqPk/wwe6PDK7FGRpTshF+
+N9bmnnvy8zP5ygFX7G8YwLoFNG6NNx6BLCuFOdaTF1QeCk3jsVQXR8OGf8ccydn3
+VE6ylZas9/z0NflaLVLNIN0tJEMVIV12Mrj5I1mg+y1VCOjljlFABgstgeoF5s5/
+W2MgKavjQg==
+=5EpO
 -----END PGP PUBLIC KEY BLOCK-----
-" | gpg --dearmor > microsoft.gpg
-		mv microsoft.gpg $CODE_TRUSTED_PART
+" | gpg --dearmor > sourcegraph.gpg
+		mv sourcegraph.gpg $CODE_TRUSTED_PART
 	fi
 
 	# Install repository source list
@@ -66,13 +78,15 @@ NdCFTW7wY0Fb1fWJ+/KTsC4=
 	if [ ! -f $CODE_SOURCE_PART ]; then
 		# Write source list if it does not exist
 		WRITE_SOURCE=1
-	elif grep -q "# disabled on upgrade to" /etc/apt/sources.list.d/vscode.list; then
+	elif grep -q "# disabled on upgrade to" /etc/apt/sources.list.d/sourcegraph.list; then
 		# Write source list if it was disabled by OS upgrade
 		WRITE_SOURCE=1
 	fi
 	if [ "$WRITE_SOURCE" -eq "1" ]; then
 		echo "### THIS FILE IS AUTOMATICALLY CONFIGURED ###
 # You may comment out this entry, but any other modifications may be lost.
-deb [arch=amd64] http://packages.microsoft.com/repos/vscode stable main" > $CODE_SOURCE_PART
+
+# TODO(sqs): uncomment this when our apt repository is ready
+# deb [arch=amd64] http://sourcegraph-packages.storage-download.googleapis.com/repos/sourcegraph stable main" > $CODE_SOURCE_PART
 	fi
 fi
