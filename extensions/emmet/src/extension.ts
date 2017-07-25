@@ -20,6 +20,8 @@ import { incrementDecrement } from './incrementDecrement';
 import { LANGUAGE_MODES, getMappingForIncludedLanguages } from './util';
 import { updateExtensionsPath } from 'vscode-emmet-helper';
 import { updateImageSize } from './updateImageSize';
+import { reflectCssValue } from './reflectCssValue';
+
 import * as path from 'path';
 
 export function activate(context: vscode.ExtensionContext) {
@@ -34,7 +36,7 @@ export function activate(context: vscode.ExtensionContext) {
 	}));
 
 	context.subscriptions.push(vscode.commands.registerCommand('emmet.removeTag', () => {
-		removeTag();
+		return removeTag();
 	}));
 
 	context.subscriptions.push(vscode.commands.registerCommand('emmet.updateTag', (inputTag) => {
@@ -59,7 +61,7 @@ export function activate(context: vscode.ExtensionContext) {
 	}));
 
 	context.subscriptions.push(vscode.commands.registerCommand('emmet.splitJoinTag', () => {
-		splitJoinTag();
+		return splitJoinTag();
 	}));
 
 	context.subscriptions.push(vscode.commands.registerCommand('emmet.mergeLines', () => {
@@ -116,6 +118,10 @@ export function activate(context: vscode.ExtensionContext) {
 
 	context.subscriptions.push(vscode.commands.registerCommand('emmet.updateImageSize', () => {
 		return updateImageSize();
+	}));
+
+	context.subscriptions.push(vscode.commands.registerCommand('emmet.reflectCssValue', () => {
+		return reflectCssValue();
 	}));
 
 	let currentExtensionsPath = undefined;

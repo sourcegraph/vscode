@@ -11,7 +11,7 @@ import { TextEditor, Range, Position, window } from 'vscode';
 import * as path from 'path';
 import { getImageSize } from './imageSizeHelper';
 import { isStyleSheet } from 'vscode-emmet-helper';
-import { parse, getNode, iterateCSSToken } from './util';
+import { parseDocument, getNode, iterateCSSToken, getCssPropertyFromRule } from './util';
 import { HtmlNode, CssToken, HtmlToken, Attribute, Property } from 'EmmetNode';
 import { locateFile } from './locateFile';
 import parseStylesheet from '@emmetio/css-parser';
@@ -59,7 +59,7 @@ function updateImageSizeHTML(editor: TextEditor) {
 
 function updateImageSizeStyleTag(editor: TextEditor) {
 	let getPropertyInsiderStyleTag = (editor) => {
-		const rootNode = parse(editor.document);
+		const rootNode = parseDocument(editor.document);
 		const currentNode = <HtmlNode>getNode(rootNode, editor.selection.active);
 		if (currentNode && currentNode.name === 'style'
 			&& currentNode.open.end.isBefore(editor.selection.active)
@@ -109,7 +109,7 @@ function updateImageSizeCSS(editor: TextEditor, fetchNode: (editor) => Property)
  * @return {HtmlNode}
  */
 function getImageHTMLNode(editor: TextEditor): HtmlNode {
-	const rootNode = parse(editor.document);
+	const rootNode = parseDocument(editor.document);
 	const node = <HtmlNode>getNode(rootNode, editor.selection.active, true);
 
 	return node && node.name.toLowerCase() === 'img' ? node : null;
@@ -122,7 +122,7 @@ function getImageHTMLNode(editor: TextEditor): HtmlNode {
  * @return {Property}
  */
 function getImageCSSNode(editor: TextEditor): Property {
-	const rootNode = parse(editor.document);
+	const rootNode = parseDocument(editor.document);
 	const node = getNode(rootNode, editor.selection.active, true);
 	return node && node.type === 'property' ? <Property>node : null;
 }
@@ -213,12 +213,12 @@ function updateHTMLTag(editor: TextEditor, node: HtmlNode, width: number, height
  */
 function updateCSSNode(editor: TextEditor, srcProp: Property, width: number, height: number) {
 	const rule = srcProp.parent;
-	const widthProp = getProperty(rule, 'width');
-	const heightProp = getProperty(rule, 'height');
+	const widthProp = getCssPropertyFromRule(rule, 'width');
+	const heightProp = getCssPropertyFromRule(rule, 'height');
 
 	// Detect formatting
 	const separator = srcProp.separator || ': ';
-	const before = getBefore(editor, srcProp);
+	const before = getPropertyDelimitor(editor, srcProp);
 
 	let edits: [Range, string][] = [];
 	if (!srcProp.terminatorToken) {
@@ -292,22 +292,12 @@ function findUrlToken(node, pos: Position) {
 }
 
 /**
- * Returns `name` CSS property from given `rule`
- * @param  {Node} rule
- * @param  {String} name
- * @return {Node}
- */
-function getProperty(rule, name) {
-	return rule.children.find(node => node.type === 'property' && node.name === name);
-}
-
-/**
  * Returns a string that is used to delimit properties in current node’s rule
  * @param  {TextEditor} editor
- * @param  {Node}       node
+ * @param  {Property}       node
  * @return {String}
  */
-function getBefore(editor: TextEditor, node: Property) {
+function getPropertyDelimitor(editor: TextEditor, node: Property) {
 	let anchor;
 	if (anchor = (node.previousSibling || node.parent.contentStartToken)) {
 		return editor.document.getText(new Range(anchor.end, node.start));
@@ -317,3 +307,4 @@ function getBefore(editor: TextEditor, node: Property) {
 
 	return '';
 }
+

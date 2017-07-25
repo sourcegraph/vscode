@@ -395,7 +395,7 @@ configurationRegistry.registerConfiguration({
 					}
 				]
 			},
-			'scope': ConfigurationScope.FOLDER
+			'scope': ConfigurationScope.RESOURCE
 		},
 		'search.useRipgrep': {
 			'type': 'boolean',
