@@ -6,6 +6,7 @@
 'use strict';
 
 import * as vscode from 'vscode';
+import 'isomorphic-fetch';
 
 export interface IDependencyReference {
 	dependencyData: string;
