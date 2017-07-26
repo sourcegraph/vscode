@@ -215,6 +215,21 @@ export class ExtensionsListView extends CollapsibleView {
 			return new PagedModel(result);
 		}
 
+		if (/@enabled/i.test(value)) {
+			value = value ? value.replace(/@enabled/g, '').trim().toLowerCase() : '';
+
+			const local = await this.extensionsWorkbenchService.queryLocal();
+
+			const result = local
+				.sort((e1, e2) => e1.displayName.localeCompare(e2.displayName))
+				.filter(e => e.type === LocalExtensionType.User &&
+					!(e.disabledForWorkspace || e.disabledGlobally) &&
+					e.name.toLowerCase().indexOf(value) > -1
+				);
+
+			return new PagedModel(result);
+		}
+
 		if (ExtensionsListView.isWorkspaceRecommendedExtensionsQuery(query.value)) {
 			return this.getWorkspaceRecommendationsModel(query, options);
 		} else if (ExtensionsListView.isKeymapsRecommendedExtensionsQuery(query.value)) {
@@ -405,6 +420,10 @@ export class ExtensionsListView extends CollapsibleView {
 		return /@disabled/i.test(query);
 	}
 
+	static isEnabledExtensionsQuery(query: string): boolean {
+		return /@enabled/i.test(query);
+	}
+
 	static isRecommendedExtensionsQuery(query: string): boolean {
 		return /@recommended/i.test(query);
 	}
@@ -423,7 +442,8 @@ export class InstalledExtensionsView extends ExtensionsListView {
 	public static isInsalledExtensionsQuery(query: string): boolean {
 		return ExtensionsListView.isInstalledExtensionsQuery(query)
 			|| ExtensionsListView.isOutdatedExtensionsQuery(query)
-			|| ExtensionsListView.isDisabledExtensionsQuery(query);
+			|| ExtensionsListView.isDisabledExtensionsQuery(query)
+			|| ExtensionsListView.isEnabledExtensionsQuery(query);
 	}
 
 	async show(query: string): TPromise<IPagedModel<IExtension>> {

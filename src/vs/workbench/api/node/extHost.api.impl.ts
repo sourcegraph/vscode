@@ -445,15 +445,12 @@ export function createApiFactory(
 			onDidChangeConfiguration: (listener: (_: any) => any, thisArgs?: any, disposables?: extHostTypes.Disposable[]) => {
 				return extHostConfiguration.onDidChangeConfiguration(listener, thisArgs, disposables);
 			},
-			getConfiguration: (section?: string): vscode.WorkspaceConfiguration => {
-				return extHostConfiguration.getConfiguration(section);
+			getConfiguration: (section?: string, resource?: vscode.Uri): vscode.WorkspaceConfiguration => {
+				return extHostConfiguration.getConfiguration(section, <URI>resource);
 			},
 			extractResourceInfo(resource: vscode.Uri | string): { workspace: string, repo: string, revisionSpecifier?: string, relativePath?: string } | undefined {
 				return extHostWorkspace.extractResourceInfo(resource as (string | URI));
 			},
-			getConfiguration2: proposedApiFunction(extension, (section?: string, resource?: vscode.Uri): vscode.WorkspaceConfiguration => {
-				return extHostConfiguration.getConfiguration2(section, <URI>resource);
-			}),
 			registerTaskProvider: (type: string, provider: vscode.TaskProvider) => {
 				return extHostTask.registerTaskProvider(extension, provider);
 			},
@@ -487,11 +484,8 @@ export function createApiFactory(
 			get activeDebugSession() {
 				return extHostDebugService.activeDebugSession;
 			},
-			startDebugging: proposedApiFunction(extension, (folder: vscode.WorkspaceFolder | undefined, nameOrConfig: string | vscode.DebugConfiguration) => {
+			startDebugging(folder: vscode.WorkspaceFolder | undefined, nameOrConfig: string | vscode.DebugConfiguration) {
 				return extHostDebugService.startDebugging(folder, nameOrConfig);
-			}),
-			startDebugSession(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration) {
-				return extHostDebugService.startDebugSession(folder, config);
 			},
 			onDidStartDebugSession(listener, thisArg?, disposables?) {
 				return extHostDebugService.onDidStartDebugSession(listener, thisArg, disposables);
@@ -585,7 +579,8 @@ export function createApiFactory(
 			TaskGroup: extHostTypes.TaskGroup,
 			ProcessExecution: extHostTypes.ProcessExecution,
 			ShellExecution: extHostTypes.ShellExecution,
-			Task: extHostTypes.Task
+			Task: extHostTypes.Task,
+			ConfigurationTarget: extHostTypes.ConfigurationTarget
 		};
 	};
 }

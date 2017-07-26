@@ -229,12 +229,11 @@ export class ConfigurationManager implements IConfigurationManager {
 		@IStorageService private storageService: IStorageService
 	) {
 		this.adapters = [];
-		this.launches = [];
 		this.toDispose = [];
 		this.registerListeners();
 		this.initLaunches();
-		// TODO@isidor select the appropriate Launch
-		this.selectConfiguration(this.launches.length ? this.launches[0] : undefined, this.storageService.get(DEBUG_SELECTED_CONFIG_NAME_KEY, StorageScope.WORKSPACE, null));
+		const previousSelectedRoot = this.storageService.get(DEBUG_SELECTED_ROOT, StorageScope.WORKSPACE);
+		this.selectConfiguration(this.launches.filter(l => l.workspaceUri.toString() === previousSelectedRoot).pop(), this.storageService.get(DEBUG_SELECTED_CONFIG_NAME_KEY, StorageScope.WORKSPACE));
 	}
 
 	private registerListeners(): void {
@@ -282,19 +281,19 @@ export class ConfigurationManager implements IConfigurationManager {
 		});
 
 		this.toDispose.push(this.contextService.onDidChangeWorkspaceRoots(() => {
+			this.initLaunches();
 		}));
 
 		this.toDispose.push(this.configurationService.onDidUpdateConfiguration((event) => {
-			if (event.sourceConfig) {
-				// TODO@Isidor react on user changing the launch.json
+			if (event.sourceConfig.launch) {
+				this.selectConfiguration(this.selectedLaunch);
 			}
 		}));
 	}
 
 	private initLaunches(): void {
-		if (this.contextService.hasWorkspace()) {
-			this.launches = this.contextService.getWorkspace().roots.map(root => this.instantiationService.createInstance(Launch, this, root));
-		}
+		const workspace = this.contextService.getWorkspace();
+		this.launches = workspace ? workspace.roots.map(root => this.instantiationService.createInstance(Launch, this, root)) : [];
 	}
 
 	public getLaunches(): ILaunch[] {
@@ -313,12 +312,18 @@ export class ConfigurationManager implements IConfigurationManager {
 		return this._onDidSelectConfigurationName.event;
 	}
 
-	public selectConfiguration(launch: ILaunch, name: string): void {
+	public selectConfiguration(launch: ILaunch, name?: string): void {
 		this._selectedLaunch = launch;
-		this._selectedName = name;
+		const names = launch ? launch.getConfigurationNames() : [];
+		if (name && names.indexOf(name) >= 0) {
+			this._selectedName = name;
+		}
+		if (names.indexOf(this.selectedName) === -1) {
+			this._selectedName = names.length ? names[0] : undefined;
+		}
 		this.storageService.store(DEBUG_SELECTED_CONFIG_NAME_KEY, this.selectedName, StorageScope.WORKSPACE);
 		if (launch) {
-			this.storageService.store(DEBUG_SELECTED_ROOT, this.contextService.getRoot(launch.uri).toString(), StorageScope.WORKSPACE);
+			this.storageService.store(DEBUG_SELECTED_ROOT, launch.workspaceUri.toString(), StorageScope.WORKSPACE);
 		}
 		this._onDidSelectConfigurationName.fire();
 	}
@@ -451,7 +456,7 @@ class Launch implements ILaunch {
 
 		// massage configuration attributes - append workspace path to relatvie paths, substitute variables in paths.
 		Object.keys(result).forEach(key => {
-			result[key] = this.configurationResolverService.resolveAny(result[key]);
+			result[key] = this.configurationResolverService.resolveAny(this.workspaceUri, result[key]);
 		});
 
 		const adapter = this.configurationManager.getAdapter(result.type);
