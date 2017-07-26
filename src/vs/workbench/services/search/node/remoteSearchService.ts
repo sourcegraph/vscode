@@ -110,12 +110,12 @@ export class RemoteSearchService extends SearchService implements ISearchService
 	}
 
 	private getWarning(r: CodeSearchResponse): string | undefined {
-		if (r.cloning) {
+		if (r.cloning.length > 0) {
 			return r.cloning.length === 1 ?
 				nls.localize('searchCloningWarning', "{0} is still cloning, so is missing from the results. You can retry your search soon.", r.cloning[0]) :
 				nls.localize('searchCloningManyWarning', "{0} (including {1}) repositories are still cloning, so are missing from the results. You can retry your search soon.", r.cloning.length, r.cloning[0]);
 		}
-		if (r.missing) {
+		if (r.missing.length > 0) {
 			return r.missing.length === 1 ?
 				nls.localize('searchMissingWarning', "{0} could not be found, so is missing from the results. You may have a typo in your repo selection.", r.missing[0]) :
 				nls.localize('searchMissingManyWarning', "{0} (including {1}) could not be found, so are missing from the results.", r.missing.length, r.missing[0]);
