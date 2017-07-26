@@ -11,7 +11,7 @@ import Event, { Emitter } from 'vs/base/common/event';
 import { assign } from 'vs/base/common/objects';
 import { IDisposable, dispose } from 'vs/base/common/lifecycle';
 import { IThreadService } from 'vs/workbench/services/thread/common/threadService';
-import { ISCMService, ISCMProvider, ISCMResource, ISCMResourceGroup, ISCMResourceDecorations, ISCMRevision } from 'vs/workbench/services/scm/common/scm';
+import { ISCMService, ISCMProvider, ISCMResource, ISCMResourceGroup, ISCMResourceDecorations } from 'vs/workbench/services/scm/common/scm';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { ICommandService } from 'vs/platform/commands/common/commands';
 import { ExtHostContext, MainThreadSCMShape, ExtHostSCMShape, SCMProviderFeatures, SCMRawResource, SCMGroupFeatures } from '../node/extHost.protocol';
@@ -82,6 +82,7 @@ class MainThreadSCMProvider implements ISCMProvider {
 	get commitTemplate(): string | undefined { return this.features.commitTemplate; }
 	get acceptInputCommand(): Command | undefined { return this.features.acceptInputCommand; }
 	get statusBarCommands(): Command[] | undefined { return this.features.statusBarCommands; }
+	get setRevisionCommand(): Command | undefined { return this.features.setRevisionCommand; }
 
 	private _onDidChangeCommitTemplate = new Emitter<string>();
 	get onDidChangeCommitTemplate(): Event<string> { return this._onDidChangeCommitTemplate.event; }
@@ -203,14 +204,6 @@ class MainThreadSCMProvider implements ISCMProvider {
 		return this.proxy.$executeCommand(this.handle, args);
 	};
 
-	// There is no extension support for the Sourcegraph-specific SCM provider API yet.
-	get revision(): ISCMRevision { return null; }
-	resolveRevision(arg: any): any { throw new Error('not implemented'); }
-	setRevision(arg: any): any { throw new Error('not implemented'); }
-	setDiffBase(arg: any): any { throw new Error('not implemented'); }
-	get diffBase(): any { throw new Error('not implemented'); }
-	ready(): TPromise<void> { return TPromise.as(void 0); }
-
 	dispose(): void {
 
 	}
@@ -219,7 +212,6 @@ class MainThreadSCMProvider implements ISCMProvider {
 export class MainThreadSCM extends MainThreadSCMShape {
 
 	private _proxy: ExtHostSCMShape;
-	private _sourceControlsMain: { [handle: number]: ISCMProvider; } = Object.create(null);
 	private _sourceControls: { [handle: number]: MainThreadSCMProvider; } = Object.create(null);
 	private _sourceControlDisposables: { [handle: number]: IDisposable; } = Object.create(null);
 	private _disposables: IDisposable[] = [];
@@ -233,14 +225,8 @@ export class MainThreadSCM extends MainThreadSCMShape {
 		super();
 		this._proxy = threadService.get(ExtHostContext.ExtHostSCM);
 
-		this.scmService.onDidRegisterProvider(this.onDidRegisterProvider, this, this._disposables);
 		this.scmService.onDidChangeProvider(this.onDidChangeProvider, this, this._disposables);
 		this.scmService.input.onDidChange(this._proxy.$onInputBoxValueChange, this._proxy, this._disposables);
-
-		scmService.providers.forEach(provider => this.onDidRegisterProvider(provider));
-		if (scmService.activeProvider) {
-			this.onDidChangeProvider(scmService.activeProvider);
-		}
 	}
 
 	$registerSourceControl(handle: number, id: string, label: string): void {
@@ -327,45 +313,9 @@ export class MainThreadSCM extends MainThreadSCMShape {
 		this.scmService.input.value = value;
 	}
 
-	$setRevision(handle: number, revision: ISCMRevision): TPromise<ISCMRevision> {
-		const provider = this._sourceControlsMain[handle];
-
-		if (!provider) {
-			return TPromise.wrapError(new Error('invalid SCM provider'));
-		}
-
-		return provider.setRevision(revision);
-	}
-
-	private static _handlePool: number = 0;
-	private onDidRegisterProvider(provider: ISCMProvider): void {
-		const handle = MainThreadSCM._handlePool++;
-		this._sourceControlsMain[handle] = provider;
-		this._proxy.$onSourceControlRegistered(handle, {
-			id: provider.id,
-			label: provider.label,
-			...this.toFeatures(provider),
-		});
-		provider.onDidChange(() => {
-			this._proxy.$onSourceControlUpdated(handle, this.toFeatures(provider));
-		}, null, this._disposables);
-	}
-
 	private onDidChangeProvider(provider: ISCMProvider): void {
-		let main = false;
-		let handle = Object.keys(this._sourceControls).filter(handle => this._sourceControls[handle] === provider)[0];
-		if (handle === undefined) {
-			main = true;
-			handle = Object.keys(this._sourceControlsMain).filter(handle => this._sourceControlsMain[handle] === provider)[0];
-		}
-		this._proxy.$onActiveSourceControlChange(handle && parseInt(handle), main);
-	}
-
-	private toFeatures(provider: ISCMProvider): SCMProviderFeatures {
-		return {
-			revision: provider.revision,
-			// TODO(sqs): fill in others when they are needed
-		};
+		const handle = Object.keys(this._sourceControls).filter(handle => this._sourceControls[handle] === provider)[0];
+		this._proxy.$onActiveSourceControlChange(handle && parseInt(handle));
 	}
 
 	dispose(): void {

@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import assert = require('assert');
-import { globToString } from 'vs/workbench/services/search/node/remoteSearchService';
+import { globToString } from 'vs/workbench/services/search/electron-browser/remoteSearchService';
 
 suite('RemoteSearchService', () => {
 	test('globToString', () => {

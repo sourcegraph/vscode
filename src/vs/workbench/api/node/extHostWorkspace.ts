@@ -22,6 +22,7 @@ import { compare } from "vs/base/common/strings";
 import { asWinJsPromise } from 'vs/base/common/async';
 import { Disposable } from 'vs/workbench/api/node/extHostTypes';
 import { TrieMap } from 'vs/base/common/map';
+import { IFileStat, IResolveFileOptions } from 'vs/platform/files/common/files';
 
 class Workspace2 extends Workspace {
 
@@ -221,16 +222,21 @@ export class ExtHostWorkspace extends ExtHostWorkspaceShape {
 
 	private readonly _provider = new Map<number, vscode.FileSystemProvider>();
 
-	public registerFileSystemProvider(authority: string, provider: vscode.FileSystemProvider): vscode.Disposable {
+	public registerFileSystemProvider(scheme: string, provider: vscode.FileSystemProvider): vscode.Disposable {
 
 		const handle = this._provider.size;
 		this._provider.set(handle, provider);
 		const reg = provider.onDidChange(e => this._proxy.$onFileSystemChange(handle, <URI>e));
-		this._proxy.$registerFileSystemProvider(handle, authority);
+		this._proxy.$registerFileSystemProvider(handle, scheme);
 		return new Disposable(() => {
 			this._provider.delete(handle);
 			reg.dispose();
 		});
+	}
+
+	$resolveFileStat(handle: number, resource: URI, options: IResolveFileOptions | vscode.ResolveFileOptions): TPromise<IFileStat> {
+		const provider = this._provider.get(handle);
+		return asWinJsPromise(token => provider.resolveFile(resource, options as vscode.ResolveFileOptions) as TPromise<IFileStat>);
 	}
 
 	$resolveFile(handle: number, resource: URI): TPromise<string> {

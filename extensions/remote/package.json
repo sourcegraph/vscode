@@ -1,0 +1,41 @@
+{
+  "name": "remote",
+  "displayName": "Remote resources support (Sourcegraph)",
+  "description": "A Visual Studio Code extension that provides file contents, tree listings, search, and SCM APIs backed by the Sourcegraph API",
+  "categories": [
+    "Other"
+  ],
+  "main": "./out/main",
+  "version": "0.0.1",
+  "publisher": "sourcegraph",
+  "engines": {
+    "vscode": "*"
+  },
+  "activationEvents": [
+    "resource:repo",
+    "resource:gitremote"
+  ],
+  "enableProposedApi": true,
+  "contributes": {
+    "commands": [
+      {
+        "command": "remote.repository.action.switchRevision",
+        "title": "%remote.switchRevision.title%",
+        "category": "Remote repository"
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "gulp compile-extension:remote",
+    "watch": "gulp watch-extension:remote"
+  },
+  "dependencies": {
+    "isomorphic-fetch": "^2.2.1",
+    "vscode-nls": "^2.0.2"
+  },
+  "devDependencies": {
+    "@types/mocha": "^2.2.38",
+    "@types/node": "^7.0.12",
+    "vscode": "1.0.1"
+  }
+}

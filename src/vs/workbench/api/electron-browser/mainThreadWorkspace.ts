@@ -115,13 +115,16 @@ export class MainThreadWorkspace extends MainThreadWorkspaceShape {
 
 	private _provider = new Map<number, [IRemoteFileSystemProvider, Emitter<URI>]>();
 
-	$registerFileSystemProvider(handle: number, authority: string): void {
+	$registerFileSystemProvider(handle: number, scheme: string): void {
 		if (!(this._fileService instanceof RemoteFileService)) {
 			throw new Error();
 		}
 		const emitter = new Emitter<URI>();
 		const provider = {
 			onDidChange: emitter.event,
+			resolveFile: (resource, options) => {
+				return this._proxy.$resolveFileStat(handle, resource, options);
+			},
 			resolve: (resource) => {
 				return this._proxy.$resolveFile(handle, resource);
 			},
@@ -130,7 +133,7 @@ export class MainThreadWorkspace extends MainThreadWorkspaceShape {
 			}
 		};
 		this._provider.set(handle, [provider, emitter]);
-		this._fileService.registerProvider(authority, provider);
+		this._fileService.registerProvider(scheme, provider);
 	}
 
 	$onFileSystemChange(handle: number, resource: URI) {

@@ -19,11 +19,6 @@ import assert = require('vs/base/common/assert');
 import { StopWatch } from 'vs/base/common/stopwatch';
 import { startTimer } from 'vs/base/node/startupTimers';
 import errors = require('vs/base/common/errors');
-// tslint:disable-next-line:import-patterns
-import { RemoteGitSCMProvider } from 'vs/workbench/services/scm/node/remoteGitProvider';
-import { RemoteRepoFileService } from 'vs/workbench/services/files/node/remoteRepoFileService';
-import { Schemas } from 'vs/base/common/network';
-import { SchemeRouterFileService } from 'vs/platform/files/common/schemeRouter';
 import { BackupFileService } from 'vs/workbench/services/backup/node/backupFileService';
 import { IBackupFileService } from 'vs/workbench/services/backup/common/backup';
 import { toErrorMessage } from 'vs/base/common/errorMessage';
@@ -179,7 +174,6 @@ export class Workbench implements IPartService {
 	private workbenchStarted: boolean;
 	private workbenchCreated: boolean;
 	private workbenchShutdown: boolean;
-	private scmService: ISCMService;
 	private editorService: WorkbenchEditorService;
 	private viewletService: IViewletService;
 	private contextKeyService: IContextKeyService;
@@ -367,11 +361,6 @@ export class Workbench implements IPartService {
 					}
 				});
 			})));
-
-			// Resolve SCM provider revision
-			if (this.scmService && this.scmService.activeProvider) {
-				compositeAndEditorPromises.push(this.scmService.activeProvider.ready());
-			}
 
 			if (this.storageService.getBoolean(Workbench.zenModeActiveSettingKey, StorageScope.WORKSPACE, false)) {
 				this.toggleZenMode(true);
@@ -599,35 +588,8 @@ export class Workbench implements IPartService {
 		this.toShutdown.push(this.titlebarPart);
 		serviceCollection.set(ITitleService, this.titlebarPart);
 
-		// SCM Service
-		// needs to be instantiated before FileService
-		this.scmService = this.instantiationService.createInstance(SCMService);
-		serviceCollection.set(ISCMService, this.scmService);
-
-		// TODO(sqs): support multiple roots, not sure what to do in that case, though
-		if (this.contextService.hasWorkspace() && this.contextService.getWorkspace().roots[0].scheme === Schemas.remoteRepo) {
-			const scmProvider = this.instantiationService.createInstance(RemoteGitSCMProvider);
-
-			const disposable = this.scmService.registerSCMProvider(scmProvider);
-			this.toDispose.push(disposable);
-
-			scmProvider.setRevision({}); // TODO(sqs) accept workspaceRevision and add back that field
-			// scmProvider.setRevision(this.workbenchParams.options.workspaceRevision || {});
-		}
-
 		// File Service
-		// Register scheme file handlers.
-		//
-		// NOTE: You must also register the scheme in remoteRepoContentProvider.ts.
-		const fileService = new SchemeRouterFileService();
-
-		// Virtual repo file systems.
-		fileService.registerSchemeFileService(Schemas.remoteRepo, this.instantiationService.createInstance(RemoteRepoFileService));
-		fileService.registerSchemeFileService(Schemas.remoteGitRepo, this.instantiationService.createInstance(RemoteRepoFileService));
-
-		// Fall back to local file system.
-		fileService.registerSchemeFileService(Schemas.file, this.instantiationService.createInstance(RemoteFileService));
-
+		const fileService = this.instantiationService.createInstance(RemoteFileService);
 		serviceCollection.set(IFileService, fileService);
 		this.toDispose.push(fileService.onFileChanges(e => this.configurationService.handleWorkspaceFileEvents(e)));
 
@@ -640,6 +602,9 @@ export class Workbench implements IPartService {
 
 		// Text File Service
 		serviceCollection.set(ITextFileService, new SyncDescriptor(TextFileService));
+
+		// SCM Service
+		serviceCollection.set(ISCMService, new SyncDescriptor(SCMService));
 
 		// Text Model Resolver Service
 		serviceCollection.set(ITextModelService, new SyncDescriptor(TextModelResolverService));

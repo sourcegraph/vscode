@@ -5,10 +5,10 @@
 
 'use strict';
 import assert = require('assert');
-import URI from 'vs/base/common/uri';
-import { toFileStat } from 'vs/workbench/services/files/node/remoteRepoFileService';
+import * as vscode from 'vscode';
+import { toFileStat } from './fileStat';
 
-suite('RemoteRepoFileService', () => {
+suite('fileStat', () => {
 	test('toFileStat with no parentPath', () => {
 		const files = [
 			'a1',
@@ -18,7 +18,7 @@ suite('RemoteRepoFileService', () => {
 			'd2/f5',
 			'f6',
 		];
-		const root = toFileStat(URI.parse('repo://example.com/foo/bar'), files, {});
+		const root = toFileStat(vscode.Uri.parse('repo://example.com/foo/bar'), files, {});
 
 		assert.ok(root);
 		assert.equal(root.resource.toString(), 'repo://example.com/foo/bar');
@@ -27,8 +27,8 @@ suite('RemoteRepoFileService', () => {
 		assert.equal(root.hasChildren, true);
 
 		assert.ok(root.children);
-		assert.deepEqual(root.children.map(c => c.name), ['a1', 'd1', 'd2', 'f6']);
-		const [a1, d1, d2, f6] = root.children;
+		assert.deepEqual(root.children!.map(c => c.name), ['a1', 'd1', 'd2', 'f6']);
+		const [a1, d1, d2, f6] = root.children!;
 
 		assert.equal(a1.resource.toString(), 'repo://example.com/foo/bar/a1');
 		assert.equal(a1.isDirectory, false);
@@ -56,7 +56,7 @@ suite('RemoteRepoFileService', () => {
 			'd2/f5',
 			'f6',
 		];
-		const root = toFileStat(URI.parse('repo://example.com/foo/bar'), files, { parentPath: 'd1' });
+		const root = toFileStat(vscode.Uri.parse('repo://example.com/foo/bar'), files, { parentPath: 'd1' });
 
 		assert.ok(root);
 		assert.equal(root.resource.toString(), 'repo://example.com/foo/bar/d1');
@@ -65,8 +65,8 @@ suite('RemoteRepoFileService', () => {
 		assert.equal(root.hasChildren, true);
 
 		assert.ok(root.children);
-		assert.deepEqual(root.children.map(c => c.name), ['a2', 'd2', 'f4']);
-		const [a2, d2, f4] = root.children;
+		assert.deepEqual(root.children!.map(c => c.name), ['a2', 'd2', 'f4']);
+		const [a2, d2, f4] = root.children!;
 
 		assert.equal(a2.resource.toString(), 'repo://example.com/foo/bar/d1/a2');
 		assert.equal(a2.isDirectory, false);
@@ -82,7 +82,7 @@ suite('RemoteRepoFileService', () => {
 
 	test('toFileStat with parentPath file (not dir)', () => {
 		const files = ['a1'];
-		const root = toFileStat(URI.parse('repo://example.com/foo/bar'), files, { parentPath: 'a1' });
+		const root = toFileStat(vscode.Uri.parse('repo://example.com/foo/bar'), files, { parentPath: 'a1' });
 
 		assert.ok(root);
 		assert.equal(root.resource.toString(), 'repo://example.com/foo/bar/a1');
@@ -96,7 +96,7 @@ suite('RemoteRepoFileService', () => {
 			'd1/a1',
 			'd2/a3',
 		];
-		const root = toFileStat(URI.parse('repo://example.com/foo/bar'), files, { parentPath: 'd2/a3' });
+		const root = toFileStat(vscode.Uri.parse('repo://example.com/foo/bar'), files, { parentPath: 'd2/a3' });
 
 		assert.ok(root);
 		assert.equal(root.resource.toString(), 'repo://example.com/foo/bar/d2/a3');
@@ -114,7 +114,7 @@ suite('RemoteRepoFileService', () => {
 			'd2/f5',
 			'f6',
 		];
-		const root = toFileStat(URI.parse('repo://example.com/foo/bar'), files, { parentPath: 'd1/d2' });
+		const root = toFileStat(vscode.Uri.parse('repo://example.com/foo/bar'), files, { parentPath: 'd1/d2' });
 
 		assert.ok(root);
 		assert.equal(root.resource.toString(), 'repo://example.com/foo/bar/d1/d2');
@@ -123,9 +123,9 @@ suite('RemoteRepoFileService', () => {
 		assert.equal(root.hasChildren, true);
 
 		assert.ok(root.children);
-		assert.deepEqual(root.children.map(c => c.name), ['f3']);
+		assert.deepEqual(root.children!.map(c => c.name), ['f3']);
 
-		const f3 = root.children[0];
+		const f3 = root.children![0];
 		assert.equal(f3.resource.toString(), 'repo://example.com/foo/bar/d1/d2/f3');
 		assert.equal(f3.isDirectory, false);
 	});
@@ -137,32 +137,32 @@ suite('RemoteRepoFileService', () => {
 			'd2/f2',
 		];
 
-		const d1 = toFileStat(URI.parse('repo://example.com/foo/bar'), files, { parentPath: 'd1' });
+		const d1 = toFileStat(vscode.Uri.parse('repo://example.com/foo/bar'), files, { parentPath: 'd1' });
 		assert.ok(d1);
 		assert.equal(d1.resource.toString(), 'repo://example.com/foo/bar/d1');
 		assert.equal(d1.name, 'd1');
 		assert.equal(d1.isDirectory, true);
 		assert.equal(d1.hasChildren, true);
 		assert.ok(d1.children);
-		assert.deepEqual(d1.children.map(c => c.name), ['f1']);
+		assert.deepEqual(d1.children!.map(c => c.name), ['f1']);
 
-		const d11 = toFileStat(URI.parse('repo://example.com/foo/bar'), files, { parentPath: 'd11' });
+		const d11 = toFileStat(vscode.Uri.parse('repo://example.com/foo/bar'), files, { parentPath: 'd11' });
 		assert.ok(d11);
 		assert.equal(d11.resource.toString(), 'repo://example.com/foo/bar/d11');
 		assert.equal(d11.name, 'd11');
 		assert.equal(d11.isDirectory, true);
 		assert.equal(d11.hasChildren, true);
 		assert.ok(d11.children);
-		assert.deepEqual(d11.children.map(c => c.name), ['f11']);
+		assert.deepEqual(d11.children!.map(c => c.name), ['f11']);
 
-		const d2 = toFileStat(URI.parse('repo://example.com/foo/bar'), files, { parentPath: 'd2' });
+		const d2 = toFileStat(vscode.Uri.parse('repo://example.com/foo/bar'), files, { parentPath: 'd2' });
 		assert.ok(d2);
 		assert.equal(d2.resource.toString(), 'repo://example.com/foo/bar/d2');
 		assert.equal(d2.name, 'd2');
 		assert.equal(d2.isDirectory, true);
 		assert.equal(d2.hasChildren, true);
 		assert.ok(d2.children);
-		assert.deepEqual(d2.children.map(c => c.name), ['f2']);
+		assert.deepEqual(d2.children!.map(c => c.name), ['f2']);
 	});
 
 	test('toFileStat for nonexistent subdirectory', () => {
@@ -170,14 +170,14 @@ suite('RemoteRepoFileService', () => {
 			'f1',
 			'd1/f2',
 		];
-		assert.throws(() => toFileStat(URI.parse('repo://example.com/foo/bar'), files, { parentPath: 'd2' }), /not found:/);
+		assert.throws(() => toFileStat(vscode.Uri.parse('repo://example.com/foo/bar'), files, { parentPath: 'd2' }), /not found:/);
 	});
 
 	test('toFileStat for nonexistent file', () => {
 		const files = [
 			'f1',
 		];
-		assert.throws(() => toFileStat(URI.parse('repo://example.com/foo/bar'), files, { parentPath: 'f2' }), /not found:/);
+		assert.throws(() => toFileStat(vscode.Uri.parse('repo://example.com/foo/bar'), files, { parentPath: 'f2' }), /not found:/);
 	});
 
 	test('toFileStat with resolveTo', () => {
@@ -186,15 +186,15 @@ suite('RemoteRepoFileService', () => {
 			'd1/d2/f3',
 			'd4/d5/f6',
 		];
-		const root = toFileStat(URI.parse('repo://example.com/foo/bar'), files, {
+		const root = toFileStat(vscode.Uri.parse('repo://example.com/foo/bar'), files, {
 			resolveTo: ['d1/d2/f3'],
 		});
-		assert.deepEqual(root.children.map(c => c.name), ['d1', 'd4']);
-		const f3 = root.children[0].children[0].children[1];
+		assert.deepEqual(root.children!.map(c => c.name), ['d1', 'd4']);
+		const f3 = root.children![0].children![0].children![1];
 		assert.equal(f3.resource.toString(), 'repo://example.com/foo/bar/d1/d2/f3');
 		assert.equal(f3.name, 'f3');
 		assert.equal(f3.isDirectory, false);
-		assert.equal(root.children[1].children, undefined); // not yet resolved because not in resolveTo
+		assert.equal(root.children![1].children, undefined); // not yet resolved because not in resolveTo
 	});
 
 	test('toFileStat with resolveTo dir', () => {
@@ -204,17 +204,17 @@ suite('RemoteRepoFileService', () => {
 			'd1/d4/f5',
 			'd6/f7',
 		];
-		const root = toFileStat(URI.parse('repo://example.com/foo/bar'), files, {
+		const root = toFileStat(vscode.Uri.parse('repo://example.com/foo/bar'), files, {
 			resolveTo: ['d1'],
 		});
-		assert.deepEqual(root.children.map(c => c.name), ['d1', 'd6']);
-		const d1 = root.children[0];
-		assert.deepEqual(d1.children.map(c => c.name), ['d2', 'd4']);
+		assert.deepEqual(root.children!.map(c => c.name), ['d1', 'd6']);
+		const d1 = root.children![0];
+		assert.deepEqual(d1.children!.map(c => c.name), ['d2', 'd4']);
 		assert.equal(d1.resource.toString(), 'repo://example.com/foo/bar/d1');
 		assert.equal(d1.name, 'd1');
 		assert.equal(d1.isDirectory, true);
-		assert.equal(d1.children[0].children, undefined);
-		assert.equal(d1.children[1].children, undefined);
+		assert.equal(d1.children![0].children, undefined);
+		assert.equal(d1.children![1].children, undefined);
 	});
 
 	test('toFileStat with resolveTo on nonexistent file does not poison dir', () => {
@@ -224,13 +224,13 @@ suite('RemoteRepoFileService', () => {
 			'd1/d3/f5',
 			'd4/d5/f4',
 		];
-		const root = toFileStat(URI.parse('repo://example.com/foo/bar'), files, {
+		const root = toFileStat(vscode.Uri.parse('repo://example.com/foo/bar'), files, {
 			resolveTo: ['d1/d2/zz'],
 		});
-		assert.deepEqual(root.children.map(c => c.name), ['d1', 'd4']);
-		assert.deepEqual(root.children[0].children[0].children.map(c => c.name), ['f2', 'f3']);
-		assert.equal(root.children[0].children[1].children, undefined);
-		assert.equal(root.children[1].children, undefined);
+		assert.deepEqual(root.children!.map(c => c.name), ['d1', 'd4']);
+		assert.deepEqual(root.children![0].children![0].children!.map(c => c.name), ['f2', 'f3']);
+		assert.equal(root.children![0].children![1].children, undefined);
+		assert.equal(root.children![1].children, undefined);
 	});
 
 	test('toFileStat with resolveSingleChildDescendants', () => {
@@ -242,20 +242,20 @@ suite('RemoteRepoFileService', () => {
 			'd3/y',
 			'd4/z/f',
 		];
-		const root = toFileStat(URI.parse('repo://example.com/foo/bar'), files, {
+		const root = toFileStat(vscode.Uri.parse('repo://example.com/foo/bar'), files, {
 			resolveSingleChildDescendants: true,
 		});
-		assert.equal(root.children.length, 4);
+		assert.equal(root.children!.length, 4);
 
-		assert.equal(root.children[0].children, undefined); // not yet resolved because not single-child
-		assert.equal(root.children[2].children, undefined); // not yet resolved because not single-child
+		assert.equal(root.children![0].children, undefined); // not yet resolved because not single-child
+		assert.equal(root.children![2].children, undefined); // not yet resolved because not single-child
 
-		const d2zf = root.children[1].children[0].children[0];
+		const d2zf = root.children![1].children![0].children![0];
 		assert.equal(d2zf.resource.toString(), 'repo://example.com/foo/bar/d2/z/f');
 		assert.equal(d2zf.name, 'f');
 		assert.equal(d2zf.isDirectory, false);
 
-		const d4zf = root.children[3].children[0].children[0];
+		const d4zf = root.children![3].children![0].children![0];
 		assert.equal(d4zf.resource.toString(), 'repo://example.com/foo/bar/d4/z/f');
 		assert.equal(d4zf.name, 'f');
 		assert.equal(d4zf.isDirectory, false);
@@ -267,14 +267,43 @@ suite('RemoteRepoFileService', () => {
 			'd/y/f',
 			'd2/z/f',
 		];
-		const root = toFileStat(URI.parse('repo://example.com/foo/bar'), files, {
+		const root = toFileStat(vscode.Uri.parse('repo://example.com/foo/bar'), files, {
 			resolveSingleChildDescendants: true,
 		});
-		assert.equal(root.children.length, 2);
-		assert.equal(root.children[0].children, undefined); // not yet resolved because not single-child
-		const d2zf = root.children[1].children[0].children[0];
+		assert.equal(root.children!.length, 2);
+		assert.equal(root.children![0].children, undefined); // not yet resolved because not single-child
+		const d2zf = root.children![1].children![0].children![0];
 		assert.equal(d2zf.resource.toString(), 'repo://example.com/foo/bar/d2/z/f');
 		assert.equal(d2zf.name, 'f');
 		assert.equal(d2zf.isDirectory, false);
+	});
+
+	test('toFileStat with resolveAllDescendants', () => {
+		const files = [
+			'a1',
+			'd1/a2',
+			'd1/d2/f3',
+			'd1/f4',
+			'd2/f5',
+			'f6',
+		];
+		const root = toFileStat(vscode.Uri.parse('repo://example.com/foo/bar'), files, { resolveAllDescendants: true });
+
+		assert.ok(root);
+		assert.equal(root.resource.toString(), 'repo://example.com/foo/bar');
+		assert.equal(root.name, 'bar');
+		assert.equal(root.isDirectory, true);
+		assert.equal(root.hasChildren, true);
+
+		assert.ok(root.children);
+		assert.deepEqual(root.children!.map(c => c.name), ['a1', 'a2', 'f3', 'f4', 'f5', 'f6']);
+		const [a1, a2, f3, f4, f5, f6] = root.children!;
+
+		assert.equal(a1.resource.toString(), 'repo://example.com/foo/bar/a1');
+		assert.equal(a2.resource.toString(), 'repo://example.com/foo/bar/d1/a2');
+		assert.equal(f3.resource.toString(), 'repo://example.com/foo/bar/d1/d2/f3');
+		assert.equal(f4.resource.toString(), 'repo://example.com/foo/bar/d1/f4');
+		assert.equal(f5.resource.toString(), 'repo://example.com/foo/bar/d2/f5');
+		assert.equal(f6.resource.toString(), 'repo://example.com/foo/bar/f6');
 	});
 });

@@ -15,15 +15,21 @@ export function activate(context: vscode.ExtensionContext) {
 	);
 	context.subscriptions.push(
 		vscode.commands.registerCommand('file-links.goToImmutableRevision', () => {
+			if (!vscode.scm.activeProvider.setRevisionCommand) {
+				vscode.window.showErrorMessage('SCM provider does not support setting revision.');
+				return;
+			}
+
 			const revision = vscode.scm.activeProvider.revision;
 			if (!revision || !revision.id) {
 				vscode.window.showErrorMessage('Unable to determine immutable revision.');
 				return;
 			}
 			const origSpecifier = revision.rawSpecifier || revision.specifier;
-			return vscode.scm.activeProvider.setRevision({ rawSpecifier: revision.id }).then(
-				() => vscode.window.setStatusBarMessage('Resolved ' + origSpecifier + ' to ' + revision.id, 3000),
-			);
+			return vscode.commands.executeCommand(
+				vscode.scm.activeProvider.setRevisionCommand.command,
+				...((vscode.scm.activeProvider.setRevisionCommand.arguments || []).concat({ rawSpecifier: revision.id })),
+			).then(() => vscode.window.setStatusBarMessage('Resolved ' + origSpecifier + ' to ' + revision.id, 3000));
 		}),
 	);
 }

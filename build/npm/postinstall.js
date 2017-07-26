@@ -35,6 +35,7 @@ const extensions = [
 	'html',
 	'git',
 	'lsp',
+	'remote',
 	'file-links',
 	'gulp',
 	'grunt',

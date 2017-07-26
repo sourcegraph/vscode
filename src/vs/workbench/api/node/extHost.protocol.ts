@@ -38,6 +38,7 @@ import { TextEditorCursorStyle } from 'vs/editor/common/config/editorOptions';
 import { EndOfLine, TextEditorLineNumbersStyle } from 'vs/workbench/api/node/extHostTypes';
 import { ISCMRevision } from 'vs/workbench/services/scm/common/scm';
 
+import { IFileStat, IResolveFileOptions } from 'vs/platform/files/common/files';
 
 import { TaskSet } from 'vs/workbench/parts/tasks/common/tasks';
 import { IModelChangedEvent } from 'vs/editor/common/model/mirrorModel';
@@ -325,6 +326,7 @@ export interface SCMProviderFeatures {
 	commitTemplate?: string;
 	acceptInputCommand?: modes.Command;
 	statusBarCommands?: modes.Command[];
+	setRevisionCommand?: modes.Command;
 	revision?: ISCMRevision;
 }
 
@@ -353,8 +355,6 @@ export abstract class MainThreadSCMShape {
 	$unregisterGroup(sourceControlHandle: number, handle: number): void { throw ni(); }
 
 	$setInputBoxValue(value: string): void { throw ni(); }
-
-	$setRevision(handle: number, revision: ISCMRevision): TPromise<ISCMRevision> { throw ni(); }
 }
 
 export type DebugSessionUUID = string;
@@ -441,6 +441,7 @@ export abstract class ExtHostTreeViewsShape {
 
 export abstract class ExtHostWorkspaceShape {
 	$acceptWorkspaceData(workspace: IWorkspaceData): void { throw ni(); }
+	$resolveFileStat(handle: number, resource: URI, options: IResolveFileOptions): TPromise<IFileStat> { throw ni(); }
 	$resolveFile(handle: number, resource: URI): TPromise<string> { throw ni(); }
 	$storeFile(handle: number, resource: URI, content: string): TPromise<any> { throw ni(); }
 }
@@ -511,19 +512,12 @@ export abstract class ExtHostTerminalServiceShape {
 	$acceptTerminalProcessId(id: number, processId: number): void { throw ni(); }
 }
 
-export interface SCMProviderRegistration extends SCMProviderFeatures {
-	id: string;
-	label: string;
-}
-
 export abstract class ExtHostSCMShape {
 	$executeCommand(sourceControlHandle: number, args: string[]): TPromise<string> { throw ni(); }
 	$provideOriginalResource(sourceControlHandle: number, uri: URI): TPromise<URI> { throw ni(); }
-	$onActiveSourceControlChange(sourceControlHandle: number, main: boolean): TPromise<void> { throw ni(); }
+	$onActiveSourceControlChange(sourceControlHandle: number): TPromise<void> { throw ni(); }
 	$onInputBoxValueChange(value: string): TPromise<void> { throw ni(); }
 	$onInputBoxAcceptChanges(): TPromise<void> { throw ni(); }
-	$onSourceControlRegistered(handle: number, data: SCMProviderRegistration): TPromise<void> { throw ni(); }
-	$onSourceControlUpdated(handle: number, data: SCMProviderFeatures): TPromise<void> { throw ni(); }
 }
 
 export abstract class ExtHostTaskShape {

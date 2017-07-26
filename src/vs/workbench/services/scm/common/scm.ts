@@ -11,6 +11,7 @@ import { createDecorator } from 'vs/platform/instantiation/common/instantiation'
 import Event from 'vs/base/common/event';
 import { IDisposable } from 'vs/base/common/lifecycle';
 import { Command } from 'vs/editor/common/modes';
+import { ICommandService } from 'vs/platform/commands/common/commands';
 
 export interface IBaselineResourceProvider {
 	getBaselineResource(resource: URI): TPromise<URI>;
@@ -93,16 +94,13 @@ export interface ISCMProvider extends IDisposable {
 	readonly onDidChange: Event<void>;
 	readonly count?: number;
 	readonly commitTemplate?: string;
+	readonly revision?: ISCMRevision;
 	readonly onDidChangeCommitTemplate?: Event<string>;
 	readonly acceptInputCommand?: Command;
 	readonly statusBarCommands?: Command[];
+	readonly setRevisionCommand?: Command;
 
 	getOriginalResource(uri: URI): TPromise<URI>;
-
-	/**
-	 * The SCM provider's current revision, if any. Call setRevision to set this field.
-	 */
-	readonly revision?: ISCMRevision;
 
 	/**
 	 * Executes a raw SCM command.
@@ -111,39 +109,6 @@ export interface ISCMProvider extends IDisposable {
 	 * executeCommand(['--version']) would execute `git --version` for a git scm provider.
 	 */
 	executeCommand(args: string[]): TPromise<string>;
-
-	/**
-	 * Resolves an SCM revision input, such as a Git branch or other mutable rev spec, to
-	 * an equivalent ISCMRevision with the canonical revision specifier and (if available)
-	 * immutable ID.
-	 *
-	 * This method does not modify the provider's revision or any other internal state; to
-	 * do so, call setInput.
-	 */
-	resolveRevision(input: ISCMRevision): TPromise<ISCMRevision>;
-
-	/**
-	 * Updates the SCM provider's revision. The SCM provider may or may not resolve the
-	 * input before applying it.
-	 */
-	setRevision(input: ISCMRevision): TPromise<ISCMRevision>;
-
-	/**
-	 * Sets the revision to use as a basis for diffing in the changes view.
-	 */
-	setDiffBase(input: ISCMRevision): TPromise<void>;
-
-	/**
-	 * The current diff base. Change it by calling setDiffBase.
-	 */
-	readonly diffBase: ISCMRevision;
-
-	/**
-	 * Returns a promise that resolves when there are no more pending setRevision
-	 * operations. Callers should wait for the returned promise to be completed before
-	 * performing an asynchronous operation using the SCM provider's revision.
-	 */
-	ready(): TPromise<void>;
 }
 
 export interface ISCMInput {
@@ -193,4 +158,22 @@ export function onDidChangeOrUpdateSCMProvider(service: ISCMService, listener: (
 			serviceListener.dispose();
 		},
 	};
+}
+
+/**
+ * Sets the revision of the specified SCM provider (using its setRevisionCommand).
+ */
+export function setSCMProviderRevision(
+	commandService: ICommandService,
+	provider: ISCMProvider,
+	revision: ISCMRevision,
+): TPromise<void> {
+	if (!provider.setRevisionCommand) {
+		return TPromise.wrapError(new Error('SCM provider does not implement setting revision'));
+	}
+
+	const id = provider.setRevisionCommand.id;
+	const args = (provider.setRevisionCommand.arguments || []).concat(revision);
+
+	return this.commandService.executeCommand(id, ...args);
 }

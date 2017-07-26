@@ -41,7 +41,7 @@ import { MessageService } from 'vs/workbench/services/message/electron-browser/m
 import { IRequestService } from 'vs/platform/request/node/request';
 import { RequestService } from 'vs/platform/request/electron-browser/requestService';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
-import { RemoteSearchService } from 'vs/workbench/services/search/node/remoteSearchService';
+import { RemoteSearchService } from 'vs/workbench/services/search/electron-browser/remoteSearchService';
 import { WorkspaceSearchService } from 'vs/platform/multiWorkspace/node/searchService';
 import { LifecycleService } from 'vs/workbench/services/lifecycle/electron-browser/lifecycleService';
 import { MainThreadService } from 'vs/workbench/services/thread/electron-browser/threadService';

@@ -21,6 +21,7 @@ import { IRawSearch, IFolderSearch, ISerializedSearchComplete, ISerializedSearch
 import { ISearchChannel, SearchChannelClient } from './searchIpc';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 import { ResourceMap } from 'vs/base/common/map';
+import { Schemas } from 'vs/base/common/network';
 
 export class SearchService implements ISearchService {
 	public _serviceBrand: any;
@@ -297,7 +298,11 @@ export class DiskSearch {
 	}
 
 	private static createFileMatch(data: ISerializedFileMatch): FileMatch {
-		let fileMatch = new FileMatch(uri.file(data.path));
+		let resource = uri.parse(data.path);
+		if (!resource.scheme) {
+			resource = resource.with({ scheme: Schemas.file });
+		}
+		let fileMatch = new FileMatch(resource);
 		if (data.lineMatches) {
 			for (let j = 0; j < data.lineMatches.length; j++) {
 				fileMatch.lineMatches.push(new LineMatch(data.lineMatches[j].preview, data.lineMatches[j].lineNumber, data.lineMatches[j].offsetAndLengths));

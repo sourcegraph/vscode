@@ -7,18 +7,40 @@
 
 declare module 'vscode' {
 
+	export interface ResolveFileOptions {
+		resolveTo?: Uri[];
+		resolveSingleChildDescendants?: boolean;
+
+		/**
+		 * Return all descendants in a flat array in the FileStat's children property.
+		 */
+		resolveAllDescendants?: boolean;
+	}
+
+	export interface FileStat {
+		resource: Uri;
+		name: string;
+		mtime?: number;
+		etag?: string;
+		isDirectory: boolean;
+		hasChildren: boolean;
+		children?: FileStat[];
+		size?: number;
+	}
+
 	// todo@joh discover files etc
 	export interface FileSystemProvider {
 		// todo@joh -> added, deleted, renamed, changed
 		onDidChange: Event<Uri>;
 
+		resolveFile(resource: Uri, options?: ResolveFileOptions): Thenable<FileStat>;
 		resolveContents(resource: Uri): string | Thenable<string>;
 		writeContents(resource: Uri, contents: string): void | Thenable<void>;
 	}
 
 	export namespace workspace {
 
-		export function registerFileSystemProvider(authority: string, provider: FileSystemProvider): Disposable;
+		export function registerFileSystemProvider(scheme: string, provider: FileSystemProvider): Disposable;
 	}
 
 	export namespace window {
@@ -70,10 +92,21 @@ declare module 'vscode' {
 
 	export interface SourceControl {
 		/**
-		 * PATCH(sourcegraph): See ISCMProvider for canonical documentation for these fields.
+		 * The current SCM revision of the source control. Can be undefined if the source
+		 * control has not yet determined its revision or does not implement revision
+		 * determination. The extension should update this property's value whenever it
+		 * detects the revision has changed.
 		 */
 		revision?: SCMRevision;
-		setRevision(revision: SCMRevision): Thenable<SCMRevision>;
+
+		/**
+		 * Optional set revision command.
+		 *
+		 * This command will be invoked to set the revision of the source control. An
+		 * argument of type SCMRevision (specifying the revision to set) is appended to
+		 * the Command's arguments array.
+		 */
+		setRevisionCommand?: Command;
 
 		commandExecutor?: CommandExecutor;
 	}

@@ -6,31 +6,35 @@
 'use strict';
 
 import * as glob from 'vs/base/common/glob';
-import * as scorer from 'vs/base/common/scorer';
 import * as strings from 'vs/base/common/strings';
 import * as nls from 'vs/nls';
-import { flatten } from 'vs/base/common/arrays';
 import URI from 'vs/base/common/uri';
 import { PPromise, TPromise } from 'vs/base/common/winjs.base';
-import { FileMatch, IFileMatch, ISearchComplete, ISearchProgressItem, ISearchQuery, ISearchService, QueryType } from 'vs/platform/search/common/search';
+import { IFileMatch, ISearchComplete, ISearchProgressItem, ISearchQuery, ISearchService, QueryType } from 'vs/platform/search/common/search';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
-import { IFileStat } from 'vs/platform/files/common/files';
+import { IFileService } from 'vs/platform/files/common/files';
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
 import { extractResourceInfo } from 'vs/platform/workspace/common/resource';
 import { IRemoteService } from 'vs/platform/remote/node/remote';
-import { workspaceResourceInfoVars, fetchFilesAndDirs, parseSourcegraphGitURI } from 'vs/workbench/services/files/node/remoteRepoFileService';
 import { ISCMService } from 'vs/workbench/services/scm/common/scm';
 import { CodeSearchModel, CodeSearchQuery, WorkspaceRevision, CodeSearchResponse } from 'vs/workbench/services/search/node/codeSearchModel';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
-import { SearchService } from 'vs/workbench/services/search/node/searchService';
+import { SearchService, DiskSearch } from 'vs/workbench/services/search/node/searchService';
 import { IUntitledEditorService } from 'vs/workbench/services/untitled/common/untitledEditorService';
 import { IModelService } from 'vs/editor/common/services/modelService';
 import { Schemas } from 'vs/base/common/network';
+import { createRemoteFileSearchEngineClass } from 'vs/workbench/services/search/electron-browser/remoteFileSearch';
+import { IRawSearch, IFolderSearch } from 'vs/workbench/services/search/node/search';
+import { SearchService as RawSearchService } from 'vs/workbench/services/search/node/rawSearchService';
 
 export class RemoteSearchService extends SearchService implements ISearchService {
 	_serviceBrand: any;
+
+	private static BATCH_SIZE = 512; // same as RawSearchService
+
+	private raw: RawSearchService;
 
 	constructor(
 		@IEnvironmentService environmentService: IEnvironmentService,
@@ -42,6 +46,7 @@ export class RemoteSearchService extends SearchService implements ISearchService
 		@ITelemetryService private telemetryService: ITelemetryService,
 		@IModelService modelService: IModelService,
 		@IUntitledEditorService untitledEditorService: IUntitledEditorService,
+		@IFileService private fileService: IFileService,
 	) {
 		super(
 			modelService,
@@ -50,6 +55,8 @@ export class RemoteSearchService extends SearchService implements ISearchService
 			contextService,
 			configurationService,
 		);
+
+		this.raw = new RawSearchService();
 	}
 
 	private textSearch(query: ISearchQuery): PPromise<ISearchComplete, ISearchProgressItem> {
@@ -59,10 +66,9 @@ export class RemoteSearchService extends SearchService implements ISearchService
 		}
 		const workspaceRoot = this.contextService.getWorkspace().roots[0];
 
-		return workspaceResourceInfoVars(this.contextService, this.scmService, extractResourceInfo(workspaceRoot))
-			.then(({ repo, revision }) => {
-				return this.textSearchExternalRepos(query, repo, revision);
-			});
+		const info = extractResourceInfo(workspaceRoot);
+		const revision = this.scmService.activeProvider.revision;
+		return this.textSearchExternalRepos(query, info.repo, revision.id);
 	}
 
 	/**
@@ -90,11 +96,11 @@ export class RemoteSearchService extends SearchService implements ISearchService
 		return new PPromise<ISearchComplete, ISearchProgressItem>((complete, error, progress) => {
 			model.load().then(model => {
 				const results: IFileMatch[] = model.response.results.map(fileMatch => {
-					const { repo, rev, path } = parseSourcegraphGitURI(fileMatch.resource);
-					const inWorkspace = (repo === workspaceRepo && rev === workspaceRevision);
+					const { repo, revisionSpecifier, relativePath } = extractResourceInfo(fileMatch.resource);
+					const inWorkspace = (repo === workspaceRepo && revisionSpecifier === workspaceRevision);
 					const resource = inWorkspace ?
-						URI.parse(`repo://${repo}/${path}`) :
-						URI.parse(`gitremote://${repo}/${path}?${rev}`);
+						URI.parse(`repo://${repo}/${relativePath}`) :
+						URI.parse(`gitremote://${repo}/${relativePath}?${revisionSpecifier}`);
 					return { ...fileMatch, resource };
 				});
 				complete({
@@ -144,99 +150,28 @@ export class RemoteSearchService extends SearchService implements ISearchService
 
 
 	private fileSearch(query: ISearchQuery): PPromise<ISearchComplete, ISearchProgressItem> {
-		let promise: TPromise<any>;
-		return new PPromise<ISearchComplete, ISearchProgressItem>((onComplete, onError, onProgress) => {
-			promise = this.getWorkspaceFiles(query).then(files => {
-				// TODO(nick): revert this setTimeout hack that was a temporary workaround for https://github.com/sourcegraph/sourcegraph/issues/5824
-				setTimeout(() => {
-					onComplete({
-						results: files,
-						stats: {} as any,
-					});
-				}, 0);
-			});
-		}, () => promise.cancel());
+
+		const EngineClass = this.instantiationService.invokeFunction(createRemoteFileSearchEngineClass);
+
+		type IgnoreExtraFields = { type?: any, extraFileResources?: any, fileEncoding?: any, disregardExcludeSettings?: any };
+		const rawSearch: IRawSearch & IgnoreExtraFields = {
+			...query,
+			folderQueries: query.folderQueries ? query.folderQueries.map(q => {
+				return <IFolderSearch>{
+					excludePattern: q.excludePattern,
+					includePattern: q.includePattern,
+					fileEncoding: q.fileEncoding,
+					folder: q.folder.toString(),
+				};
+			}) : [],
+		};
+
+		const searchP = this.raw.doFileSearch(EngineClass, rawSearch, RemoteSearchService.BATCH_SIZE);
+		return DiskSearch.collectResults(searchP);
 	}
 
 	clearCache(cacheKey: string): TPromise<void> {
 		return TPromise.as(void 0);
-	}
-
-	/**
-	 * getWorkspaceFiles returns a promise which completes with the complete set of files
-	 * in a workspace which match the specified query.
-	 */
-	private getWorkspaceFiles(query: ISearchQuery): TPromise<IFileMatch[]> {
-		function getURIs(stat: IFileStat): URI[] {
-			if (!stat.isDirectory) {
-				return [stat.resource];
-			}
-			if (stat.children) {
-				return flatten(stat.children.map(getURIs));
-			}
-			return [];
-		}
-
-		if (query.type === QueryType.File && this.contextService.getWorkspace()) {
-			return fetchFilesAndDirs(this.contextService, this.remoteService, this.scmService).then(files => {
-				const workspaceRoot = this.contextService.getWorkspace().roots[0];
-				let matches: FileMatch[] = [];
-				for (const fileName of files) {
-					// TODO(sqs:vscode): Use a fast path to eliminate
-					// vendored files, which slow down search considerably.
-					// Use the search.exclude config property. Doing it here
-					// instead of a few lines below means we avoid the
-					// relatively costly workspace.with() call.
-
-					if (this.matchesForRemote(fileName, query.filePattern!, query.includePattern!, query.excludePattern!)) {
-						matches.push(new FileMatch(workspaceRoot.with({ path: workspaceRoot.path + `/${fileName}` })));
-					}
-
-					// maxResults is 0 when quickopen is initially
-					// opened because we choose to not show any
-					// files there.
-					if (matches.length >= (query.maxResults || 0)) {
-						break;
-					}
-				}
-				return matches;
-			});
-		}
-
-		return TPromise.wrap([]);
-	}
-
-	/**
-	 * matchesForRemote is used to filter candidate search results. It is mostly copied from vscode's search service implementation.
-	 */
-	private matchesForRemote(resource: string, filePattern: string, includePattern: glob.IExpression, excludePattern: glob.IExpression): boolean {
-		// NOTE: This assumes the workspace is always at the root of
-		// the repository. If this no longer holds, you must use
-		// this.contextService.toWorkspaceRelativePath instead of just
-		// the `resource` below.
-
-		// file pattern
-		if (filePattern) {
-			if (!scorer.matches(resource, strings.stripWildcards(filePattern).toLowerCase())) {
-				return false;
-			}
-		}
-
-		// includes
-		if (includePattern) {
-			if (!glob.match(includePattern, resource)) {
-				return false;
-			}
-		}
-
-		// excludes
-		if (excludePattern) {
-			if (glob.match(excludePattern, resource)) {
-				return false;
-			}
-		}
-
-		return true;
 	}
 }
 
