@@ -8,6 +8,7 @@
 import * as glob from 'vs/base/common/glob';
 import * as scorer from 'vs/base/common/scorer';
 import * as strings from 'vs/base/common/strings';
+import * as nls from 'vs/nls';
 import { flatten } from 'vs/base/common/arrays';
 import URI from 'vs/base/common/uri';
 import { PPromise, TPromise } from 'vs/base/common/winjs.base';
@@ -20,7 +21,7 @@ import { extractResourceInfo } from 'vs/platform/workspace/common/resource';
 import { IRemoteService } from 'vs/platform/remote/node/remote';
 import { workspaceResourceInfoVars, fetchFilesAndDirs, parseSourcegraphGitURI } from 'vs/workbench/services/files/node/remoteRepoFileService';
 import { ISCMService } from 'vs/workbench/services/scm/common/scm';
-import { CodeSearchModel, CodeSearchQuery, WorkspaceRevision } from 'vs/workbench/services/search/node/codeSearchModel';
+import { CodeSearchModel, CodeSearchQuery, WorkspaceRevision, CodeSearchResponse } from 'vs/workbench/services/search/node/codeSearchModel';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { SearchService } from 'vs/workbench/services/search/node/searchService';
@@ -100,6 +101,7 @@ export class RemoteSearchService extends SearchService implements ISearchService
 					results: results,
 					limitHit: model.response.limitHit,
 					stats: {} as any,
+					warning: this.getWarning(model.response),
 				});
 			}, err => error({ message: err }));
 		}, () => {
@@ -107,11 +109,18 @@ export class RemoteSearchService extends SearchService implements ISearchService
 		});
 	}
 
-	private trimPrefix(s, prefix) {
-		if (s.slice(0, prefix.length) === prefix) {
-			return s.slice(prefix.length);
+	private getWarning(r: CodeSearchResponse): string | undefined {
+		if (r.cloning) {
+			return r.cloning.length === 1 ?
+				nls.localize('searchCloningWarning', "{0} is still cloning, so is missing from the results. You can retry your search soon.", r.cloning[0]) :
+				nls.localize('searchCloningManyWarning', "{0} (including {1}) repositories are still cloning, so are missing from the results. You can retry your search soon.", r.cloning.length, r.cloning[0]);
 		}
-		return s;
+		if (r.missing) {
+			return r.missing.length === 1 ?
+				nls.localize('searchMissingWarning', "{0} could not be found, so is missing from the results. You may have a typo in your repo selection.", r.missing[0]) :
+				nls.localize('searchMissingManyWarning', "{0} (including {1}) could not be found, so are missing from the results.", r.missing.length, r.missing[0]);
+		}
+		return undefined;
 	}
 
 	/**

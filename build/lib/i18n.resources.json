@@ -175,6 +175,10 @@
 			"project": "vscode-workbench"
 		},
 		{
+			"name": "vs/workbench/services/search",
+			"project": "vscode-workbench"
+		},
+		{
 			"name": "vs/workbench/services/progress",
 			"project": "vscode-workbench"
 		},

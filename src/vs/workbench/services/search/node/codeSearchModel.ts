@@ -59,8 +59,16 @@ export interface FileMatch {
  * The code search response from our GraphQL endpoint.
  */
 export interface CodeSearchResponse {
-	readonly limitHit: boolean;
 	readonly results: FileMatch[];
+
+	/** True if we found more than the requested limit of FileMatches */
+	readonly limitHit: boolean;
+
+	/** List of repositories that could not be searched since they are cloning. */
+	readonly cloning: string[];
+
+	/** List of repositories that do not exist. */
+	readonly missing: string[];
 }
 
 /**
@@ -93,6 +101,8 @@ export class CodeSearchModel extends EditorModel {
 			this._response = {
 				limitHit: false,
 				results: [],
+				missing: [],
+				cloning: [],
 			};
 			return TPromise.wrap(this);
 		}
@@ -119,6 +129,8 @@ export class CodeSearchModel extends EditorModel {
 							excludePattern: $excludePattern,
 					}) {
 						limitHit
+						cloning
+						missing
 						results {
 							resource
 							limitHit

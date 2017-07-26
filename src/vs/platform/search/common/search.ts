@@ -102,6 +102,9 @@ export interface ISearchComplete {
 	limitHit?: boolean;
 	results: IFileMatch[];
 	stats: ISearchStats;
+
+	// PATCH(sourcegraph) An optional warning to show with the results. We use this when we could not search some repos.
+	warning?: string;
 }
 
 export interface ISearchStats {

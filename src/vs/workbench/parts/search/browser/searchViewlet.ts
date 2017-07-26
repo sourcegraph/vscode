@@ -1028,6 +1028,12 @@ export class SearchViewlet extends Viewlet {
 			this.actionRegistry['vs.tree.collapse'].enabled = hasResults;
 			this.actionRegistry['clearSearchResults'].enabled = hasResults;
 
+			if (completed && completed.warning) {
+				this.searchWidget.searchInput.showMessage({
+					content: completed.warning,
+					type: MessageType.WARNING,
+				});
+			}
 			if (completed && completed.limitHit) {
 				this.searchWidget.searchInput.showMessage({
 					content: nls.localize('searchMaxResultsWarning', "The result set only contains a subset of all matches. Please be more specific in your search to narrow down the results."),
