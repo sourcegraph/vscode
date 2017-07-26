@@ -68,7 +68,6 @@ export class RemoteSearchService extends SearchService implements ISearchService
 	 * Searches multiple repos.
 	 */
 	private textSearchExternalRepos(query: ISearchQuery, workspaceRepo: string, workspaceRevision: string): PPromise<ISearchComplete, ISearchProgressItem> {
-		this.logTelemetry(query, true);
 
 		// For the current workspace, use the current revision selected in the UI. For
 		// other workspaces, use the server's default revision.
@@ -105,17 +104,6 @@ export class RemoteSearchService extends SearchService implements ISearchService
 			}, err => error({ message: err }));
 		}, () => {
 			model.dispose();
-		});
-	}
-
-	private logTelemetry(query: ISearchQuery, external: boolean) {
-		const repos = (query.folderQueries || []).map(r => this.trimPrefix(r.folder.toString(), 'repo://'));
-		this.telemetryService.publicLog('codeSearch.search', {
-			codeSearch: {
-				...query.contentPattern,
-				repos,
-				external,
-			}
 		});
 	}
 
