@@ -151,6 +151,8 @@ export abstract class AbstractSCMProvider implements ISCMProvider {
 		return this._resources;
 	}
 
+	abstract executeCommand(args: string[]): TPromise<string>;
+
 	abstract getOriginalResource(uri: URI): TPromise<URI>;
 
 	get revision(): ISCMRevision { return this._revision; }

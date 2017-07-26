@@ -199,6 +199,10 @@ class MainThreadSCMProvider implements ISCMProvider {
 		return this.proxy.$provideOriginalResource(this.handle, uri);
 	}
 
+	executeCommand(args: string[]): TPromise<string> {
+		return this.proxy.$executeCommand(this.handle, args);
+	};
+
 	// There is no extension support for the Sourcegraph-specific SCM provider API yet.
 	get revision(): ISCMRevision { return null; }
 	resolveRevision(arg: any): any { throw new Error('not implemented'); }

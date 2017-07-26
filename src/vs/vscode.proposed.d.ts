@@ -64,12 +64,18 @@ declare module 'vscode' {
 		readonly id?: string;
 	}
 
+	export interface CommandExecutor {
+		executeCommand(args: string[]): Thenable<string>;
+	}
+
 	export interface SourceControl {
 		/**
 		 * PATCH(sourcegraph): See ISCMProvider for canonical documentation for these fields.
 		 */
 		revision?: SCMRevision;
 		setRevision(revision: SCMRevision): Thenable<SCMRevision>;
+
+		commandExecutor?: CommandExecutor
 	}
 
 	export namespace scm {

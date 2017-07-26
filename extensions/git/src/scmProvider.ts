@@ -5,7 +5,7 @@
 
 'use strict';
 
-import { scm, Uri, Disposable, SourceControl, SourceControlResourceGroup, Event, workspace, commands } from 'vscode';
+import { scm, Uri, Disposable, SourceControl, SourceControlResourceGroup, Event, workspace, commands, CommandExecutor } from 'vscode';
 import { Model, State, Status } from './model';
 import { StatusBarCommands } from './statusbar';
 import { CommandCenter } from './commands';
@@ -15,7 +15,7 @@ import * as nls from 'vscode-nls';
 
 const localize = nls.loadMessageBundle();
 
-export class GitSCMProvider {
+export class GitSCMProvider implements CommandExecutor {
 
 	private disposables: Disposable[] = [];
 	get contextKey(): string { return 'git'; }
@@ -68,6 +68,7 @@ export class GitSCMProvider {
 
 		this._sourceControl.acceptInputCommand = { command: 'git.commitWithInput', title: localize('commit', "Commit") };
 		this._sourceControl.quickDiffProvider = this;
+		this._sourceControl.commandExecutor = this;
 
 		this.statusBarCommands.onDidChange(this.onDidStatusBarCommandsChange, this, this.disposables);
 		this.onDidStatusBarCommandsChange();
@@ -85,6 +86,10 @@ export class GitSCMProvider {
 
 		model.onDidChange(this.onDidModelChange, this, this.disposables);
 		this.updateCommitTemplate();
+	}
+
+	executeCommand(args: string[]): Promise<string> {
+		return this.model.executeCommand(args);
 	}
 
 	private async updateCommitTemplate(): Promise<void> {

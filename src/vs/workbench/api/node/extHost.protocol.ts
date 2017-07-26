@@ -517,6 +517,7 @@ export interface SCMProviderRegistration extends SCMProviderFeatures {
 }
 
 export abstract class ExtHostSCMShape {
+	$executeCommand(sourceControlHandle: number, args: string[]): TPromise<string> { throw ni(); }
 	$provideOriginalResource(sourceControlHandle: number, uri: URI): TPromise<URI> { throw ni(); }
 	$onActiveSourceControlChange(sourceControlHandle: number, main: boolean): TPromise<void> { throw ni(); }
 	$onInputBoxValueChange(value: string): TPromise<void> { throw ni(); }

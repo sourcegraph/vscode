@@ -165,6 +165,8 @@ class ExtHostSourceControl implements vscode.SourceControl {
 		return this._label;
 	}
 
+	public commandExecutor?: vscode.CommandExecutor;
+
 	private _count: number | undefined = undefined;
 
 	get count(): number | undefined {
@@ -399,6 +401,16 @@ export class ExtHostSCM extends ExtHostSCMShape {
 		return asWinJsPromise(token => {
 			const result = sourceControl.quickDiffProvider.provideOriginalResource(uri, token);
 			return result && URI.parse(result.toString());
+		});
+	}
+
+	$executeCommand(sourceControlHandle: number, args: string[]): TPromise<string> {
+		const sourceControl = this._sourceControls.get(sourceControlHandle);
+		if (!sourceControl || !sourceControl.commandExecutor) {
+			return TPromise.wrapError(new Error('no source control or command executor'));
+		}
+		return asWinJsPromise(token => {
+			return sourceControl.commandExecutor.executeCommand(args);
 		});
 	}
 

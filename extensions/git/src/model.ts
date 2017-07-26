@@ -214,7 +214,8 @@ export enum Operation {
 	GetCommitTemplate = 1 << 15,
 	DeleteBranch = 1 << 16,
 	Merge = 1 << 17,
-	Ignore = 1 << 18
+	Ignore = 1 << 18,
+	ExecuteCommand = 1 << 19
 }
 
 // function getOperationName(operation: Operation): string {
@@ -400,6 +401,18 @@ export class Model implements Disposable {
 
 	async add(...resources: Resource[]): Promise<void> {
 		await this.run(Operation.Add, () => this.repository.add(resources.map(r => r.resourceUri.fsPath)));
+	}
+
+	async executeCommand(args: string[]): Promise<string> {
+		return await this.run(Operation.ExecuteCommand, () => {
+			return this.repository.run(args).then(result => {
+				if (result.exitCode !== 0) {
+					const msg = `'git ${args.join('')}' failed with exitCode=${result.exitCode} stderr: ${result.stderr}`;
+					return Promise.reject(Object.assign(new Error(msg), { args, result }));
+				}
+				return Promise.resolve(result.stdout);
+			});
+		});
 	}
 
 	async stage(uri: Uri, contents: string): Promise<void> {

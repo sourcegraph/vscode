@@ -83,6 +83,11 @@ export class RemoteGitSCMProvider extends AbstractSCMProvider {
 		return [];
 	}
 
+	executeCommand(args: string[]): TPromise<string> {
+		// TODO: implement this
+		return TPromise.wrapError(new Error('not implemented'));
+	}
+
 	getOriginalResource(uri: URI): TPromise<URI> {
 		return TPromise.wrap(null);
 	}

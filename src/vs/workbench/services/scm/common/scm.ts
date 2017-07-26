@@ -105,6 +105,14 @@ export interface ISCMProvider extends IDisposable {
 	readonly revision?: ISCMRevision;
 
 	/**
+	 * Executes a raw SCM command.
+	 *
+	 * For example:
+	 * executeCommand(['--version']) would execute `git --version` for a git scm provider.
+	 */
+	executeCommand(args: string[]): TPromise<string>;
+
+	/**
 	 * Resolves an SCM revision input, such as a Git branch or other mutable rev spec, to
 	 * an equivalent ISCMRevision with the canonical revision specifier and (if available)
 	 * immutable ID.
