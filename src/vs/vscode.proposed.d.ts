@@ -75,7 +75,7 @@ declare module 'vscode' {
 		revision?: SCMRevision;
 		setRevision(revision: SCMRevision): Thenable<SCMRevision>;
 
-		commandExecutor?: CommandExecutor
+		commandExecutor?: CommandExecutor;
 	}
 
 	export namespace scm {
