@@ -6,7 +6,7 @@
 
 import * as vscode from 'vscode';
 import { toFileStat, toICustomResolveFileOptions } from './fileStat';
-import { Revisioned, REPO_SCHEME } from './repository';
+import { Revisioned, isRemoteResource } from './repository';
 import { requestGraphQL } from './util';
 
 /**
@@ -32,7 +32,7 @@ export class RemoteFileSystem implements vscode.FileSystemProvider, vscode.Dispo
 			// Trigger a refresh of all documents.
 			vscode.workspace.textDocuments.forEach(doc => {
 				const info = vscode.workspace.extractResourceInfo(doc.uri);
-				if (info && doc.uri.scheme === REPO_SCHEME && info.repo === this.repo) {
+				if (info && isRemoteResource(doc.uri) && info.repo === this.repo) {
 					this._onDidChange.fire(doc.uri);
 				}
 			});

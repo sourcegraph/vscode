@@ -21,6 +21,7 @@ import { IInstantiationService } from 'vs/platform/instantiation/common/instanti
 import { attachBadgeStyler } from 'vs/platform/theme/common/styler';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { IDisposable } from 'vs/base/common/lifecycle';
+import { isFileLikeResource } from 'vs/platform/files/common/files';
 
 interface IAnyResourceTemplateData {
 	count: CountBadge;
@@ -95,7 +96,7 @@ export class Renderer implements IRenderer {
 
 	public getTemplateId(tree: ITree, element: any): string {
 		if (element instanceof Resource) {
-			if ((<Resource>element).uri.scheme === network.Schemas.file || (<Resource>element).uri.scheme === network.Schemas.remoteRepo || (<Resource>element).uri.scheme === network.Schemas.untitled) {
+			if (isFileLikeResource((<Resource>element).uri) || (<Resource>element).uri.scheme === network.Schemas.untitled) {
 				return Renderer.FILE_RESOURCE_TEMPLATE_ID;
 			} else {
 				return Renderer.RESOURCE_TEMPLATE_ID;

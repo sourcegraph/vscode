@@ -7,7 +7,7 @@
 
 import * as vscode from 'vscode';
 import { RemoteGitRepository, Ref, RefType } from './git';
-import { REPO_SCHEME } from './repository';
+import { isRemoteResource, REPO_SCHEME, GIT_REMOTE_SCHEME } from './repository';
 import * as nls from 'vscode-nls';
 
 const localize = nls.loadMessageBundle();
@@ -52,7 +52,7 @@ export class Workspace implements vscode.Disposable {
 		}
 
 		for (const addedFolder of event.added) {
-			if (addedFolder.uri.scheme === REPO_SCHEME) {
+			if (isRemoteResource(addedFolder.uri)) {
 				this.getRemoteRepository(addedFolder.uri);
 			}
 		}
@@ -79,11 +79,11 @@ export class Workspace implements vscode.Disposable {
 	private onDidFileSystemChange = new vscode.EventEmitter<vscode.Uri>();
 
 	/**
-	 * Register a FileSystemProvider that routes operations on 'repo'-scheme resources to
-	 * the file system for the repo.
+	 * Register a FileSystemProvider that routes operations on 'repo'- and
+	 * 'gitremote'-scheme resources to the file system for the repo.
 	 */
 	private registerUnionFileSystem(): void {
-		this.toDispose.push(vscode.workspace.registerFileSystemProvider(REPO_SCHEME, {
+		const provider = {
 			onDidChange: this.onDidFileSystemChange.event,
 			resolveFile: (resource: vscode.Uri, options?: vscode.ResolveFileOptions): Thenable<vscode.FileStat | null> => {
 				return this.getRemoteRepository(resource).fileSystem.resolveFile(resource, options);
@@ -93,6 +93,20 @@ export class Workspace implements vscode.Disposable {
 			},
 			writeContents: (resource: vscode.Uri, value: string): void => {
 				this.getRemoteRepository(resource).fileSystem.writeContents(resource, value);
+			},
+		};
+		this.toDispose.push(vscode.workspace.registerFileSystemProvider(REPO_SCHEME, provider));
+		this.toDispose.push(vscode.workspace.registerFileSystemProvider(GIT_REMOTE_SCHEME, provider));
+
+		// Register a TextDocumentContentProvider for gitremote:// documents because they
+		// are treated as ResourceInputs in workbench, which means their content is not
+		// provided via the file service. (repo:// documents are special-cased in
+		// workbench to be treated as files so they derive contents from the file
+		// service.)
+		this.toDispose.push(vscode.workspace.registerTextDocumentContentProvider(GIT_REMOTE_SCHEME, {
+			onDidChange: this.onDidFileSystemChange.event,
+			provideTextDocumentContent: (uri: vscode.Uri, token: vscode.CancellationToken): vscode.ProviderResult<string> => {
+				return this.getRemoteRepository(uri).fileSystem.resolveContents(uri);
 			},
 		}));
 	}

@@ -219,8 +219,8 @@ export class TextFileEditor extends BaseTextEditor {
 	protected getConfigurationOverrides(): IEditorOptions {
 		const options = super.getConfigurationOverrides();
 
-		// Make repo:// resources readonly.
-		options.readOnly = this.input && this.input.getResource().scheme === Schemas.remoteRepo;
+		// Make remote resources readonly.
+		options.readOnly = this.input && (this.input.getResource().scheme === Schemas.remoteRepo);
 
 		return options;
 	}
