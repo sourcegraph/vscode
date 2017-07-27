@@ -282,6 +282,8 @@ export class OpenAnyWorkspaceHandler extends QuickOpenHandler {
 
 	private static MAX_DISPLAYED_RESULTS = 150;
 
+	private static LOG_VERBOSE = false;
+
 	private pendingSearch: TPromise<QuickOpenModel> | undefined;
 
 	private openWorkspaceHandler: OpenWorkspaceHandler;
@@ -388,7 +390,9 @@ export class OpenAnyWorkspaceHandler extends QuickOpenHandler {
 
 				const duration = Date.now() - startTime;
 				const handlerName = (result.handler.constructor as any).name;
-				console.log(`OpenAnyWorkspaceHandler[${handlerName}]: ${entries.length} results for ${JSON.stringify(searchValue)} in ${duration}ms (sorting ${sortedResultTime - unsortedResultTime}ms, highlighting ${highlightedResultTime - unhighlightedResultTime}ms)`);
+				if (OpenAnyWorkspaceHandler.LOG_VERBOSE) {
+					console.log(`OpenAnyWorkspaceHandler[${handlerName}]: ${entries.length} results for ${JSON.stringify(searchValue)} in ${duration}ms (sorting ${sortedResultTime - unsortedResultTime}ms, highlighting ${highlightedResultTime - unhighlightedResultTime}ms)`);
+				}
 
 				// Group
 				if (viewResults.length) {
