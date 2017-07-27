@@ -33,7 +33,12 @@ declare module 'vscode' {
 		// todo@joh -> added, deleted, renamed, changed
 		onDidChange: Event<Uri>;
 
-		resolveFile(resource: Uri, options?: ResolveFileOptions): Thenable<FileStat>;
+		/**
+		 * Resolves a resource and returns stat info, or null if the resource doesn't
+		 * exist.
+		 */
+		resolveFile(resource: Uri, options?: ResolveFileOptions): Thenable<FileStat | null>;
+
 		resolveContents(resource: Uri): string | Thenable<string>;
 		writeContents(resource: Uri, contents: string): void | Thenable<void>;
 	}

@@ -39,10 +39,11 @@ export class RemoteFileSystem implements vscode.FileSystemProvider, vscode.Dispo
 		}
 	}
 
-	resolveFile(resource: vscode.Uri, options?: vscode.ResolveFileOptions): Thenable<vscode.FileStat> {
-		return listAllFiles(this.repo, this.revision).then(files => {
-			return toFileStat(resource, files, toICustomResolveFileOptions('', options));
-		});
+	resolveFile(resource: vscode.Uri, options?: vscode.ResolveFileOptions): Thenable<vscode.FileStat | null> {
+		const { relativePath, workspace } = vscode.workspace.extractResourceInfo(resource)!;
+		return listAllFiles(this.repo, this.revision).then(files =>
+			toFileStat(vscode.Uri.parse(workspace), files, toICustomResolveFileOptions(relativePath, options))
+		);
 	}
 
 	resolveContents(resource: vscode.Uri): Thenable<string> {

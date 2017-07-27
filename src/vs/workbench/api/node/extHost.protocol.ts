@@ -441,7 +441,7 @@ export abstract class ExtHostTreeViewsShape {
 
 export abstract class ExtHostWorkspaceShape {
 	$acceptWorkspaceData(workspace: IWorkspaceData): void { throw ni(); }
-	$resolveFileStat(handle: number, resource: URI, options: IResolveFileOptions): TPromise<IFileStat> { throw ni(); }
+	$resolveFileStat(handle: number, resource: URI, options: IResolveFileOptions): TPromise<IFileStat | null> { throw ni(); }
 	$resolveFile(handle: number, resource: URI): TPromise<string> { throw ni(); }
 	$storeFile(handle: number, resource: URI, content: string): TPromise<any> { throw ni(); }
 }

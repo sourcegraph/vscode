@@ -85,7 +85,7 @@ export class Workspace implements vscode.Disposable {
 	private registerUnionFileSystem(): void {
 		this.toDispose.push(vscode.workspace.registerFileSystemProvider(REPO_SCHEME, {
 			onDidChange: this.onDidFileSystemChange.event,
-			resolveFile: (resource: vscode.Uri, options?: vscode.ResolveFileOptions): Thenable<vscode.FileStat> => {
+			resolveFile: (resource: vscode.Uri, options?: vscode.ResolveFileOptions): Thenable<vscode.FileStat | null> => {
 				return this.getRemoteRepository(resource).fileSystem.resolveFile(resource, options);
 			},
 			resolveContents: (resource: vscode.Uri): string | Thenable<string> => {

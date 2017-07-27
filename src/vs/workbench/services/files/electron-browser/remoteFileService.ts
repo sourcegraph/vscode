@@ -139,7 +139,12 @@ export class RemoteFileService extends FileService {
 			return TPromise.wrapError(new Error('not implemented: stat'));
 		}
 
-		return provider.resolveFile(resource, options);
+		return provider.resolveFile(resource, options).then(stat => {
+			if (stat === null) {
+				throw this.createNotFoundError(resource.toString());
+			}
+			return stat;
+		});
 	}
 
 	// --- resolve content
@@ -320,5 +325,19 @@ export class RemoteFileService extends FileService {
 			emitter.emit('end');
 		}, 0);
 		return result;
+	}
+
+	/**
+	 * Create an error that the workbench will treat as a 'not found' error and handle
+	 * internally. If we just use normal Errors without these extra fields, the workbench
+	 * will always display them to users even if the caller was just checking for
+	 * existence (and the file not existing would not an error).
+	 */
+	private createNotFoundError(path: string): NodeJS.ErrnoException {
+		const err: NodeJS.ErrnoException = new Error(`resource not found: ${path}`);
+		err.code = 'ENOENT';
+		err.errno = 34; // libuv ENOENT code
+		err.path = path;
+		return err;
 	}
 }

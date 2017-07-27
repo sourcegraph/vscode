@@ -69,15 +69,15 @@ function toRelativePaths(resources: vscode.Uri[]): string[] {
 }
 
 /**
- * toFileStat returns a tree of IFileStat that represents a tree underneath
- * the given root URI.
+ * toFileStat returns a tree of IFileStat that represents a tree underneath the given root
+ * URI. It returns null if (root + '/' + options.parentPath) does not exist.
  *
  * @param root The root URI of the file paths.
  * @param files A lexicographically sorted list of file paths in
  *              the workspace, relative to the root and
  *              without a leading '/'.
  */
-export function toFileStat(root: vscode.Uri, files: string[], options: ICustomResolveFileOptions, skipFiles: number = 0): vscode.FileStat {
+export function toFileStat(root: vscode.Uri, files: string[], options: ICustomResolveFileOptions, skipFiles: number = 0): vscode.FileStat | null {
 	const { parentPath, resolveSingleChildDescendants, resolveTo, resolveAllDescendants } = options;
 
 	if (parentPath && parentPath.startsWith('/')) {
@@ -180,7 +180,7 @@ export function toFileStat(root: vscode.Uri, files: string[], options: ICustomRe
 							parentPath: recurseParentPath,
 							resolveSingleChildDescendants,
 							resolveTo,
-						}, i));
+						}, i)!);
 					} else {
 						rootStat.children!.push({
 							resource: rootResource.with({ path: rootResource.path + '/' + subdir }),
@@ -200,7 +200,10 @@ export function toFileStat(root: vscode.Uri, files: string[], options: ICustomRe
 		}
 	}
 
-	if (!rootStat.isDirectory) { throw new Error('not found: ' + rootResource.toString()); }
+	if (!rootStat.isDirectory) {
+		return null; // not found
+	}
+
 	if (!rootStat.children) {
 		rootStat.hasChildren = false;
 	}

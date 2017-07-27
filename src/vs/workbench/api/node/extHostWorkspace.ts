@@ -234,7 +234,7 @@ export class ExtHostWorkspace extends ExtHostWorkspaceShape {
 		});
 	}
 
-	$resolveFileStat(handle: number, resource: URI, options: IResolveFileOptions | vscode.ResolveFileOptions): TPromise<IFileStat> {
+	$resolveFileStat(handle: number, resource: URI, options: IResolveFileOptions | vscode.ResolveFileOptions): TPromise<IFileStat | null> {
 		const provider = this._provider.get(handle);
 		return asWinJsPromise(token => provider.resolveFile(resource, options as vscode.ResolveFileOptions) as TPromise<IFileStat>);
 	}
