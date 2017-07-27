@@ -904,10 +904,7 @@ export class ExplorerView extends CollapsibleView {
 		}
 
 		return revealPromise.then(() => {
-			if (!fileStat.isDirectory) {
-				this.explorerViewer.setSelection([fileStat]); // Since folders can not be opened, only select files
-			}
-
+			this.explorerViewer.setSelection([fileStat]);
 			this.explorerViewer.setFocus(fileStat);
 		});
 	}

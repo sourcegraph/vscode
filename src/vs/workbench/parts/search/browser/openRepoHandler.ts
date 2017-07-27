@@ -29,6 +29,10 @@ import { IWindowsService } from 'vs/platform/windows/common/windows';
 import { ThrottledDelayer } from 'vs/base/common/async';
 import { IMessageService, Severity } from 'vs/platform/message/common/message';
 import { KeyMod } from 'vs/base/common/keyCodes';
+import { IWorkspaceEditingService } from 'vs/workbench/services/workspace/common/workspaceEditing';
+import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
+import { ExplorerViewlet } from 'vs/workbench/parts/files/browser/explorerViewlet';
+import { VIEWLET_ID as EXPLORER_VIEWLET_ID } from 'vs/workbench/parts/files/common/files';
 
 /**
 * The quick open model representing workspace results from a single handler.
@@ -180,6 +184,9 @@ export class WorkspaceEntry extends QuickOpenEntry {
 	constructor(
 		private match: IWorkspaceMatch,
 		@IConfigurationService private configurationService: IConfigurationService,
+		@IWorkspaceContextService private contextService: IWorkspaceContextService,
+		@IWorkspaceEditingService private workspaceEditingService: IWorkspaceEditingService,
+		@IViewletService private viewletService: IViewletService,
 		@IWindowsService private windowsService: IWindowsService
 	) {
 		super();
@@ -246,11 +253,42 @@ export class WorkspaceEntry extends QuickOpenEntry {
 			mode = Mode.OPEN_IN_BACKGROUND;
 		}
 
+		const repoResource = this.match.resource;
 		const hideWidget = (mode === Mode.OPEN);
 
-		// Opens a window for this workspace.
-		if (mode === Mode.OPEN || mode === Mode.OPEN_IN_BACKGROUND) {
-			this.windowsService.openWindow([this.match.resource.toString()])
+		if (mode === Mode.OPEN) {
+			// Add repo as another root folder in the workspace.
+			let rootExists = false;
+			if (this.contextService.hasWorkspace()) {
+				rootExists = this.contextService.getWorkspace().roots.some(root => root.toString() === repoResource.toString());
+			}
+			let p = TPromise.as<void>(void 0);
+			if (!rootExists) {
+				p = this.workspaceEditingService.addRoots([repoResource]).then(() =>
+					// Wait for workspace to reload and detect its newly added root.
+					this.configurationService.reloadConfiguration()
+				);
+			}
+
+			// Highlight the root folder in explorer.
+			p.then(() =>
+				this.viewletService.openViewlet(EXPLORER_VIEWLET_ID, true).then((viewlet: ExplorerViewlet) => {
+					const explorerView = viewlet.getExplorerView();
+					if (explorerView) {
+						// TODO(sqs): a full refresh waits too long; there is a visual lag
+						// between the new root folder appearing in the explorer and it
+						// being selected.
+						return explorerView.refresh().then(() => {
+							explorerView.expand();
+							explorerView.select(repoResource, true);
+						});
+					}
+					return void 0;
+				})
+			).done(null, errors.onUnexpectedError);
+		} else if (mode === Mode.OPEN_IN_BACKGROUND) {
+			// Opens a window for this workspace.
+			this.windowsService.openWindow([repoResource.toString()])
 				.done(null, errors.onUnexpectedError);
 		}
 
