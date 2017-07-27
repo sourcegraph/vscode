@@ -55,7 +55,7 @@ export class RemoteFileSystem implements vscode.FileSystemProvider, vscode.Dispo
 		throw new Error('not implemented: RemoteFileSystem writeContents');
 	}
 
-	public dispose(): void {
+	dispose(): void {
 		this.toDispose.forEach(disposable => disposable.dispose());
 		this.toDispose = [];
 	}
