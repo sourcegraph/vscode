@@ -113,14 +113,20 @@ export function toFileStat(root: vscode.Uri, files: string[], options: ICustomRe
 
 	if (resolveAllDescendants) {
 		// Simple flat case.
-		rootStat.children = files.map(file => ({
-			resource: rootResource.with({ path: rootResource.path + '/' + file }),
-			name: path.basename(file),
-			isDirectory: false,
-			hasChildren: false,
-			mtime: undefined!,
-			etag: undefined!,
-		}));
+		rootStat.children = [];
+		for (const file of files) {
+			if (parentPath && !file.startsWith(parentPath + '/')) {
+				continue;
+			}
+			rootStat.children.push({
+				resource: rootResource.with({ path: rootResource.path + '/' + file }),
+				name: path.basename(file),
+				isDirectory: false,
+				hasChildren: false,
+				mtime: undefined!,
+				etag: undefined!,
+			});
+		}
 		rootStat.isDirectory = true;
 		rootStat.hasChildren = !!rootStat.children;
 		return rootStat;
