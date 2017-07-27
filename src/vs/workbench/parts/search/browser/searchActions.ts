@@ -28,6 +28,7 @@ import { ServicesAccessor, IInstantiationService } from 'vs/platform/instantiati
 import { IListService } from 'vs/platform/list/browser/listService';
 import { explorerItemToFileResource } from 'vs/workbench/parts/files/common/files';
 import { OS } from 'vs/base/common/platform';
+import { IContextKeyService, ContextKeyExpr } from "vs/platform/contextkey/common/contextkey";
 import { SourcegraphSearchViewlet } from 'vs/workbench/parts/search/browser/sourcegraphSearchViewlet';
 
 export function isSearchViewletFocussed(viewletService: IViewletService): boolean {
@@ -92,9 +93,14 @@ export class ShowNextSearchIncludeAction extends Action {
 
 	public static ID = 'search.history.showNextIncludePattern';
 	public static LABEL = nls.localize('nextSearchIncludePattern', "Show Next Search Include Pattern");
+	public static CONTEXT_KEY_EXPRESSION: ContextKeyExpr = ContextKeyExpr.and(Constants.SearchViewletVisibleKey, Constants.PatternIncludesFocussedKey);
 
-	constructor(id: string, label: string, @IViewletService private viewletService: IViewletService) {
+	constructor(id: string, label: string,
+		@IViewletService private viewletService: IViewletService,
+		@IContextKeyService private contextKeyService: IContextKeyService
+	) {
 		super(id, label);
+		this.enabled = this.contextKeyService.contextMatchesRules(ShowNextSearchIncludeAction.CONTEXT_KEY_EXPRESSION);
 	}
 
 	public run(): TPromise<any> {
@@ -108,9 +114,14 @@ export class ShowPreviousSearchIncludeAction extends Action {
 
 	public static ID = 'search.history.showPreviousIncludePattern';
 	public static LABEL = nls.localize('previousSearchIncludePattern', "Show Previous Search Include Pattern");
+	public static CONTEXT_KEY_EXPRESSION: ContextKeyExpr = ContextKeyExpr.and(Constants.SearchViewletVisibleKey, Constants.PatternIncludesFocussedKey);
 
-	constructor(id: string, label: string, @IViewletService private viewletService: IViewletService) {
+	constructor(id: string, label: string,
+		@IViewletService private viewletService: IViewletService,
+		@IContextKeyService private contextKeyService: IContextKeyService
+	) {
 		super(id, label);
+		this.enabled = this.contextKeyService.contextMatchesRules(ShowPreviousSearchIncludeAction.CONTEXT_KEY_EXPRESSION);
 	}
 
 	public run(): TPromise<any> {
@@ -124,11 +135,15 @@ export class ShowNextSearchExcludeAction extends Action {
 
 	public static ID = 'search.history.showNextExcludePattern';
 	public static LABEL = nls.localize('nextSearchExcludePattern', "Show Next Search Exclude Pattern");
+	public static CONTEXT_KEY_EXPRESSION: ContextKeyExpr = ContextKeyExpr.and(Constants.SearchViewletVisibleKey, Constants.PatternExcludesFocussedKey);
 
-	constructor(id: string, label: string, @IViewletService private viewletService: IViewletService) {
+	constructor(id: string, label: string,
+		@IViewletService private viewletService: IViewletService,
+		@IContextKeyService private contextKeyService: IContextKeyService
+	) {
 		super(id, label);
+		this.enabled = this.contextKeyService.contextMatchesRules(ShowNextSearchExcludeAction.CONTEXT_KEY_EXPRESSION);
 	}
-
 	public run(): TPromise<any> {
 		let searchAndReplaceWidget = (<SearchViewlet>this.viewletService.getActiveViewlet()).searchExcludePattern;
 		searchAndReplaceWidget.showNextTerm();
@@ -140,9 +155,14 @@ export class ShowPreviousSearchExcludeAction extends Action {
 
 	public static ID = 'search.history.showPreviousExcludePattern';
 	public static LABEL = nls.localize('previousSearchExcludePattern', "Show Previous Search Exclude Pattern");
+	public static CONTEXT_KEY_EXPRESSION: ContextKeyExpr = ContextKeyExpr.and(Constants.SearchViewletVisibleKey, Constants.PatternExcludesFocussedKey);
 
-	constructor(id: string, label: string, @IViewletService private viewletService: IViewletService) {
+	constructor(id: string, label: string,
+		@IViewletService private viewletService: IViewletService,
+		@IContextKeyService private contextKeyService: IContextKeyService
+	) {
 		super(id, label);
+		this.enabled = this.contextKeyService.contextMatchesRules(ShowPreviousSearchExcludeAction.CONTEXT_KEY_EXPRESSION);
 	}
 
 	public run(): TPromise<any> {
@@ -156,9 +176,15 @@ export class ShowNextSearchTermAction extends Action {
 
 	public static ID = 'search.history.showNext';
 	public static LABEL = nls.localize('nextSearchTerm', "Show Next Search Term");
+	public static CONTEXT_KEY_EXPRESSION: ContextKeyExpr = ContextKeyExpr.and(Constants.SearchViewletVisibleKey, Constants.SearchInputBoxFocussedKey);
 
-	constructor(id: string, label: string, @IViewletService private viewletService: IViewletService) {
+	constructor(id: string, label: string,
+		@IViewletService private viewletService: IViewletService,
+		@IContextKeyService private contextKeyService: IContextKeyService
+	) {
 		super(id, label);
+		this.enabled = this.contextKeyService.contextMatchesRules(ShowNextSearchTermAction.CONTEXT_KEY_EXPRESSION);
+
 	}
 
 	public run(): TPromise<any> {
@@ -172,9 +198,14 @@ export class ShowPreviousSearchTermAction extends Action {
 
 	public static ID = 'search.history.showPrevious';
 	public static LABEL = nls.localize('previousSearchTerm', "Show Previous Search Term");
+	public static CONTEXT_KEY_EXPRESSION: ContextKeyExpr = ContextKeyExpr.and(Constants.SearchViewletVisibleKey, Constants.SearchInputBoxFocussedKey);
 
-	constructor(id: string, label: string, @IViewletService private viewletService: IViewletService) {
+	constructor(id: string, label: string,
+		@IViewletService private viewletService: IViewletService,
+		@IContextKeyService private contextKeyService: IContextKeyService
+	) {
 		super(id, label);
+		this.enabled = this.contextKeyService.contextMatchesRules(ShowPreviousSearchTermAction.CONTEXT_KEY_EXPRESSION);
 	}
 
 	public run(): TPromise<any> {

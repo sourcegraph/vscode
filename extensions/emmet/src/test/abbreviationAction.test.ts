@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
-import { Selection } from 'vscode';
+import { Selection, workspace } from 'vscode';
 import { withRandomFileEditor, closeAllEditors } from './testUtils';
 import { expandAbbreviation, wrapWithAbbreviation } from '../abbreviationActions';
 
@@ -20,6 +20,12 @@ const cssContents = `
 	ind
 }
 `;
+
+const bemFilterExample = 'ul.search-form._wide>li.-querystring+li.-btn_large|bem';
+const expectedBemFilterOutput = `<ul class="search-form search-form_wide">
+		<li class="search-form__querystring"></li>
+		<li class="search-form__btn search-form__btn_large"></li>
+	</ul>`;
 
 const htmlContents = `
 <body class="header">
@@ -37,6 +43,7 @@ const htmlContents = `
 			m10
 		}
 	</style>
+	${bemFilterExample}
 </body>
 `;
 
@@ -88,7 +95,10 @@ const wrapMultiLineAbbrExpected = `
 `;
 
 suite('Tests for Expand Abbreviations (HTML)', () => {
-	teardown(closeAllEditors);
+	teardown(() => {
+		// Reset config and close all editors
+		return workspace.getConfiguration('emmet').update('excludeLanguages', []).then(closeAllEditors);
+	});
 
 	test('Expand snippets (HTML)', () => {
 		return testHtmlExpandAbbreviation(new Selection(3, 23, 3, 23), 'img', '<img src=\"\" alt=\"\">');
@@ -135,6 +145,19 @@ suite('Tests for Expand Abbreviations (HTML)', () => {
 			});
 		});
 	});
+
+	test('No expanding when html is excluded in the settings', () => {
+		return workspace.getConfiguration('emmet').update('excludeLanguages', ['html']).then(() => {
+			return testHtmlExpandAbbreviation(new Selection(9, 6, 9, 6), '', '', true).then(() => {
+				return workspace.getConfiguration('emmet').update('excludeLanguages', []);
+			});
+		});
+	});
+
+	test('Expand using bem filter', () => {
+		return testHtmlExpandAbbreviation(new Selection(16, 55, 16, 55), bemFilterExample, expectedBemFilterOutput);
+	});
+
 });
 
 suite('Tests for Expand Abbreviations (CSS)', () => {
@@ -213,7 +236,6 @@ suite('Tests for Wrap with Abbreviations', () => {
 
 
 function testHtmlExpandAbbreviation(selection: Selection, abbreviation: string, expandedText: string, shouldFail?: boolean): Thenable<any> {
-
 	return withRandomFileEditor(htmlContents, 'html', (editor, doc) => {
 		editor.selection = selection;
 		let expandPromise = expandAbbreviation(null);
