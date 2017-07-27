@@ -272,26 +272,6 @@ export class RemoteFileService extends FileService {
 		return super.importFile(source, targetFolder);
 	}
 
-	watchFileChanges(resource: URI): void {
-		if (this._provider.has(resource.scheme)) {
-			throw new Error(`not implemented: watch file changes ${resource.toString()}`);
-		}
-
-		return super.watchFileChanges(resource);
-	}
-
-	unwatchFileChanges(resource: URI): void;
-	unwatchFileChanges(fsPath: string): void;
-	unwatchFileChanges(arg: any): void {
-		const resource = typeof arg === 'string' ? URI.file(arg) : arg;
-
-		if (this._provider.has(resource.scheme)) {
-			throw new Error(`not implemented: unwatch file changes ${resource.toString()}`);
-		}
-
-		return super.unwatchFileChanges(arg);
-	}
-
 	getEncoding(resource: URI, preferredEncoding?: string): string {
 		if (this._provider.has(resource.scheme)) {
 			throw new Error(`not implemented: get encoding for ${resource.toString()}`);

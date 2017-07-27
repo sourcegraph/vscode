@@ -23,7 +23,7 @@ import { getPathLabel } from 'vs/base/common/labels';
 import { ResourceMap } from 'vs/base/common/map';
 import { once } from 'vs/base/common/event';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
-import { isFileLikeResource } from 'vs/platform/files/common/files';
+import { Schemas } from 'vs/base/common/network';
 
 export interface IEditorPart {
 	openEditor(input?: IEditorInput, options?: IEditorOptions | ITextEditorOptions, sideBySide?: boolean): TPromise<BaseEditor>;
@@ -240,7 +240,7 @@ export class WorkbenchEditorService implements IWorkbenchEditorService {
 		const resourceInput = <IResourceInput>input;
 
 		// Files support
-		if (resourceInput.resource instanceof URI && isFileLikeResource(resourceInput.resource)) {
+		if (resourceInput.resource instanceof URI && (resourceInput.resource.scheme === Schemas.file || resourceInput.resource.scheme === Schemas.remoteRepo)) {
 			return this.createOrGet(resourceInput.resource, this.instantiationService, resourceInput.label, resourceInput.description, resourceInput.encoding);
 		}
 

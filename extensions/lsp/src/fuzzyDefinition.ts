@@ -8,8 +8,8 @@
 import * as vscode from 'vscode';
 import { LanguageClient, WorkspaceSymbolRequest, SymbolInformation } from '@sourcegraph/vscode-languageclient/lib/client';
 
-export function registerFuzzyDefinitionProvider(mode: string, client: LanguageClient): vscode.Disposable {
-	const p = new FuzzyDefinitionProvider(mode, client);
+export function registerFuzzyDefinitionProvider(mode: string, root: vscode.Uri, client: LanguageClient): vscode.Disposable {
+	const p = new FuzzyDefinitionProvider(mode, root, client);
 	p.register();
 	return p;
 }
@@ -26,12 +26,13 @@ class FuzzyDefinitionProvider implements vscode.DefinitionProvider {
 
 	constructor(
 		private mode: string,
+		private root: vscode.Uri,
 		private client: LanguageClient,
 	) { }
 
 	public register() {
 		// register each new instance as a definition provider
-		const info = vscode.workspace.extractResourceInfo(vscode.workspace.rootPath);
+		const info = vscode.workspace.extractResourceInfo(this.root);
 		const workspace = vscode.Uri.parse(info.workspace);
 		vscode.languages.registerDefinitionProvider({
 			language: this.mode, scheme: workspace.scheme, pattern: `${workspace.path}/**/*`,

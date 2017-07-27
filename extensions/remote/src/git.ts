@@ -6,7 +6,7 @@
 
 import * as vscode from 'vscode';
 import { RemoteFileSystem } from './fileSystem';
-import { Revisioned, Repository } from './repository';
+import { Revisioned, Repository, REPO_SCHEME } from './repository';
 import { requestGraphQL } from './util';
 import * as nls from 'vscode-nls';
 import { SWITCH_REVISION_COMMAND_ID } from './workspace';
@@ -38,7 +38,7 @@ export class RemoteGitRepository implements Repository, vscode.Disposable {
 	public readonly sourceControl: vscode.SourceControl;
 
 	private resolveRevisionOperation?: Thenable<vscode.SCMRevision>;
-	private statusBarItem: vscode.StatusBarItem;
+	private statusBarItem?: vscode.StatusBarItem;
 
 	/**
 	 * Things that rely on the current revision.
@@ -52,8 +52,11 @@ export class RemoteGitRepository implements Repository, vscode.Disposable {
 		private repo: string,
 		private workspaceState: vscode.Memento,
 	) {
-		this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
-		this.toDispose.push(this.statusBarItem);
+		// Show status bar item iff we can switch the revision.
+		if (root.scheme === REPO_SCHEME) {
+			this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
+			this.toDispose.push(this.statusBarItem);
+		}
 
 		this.sourceControl = vscode.scm.createSourceControl('git', {
 			label: 'Git',
@@ -98,6 +101,10 @@ export class RemoteGitRepository implements Repository, vscode.Disposable {
 	}
 
 	private onUpdateRevision(error: boolean): void {
+		if (!this.statusBarItem) {
+			return;
+		}
+
 		this.statusBarItem.command = SWITCH_REVISION_COMMAND_ID;
 		if (error) {
 			// TODO(sqs): handle repo cloning, repo-not-exists, and other errors; not all

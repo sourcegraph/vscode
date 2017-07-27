@@ -8,75 +8,26 @@ import * as vscode from 'vscode';
 import { LanguageClient, RevealOutputChannelOn, LanguageClientOptions, ErrorCodes } from '@sourcegraph/vscode-languageclient/lib/client';
 import { v4 as uuidV4 } from 'uuid';
 import { MessageTrace, webSocketStreamOpener } from './connection';
-import { Language, getLanguage, getLanguageForResource, isEnabled } from './languages';
-import { registerMultiWorkspaceProviders } from './multiWorkspace';
-import { registerFuzzyDefinitionProvider } from './fuzzyDefinition';
-import * as roots from './roots';
+import { Workspace } from './workspace';
+import * as log from './log';
 
 export function activateLSP(): vscode.Disposable {
 	const toDispose: vscode.Disposable[] = []; // things that should live for this extension's lifetime
-	const toDisposeCanRecreate: vscode.Disposable[] = []; // things that will be recreated if disposed
 
-	// Search the workspace for file types to know what to activate. This lets us start
-	// initializing language features when the user first loads a workspace, not just when
-	// they view a file, which reduces perceived load time. It also makes
-	// workspace/symbols work before a file is open.
-	vscode.workspace.findFiles('**/*', undefined, 250).then(resources => {
-		resources.forEach(resource => {
-			activateForResource(resource, toDisposeCanRecreate);
-		});
-	});
+	// Start workspace and initialize roots.
+	const workspace = new Workspace();
+	toDispose.push(workspace);
 
-	// Activate when documents of a specific mode are opened. This lets us initialize
-	// language features for a specific document before our workspace-wide search above
-	// (which might take a few seconds) has finished.
-	vscode.workspace.textDocuments.forEach(doc => {
-		activateForDocument(doc, toDisposeCanRecreate);
-	});
-	vscode.workspace.onDidOpenTextDocument(doc => {
-		activateForDocument(doc, toDisposeCanRecreate);
-	}, null, toDispose);
-	vscode.window.onDidChangeVisibleTextEditors(editors => {
-		editors.forEach(editor => activateForDocument(editor.document, toDisposeCanRecreate));
-	}, null, toDispose);
-
-	// Activate when the source control changes for any doc.
-	vscode.scm.onDidUpdateSourceControl(sourceControl => {
-		vscode.workspace.textDocuments.forEach(doc => {
-			if (vscode.scm.getSourceControlForResource(doc.uri) === sourceControl) {
-				activateForDocument(doc, toDisposeCanRecreate);
-			}
-		});
-	}, null, toDispose);
-
-	// HACK: Poll SCM provider to see if revision changes. If so, then kill our LSP
-	// clients because the revision is specified immutably in our LSP proxy initialization
-	// request.
-	//
-	// TODO(sqs): replace this with using vscode.scm.onDidUpdateSourceControl
-	const rootFolder = vscode.Uri.parse(vscode.workspace.rootPath);
-	const sourceControl = vscode.scm.getSourceControlForResource(rootFolder);
-	let lastSCMRevision: string | undefined = sourceControl && sourceControl.revision && sourceControl.revision.id;
-	const pollSCMRevisionHandle = setInterval(() => {
-		const sourceControl = vscode.scm.getSourceControlForResource(rootFolder);
-		let scmRevision = sourceControl && sourceControl.revision && sourceControl.revision.id;
-		if (scmRevision !== lastSCMRevision) {
-			// Dispose all clients and related resources.
-			dispose(toDisposeCanRecreate);
-
-			// Trigger recreation of any clients (for the new revision) that we just
-			// disposed.
-			vscode.window.visibleTextEditors.forEach(editor => activateForDocument(editor.document, toDisposeCanRecreate));
-
-			lastSCMRevision = scmRevision;
-		}
-	}, 2000);
+	// Other disposables.
+	toDispose.push(log.outputChannel);
 
 	return {
 		dispose(): void {
-			clearInterval(pollSCMRevisionHandle);
 			dispose(toDispose);
-			dispose(toDisposeCanRecreate);
+
+			if (traceOutputChannel) {
+				traceOutputChannel.dispose();
+			}
 		},
 	};
 }
@@ -84,56 +35,6 @@ export function activateLSP(): vscode.Disposable {
 function dispose(toDispose: vscode.Disposable[]): void {
 	toDispose.forEach(disposable => disposable.dispose());
 	toDispose.length = 0;
-}
-
-function activateForResource(resource: vscode.Uri, toDispose: vscode.Disposable[]): void {
-	const info = vscode.workspace.extractResourceInfo(resource);
-	if (!info) {
-		return;
-	}
-
-	const lang = getLanguageForResource(resource);
-	if (lang) {
-		activateForLanguage(vscode.Uri.parse(info.workspace), lang, toDispose);
-	}
-}
-
-function activateForDocument(doc: vscode.TextDocument, toDispose: vscode.Disposable[]): void {
-	if (!doc) { return; }
-
-	const info = vscode.workspace.extractResourceInfo(doc.uri);
-	if (!info) {
-		return;
-	}
-
-	const lang = getLanguage(doc.languageId);
-	if (lang) {
-		activateForLanguage(vscode.Uri.parse(info.workspace), lang, toDispose);
-	}
-}
-
-function activateForLanguage(root: vscode.Uri, lang: Language, toDispose: vscode.Disposable[]): Promise<void> {
-	if (!isEnabled(lang)) { return; }
-
-	const sourceControl = vscode.scm.getSourceControlForResource(root);
-	if (!sourceControl) {
-		// console.warn('Disabling LSP because there is no active source control for ' + root.toString());
-		return;
-	}
-	if (!sourceControl || !sourceControl.revision || !sourceControl.revision.id) {
-		// console.warn('Disabling LSP because the resolved revision is not available.', sourceControl.revision);
-		return;
-	}
-
-	// Only use one client per workspace per mode.
-	if (roots.hasActivatedMode(root, lang.mode)) { return; }
-	toDispose.push(roots.setActivatedMode(root, lang.mode));
-
-	const client = newClient(lang.mode, lang.allLanguageIds, root, sourceControl.revision.id);
-	toDispose.push(client.start());
-
-	toDispose.push(registerMultiWorkspaceProviders(lang.mode, lang.allLanguageIds, client));
-	toDispose.push(registerFuzzyDefinitionProvider(lang.mode, client));
 }
 
 const REUSE_BACKEND_LANG_SERVERS = true;
@@ -206,48 +107,34 @@ export function newClient(mode: string, languageIds: string[], root: vscode.Uri,
 	} as LanguageClientOptions);
 }
 
-// tslint:disable: no-console
+let traceOutputChannel: vscode.OutputChannel | undefined;
 
 function createRequestTracer(languageId: string): ((trace: MessageTrace) => void) | undefined {
-	if (!(global as any).console) {
-		return undefined;
-	}
-	if (!vscode.workspace.getConfiguration('lsp').get<boolean>('trace')) {
-		return undefined;
-	}
-	const console = (global as any).console;
-	if (!console.log || !console.group) {
-		return undefined;
-	}
 	return (trace: MessageTrace) => {
+		if (!vscode.workspace.getConfiguration('lsp').get<boolean>('trace')) {
+			return undefined;
+		}
+
+		if (!traceOutputChannel) {
+			traceOutputChannel = vscode.window.createOutputChannel('LSP (trace)');
+		}
+
 		let label: string;
-		let bgColor: string;
 		if (!trace.response.error) {
-			label = 'OK';
-			bgColor = 'green';
+			label = 'OK ';
 		}
 		else if (trace.response.error.code === ErrorCodes.RequestCancelled) {
 			label = 'CXL';
-			bgColor = '#bbb';
 		} else {
 			label = 'ERR';
-			bgColor = 'red';
 		}
-		console.groupCollapsed(
-			'%c%s%c LSP %s %s %c%sms',
-			`background-color:${bgColor};color:white`, label,
-			`background-color:inherit;color:inherit;`,
-			languageId,
-			describeRequest(trace.request.method, trace.request.params),
-			'color:#999;font-weight:normal;font-style:italic',
-			trace.endTime - trace.startTime,
-		);
+		traceOutputChannel.appendLine(`${label} ${languageId} ${describeRequest(trace.request.method, trace.request.params)} — ${trace.endTime - trace.startTime}ms`);
 		if (trace.response.meta && trace.response.meta['X-Trace']) {
-			console.log('Trace:', trace.response.meta['X-Trace']);
+			traceOutputChannel.appendLine(` - Trace: ${trace.response.meta['X-Trace']}`);
 		}
-		console.log('Request Params:', trace.request.params);
-		console.log('Response:', trace.response);
-		console.groupEnd();
+		traceOutputChannel.appendLine('');
+		// console.log('Request Params:', trace.request.params);
+		// console.log('Response:', trace.response);
 	};
 }
 

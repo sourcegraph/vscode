@@ -277,7 +277,7 @@ type SourceControlRootFolder = { handle: number, rootFolder: string };
 
 export class ExtHostSCM {
 
-	private static _handlePool: number = 0;
+	private static _handlePool: number = 1; // start at 1 because TrieMap element must be truthy
 
 	private _proxy: MainThreadSCMShape;
 	private _sourceControls: Map<ProviderHandle, ExtHostSourceControl> = new Map<ProviderHandle, ExtHostSourceControl>();
@@ -290,9 +290,6 @@ export class ExtHostSCM {
 
 	private _onDidUpdateSourceControl = new Emitter<vscode.SourceControl>();
 	get onDidUpdateSourceControl(): Event<vscode.SourceControl> { return this._onDidUpdateSourceControl.event; }
-
-	private _onDidUpdateProvider = new Emitter<vscode.SourceControl>();
-	get onDidUpdateProvider(): Event<vscode.SourceControl> { return this._onDidUpdateProvider.event; }
 
 	private _inputBox: ExtHostSCMInputBox;
 	get inputBox(): ExtHostSCMInputBox { return this._inputBox; }

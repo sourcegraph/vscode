@@ -5,10 +5,5 @@
 'use strict';
 
 import * as vscode from 'vscode';
-import { activateLSP } from './client';
-import { activateLanguageSupportParts } from './languageSupportParts';
 
-export function activate(context: vscode.ExtensionContext): void {
-	context.subscriptions.push(activateLSP());
-	context.subscriptions.push(activateLanguageSupportParts());
-}
+export const outputChannel: vscode.OutputChannel = vscode.window.createOutputChannel('LSP');
