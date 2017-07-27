@@ -5,12 +5,13 @@
 
 'use strict';
 
+import * as arrays from 'vs/base/common/arrays';
 import * as glob from 'vs/base/common/glob';
 import * as strings from 'vs/base/common/strings';
 import * as nls from 'vs/nls';
 import URI from 'vs/base/common/uri';
-import { PPromise, TPromise } from 'vs/base/common/winjs.base';
-import { IFileMatch, ISearchComplete, ISearchProgressItem, ISearchQuery, ISearchService, QueryType } from 'vs/platform/search/common/search';
+import { PPromise } from 'vs/base/common/winjs.base';
+import { IFileMatch, ISearchComplete, ISearchProgressItem, ISearchQuery, ISearchService, QueryType, ISearchStats } from 'vs/platform/search/common/search';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 import { IFileService } from 'vs/platform/files/common/files';
@@ -63,6 +64,17 @@ export class RemoteSearchService extends SearchService implements ISearchService
 	 * Searches multiple repos.
 	 */
 	private textSearch(query: ISearchQuery): PPromise<ISearchComplete, ISearchProgressItem> {
+		if (arrays.isFalsyOrEmpty(query.folderQueries)) {
+			// Avoid network request if we have no folderQueries
+			return PPromise.as({
+				results: [],
+				limitHit: false,
+				stats: {
+					fromCache: false,
+					resultCount: 0,
+				},
+			});
+		}
 
 		// If the query is searching a folder inside an SCM repository, search in its
 		// current revision.
@@ -103,7 +115,10 @@ export class RemoteSearchService extends SearchService implements ISearchService
 				complete({
 					results: results,
 					limitHit: model.response.limitHit,
-					stats: {} as any,
+					stats: {
+						fromCache: false,
+						resultCount: results.length,
+					},
 					warning: this.getWarning(model.response),
 				});
 			}, err => error({ message: err }));
@@ -130,21 +145,33 @@ export class RemoteSearchService extends SearchService implements ISearchService
 	 * search returns a promise which completes with file search results matching the specified query.
 	 */
 	public search(query: ISearchQuery): PPromise<ISearchComplete, ISearchProgressItem> {
-		// Fall back to the normal search service if we aren't searching anything remote.
-		//
-		// TODO(sqs): merge results from local + remote if there are multiple roots and at
-		// least 1 of local and remote.
-		if (!this.contextService.hasWorkspace() || this.contextService.getWorkspace().roots[0].scheme !== Schemas.remoteRepo) {
-			return super.search(query);
-		}
-
+		// extendQuery is idempotent, so it is fine that super.search also calls it.
 		this.extendQuery(query);
-		if (query.type === QueryType.File) {
-			return this.fileSearch(query);
-		}
-		return this.textSearch(query);
+
+		// Split out local and external resources
+		const localFolderQueries = query.folderQueries.filter(fq => fq.folder.scheme !== Schemas.remoteRepo);
+		const remoteFolderQueries = query.folderQueries.filter(fq => fq.folder.scheme === Schemas.remoteRepo);
+
+		return PPromise.join({
+			local: this.localSearch({ ...query, folderQueries: localFolderQueries }),
+			remote: this.remoteSearch({ ...query, folderQueries: remoteFolderQueries }),
+		}).then(({ local, remote }) => {
+			return {
+				limitHit: local.limitHit || remote.limitHit,
+				results: local.results.concat(remote.results),
+				stats: mergeStats([local.stats, remote.stats]),
+				warning: local.warning || remote.warning,
+			};
+		});
 	}
 
+	private localSearch(query: ISearchQuery): PPromise<ISearchComplete, ISearchProgressItem> {
+		return super.search(query);
+	}
+
+	private remoteSearch(query: ISearchQuery): PPromise<ISearchComplete, ISearchProgressItem> {
+		return query.type === QueryType.File ? this.fileSearch(query) : this.textSearch(query);
+	}
 
 	private fileSearch(query: ISearchQuery): PPromise<ISearchComplete, ISearchProgressItem> {
 
@@ -166,10 +193,19 @@ export class RemoteSearchService extends SearchService implements ISearchService
 		const searchP = this.raw.doFileSearch(EngineClass, rawSearch, RemoteSearchService.BATCH_SIZE);
 		return DiskSearch.collectResults(searchP);
 	}
+}
 
-	clearCache(cacheKey: string): TPromise<void> {
-		return TPromise.as(void 0);
-	}
+/** mergeStats combines search stats from different search backends. */
+function mergeStats(stats: (ISearchStats | undefined)[]): ISearchStats {
+	stats = arrays.coalesce(stats);
+	const initial = {
+		fromCache: stats.length > 0,
+		resultCount: 0,
+	};
+	return arrays.coalesce(stats).reduce((a, b) => ({
+		fromCache: a.fromCache && b.fromCache,
+		resultCount: a.resultCount + b.resultCount,
+	}), initial);
 }
 
 /**
