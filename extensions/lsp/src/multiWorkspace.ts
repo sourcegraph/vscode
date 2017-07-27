@@ -138,18 +138,22 @@ class MultiWorkspaceProvider implements vscode.ReferenceProvider {
 	private listDependents(document: vscode.TextDocument, position: vscode.Position): Thenable<Dependent[]> {
 		const info = vscode.workspace.extractResourceInfo(document.uri);
 		if (!info) {
-			return Promise.reject(`unable to extract resource information for ${document.uri}`);
+			throw new Error(`unable to extract resource information for ${document.uri}`);
 		}
 		const workspace = vscode.Uri.parse(info.workspace);
 
 		let rev: string;
 		if (info.workspace === vscode.workspace.rootPath) {
-			rev = vscode.scm.activeProvider.revision.id;
+			const sourceControl = vscode.scm.getSourceControlForResource(document.uri);
+			if (!sourceControl) {
+				throw new Error(`no source control found for ${document.uri.toString()}`);
+			}
+			rev = sourceControl.revision.id;
 		} else if (info.revisionSpecifier) {
 			rev = info.revisionSpecifier;
 		}
 		if (!rev) {
-			return Promise.reject(`unable to resolve revision for ${document.uri}`);
+			throw new Error(`unable to resolve revision for ${document.uri}`);
 		}
 
 		return listDependents({

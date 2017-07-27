@@ -92,6 +92,11 @@ declare module 'vscode' {
 
 	export interface SourceControl {
 		/**
+		 * The root (top-level) folder of the source control repository.
+		 */
+		readonly rootFolder?: Uri;
+
+		/**
 		 * The current SCM revision of the source control. Can be undefined if the source
 		 * control has not yet determined its revision or does not implement revision
 		 * determination. The extension should update this property's value whenever it
@@ -111,12 +116,43 @@ declare module 'vscode' {
 		commandExecutor?: CommandExecutor;
 	}
 
+	/**
+	 * Options specified when creating a source control.
+	 */
+	export interface SourceControlOptions {
+		/**
+		 * A human-readable string for the source control. Eg: `Git`.
+		 */
+		label: string;
+
+		/**
+		 * The root (top-level) folder of the source control repository.
+		 */
+		rootFolder?: Uri;
+	}
+
 	export namespace scm {
 
 		/**
-		 * The currently active source control provider, or undefined if there is none.
+		 * Creates a new [source control](#SourceControl) instance.
+		 *
+		 * @param id A unique `id` for the source control. Something short, eg: `git`.
+		 * @param options Options for creating the source control.
+		 * @return An instance of [source control](#SourceControl).
 		 */
-		export let activeProvider: SourceControl | undefined;
+		export function createSourceControl(id: string, options: SourceControlOptions): SourceControl;
+
+		/**
+		 * Returns the source control for the given resource (by traversing up the directory
+		 * hierarchy until the first folder is found that is associated with an source
+		 * control). Can be undefined if the resource is not in any known source control.
+		 */
+		export function getSourceControlForResource(resource: Uri): SourceControl | undefined;
+
+		/**
+		 * An event which fires when a source control is updated.
+		 */
+		export const onDidUpdateSourceControl: Event<SourceControl>;
 	}
 
 	/**

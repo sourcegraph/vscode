@@ -65,5 +65,8 @@
   },
   "devDependencies": {
     "@types/node": "^7.0.12"
+  },
+  "dependencies": {
+    "vscode-nls": "^2.0.2"
   }
 }

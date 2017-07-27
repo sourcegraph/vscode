@@ -1,12 +1,14 @@
 {
 	"compilerOptions": {
-		"module": "umd",
+		"module": "commonjs",
+		"moduleResolution": "node",
 		"target": "es5",
 		"outDir": "./out",
 		"lib": [
 			"es2015"
 		],
-		"sourceMap": true
+		"sourceMap": true,
+		"strict": true
 	},
 	"exclude": [
 		"node_modules"

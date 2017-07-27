@@ -48,13 +48,17 @@ export class RemoteGitRepository implements Repository, vscode.Disposable {
 	private toDispose: vscode.Disposable[] = [];
 
 	constructor(
+		private root: vscode.Uri,
 		private repo: string,
 		private workspaceState: vscode.Memento,
 	) {
 		this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
 		this.toDispose.push(this.statusBarItem);
 
-		this.sourceControl = vscode.scm.createSourceControl('git', 'Git');
+		this.sourceControl = vscode.scm.createSourceControl('git', {
+			label: 'Git',
+			rootFolder: this.root,
+		});
 		this.toDispose.push(this.sourceControl);
 
 		// Load last-viewed revision for repository.

@@ -11,6 +11,7 @@ import { MessageTrace, webSocketStreamOpener } from './connection';
 import { Language, getLanguage, getLanguageForResource, isEnabled } from './languages';
 import { registerMultiWorkspaceProviders } from './multiWorkspace';
 import { registerFuzzyDefinitionProvider } from './fuzzyDefinition';
+import * as roots from './roots';
 
 export function activateLSP(): vscode.Disposable {
 	const toDispose: vscode.Disposable[] = []; // things that should live for this extension's lifetime
@@ -22,10 +23,7 @@ export function activateLSP(): vscode.Disposable {
 	// workspace/symbols work before a file is open.
 	vscode.workspace.findFiles('**/*', undefined, 250).then(resources => {
 		resources.forEach(resource => {
-			const lang = getLanguageForResource(resource);
-			if (lang) {
-				activateForLanguage(lang, toDisposeCanRecreate);
-			}
+			activateForResource(resource, toDisposeCanRecreate);
 		});
 	});
 
@@ -42,12 +40,26 @@ export function activateLSP(): vscode.Disposable {
 		editors.forEach(editor => activateForDocument(editor.document, toDisposeCanRecreate));
 	}, null, toDispose);
 
+	// Activate when the source control changes for any doc.
+	vscode.scm.onDidUpdateSourceControl(sourceControl => {
+		vscode.workspace.textDocuments.forEach(doc => {
+			if (vscode.scm.getSourceControlForResource(doc.uri) === sourceControl) {
+				activateForDocument(doc, toDisposeCanRecreate);
+			}
+		});
+	}, null, toDispose);
+
 	// HACK: Poll SCM provider to see if revision changes. If so, then kill our LSP
 	// clients because the revision is specified immutably in our LSP proxy initialization
 	// request.
-	let lastSCMRevision: string | undefined = vscode.scm.activeProvider && vscode.scm.activeProvider.revision && vscode.scm.activeProvider.revision.id;
+	//
+	// TODO(sqs): replace this with using vscode.scm.onDidUpdateSourceControl
+	const rootFolder = vscode.Uri.parse(vscode.workspace.rootPath);
+	const sourceControl = vscode.scm.getSourceControlForResource(rootFolder);
+	let lastSCMRevision: string | undefined = sourceControl && sourceControl.revision && sourceControl.revision.id;
 	const pollSCMRevisionHandle = setInterval(() => {
-		let scmRevision = vscode.scm.activeProvider && vscode.scm.activeProvider.revision && vscode.scm.activeProvider.revision.id;
+		const sourceControl = vscode.scm.getSourceControlForResource(rootFolder);
+		let scmRevision = sourceControl && sourceControl.revision && sourceControl.revision.id;
 		if (scmRevision !== lastSCMRevision) {
 			// Dispose all clients and related resources.
 			dispose(toDisposeCanRecreate);
@@ -74,33 +86,50 @@ function dispose(toDispose: vscode.Disposable[]): void {
 	toDispose.length = 0;
 }
 
-function activateForDocument(doc: vscode.TextDocument, toDispose: vscode.Disposable[]): void {
-	if (!doc) { return; }
-	const lang = getLanguage(doc.languageId);
+function activateForResource(resource: vscode.Uri, toDispose: vscode.Disposable[]): void {
+	const info = vscode.workspace.extractResourceInfo(resource);
+	if (!info) {
+		return;
+	}
+
+	const lang = getLanguageForResource(resource);
 	if (lang) {
-		activateForLanguage(lang, toDispose);
+		activateForLanguage(vscode.Uri.parse(info.workspace), lang, toDispose);
 	}
 }
 
-const activatedModes = new Set<string>();
+function activateForDocument(doc: vscode.TextDocument, toDispose: vscode.Disposable[]): void {
+	if (!doc) { return; }
 
-function activateForLanguage(lang: Language, toDispose: vscode.Disposable[]): void {
+	const info = vscode.workspace.extractResourceInfo(doc.uri);
+	if (!info) {
+		return;
+	}
+
+	const lang = getLanguage(doc.languageId);
+	if (lang) {
+		activateForLanguage(vscode.Uri.parse(info.workspace), lang, toDispose);
+	}
+}
+
+function activateForLanguage(root: vscode.Uri, lang: Language, toDispose: vscode.Disposable[]): Promise<void> {
 	if (!isEnabled(lang)) { return; }
 
-	// Only use one client per workspace per mode.
-	if (activatedModes.has(lang.mode)) { return; }
-	activatedModes.add(lang.mode);
-	toDispose.push({ dispose: () => activatedModes.delete(lang.mode) });
+	const sourceControl = vscode.scm.getSourceControlForResource(root);
+	if (!sourceControl) {
+		// console.warn('Disabling LSP because there is no active source control for ' + root.toString());
+		return;
+	}
+	if (!sourceControl || !sourceControl.revision || !sourceControl.revision.id) {
+		// console.warn('Disabling LSP because the resolved revision is not available.', sourceControl.revision);
+		return;
+	}
 
-	if (!vscode.scm.activeProvider) {
-		console.warn('Disabling LSP because there is no active SCM provider for ' + vscode.workspace.rootPath);
-		return;
-	}
-	if (!vscode.scm.activeProvider || !vscode.scm.activeProvider.revision || !vscode.scm.activeProvider.revision.id) {
-		console.warn('Disabling LSP because the resolved revision is not available.', vscode.scm.activeProvider.revision);
-		return;
-	}
-	const client = newClient(lang.mode, lang.allLanguageIds, vscode.Uri.parse(vscode.workspace.rootPath), vscode.scm.activeProvider.revision.id);
+	// Only use one client per workspace per mode.
+	if (roots.hasActivatedMode(root, lang.mode)) { return; }
+	toDispose.push(roots.setActivatedMode(root, lang.mode));
+
+	const client = newClient(lang.mode, lang.allLanguageIds, root, sourceControl.revision.id);
 	toDispose.push(client.start());
 
 	toDispose.push(registerMultiWorkspaceProviders(lang.mode, lang.allLanguageIds, client));
@@ -115,12 +144,12 @@ const REUSE_BACKEND_LANG_SERVERS = true;
 * languages that this client should be used to provide hovers, etc.,
 * for.
 */
-export function newClient(mode: string, languageIds: string[], workspace: vscode.Uri, commitID: string): LanguageClient {
+export function newClient(mode: string, languageIds: string[], root: vscode.Uri, commitID: string): LanguageClient {
 	const endpoint = vscode.Uri.parse(vscode.workspace.getConfiguration('remote').get<string>('endpoint'));
 	const wsOrigin = endpoint.with({ scheme: endpoint.scheme === 'http' ? 'ws' : 'wss' });
 
 	if (!commitID) {
-		throw new Error(`no commit ID for workspace ${workspace.toString()}`);
+		throw new Error(`no commit ID for workspace ${root.toString()}`);
 	}
 
 	// We include ?mode= in the url to make it easier to find the correct LSP
@@ -132,8 +161,8 @@ export function newClient(mode: string, languageIds: string[], workspace: vscode
 		revealOutputChannelOn: RevealOutputChannelOn.Never,
 		documentSelector: languageIds.map(languageId => ({
 			language: languageId,
-			scheme: workspace.scheme,
-			pattern: `${workspace.path}/**/*`,
+			scheme: root.scheme,
+			pattern: `${root.path}/**/*`,
 		})),
 		initializationOptions: {
 			mode: mode,
@@ -151,7 +180,7 @@ export function newClient(mode: string, languageIds: string[], workspace: vscode
 					// vscode.workspace.rootPath. We use a URI converter to automatically inject
 					// the workspace provided to newClient in place of the default
 					// vscode.workspace.rootPath, which vscode-languageclient uses.
-					return vscode.Uri.parse(`git://${workspace.authority}${workspace.path}`).with({
+					return vscode.Uri.parse(`git://${root.authority}${root.path}`).with({
 						query: commitID,
 						fragment: info.relativePath,
 					}).toString();
@@ -164,8 +193,8 @@ export function newClient(mode: string, languageIds: string[], workspace: vscode
 					// URI is of the form git://github.com/owner/repo?gitrev#dir/file.
 
 					// Convert to repo://github.com/owner/repo/dir/file if in the same workspace.
-					if (uri.with({ scheme: 'repo', query: '', fragment: '' }).toString() === workspace.toString()) {
-						return workspace.with({ scheme: 'repo', path: workspace.path + `${uri.fragment !== '' ? `/${decodeURIComponent(uri.fragment)}` : ''}` });
+					if (uri.with({ scheme: 'repo', query: '', fragment: '' }).toString() === root.toString()) {
+						return root.with({ scheme: 'repo', path: root.path + `${uri.fragment !== '' ? `/${decodeURIComponent(uri.fragment)}` : ''}` });
 					}
 
 					// Convert to gitremote://github.com/owner/repo/dir/file.txt?gitrev.

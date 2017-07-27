@@ -59,31 +59,18 @@ export class RemoteSearchService extends SearchService implements ISearchService
 		this.raw = new RawSearchService();
 	}
 
-	private textSearch(query: ISearchQuery): PPromise<ISearchComplete, ISearchProgressItem> {
-		if (!this.contextService.hasWorkspace()) {
-			// If we don't have a current workspace, then just search the workspaces that were in the query.
-			return this.textSearchExternalRepos(query, '', '');
-		}
-		const workspaceRoot = this.contextService.getWorkspace().roots[0];
-
-		const info = extractResourceInfo(workspaceRoot);
-		const revision = this.scmService.activeProvider.revision;
-		return this.textSearchExternalRepos(query, info.repo, revision.id);
-	}
-
 	/**
 	 * Searches multiple repos.
 	 */
-	private textSearchExternalRepos(query: ISearchQuery, workspaceRepo: string, workspaceRevision: string): PPromise<ISearchComplete, ISearchProgressItem> {
+	private textSearch(query: ISearchQuery): PPromise<ISearchComplete, ISearchProgressItem> {
 
-		// For the current workspace, use the current revision selected in the UI. For
-		// other workspaces, use the server's default revision.
+		// If the query is searching a folder inside an SCM repository, search in its
+		// current revision.
 		const workspaces: WorkspaceRevision[] = (query.folderQueries || []).map(folderQuery => {
-			const resource = folderQuery.folder;
-			const isCurrentWorkspace = this.contextService.hasWorkspace() && this.contextService.getWorkspace().roots[0].toString() === resource.toString();
+			const provider = this.scmService.getProviderForResource(folderQuery.folder);
 			return {
-				workspace: resource,
-				revision: isCurrentWorkspace && this.scmService.activeProvider.revision ? this.scmService.activeProvider.revision.id : undefined,
+				workspace: folderQuery.folder,
+				revision: provider && provider.revision ? provider.revision.id : undefined,
 			};
 		});
 
@@ -96,12 +83,22 @@ export class RemoteSearchService extends SearchService implements ISearchService
 		return new PPromise<ISearchComplete, ISearchProgressItem>((complete, error, progress) => {
 			model.load().then(model => {
 				const results: IFileMatch[] = model.response.results.map(fileMatch => {
-					const { repo, revisionSpecifier, relativePath } = extractResourceInfo(fileMatch.resource);
-					const inWorkspace = (repo === workspaceRepo && revisionSpecifier === workspaceRevision);
-					const resource = inWorkspace ?
+					// The fileMatch.resource URI is in the old
+					// git://github.com/foo/bar?rev#dir/file syntax. Convert it to the new
+					// (usual) format.
+					const oldFormatResource = URI.parse(fileMatch.resource);
+					const resource = URI.from({
+						scheme: Schemas.remoteGitRepo,
+						authority: oldFormatResource.authority,
+						path: oldFormatResource.path + '/' + oldFormatResource.fragment,
+						query: oldFormatResource.query,
+					});
+
+					const { repo, revisionSpecifier, relativePath } = extractResourceInfo(resource);
+					const resourceLocallyNamed = this.contextService.isInsideWorkspace(resource) ?
 						URI.parse(`repo://${repo}/${relativePath}`) :
 						URI.parse(`gitremote://${repo}/${relativePath}?${revisionSpecifier}`);
-					return { ...fileMatch, resource };
+					return { ...fileMatch, resource: resourceLocallyNamed };
 				});
 				complete({
 					results: results,

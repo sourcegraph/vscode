@@ -344,7 +344,7 @@ export type SCMRawResource = [
 ];
 
 export abstract class MainThreadSCMShape {
-	$registerSourceControl(handle: number, id: string, label: string): void { throw ni(); }
+	$registerSourceControl(handle: number, id: string, label: string, rootFolder: URI): void { throw ni(); }
 	$updateSourceControl(handle: number, features: SCMProviderFeatures): void { throw ni(); }
 	$unregisterSourceControl(handle: number): void { throw ni(); }
 

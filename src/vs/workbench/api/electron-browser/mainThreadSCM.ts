@@ -78,6 +78,7 @@ class MainThreadSCMProvider implements ISCMProvider {
 	get handle(): number { return this._handle; }
 	get label(): string { return this._label; }
 	get id(): string { return this._id; }
+	get rootFolder(): URI | undefined { return this._rootFolder; }
 
 	get commitTemplate(): string | undefined { return this.features.commitTemplate; }
 	get acceptInputCommand(): Command | undefined { return this.features.acceptInputCommand; }
@@ -95,6 +96,7 @@ class MainThreadSCMProvider implements ISCMProvider {
 		private _handle: number,
 		private _id: string,
 		private _label: string,
+		private _rootFolder: URI | undefined,
 		@ISCMService scmService: ISCMService,
 		@ICommandService private commandService: ICommandService
 	) { }
@@ -229,8 +231,8 @@ export class MainThreadSCM extends MainThreadSCMShape {
 		this.scmService.input.onDidChange(this._proxy.$onInputBoxValueChange, this._proxy, this._disposables);
 	}
 
-	$registerSourceControl(handle: number, id: string, label: string): void {
-		const provider = new MainThreadSCMProvider(this._proxy, handle, id, label, this.scmService, this.commandService);
+	$registerSourceControl(handle: number, id: string, label: string, rootFolder: URI): void {
+		const provider = new MainThreadSCMProvider(this._proxy, handle, id, label, rootFolder, this.scmService, this.commandService);
 		this._sourceControls[handle] = provider;
 		this._sourceControlDisposables[handle] = this.scmService.registerSCMProvider(provider);
 	}

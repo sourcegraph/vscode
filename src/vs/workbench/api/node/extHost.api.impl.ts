@@ -51,6 +51,7 @@ import { realpath } from 'fs';
 import { MainContext, ExtHostContext, InstanceCollection, IInitData } from './extHost.protocol';
 import * as languageConfiguration from 'vs/editor/common/modes/languageConfiguration';
 import { TextEditorCursorStyle } from 'vs/editor/common/config/editorOptions';
+import * as types from 'vs/base/common/types';
 
 export interface IExtensionApiFactory {
 	(extension: IExtensionDescription): typeof vscode;
@@ -461,22 +462,24 @@ export function createApiFactory(
 
 		// namespace: scm
 		const scm: typeof vscode.scm = {
-			// PATCH(sourcegraph): expose activeProvider
-			get activeProvider() {
-				return extHostSCM.activeProvider;
-			},
 			get inputBox() {
 				return extHostSCM.inputBox;
 			},
-			createSourceControl(id: string, label: string) {
+			createSourceControl(id: string, arg: any) {
 				telemetryService.publicLog('registerSCMProvider', {
 					extensionId: extension.id,
 					providerId: id,
-					providerLabel: label
+					providerLabel: types.isString(arg) ? arg : undefined,
 				});
 
-				return extHostSCM.createSourceControl(id, label);
-			}
+				return extHostSCM.createSourceControl(id, arg);
+			},
+			getSourceControlForResource(resource: vscode.Uri) {
+				return extHostSCM.getSourceControlForResource(resource);
+			},
+			get onDidUpdateSourceControl() {
+				return extHostSCM.onDidUpdateSourceControl;
+			},
 		};
 
 		// namespace: debug

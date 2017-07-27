@@ -8,6 +8,9 @@
 import { IDisposable, toDisposable, empty as EmptyDisposable, combinedDisposable } from 'vs/base/common/lifecycle';
 import Event, { Emitter } from 'vs/base/common/event';
 import { memoize } from 'vs/base/common/decorators';
+import URI from 'vs/base/common/uri';
+import { TrieMap } from 'vs/base/common/map';
+import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
 import { IContextKeyService, IContextKey } from 'vs/platform/contextkey/common/contextkey';
 import { IStatusbarService, StatusbarAlignment as MainThreadStatusBarAlignment } from 'vs/platform/statusbar/common/statusbar';
 import { IStorageService, StorageScope } from 'vs/platform/storage/common/storage';
@@ -34,11 +37,16 @@ export class SCMService implements ISCMService {
 
 	_serviceBrand;
 
-	private activeProviderDisposable: IDisposable = EmptyDisposable;
 	private statusBarDisposable: IDisposable = EmptyDisposable;
 	private activeProviderContextKey: IContextKey<string | undefined>;
 
 	private _activeProvider: ISCMProvider | undefined;
+
+	/**
+	 * Map of SCM root folders to the SCM provider that is used to provide SCM information
+	 * about resources inside the folder.
+	 */
+	private _folderProvidersMap: TrieMap<ISCMProvider>;
 
 	get activeProvider(): ISCMProvider | undefined {
 		return this._activeProvider;
@@ -52,9 +60,6 @@ export class SCMService implements ISCMService {
 	private _providers: ISCMProvider[] = [];
 	get providers(): ISCMProvider[] { return [...this._providers]; }
 
-	private _onDidRegisterProvider = new Emitter<ISCMProvider>();
-	get onDidRegisterProvider(): Event<ISCMProvider> { return this._onDidRegisterProvider.event; }
-
 	private _onDidChangeProvider = new Emitter<ISCMProvider>();
 	get onDidChangeProvider(): Event<ISCMProvider> { return this._onDidChangeProvider.event; }
 
@@ -62,15 +67,17 @@ export class SCMService implements ISCMService {
 	get input(): ISCMInput { return new SCMInput(); }
 
 	constructor(
+		@IWorkspaceContextService private contextService: IWorkspaceContextService,
 		@IContextKeyService contextKeyService: IContextKeyService,
 		@IStorageService private storageService: IStorageService,
 		@IStatusbarService private statusbarService: IStatusbarService
 	) {
 		this.activeProviderContextKey = contextKeyService.createKey<string | undefined>('scmProvider', void 0);
+
+		this.updateFolderProvidersMap();
 	}
 
 	private setActiveSCMProdiver(provider: ISCMProvider): void {
-		this.activeProviderDisposable.dispose();
 
 		if (!provider) {
 			throw new Error('invalid provider');
@@ -82,7 +89,6 @@ export class SCMService implements ISCMService {
 
 		this._activeProvider = provider;
 
-		this.activeProviderDisposable = provider.onDidChange(() => this.onDidProviderChange(provider));
 		this.onDidProviderChange(provider);
 
 		this.activeProviderContextKey.set(provider ? provider.id : void 0);
@@ -91,7 +97,6 @@ export class SCMService implements ISCMService {
 
 	registerSCMProvider(provider: ISCMProvider): IDisposable {
 		this._providers.push(provider);
-		this._onDidRegisterProvider.fire(provider);
 
 		const defaultProviderId = this.storageService.get(DefaultSCMProviderIdStorageKey, StorageScope.WORKSPACE);
 
@@ -99,7 +104,15 @@ export class SCMService implements ISCMService {
 			this.setActiveSCMProdiver(provider);
 		}
 
+		if (provider.rootFolder) {
+			this.updateFolderProvidersMap();
+		}
+
+		const unregister = provider.onDidChange(() => this.onDidProviderChange(provider));
+
 		return toDisposable(() => {
+			unregister.dispose();
+
 			const index = this._providers.indexOf(provider);
 
 			if (index < 0) {
@@ -107,11 +120,25 @@ export class SCMService implements ISCMService {
 			}
 
 			this._providers.splice(index, 1);
+			this.updateFolderProvidersMap();
 
 			if (this.activeProvider === provider) {
 				this.activeProvider = this._providers[0];
 			}
 		});
+	}
+
+	getProviderForResource(resource: URI): ISCMProvider | undefined {
+		return this._folderProvidersMap.findSubstr(resource.toString());
+	}
+
+	private updateFolderProvidersMap(): void {
+		this._folderProvidersMap = new TrieMap<ISCMProvider>(TrieMap.PathSplitter);
+		for (const provider of this._providers) {
+			if (provider.rootFolder) {
+				this._folderProvidersMap.insert(provider.rootFolder.toString(), provider);
+			}
+		}
 	}
 
 	private onDidProviderChange(provider: ISCMProvider): void {

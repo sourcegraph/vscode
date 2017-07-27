@@ -61,7 +61,7 @@ export class Workspace implements vscode.Disposable {
 	private getRemoteRepository(resource: vscode.Uri): RemoteGitRepository {
 		const { repo: repoName, workspace: folder } = vscode.workspace.extractResourceInfo(resource)!;
 		if (!this.repositories.has(folder)) {
-			const repo = new RemoteGitRepository(repoName, this.workspaceState);
+			const repo = new RemoteGitRepository(vscode.Uri.parse(folder), repoName, this.workspaceState);
 			this.repositories.set(folder, repo);
 
 			const forwardChanges = repo.fileSystem.onDidChange(e => this.onDidFileSystemChange.fire(e));
