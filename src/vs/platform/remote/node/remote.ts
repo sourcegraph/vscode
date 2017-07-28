@@ -8,7 +8,6 @@
 import { localize } from 'vs/nls';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
-// tslint:disable-next-line:import-patterns
 import { IRequestOptions, IRequestContext, asJson } from 'vs/base/node/request';
 import { IConfigurationRegistry, Extensions } from 'vs/platform/configuration/common/configurationRegistry';
 import { Registry } from 'vs/platform/registry/common/platform';
