@@ -145,5 +145,8 @@ function describeRequest(method: string, params: any): string {
 	if (typeof params.query !== 'undefined') {
 		return `${method} with query ${JSON.stringify(params.query)}`;
 	}
+	if (params.rootPath) {
+		return `${method} ${params.rootPath}`;
+	}
 	return method;
 }
