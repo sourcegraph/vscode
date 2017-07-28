@@ -35,6 +35,19 @@ export interface Repository {
 	 * Resolves a revision specifier for a repository.
 	 */
 	resolveRevisionSpecifier(input: vscode.SCMRevision): Thenable<vscode.SCMRevision>;
+
+	/**
+	 * An event that is fired when the repository's status changes. The parent (Workspace)
+	 * will then call this repository's renderStatusBarItem if this is the active
+	 * repository.
+	 */
+	onDidChangeStatus: vscode.Event<void>;
+
+	/**
+	 * Called by its parent (Workspace) to render information about this repository in the
+	 * global remote SCM status bar item.
+	 */
+	renderStatusBarItem(statusBarItem: vscode.StatusBarItem): void;
 }
 
 /**

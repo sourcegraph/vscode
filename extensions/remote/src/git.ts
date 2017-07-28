@@ -10,6 +10,7 @@ import { Revisioned, Repository, REPO_SCHEME } from './repository';
 import { requestGraphQL } from './util';
 import * as nls from 'vscode-nls';
 import { SWITCH_REVISION_COMMAND_ID } from './workspace';
+import * as path from 'path';
 
 const localize = nls.loadMessageBundle();
 
@@ -38,12 +39,19 @@ export class RemoteGitRepository implements Repository, vscode.Disposable {
 	public readonly sourceControl: vscode.SourceControl;
 
 	private resolveRevisionOperation?: Thenable<vscode.SCMRevision>;
-	private statusBarItem?: vscode.StatusBarItem;
+
+	/**
+	 * The error, if any, from the last resolveRevisionOperation.
+	 */
+	private resolveRevisionError: Error | undefined;
 
 	/**
 	 * Things that rely on the current revision.
 	 */
 	private toRevision: Revisioned[] = [];
+
+	private _onDidChangeStatus = new vscode.EventEmitter<void>();
+	public get onDidChangeStatus(): vscode.Event<void> { return this._onDidChangeStatus.event; }
 
 	private toDispose: vscode.Disposable[] = [];
 
@@ -52,12 +60,6 @@ export class RemoteGitRepository implements Repository, vscode.Disposable {
 		private repo: string,
 		private workspaceState: vscode.Memento,
 	) {
-		// Show status bar item iff we can switch the revision.
-		if (root.scheme === REPO_SCHEME) {
-			this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
-			this.toDispose.push(this.statusBarItem);
-		}
-
 		this.sourceControl = vscode.scm.createSourceControl('git', {
 			label: 'Git',
 			rootFolder: this.root,
@@ -78,10 +80,11 @@ export class RemoteGitRepository implements Repository, vscode.Disposable {
 
 	set revision(revision: vscode.SCMRevision) {
 		this.sourceControl.revision = revision;
-		this.onUpdateRevision(false);
 
 		const operation = this.resolveRevisionSpecifier(revision);
 		this.resolveRevisionOperation = operation;
+		this.resolveRevisionError = undefined;
+		this._onDidChangeStatus.fire();
 		operation.then(revision => {
 			if (this.resolveRevisionOperation !== operation) {
 				// Another resolve revision operation started after us, so ignore our result.
@@ -89,44 +92,52 @@ export class RemoteGitRepository implements Repository, vscode.Disposable {
 			}
 
 			this.sourceControl.revision = revision;
-			this.onUpdateRevision(false);
+			this.resolveRevisionError = undefined;
 			this.toRevision.forEach(revisioned => revisioned.setRevision(revision.id!));
 
 			// Serialize last-viewed revision for next time we open this repository.
 			const data: ISerializedRepositoryState = { lastRawRevisionSpecifier: revision.rawSpecifier };
 			this.workspaceState.update(`repostate:${this.repo}`, data);
 		}, err => {
-			this.onUpdateRevision(true);
-		});
+			this.resolveRevisionError = err;
+		})
+			.then(() => this._onDidChangeStatus.fire());
 	}
 
-	private onUpdateRevision(error: boolean): void {
-		if (!this.statusBarItem) {
-			return;
+	public renderStatusBarItem(statusBarItem: vscode.StatusBarItem): void {
+		const canSwitchRevision = this.root.scheme === REPO_SCHEME;
+
+		let switchRevisionTooltip: string;
+		if (canSwitchRevision) {
+			statusBarItem.command = SWITCH_REVISION_COMMAND_ID;
+			switchRevisionTooltip = localize('switchRevision', "Repository {0}: Switch Git revision...", this.repo);;
+		} else {
+			// Can't change revision of gitremote (immutable) repos.
+			statusBarItem.command = undefined;
+			switchRevisionTooltip = localize('cantSwitchRevision', "Repository {0}: Open Containing Repository to switch revision.");
 		}
 
-		this.statusBarItem.command = SWITCH_REVISION_COMMAND_ID;
-		if (error) {
+		if (this.resolveRevisionError) {
 			// TODO(sqs): handle repo cloning, repo-not-exists, and other errors; not all
 			// of the errors are 'revision not found'.
-			this.statusBarItem.text = '$(question) ' + localize('revisionNotFound', "Revision not found: {0}", this.sourceControl.revision!.rawSpecifier!);
-			this.statusBarItem.tooltip = localize('switchRevision', "Switch Git revision...");
+			statusBarItem.text = '$(question) ' + localize('revisionNotFound', "Revision not found: {0}", this.sourceControl.revision!.rawSpecifier!);
+			statusBarItem.tooltip = switchRevisionTooltip;
 		} else if (!this.sourceControl.revision!.id) {
-			this.statusBarItem.text = '$(ellipses)';
-			this.statusBarItem.tooltip = localize('revisionLoading', "Loading revision {0}", this.sourceControl.revision!.rawSpecifier!);
+			statusBarItem.text = '$(ellipses) (${path.basename(this.repo)})';
+			statusBarItem.tooltip = localize('revisionLoading', "Loading revision {0} in repository {1}", this.sourceControl.revision!.rawSpecifier!, this.repo);
 		} else {
 			let label: string;
-			if (this.sourceControl.revision!.specifier === this.sourceControl.revision!.id && this.sourceControl.revision!.id!.length === GIT_OID_LENGTH) {
-				// Full 40-character Git commit SHA-1.
+
+			const isSHA = this.sourceControl.revision!.specifier === this.sourceControl.revision!.id && this.sourceControl.revision!.id!.length === GIT_OID_LENGTH;
+			const isHEAD = this.sourceControl.revision!.rawSpecifier === 'HEAD';
+			if (isSHA || isHEAD) {
 				label = this.sourceControl.revision!.id!.slice(0, GIT_OID_ABBREV_LENGTH);
 			} else {
 				label = this.sourceControl.revision!.specifier!.replace(/^refs\/(heads|tags)\//, '');
 			}
-			this.statusBarItem.text = `$(git-branch) ${label}`;
-			this.statusBarItem.tooltip = localize('switchRevision', "Switch Git revision...");
+			statusBarItem.text = `$(git-branch) ${label} (${path.basename(this.repo)})`;
+			statusBarItem.tooltip = switchRevisionTooltip;
 		}
-
-		this.statusBarItem.show();
 	}
 
 	resolveRevisionSpecifier(input: vscode.SCMRevision, retriesRemaining: number = 100, messageShown: boolean = false): Thenable<vscode.SCMRevision> {
