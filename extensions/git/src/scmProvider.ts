@@ -63,7 +63,10 @@ export class GitSCMProvider implements CommandExecutor {
 		private commandCenter: CommandCenter,
 		private statusBarCommands: StatusBarCommands
 	) {
-		this._sourceControl = scm.createSourceControl('git', 'Git');
+		this._sourceControl = scm.createSourceControl('git', {
+			label: 'Git',
+			rootFolder: model.workspaceRoot,
+		});
 		this.disposables.push(this._sourceControl);
 
 		this._sourceControl.acceptInputCommand = { command: 'git.commitWithInput', title: localize('commit', "Commit") };

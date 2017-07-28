@@ -364,7 +364,7 @@ export class Model implements Disposable {
 		this._onDidChangeResources.fire();
 	}
 
-	private workspaceRoot: Uri;
+	public readonly workspaceRoot: Uri;
 	private onWorkspaceChange: Event<Uri>;
 	private isRepositoryHuge = false;
 	private didWarnAboutLimit = false;
