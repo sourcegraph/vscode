@@ -56,6 +56,41 @@ export function activate(context: vscode.ExtensionContext) {
 			).then(() => vscode.window.setStatusBarMessage(localize('resolvedMessage', "Resolved {0} to {1}", origSpecifier, revision.id), 3000));
 		}),
 	);
+	context.subscriptions.push(
+		vscode.commands.registerCommand('file-links.addResourceRoot', (arg?: vscode.Uri) => {
+			const args = getSourceControl(arg);
+			if (!args) {
+				return;
+			}
+			const { resource, sourceControl } = args;
+
+			if (!vscode.workspace.workspaceFolders) {
+				vscode.window.showErrorMessage(localize('nonMultiRootWorkspace', "Must be in a multi-root workspace to add root for {0}.", resource.toString()));
+				return;
+			}
+
+			let info = vscode.workspace.extractResourceInfo(resource);
+			if (!info) {
+				vscode.window.showErrorMessage(localize('noResourceInfo', "Unable to determine the root for {0}.", resource.toString()));
+				return;
+			}
+			if (!info.revisionSpecifier) {
+				if (sourceControl && sourceControl.revision) {
+					info.revisionSpecifier = sourceControl.revision.rawSpecifier;
+				}
+			}
+
+			// TODO(sqs): handle updating revision of newly added root (and handle case
+			// when root is already open to another revision).
+			const rootToAdd = vscode.Uri.parse(info.workspace).with({ scheme: 'repo' });
+			vscode.commands.executeCommand('_workbench.addRoots', [rootToAdd]).then(
+				() => void 0,
+				err => {
+					vscode.window.showErrorMessage(localize('addRootsFailed', "Adding root {0} failed: {1}.", info!.workspace, err));
+				},
+			);
+		}),
+	);
 }
 
 function getSourceControl(resource: vscode.Uri | undefined): { resource: vscode.Uri, sourceControl: vscode.SourceControl } | undefined {

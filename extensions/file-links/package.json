@@ -13,7 +13,8 @@
   },
   "activationEvents": [
     "onCommand:file-links.goToGitHub",
-    "onCommand:file-links.goToImmutableRevision"
+    "onCommand:file-links.goToImmutableRevision",
+    "onCommand:file-links.addResourceRoot"
   ],
   "contributes": {
     "commands": [
@@ -28,6 +29,10 @@
       {
         "command": "file-links.goToImmutableRevision",
         "title": "Go to Immutable Revision"
+      },
+      {
+        "command": "file-links.addResourceRoot",
+        "title": "Open Containing Repository"
       }
     ],
     "menus": {
@@ -48,6 +53,11 @@
           "when": "resourceScheme == repo",
           "command": "file-links.goToImmutableRevision",
           "group": "file"
+        },
+        {
+          "when": "resourceScheme == gitremote",
+          "command": "file-links.addResourceRoot",
+          "group": "navigation"
         }
       ]
     },

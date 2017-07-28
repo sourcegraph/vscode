@@ -20,6 +20,8 @@ import { CommandsRegistry } from 'vs/platform/commands/common/commands';
 import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
 import URI from 'vs/base/common/uri';
 import { IEditorOptions, Position as EditorPosition } from 'vs/platform/editor/common/editor';
+import { IWorkspaceEditingService } from 'vs/workbench/services/workspace/common/workspaceEditing';
+import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 
 // --- List Commands
 
@@ -418,6 +420,18 @@ export function registerCommands(): void {
 
 		return editorService.openEditor({ resource }, column).then(() => {
 			return void 0;
+		});
+	});
+
+	CommandsRegistry.registerCommand('_workbench.addRoots', function (accessor: ServicesAccessor, args: [URI[]]) {
+		const workspaceEditingService = accessor.get(IWorkspaceEditingService);
+		const configurationService = accessor.get(IConfigurationService);
+
+		const [rootsToAdd] = args;
+
+		return workspaceEditingService.addRoots(rootsToAdd).then(() => {
+			// Wait for workspace to reload and detect its newly added root.
+			return configurationService.reloadConfiguration();
 		});
 	});
 }
