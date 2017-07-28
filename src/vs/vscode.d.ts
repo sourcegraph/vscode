@@ -3082,6 +3082,13 @@ declare module 'vscode' {
 		 *
 		 * *Note 2:* To remove a configuration value use `undefined`, like so: `config.update('somekey', undefined)`
 		 *
+		 * Will throw error when
+		 * - Writing a configuration which is not registered.
+		 * - Writing a configuration to workspace or folder target when no workspace is opened
+		 * - Writing a configuration to folder target when there is no folder settings
+		 * - Writing to folder target without passing a resource when getting the configuration (`workspace.getConfiguration(section, resource)`)
+		 * - Writing a window configuration to folder target
+		 *
 		 * @param section Configuration name, supports _dotted_ names.
 		 * @param value The new value.
 		 * @param configurationTarget The [configuration target](#ConfigurationTarget) or a boolean value.
@@ -4734,8 +4741,8 @@ declare module 'vscode' {
 		export let rootPath: string | undefined;
 
 		/**
-		 * List of workspace folders or `undefined` when no folder is open, `undefined` when no
-		 * folder has been opened. *Note* that the first entry corresponds to the value of `rootPath`.
+		 * List of workspace folders or `undefined` when no folder is open.
+		 * *Note* that the first entry corresponds to the value of `rootPath`.
 		 *
 		 * @readonly
 		 */
