@@ -103,6 +103,10 @@
 			"project": "vscode-workbench"
 		},
 		{
+			"name": "vs/workbench/parts/codeComments",
+			"project": "vscode-workbench"
+		},
+		{
 			"name": "vs/workbench/parts/search",
 			"project": "vscode-workbench"
 		},
