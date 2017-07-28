@@ -274,10 +274,11 @@ type GroupHandle = number;
 type ResourceStateHandle = number;
 
 type SourceControlRootFolder = { handle: number, rootFolder: string };
+type SourceControlHandle = { handle: number };
 
 export class ExtHostSCM {
 
-	private static _handlePool: number = 1; // start at 1 because TrieMap element must be truthy
+	private static _handlePool: number = 0;
 
 	private _proxy: MainThreadSCMShape;
 	private _sourceControls: Map<ProviderHandle, ExtHostSourceControl> = new Map<ProviderHandle, ExtHostSourceControl>();
@@ -305,7 +306,7 @@ export class ExtHostSCM {
 	 * SCM information about resources inside the folder. This data structure is kept in
 	 * sync with the equivalent map in the main process.
 	 */
-	private _folderSourceControlsMap: TrieMap<number>;
+	private _folderSourceControlsMap: TrieMap<SourceControlHandle>;
 
 	constructor(
 		threadService: IThreadService,
@@ -414,17 +415,16 @@ export class ExtHostSCM {
 
 	getSourceControlForResource(resource: vscode.Uri): vscode.SourceControl | undefined {
 		const handle = this._folderSourceControlsMap.findSubstr(resource.toString());
-		if (types.isNumber(handle)) {
-			return this._sourceControls.get(handle);
+		if (!handle) {
+			return undefined;
 		}
-
-		return undefined;
+		return this._sourceControls.get(handle.handle);
 	}
 
 	private updateFolderSourceControlsMap(): void {
-		this._folderSourceControlsMap = new TrieMap<number>(TrieMap.PathSplitter);
+		this._folderSourceControlsMap = new TrieMap<SourceControlHandle>(TrieMap.PathSplitter);
 		for (const { handle, rootFolder } of this._folderSourceControls) {
-			this._folderSourceControlsMap.insert(rootFolder, handle);
+			this._folderSourceControlsMap.insert(rootFolder, { handle });
 		}
 	}
 }
