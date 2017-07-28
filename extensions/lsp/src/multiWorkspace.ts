@@ -122,6 +122,19 @@ class MultiWorkspaceProvider implements vscode.ReferenceProvider {
 		const info = vscode.workspace.extractResourceInfo(uri);
 		client = newClient(this.mode, this.languageIds, uri, info.revisionSpecifier);
 		this.rootClients.set(uri.toString(), client);
+
+		// Ignore workspace/symbol in this client, or else workspace/symbol becomes very
+		// slow after using any cross-repo features because very many LSP connections have
+		// been opened and the workspace/symbol query must wait for all of them to return
+		// results. The user only cares about workspace/symbol from their workspace's
+		// roots, not from external roots.
+		if (!client.clientOptions.middleware) {
+			client.clientOptions.middleware = {};
+		}
+		client.clientOptions.middleware.provideWorkspaceSymbols = (query: string, token: vscode.CancellationToken): vscode.ProviderResult<vscode.SymbolInformation[]> => {
+			return [];
+		};
+
 		this.toDispose.push(client.start());
 		return client;
 	}
