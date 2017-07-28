@@ -64,6 +64,9 @@ export class SCMService implements ISCMService {
 	private _onDidChangeProvider = new Emitter<ISCMProvider>();
 	get onDidChangeProvider(): Event<ISCMProvider> { return this._onDidChangeProvider.event; }
 
+	private _onDidRegisterProvider = new Emitter<ISCMProvider>();
+	get onDidRegisterProvider(): Event<ISCMProvider> { return this._onDidRegisterProvider.event; }
+
 	@memoize
 	get input(): ISCMInput { return new SCMInput(); }
 
@@ -111,6 +114,7 @@ export class SCMService implements ISCMService {
 		}
 
 		const unregister = provider.onDidChange(() => this.onDidProviderChange(provider));
+		this._onDidRegisterProvider.fire(provider);
 
 		return toDisposable(() => {
 			unregister.dispose();
