@@ -130,9 +130,7 @@ export class Root {
 	 * activated (opened, focused, etc.). It ensures that the language client for the
 	 * resource is activated.
 	 */
-	public ensureResourceActivated(doc: vscode.TextDocument): Thenable<void>;
-	public ensureResourceActivated(resource: vscode.Uri): Thenable<void>;
-	public ensureResourceActivated(arg: vscode.TextDocument | vscode.Uri): Thenable<void> {
+	private ensureResourceActivated(arg: vscode.TextDocument | vscode.Uri): Thenable<void> {
 		let resource: vscode.Uri;
 		let lang: Language;
 		if (arg instanceof vscode.Uri) {
