@@ -37,6 +37,7 @@ export class SCMService implements ISCMService {
 
 	_serviceBrand;
 
+	private activeProviderDisposable: IDisposable = EmptyDisposable;
 	private statusBarDisposable: IDisposable = EmptyDisposable;
 	private activeProviderContextKey: IContextKey<string | undefined>;
 
@@ -53,7 +54,7 @@ export class SCMService implements ISCMService {
 	}
 
 	set activeProvider(provider: ISCMProvider | undefined) {
-		this.setActiveSCMProdiver(provider);
+		this.setActiveSCMProvider(provider);
 		this.storageService.store(DefaultSCMProviderIdStorageKey, provider.id, StorageScope.WORKSPACE);
 	}
 
@@ -77,7 +78,8 @@ export class SCMService implements ISCMService {
 		this.updateFolderProvidersMap();
 	}
 
-	private setActiveSCMProdiver(provider: ISCMProvider): void {
+	private setActiveSCMProvider(provider: ISCMProvider): void {
+		this.activeProviderDisposable.dispose();
 
 		if (!provider) {
 			throw new Error('invalid provider');
@@ -101,7 +103,7 @@ export class SCMService implements ISCMService {
 		const defaultProviderId = this.storageService.get(DefaultSCMProviderIdStorageKey, StorageScope.WORKSPACE);
 
 		if (this._providers.length === 1 || defaultProviderId === provider.id) {
-			this.setActiveSCMProdiver(provider);
+			this.setActiveSCMProvider(provider);
 		}
 
 		if (provider.rootFolder) {

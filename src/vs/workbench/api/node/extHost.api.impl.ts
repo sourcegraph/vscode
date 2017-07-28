@@ -274,7 +274,11 @@ export function createApiFactory(
 			},
 			setLanguageConfiguration: (language: string, configuration: vscode.LanguageConfiguration): vscode.Disposable => {
 				return languageFeatures.setLanguageConfiguration(language, configuration);
-			}
+			},
+			// proposed API
+			registerColorProvider: proposedApiFunction(extension, (selector: vscode.DocumentSelector, provider: vscode.DocumentColorProvider) => {
+				return languageFeatures.registerColorProvider(selector, provider);
+			})
 		};
 
 		// namespace: window
@@ -383,8 +387,8 @@ export function createApiFactory(
 				apiUsage.publicLog('workspace#onDidChangeWorkspaceFolders');
 				return extHostWorkspace.onDidChangeWorkspace(listener, thisArgs, disposables);
 			},
-			asRelativePath: (pathOrUri) => {
-				return extHostWorkspace.getRelativePath(pathOrUri);
+			asRelativePath: (pathOrUri, includeWorkspace) => {
+				return extHostWorkspace.getRelativePath(pathOrUri, includeWorkspace);
 			},
 			findFiles: (include, exclude, maxResults?, token?) => {
 				return extHostWorkspace.findFiles(include, exclude, maxResults, token);
@@ -537,6 +541,9 @@ export function createApiFactory(
 			// types
 			CancellationTokenSource: CancellationTokenSource,
 			CodeLens: extHostTypes.CodeLens,
+			Color: extHostTypes.Color,
+			ColorInfo: extHostTypes.ColorInfo,
+			EndOfLine: extHostTypes.EndOfLine,
 			CompletionItem: extHostTypes.CompletionItem,
 			CompletionItemKind: extHostTypes.CompletionItemKind,
 			CompletionList: extHostTypes.CompletionList,
@@ -546,7 +553,6 @@ export function createApiFactory(
 			DocumentHighlight: extHostTypes.DocumentHighlight,
 			DocumentHighlightKind: extHostTypes.DocumentHighlightKind,
 			DocumentLink: extHostTypes.DocumentLink,
-			EndOfLine: extHostTypes.EndOfLine,
 			EventEmitter: Emitter,
 			Hover: extHostTypes.Hover,
 			IndentAction: languageConfiguration.IndentAction,
