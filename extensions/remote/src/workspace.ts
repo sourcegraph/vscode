@@ -57,8 +57,6 @@ export class Workspace implements vscode.Disposable {
 		// Update the status bar item to reflect information about the repository that is
 		// relevant to the active editor's document.
 		vscode.window.onDidChangeActiveTextEditor(editor => {
-			console.log('ACTIVE', editor && editor.document.uri.toString());
-
 			let visible = false;
 			if (editor) {
 				const repo = this.getRemoteRepository(editor.document.uri);
