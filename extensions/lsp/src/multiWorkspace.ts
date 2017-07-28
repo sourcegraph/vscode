@@ -6,7 +6,7 @@
 'use strict';
 
 import * as vscode from 'vscode';
-import { LanguageClient, TextDocumentPositionParams } from '@sourcegraph/vscode-languageclient/lib/client';
+import { LanguageClient, TextDocumentPositionParams } from '@sourcegraph/vscode-languageclient';
 import { newClient } from './client';
 import { Dependent, listDependents } from './dependents';
 import { SymbolLocationInformation, TextDocumentXDefinitionRequest, WorkspaceReferencesParams, ReferenceInformation, WorkspaceXReferencesRequest } from './lsp';

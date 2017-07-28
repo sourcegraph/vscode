@@ -7,7 +7,7 @@
 import { DataCallback, Message, MessageReader, MessageWriter, RequestMessage } from '@sourcegraph/vscode-jsonrpc';
 import { AbstractMessageReader } from '@sourcegraph/vscode-jsonrpc/lib/messageReader';
 import { AbstractMessageWriter } from '@sourcegraph/vscode-jsonrpc/lib/messageWriter';
-import { MessageStream } from '@sourcegraph/vscode-languageclient/lib/client';
+import { MessageTransports } from '@sourcegraph/vscode-languageclient';
 import * as WebSocket from 'universal-websocket-client';
 
 /**
@@ -19,7 +19,7 @@ import * as WebSocket from 'universal-websocket-client';
  * multiple times). If connectionRetryTimeout is 0, then it will only attempt connecting
  * once.
  */
-export function webSocketStreamOpener(url: string, requestTracer?: (trace: MessageTrace) => void, connectionRetryTimeout: number = 20000): Promise<MessageStream> {
+export function webSocketStreamOpener(url: string, requestTracer?: (trace: MessageTrace) => void, connectionRetryTimeout: number = 20000): Promise<MessageTransports> {
 	const deadline = Date.now() + connectionRetryTimeout;
 	return new Promise((resolve, reject) => {
 		let socket = new WebSocket(url);

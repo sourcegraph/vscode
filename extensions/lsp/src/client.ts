@@ -5,7 +5,7 @@
 'use strict';
 
 import * as vscode from 'vscode';
-import { LanguageClient, RevealOutputChannelOn, LanguageClientOptions, ErrorCodes } from '@sourcegraph/vscode-languageclient/lib/client';
+import { LanguageClient, RevealOutputChannelOn, LanguageClientOptions, ErrorCodes, MessageTransports } from '@sourcegraph/vscode-languageclient';
 import { v4 as uuidV4 } from 'uuid';
 import { MessageTrace, webSocketStreamOpener } from './connection';
 import { Workspace } from './workspace';
@@ -46,19 +46,11 @@ const REUSE_BACKEND_LANG_SERVERS = true;
 * for.
 */
 export function newClient(mode: string, languageIds: string[], root: vscode.Uri, commitID: string): LanguageClient {
-	const endpoint = vscode.Uri.parse(vscode.workspace.getConfiguration('remote').get<string>('endpoint'));
-	const wsOrigin = endpoint.with({ scheme: endpoint.scheme === 'http' ? 'ws' : 'wss' });
-
 	if (!commitID) {
 		throw new Error(`no commit ID for workspace ${root.toString()}`);
 	}
 
-	// We include ?mode= in the url to make it easier to find the correct LSP
-	// websocket connection in (e.g.) the Chrome network inspector. It does not
-	// affect any behaviour.
-	const opener = () => webSocketStreamOpener(`${wsOrigin}/.api/lsp?mode=${mode}`, createRequestTracer(mode));
-
-	return new LanguageClient('lsp-' + mode, 'lsp-' + mode, opener, {
+	const options: LanguageClientOptions = {
 		revealOutputChannelOn: RevealOutputChannelOn.Never,
 		documentSelector: languageIds.map(languageId => ({
 			language: languageId,
@@ -104,7 +96,25 @@ export function newClient(mode: string, languageIds: string[], root: vscode.Uri,
 				throw new Error('language server sent URI with unsupported scheme: ' + value);
 			},
 		},
-	} as LanguageClientOptions);
+	};
+
+	const dummy = void 0 as any; // dummy server arg (we override createMessageTransports to supply this)
+
+	return new class WebSocketLanguageClient extends LanguageClient {
+
+		// Override to use a WebSocket transport instead of a StreamInfo (which requires a
+		// duplex stream).
+		protected createMessageTransports(encoding: string): Thenable<MessageTransports> {
+			const endpoint = vscode.Uri.parse(vscode.workspace.getConfiguration('remote').get<string>('endpoint'));
+			const wsOrigin = endpoint.with({ scheme: endpoint.scheme === 'http' ? 'ws' : 'wss' });
+
+			// We include ?mode= in the url to make it easier to find the correct LSP
+			// websocket connection in (e.g.) the Chrome network inspector. It does not
+			// affect any behaviour.
+			const url = `${wsOrigin}/.api/lsp?mode=${mode}`;
+			return webSocketStreamOpener(url, createRequestTracer(mode));
+		}
+	}('lsp-' + mode, 'lsp-' + mode, dummy, options);
 }
 
 let traceOutputChannel: vscode.OutputChannel | undefined;

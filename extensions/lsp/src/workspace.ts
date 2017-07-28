@@ -6,14 +6,7 @@
 'use strict';
 
 import * as vscode from 'vscode';
-import { LanguageClient, RevealOutputChannelOn, LanguageClientOptions, ErrorCodes } from '@sourcegraph/vscode-languageclient/lib/client';
-import { v4 as uuidV4 } from 'uuid';
-import { MessageTrace, webSocketStreamOpener } from './connection';
-import { Language, getLanguage, getLanguageForResource, isEnabled } from './languages';
-import { registerMultiWorkspaceProviders } from './multiWorkspace';
-import { registerFuzzyDefinitionProvider } from './fuzzyDefinition';
 import { Root } from './root';
-import * as log from './log';
 
 /**
  * Manages all of the LSP roots inside of a workspace.
@@ -66,7 +59,7 @@ export class Workspace implements vscode.Disposable {
 	/**
 	 * Gets the state of the root that contains the given resource.
 	 */
-	private getRootForResource(resource: vscode.Uri): Root | undefined {
+	public getRootForResource(resource: vscode.Uri): Root | undefined {
 		const info = vscode.workspace.extractResourceInfo(resource);
 		if (!info) {
 			return undefined;

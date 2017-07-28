@@ -5,8 +5,7 @@
 'use strict';
 
 import * as vscode from 'vscode';
-import * as log from './log';
-import { LanguageClient, RevealOutputChannelOn, LanguageClientOptions, ErrorCodes } from '@sourcegraph/vscode-languageclient/lib/client';
+import { LanguageClient } from '@sourcegraph/vscode-languageclient';
 import { Language, getLanguage, getLanguageForResource, isEnabled } from './languages';
 import { newClient } from './client';
 import { registerMultiWorkspaceProviders } from './multiWorkspace';
@@ -21,12 +20,6 @@ export class Root {
 	 * All active language clients for this root, keyed on the mode of the server.
 	 */
 	private modeClients = new Map<string, LanguageClient>();
-
-	/**
-	 * The immutable SCM revision (e.g., Git commit ID) that was used to initialize this
-	 * root's LSP sessions.
-	 */
-	private revision?: string;
 
 	/**
 	 * Things that should be disposed when the root is reset (i.e., when the revision of
@@ -98,8 +91,6 @@ export class Root {
 	 */
 	private activate(): Thenable<void> {
 		return this.sourceControlRevisionResolved.then<any>(() => {
-			const sourceControl = vscode.scm.getSourceControlForResource(this.resource);
-
 			// Search the workspace for file types to know what to activate. This lets us
 			// start initializing language features when the user first loads a workspace, not
 			// just when they view a file, which reduces perceived load time. It also makes

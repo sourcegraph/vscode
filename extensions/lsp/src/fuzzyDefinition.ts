@@ -6,7 +6,7 @@
 'use strict';
 
 import * as vscode from 'vscode';
-import { LanguageClient, WorkspaceSymbolRequest, SymbolInformation } from '@sourcegraph/vscode-languageclient/lib/client';
+import { LanguageClient, WorkspaceSymbolRequest, SymbolInformation } from '@sourcegraph/vscode-languageclient';
 
 export function registerFuzzyDefinitionProvider(mode: string, root: vscode.Uri, client: LanguageClient): vscode.Disposable {
 	const p = new FuzzyDefinitionProvider(mode, root, client);
