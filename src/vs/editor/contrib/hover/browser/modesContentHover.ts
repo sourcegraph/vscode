@@ -197,7 +197,9 @@ export class ModesContentHoverWidget extends SourcegraphHoverWidget {
 
 	dispose(): void {
 		this._hoverOperation.cancel();
-		this._colorPicker.dispose();
+		if (this._colorPicker) {
+			this._colorPicker.dispose();
+		}
 		super.dispose();
 	}
 
@@ -330,10 +332,6 @@ export class ModesContentHoverWidget extends SourcegraphHoverWidget {
 						fragment.appendChild($('div.hover-row', null, renderedContents));
 					});
 			} else {
-				if (this._colorPicker) {
-					return;
-				}
-
 				let opaqueFormatter: ColorFormatter, transparentFormatter: ColorFormatter;
 				if (typeof msg.format === 'string') {
 					opaqueFormatter = new ColorFormatter(msg.format);

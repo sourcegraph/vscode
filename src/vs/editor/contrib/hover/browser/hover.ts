@@ -110,7 +110,7 @@ export class ModesHoverController implements editorCommon.IEditorContribution {
 		var targetType = mouseEvent.target.type;
 		var stopKey = platform.isMacintosh ? 'metaKey' : 'ctrlKey';
 
-		if (this._isMouseDown || (this._hoverClicked && this._contentWidget.isColorPickerVisible())) {
+		if (this._isMouseDown && this._hoverClicked && this._contentWidget.isColorPickerVisible()) {
 			return;
 		}
 
@@ -143,7 +143,7 @@ export class ModesHoverController implements editorCommon.IEditorContribution {
 	}
 
 	private _hideWidgets(): void {
-		if (this._isMouseDown) {
+		if (this._isMouseDown && this._hoverClicked && this._contentWidget.isColorPickerVisible()) {
 			return;
 		}
 
