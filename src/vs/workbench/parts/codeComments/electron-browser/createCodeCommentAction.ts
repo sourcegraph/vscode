@@ -22,7 +22,6 @@ export class CreateCodeCommentAction extends EditorAction {
 	private static LABEL = localize('createCodeCommentActionLabel', "Comment on this code");
 
 	constructor() {
-		console.log('createcodecommentactionctor');
 		super({
 			id: CreateCodeCommentAction.ID,
 			label: CreateCodeCommentAction.LABEL,
