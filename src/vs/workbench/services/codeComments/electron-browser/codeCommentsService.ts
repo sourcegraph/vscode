@@ -13,6 +13,7 @@ import { ISCMService } from 'vs/workbench/services/scm/common/scm';
 import { Git } from 'vs/workbench/services/codeComments/electron-browser/git';
 import URI from 'vs/base/common/uri';
 import { startsWith } from 'vs/base/common/strings';
+import { isFileLikeResource } from 'vs/platform/files/common/files';
 
 export class CodeCommentsService implements ICodeCommentsService {
 	public _serviceBrand: any;
@@ -107,16 +108,21 @@ export class CodeCommentsService implements ICodeCommentsService {
 	}
 
 	/**
-	 * Returns a canonical identifier for the local file path.
+	 * Returns a canonical identifier for the local file path, or undefined for resources
+	 * that don't support code comments.
 	 *
 	 * For example:
 	 * file:///Users/nick/dev/vscode-private/README.md -> github.com/sourcegraph/vscode-private/README.md
 	 */
-	private getDocumentId(file: URI): Promise<string> {
+	private getDocumentId(file: URI): Promise<string | undefined> {
+		if (!isFileLikeResource(file)) { return undefined; }
 		return Promise.all([
 			this.git.getRoot(file),
 			this.git.getRemoteRepo(file),
 		]).then(([root, repo]) => {
+			if (!repo) {
+				return undefined;
+			}
 			const relativeFile = this.relativePath(root, file);
 			return this.joinDocumentId(repo, relativeFile);
 		});
@@ -127,6 +133,9 @@ export class CodeCommentsService implements ICodeCommentsService {
 	 */
 	public async getThreads(file: URI): Promise<IThread[]> {
 		const id = await this.getDocumentId(file);
+		if (id === undefined) {
+			return [];
+		}
 		const threads = this.threads.get(id) || [];
 		return this.adjustThreadRanges(file, threads);
 	}

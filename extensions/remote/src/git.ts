@@ -64,6 +64,7 @@ export class RemoteGitRepository implements Repository, vscode.Disposable {
 			label: 'Git',
 			rootFolder: this.root,
 		});
+		this.sourceControl.commandExecutor = this;
 		this.toDispose.push(this.sourceControl);
 
 		// Load last-viewed revision for repository.
@@ -79,6 +80,10 @@ export class RemoteGitRepository implements Repository, vscode.Disposable {
 	}
 
 	set revision(revision: vscode.SCMRevision) {
+		if (revisionsEqual(revision, this.sourceControl.revision)) {
+			return;
+		}
+
 		this.sourceControl.revision = revision;
 
 		const operation = this.resolveRevisionSpecifier(revision);
@@ -235,6 +240,20 @@ export class RemoteGitRepository implements Repository, vscode.Disposable {
 		});
 	}
 
+	public executeCommand(args: string[]): Thenable<string> {
+		return requestGraphQL<any>(`
+			query gitCmdRaw($repo: String, $params: [String]) {
+				root {
+					repository(uri: $repo) {
+						gitCmdRaw(params: $params)
+					}
+				}
+			}`,
+			{ repo: this.repo, params: args },
+			'remote/repository/gitCmdRaw',
+		).then(root => root.repository.gitCmdRaw || '');
+	}
+
 	public dispose(): void {
 		this.toDispose.forEach(disposable => disposable.dispose());
 		this.toDispose = [];
@@ -243,4 +262,9 @@ export class RemoteGitRepository implements Repository, vscode.Disposable {
 
 function promiseResolveAfterTimeout(timeout: number): Thenable<void> {
 	return new Promise(resolve => setTimeout(resolve, timeout));
+}
+
+function revisionsEqual(a: vscode.SCMRevision | undefined, b: vscode.SCMRevision | undefined): boolean {
+	return Boolean((!a && !b) ||
+		(a && b && a.rawSpecifier === b.rawSpecifier && a.specifier === b.specifier && a.id === b.id));
 }
