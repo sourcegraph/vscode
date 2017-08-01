@@ -6,7 +6,7 @@
 'use strict';
 
 import * as vscode from 'vscode';
-import { LanguageClient, TextDocumentPositionParams } from '@sourcegraph/vscode-languageclient';
+import { LanguageClient, TextDocumentPositionParams, ProvideWorkspaceSymbolsSignature } from '@sourcegraph/vscode-languageclient';
 import { newClient } from './client';
 import { Dependent, listDependents } from './dependents';
 import { SymbolLocationInformation, TextDocumentXDefinitionRequest, WorkspaceReferencesParams, ReferenceInformation, WorkspaceXReferencesRequest } from './lsp';
@@ -131,7 +131,10 @@ class MultiWorkspaceProvider implements vscode.ReferenceProvider {
 		if (!client.clientOptions.middleware) {
 			client.clientOptions.middleware = {};
 		}
-		client.clientOptions.middleware.provideWorkspaceSymbols = (query: string, token: vscode.CancellationToken): vscode.ProviderResult<vscode.SymbolInformation[]> => {
+		client.clientOptions.middleware.provideWorkspaceSymbols = (query: string, token: vscode.CancellationToken, next: ProvideWorkspaceSymbolsSignature): vscode.ProviderResult<vscode.SymbolInformation[]> => {
+			if (vscode.workspace.getWorkspaceFolder(uri)) {
+				return next(query, token);
+			}
 			return [];
 		};
 
