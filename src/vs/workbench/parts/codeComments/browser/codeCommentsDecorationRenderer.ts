@@ -10,6 +10,7 @@ import { IDisposable, Disposable } from 'vs/base/common/lifecycle';
 import { ICodeCommentsService } from 'vs/editor/common/services/codeCommentsService';
 import { ISCMService } from 'vs/workbench/services/scm/common/scm';
 import URI from 'vs/base/common/uri';
+import { isFileLikeResource } from 'vs/platform/files/common/files';
 
 const DECORATION_KEY = 'codeComment';
 
@@ -68,6 +69,9 @@ export class CodeCommentsDecorationRenderer extends Disposable {
 			return;
 		}
 		if (model.getLineCount() < 1) {
+			return;
+		}
+		if (!isFileLikeResource(model.uri)) {
 			return;
 		}
 		this.codeCommentsService.getThreads(model.uri).then(threads => {
