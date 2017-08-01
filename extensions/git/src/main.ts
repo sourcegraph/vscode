@@ -44,7 +44,7 @@ async function init(context: ExtensionContext, disposables: Disposable[]): Promi
 	}
 
 	const workspaceRoot = Uri.parse(workspaceRootPath);
-	if (!workspaceRoot.scheme || workspaceRoot.scheme !== 'file') {
+	if (workspaceRoot.scheme && workspaceRoot.scheme !== 'file') {
 		// This git extension only works for local git repositories, not for remote git
 		// repositories. The 'remote' extension is used for remote repositories.
 		return;
