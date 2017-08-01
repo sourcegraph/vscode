@@ -26,7 +26,7 @@ import { IRemoteService } from 'vs/platform/remote/node/remote';
 import { RemoteService } from 'vs/platform/remote/node/remoteService';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { combinedAppender, NullTelemetryService } from 'vs/platform/telemetry/common/telemetryUtils';
-import { resolveCommonProperties } from 'vs/platform/telemetry/node/commonProperties';
+import { resolveCommonProperties, machineIdStorageKey } from 'vs/platform/telemetry/node/commonProperties';
 import { TelemetryAppenderChannel } from 'vs/platform/telemetry/common/telemetryIpc';
 import { TelemetryService, ITelemetryServiceConfig } from 'vs/platform/telemetry/common/telemetryService';
 import { AppInsightsAppender } from 'vs/platform/telemetry/node/appInsightsAppender';
@@ -36,6 +36,7 @@ import { IWindowsService } from 'vs/platform/windows/common/windows';
 import { WindowsChannelClient } from 'vs/platform/windows/common/windowsIpc';
 import { ipcRenderer } from 'electron';
 import { IDisposable, dispose } from 'vs/base/common/lifecycle';
+import { StorageService, inMemoryLocalStorageInstance } from 'vs/platform/storage/common/storageService';
 
 interface ISharedProcessInitData {
 	sharedIPCHandle: string;
@@ -100,12 +101,20 @@ function main(server: Server, initData: ISharedProcessInitData): void {
 		server.registerChannel('telemetryAppender', new TelemetryAppenderChannel(appender));
 
 		const services = new ServiceCollection();
-		const { appRoot, extensionsPath, extensionDevelopmentPath, isBuilt } = accessor.get(IEnvironmentService);
+		const { appRoot, extensionsPath, extensionDevelopmentPath, isBuilt, extensionTestsPath } = accessor.get(IEnvironmentService);
 
 		if (isBuilt && !extensionDevelopmentPath && product.enableTelemetry) {
+			const disableStorage = !!extensionTestsPath; // never keep any state when running extension tests!
+			const storage = disableStorage ? inMemoryLocalStorageInstance : window.localStorage;
+			const storageService = new StorageService(storage, storage);
+
 			const config: ITelemetryServiceConfig = {
 				appender,
-				commonProperties: resolveCommonProperties(product.commit, pkg.version),
+				commonProperties: resolveCommonProperties(product.commit, pkg.version)
+					.then(result => Object.defineProperty(result, 'common.machineId', {
+						get: () => storageService.get(machineIdStorageKey),
+						enumerable: true
+					})),
 				piiPaths: [appRoot, extensionsPath]
 			};
 

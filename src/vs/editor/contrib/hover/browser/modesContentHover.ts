@@ -7,7 +7,7 @@
 import * as nls from 'vs/nls';
 import URI from 'vs/base/common/uri';
 import { onUnexpectedError } from 'vs/base/common/errors';
-import { $ } from 'vs/base/browser/dom';
+import * as dom from 'vs/base/browser/dom';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { renderMarkedString } from 'vs/base/browser/htmlContentRenderer';
 import { IOpenerService, NullOpenerService } from 'vs/platform/opener/common/opener';
@@ -29,6 +29,8 @@ import { ColorFormatter } from 'vs/editor/contrib/colorPicker/common/colorFormat
 import { Color, RGBA } from 'vs/base/common/color';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
+import * as lifecycle from 'vs/base/common/lifecycle';
+const $ = dom.$;
 
 const loadingMessage = textToMarkedString(nls.localize('modesContentHover.loading', "Loading..."));
 
@@ -177,6 +179,7 @@ export class ModesContentHoverWidget extends SourcegraphHoverWidget {
 	private _modeService: IModeService;
 	private _shouldFocus: boolean;
 	private _colorPicker: ColorPickerWidget;
+	private toDispose: lifecycle.IDisposable[];
 
 	constructor(private telemetryService: ITelemetryService, editor: ICodeEditor, openerService: IOpenerService, modeService: IModeService, private contextKeyService: IContextKeyService) {
 		super(ModesContentHoverWidget.ID, editor, contextKeyService);
@@ -193,6 +196,16 @@ export class ModesContentHoverWidget extends SourcegraphHoverWidget {
 			null,
 			result => this._withResult(result, false)
 		);
+
+		this.toDispose = [];
+		this.toDispose.push(dom.addStandardDisposableListener(this.getDomNode(), dom.EventType.FOCUS, () => {
+			if (this._colorPicker) {
+				dom.addClass(this.getDomNode(), 'colorpicker-hover');
+			}
+		}));
+		this.toDispose.push(dom.addStandardDisposableListener(this.getDomNode(), dom.EventType.BLUR, () => {
+			dom.removeClass(this.getDomNode(), 'colorpicker-hover');
+		}));
 	}
 
 	dispose(): void {
@@ -200,6 +213,7 @@ export class ModesContentHoverWidget extends SourcegraphHoverWidget {
 		if (this._colorPicker) {
 			this._colorPicker.dispose();
 		}
+		this.toDispose = lifecycle.dispose(this.toDispose);
 		super.dispose();
 	}
 
