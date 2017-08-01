@@ -33,6 +33,7 @@ import { IWorkspaceEditingService } from 'vs/workbench/services/workspace/common
 import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
 import { ExplorerViewlet } from 'vs/workbench/parts/files/browser/explorerViewlet';
 import { VIEWLET_ID as EXPLORER_VIEWLET_ID } from 'vs/workbench/parts/files/common/files';
+import { IWorkspacesService } from "vs/platform/workspaces/common/workspaces";
 
 /**
 * The quick open model representing workspace results from a single handler.
@@ -186,6 +187,7 @@ export class WorkspaceEntry extends QuickOpenEntry {
 		@IConfigurationService private configurationService: IConfigurationService,
 		@IWorkspaceContextService private contextService: IWorkspaceContextService,
 		@IWorkspaceEditingService private workspaceEditingService: IWorkspaceEditingService,
+		@IWorkspacesService private workspacesService: IWorkspacesService,
 		@IViewletService private viewletService: IViewletService,
 		@IWindowsService private windowsService: IWindowsService
 	) {
@@ -257,6 +259,13 @@ export class WorkspaceEntry extends QuickOpenEntry {
 		const hideWidget = (mode === Mode.OPEN);
 
 		if (mode === Mode.OPEN) {
+			if (!this.contextService.hasWorkspace() || this.contextService.hasFolderWorkspace()) {
+				// Upgrade workspace to multi-root workspace.
+				this.workspacesService.createWorkspace([repoResource.toString()])
+					.then(({ configPath }) => this.windowsService.openWindow([configPath]));
+				return true;
+			}
+
 			// Add repo as another root folder in the workspace.
 			let rootExists = false;
 			if (this.contextService.hasWorkspace()) {
@@ -729,7 +738,7 @@ export class OpenWorkspaceHandler extends AbstractOpenWorkspaceHandler {
 		return nls.localize('workspaceSearchResults', "other repositories");
 		// TODO
 		// if (this.userService.isAuthenticated) {
-		// 	return nls.localize('workspaceSearchResults', "other repositories");
+		//	return nls.localize('workspaceSearchResults', "other repositories");
 		// }
 		// Unauthenticated users hit a search endpoint that only returns already mirrored
 		// repos.
@@ -756,7 +765,7 @@ export class OpenAffiliatedWorkspaceHandler extends AbstractOpenWorkspaceHandler
 		return 'SignIn not implemented';
 		// TODO
 		// if (!this.userService.isAuthenticated) {
-		// 	return nls.localize('affiliatedWorkspaceNoUser', "Sign in to see your repositories.");
+		//	return nls.localize('affiliatedWorkspaceNoUser', "Sign in to see your repositories.");
 		// }
 		// return true;
 	}
@@ -792,7 +801,7 @@ export class OpenStarredWorkspaceHandler extends AbstractOpenWorkspaceHandler {
 		return 'SignUp not implemented';
 		// TODO
 		// if (!this.userService.isAuthenticated) {
-		// 	return nls.localize('starredWorkspaceNoUser', "Sign in to see your starred repositories.");
+		//	return nls.localize('starredWorkspaceNoUser', "Sign in to see your starred repositories.");
 		// }
 		// return true;
 	}
