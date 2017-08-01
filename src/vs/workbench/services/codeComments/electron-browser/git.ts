@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 'use strict';
 
-import { startsWith } from 'vs/base/common/strings';
 import { ISCMService } from 'vs/workbench/services/scm/common/scm';
 import URI from 'vs/base/common/uri';
 
@@ -42,20 +41,26 @@ export class Git {
 	}
 
 	public async getRemoteRepo(context: URI): Promise<string> {
-		const url = await this.spawnPromiseTrim(context, ['ls-remote', '--get-url']);
-		const gitPrefix = 'git@';
-		if (startsWith(url, gitPrefix)) {
-			return this.trimGitSuffix(url.substr(gitPrefix.length).replace(':', '/'));
+		const url = await this.spawnPromiseTrim(context, ['ls-remote', '--get-url'])
+			.then(url => url.replace(/\.git$/, ''));
+
+		// We can just remove a prefix for these protocols.
+		const prefixProtocols = [
+			/^https?:\/\//,
+			/^git:\/\//,
+			/^ssh:\/\/[^/@]+@/,
+		];
+		for (let prefixProtocol of prefixProtocols) {
+			if (prefixProtocol.test(url)) {
+				return url.replace(prefixProtocol, '');
+			}
 		}
-		const schemeSep = '://';
-		if (url.indexOf(schemeSep) > 0) {
-			return this.trimGitSuffix(url.split(schemeSep, 2)[1]);
+		// Parse ssh procotol (e.g. user@company.com:foo/bar)
+		const sshMatch = url.match(/[^/@]+@([^:/]+):(.+)$/);
+		if (sshMatch) {
+			return sshMatch[1] + '/' + sshMatch[2];
 		}
 		throw new Error('unsupported remote url format: ' + url);
-	}
-
-	private trimGitSuffix(s: string): string {
-		return s.replace(/\.git$/, '');
 	}
 
 	private async spawnPromiseTrim(context: URI, params: Array<string>): Promise<string> {
