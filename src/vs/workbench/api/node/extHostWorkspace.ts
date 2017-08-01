@@ -117,8 +117,9 @@ export class ExtHostWorkspace extends ExtHostWorkspaceShape {
 		if (roots.length === 0) {
 			return undefined;
 		}
-		// PATCH(sourcegraph): return full root URI
-		return (roots[0].scheme === Schemas.file) ? roots[0].fsPath : roots[0].toString();
+		// If root isn't a file: resource, the path is probably meaningless (so just
+		// return undefined).
+		return (roots[0].scheme === Schemas.file) ? roots[0].fsPath : undefined;
 	}
 
 	getRelativePath(pathOrUri: string | vscode.Uri, includeWorkspace?: boolean): string {

@@ -51,6 +51,7 @@ export function newClient(mode: string, languageIds: string[], root: vscode.Uri,
 	}
 
 	const options: LanguageClientOptions = {
+		rootUri: root,
 		revealOutputChannelOn: RevealOutputChannelOn.Never,
 		documentSelector: languageIds.map(languageId => ({
 			language: languageId,
@@ -69,11 +70,8 @@ export function newClient(mode: string, languageIds: string[], root: vscode.Uri,
 				}
 				if (value.scheme === 'repo' || value.scheme === 'gitremote') {
 					const info = vscode.workspace.extractResourceInfo(value);
-					// HACK: Support starting a LanguageClient with a workspace root other than
-					// vscode.workspace.rootPath. We use a URI converter to automatically inject
-					// the workspace provided to newClient in place of the default
-					// vscode.workspace.rootPath, which vscode-languageclient uses.
-					return vscode.Uri.parse(`git://${root.authority}${root.path}`).with({
+					// Convert to the format that the LSP proxy server expects.
+					return vscode.Uri.parse(`git://${info.repo}`).with({
 						query: commitID,
 						fragment: info.relativePath,
 					}).toString();
