@@ -5,7 +5,7 @@
 'use strict';
 
 import * as vscode from 'vscode';
-import { LanguageClient, RevealOutputChannelOn, LanguageClientOptions, ErrorCodes, MessageTransports, ProvideWorkspaceSymbolsSignature } from '@sourcegraph/vscode-languageclient';
+import { LanguageClient, RevealOutputChannelOn, LanguageClientOptions, ErrorCodes, MessageTransports, ProvideWorkspaceSymbolsSignature, ShowMessageParams, NotificationHandler } from '@sourcegraph/vscode-languageclient';
 import { v4 as uuidV4 } from 'uuid';
 import { MessageTrace, webSocketStreamOpener } from './connection';
 import { lspWorkspace } from './workspace';
@@ -102,6 +102,17 @@ export function newClient(mode: string, languageIds: string[], root: vscode.Uri,
 					return next(query, token);
 				}
 				return [];
+			},
+			onShowMessage: (params: ShowMessageParams, next: NotificationHandler<ShowMessageParams>) => {
+				if (vscode.window.activeTextEditor) {
+					const currentInfo = vscode.workspace.extractResourceInfo(vscode.window.activeTextEditor.document.uri);
+					if (currentInfo.workspace !== root.toString()) {
+						// Suppress warnings and errors from other workspaces (shown when fetching external refs) to cut
+						// down on noise.
+						return;
+					}
+				}
+				next(params);
 			},
 		},
 	};
