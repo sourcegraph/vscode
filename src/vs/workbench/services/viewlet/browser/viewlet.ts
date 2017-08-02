@@ -25,6 +25,13 @@ export interface IViewletService {
 	openViewlet(id: string, focus?: boolean): TPromise<IViewlet>;
 
 	/**
+	 * Resolves a viewlet without opening it.
+	 *
+	 * PATCH(sourcegraph) needed to sync homepage with search viewlet
+	 */
+	resolveViewlet(id: string): TPromise<IViewlet>;
+
+	/**
 	 * Returns the current active viewlet or null if none.
 	 */
 	getActiveViewlet(): IViewlet;

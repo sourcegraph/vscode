@@ -32,6 +32,10 @@ class TestViewletService implements IViewletService {
 		return TPromise.as(null);
 	}
 
+	public resolveViewlet(id: string): TPromise<IViewlet> {
+		return TPromise.as(null);
+	}
+
 	public getViewlets(): ViewletDescriptor[] {
 		return [];
 	}

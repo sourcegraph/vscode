@@ -173,6 +173,37 @@ export abstract class CompositePart<T extends Composite> extends Part {
 		});
 	}
 
+	// PATCH(sourcegraph) Create and build a composite, but not show it.
+	public resolveComposite(id: string): TPromise<Composite> {
+		return this.createComposite(id).then(composite => {
+			let createCompositePromise: TPromise<void>;
+			// Composites created for the first time
+			let compositeContainer = this.mapCompositeToCompositeContainer[composite.getId()];
+			if (!compositeContainer) {
+
+				// Build Container off-DOM
+				compositeContainer = $().div({
+					'class': ['composite', this.compositeCSSClass],
+					id: composite.getId()
+				}, (div: Builder) => {
+					createCompositePromise = composite.create(div).then(() => {
+						composite.updateStyles();
+					});
+				});
+
+				// Remember composite container
+				this.mapCompositeToCompositeContainer[composite.getId()] = compositeContainer;
+			}
+
+			// Composite already exists but is hidden
+			else {
+				createCompositePromise = TPromise.as(null);
+			}
+
+			return createCompositePromise.then(() => composite);
+		});
+	}
+
 	protected createComposite(id: string, isActive?: boolean): TPromise<Composite> {
 
 		// Check if composite is already created

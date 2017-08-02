@@ -10,7 +10,7 @@ import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
 import Event from 'vs/base/common/event';
 import { SidebarPart } from 'vs/workbench/browser/parts/sidebar/sidebarPart';
 import { Registry } from 'vs/platform/registry/common/platform';
-import { ViewletDescriptor, ViewletRegistry, Extensions as ViewletExtensions } from 'vs/workbench/browser/viewlet';
+import { ViewletDescriptor, ViewletRegistry, Extensions as ViewletExtensions, Viewlet } from 'vs/workbench/browser/viewlet';
 import { IExtensionService } from 'vs/platform/extensions/common/extensions';
 import { IProgressService } from 'vs/platform/progress/common/progress';
 
@@ -74,6 +74,25 @@ export class ViewletService implements IViewletService {
 
 			// Fallback to default viewlet if extension viewlet is still not found (e.g. uninstalled)
 			return this.sidebarPart.openViewlet(this.getDefaultViewletId(), focus);
+		});
+	}
+
+	public resolveViewlet(id: string): TPromise<IViewlet> {
+		// Built in viewlets do not need to wait for extensions to be loaded
+		const builtInViewletIds = this.getBuiltInViewlets().map(v => v.id);
+		const isBuiltInViewlet = builtInViewletIds.indexOf(id) !== -1;
+		if (isBuiltInViewlet) {
+			return this.sidebarPart.resolveComposite(id) as TPromise<Viewlet>;
+		}
+
+		// Extension viewlets need to be loaded first which can take time
+		return this.extensionViewletsLoaded.then(() => {
+			if (this.viewletRegistry.getViewlet(id)) {
+				return this.sidebarPart.resolveComposite(id) as TPromise<Viewlet>;
+			}
+
+			// Fallback to default viewlet if extension viewlet is still not found (e.g. uninstalled)
+			return this.sidebarPart.resolveComposite(this.getDefaultViewletId()) as TPromise<Viewlet>;
 		});
 	}
 
