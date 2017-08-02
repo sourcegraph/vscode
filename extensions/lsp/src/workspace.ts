@@ -82,10 +82,19 @@ export class Workspace implements vscode.Disposable {
 
 		// Add/remove LSP roots when open documents change.
 		vscode.workspace.onDidOpenTextDocument(doc => {
-			const folder = this.getRootURI(doc.uri);
-			if (folder && this.isValidRoot(folder)) {
-				this.addRoot(folder, 'opened document');
-			}
+			// Wait a second if doc isn't visible to avoid starting sessions each time the
+			// user Ctrl/Cmd-hovers (which triggers an open document event).
+			const visible = vscode.window.visibleTextEditors.some(editor => editor.document === doc);
+			setTimeout(() => {
+				if (!visible && vscode.workspace.textDocuments.indexOf(doc) === -1) {
+					return; // doc was closed while we waited
+				}
+
+				const folder = this.getRootURI(doc.uri);
+				if (folder && this.isValidRoot(folder)) {
+					this.addRoot(folder, 'opened document');
+				}
+			}, visible ? 0 : 1000);
 		});
 		vscode.workspace.onDidCloseTextDocument(doc => {
 			const folder = this.getRootURI(doc.uri);
