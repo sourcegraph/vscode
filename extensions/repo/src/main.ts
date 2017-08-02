@@ -6,19 +6,23 @@
 
 import * as vscode from 'vscode';
 import { Workspace } from './workspace';
-
-export interface IRepoExtension {
-	getOrCreateSourceControl(repo: vscode.Uri): vscode.SourceControl | undefined;
-}
+import { IRepoExtension, IRepository } from './api';
 
 export function activate(context: vscode.ExtensionContext): IRepoExtension {
 	const workspace = new Workspace(context.workspaceState);
 	context.subscriptions.push(workspace);
 
 	return {
-		getOrCreateSourceControl: (repoResource: vscode.Uri): vscode.SourceControl | undefined => {
-			const repo = workspace.getRepository(repoResource);
-			return repo ? repo.sourceControl : undefined;
+		getRepository: (resource: vscode.Uri): IRepository | undefined => {
+			return workspace.getRepository(resource) || undefined;
+		},
+		resolveResourceRevision: (resource: vscode.Uri): Thenable<vscode.SCMRevision | undefined> => {
+			const repo = workspace.getRepository(resource);
+			if (!repo) {
+				return Promise.resolve(undefined);
+			}
+
+			return repo.resolvedRevision;
 		},
 	};
 }

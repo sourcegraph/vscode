@@ -8,7 +8,7 @@ import * as vscode from 'vscode';
 import { LanguageClient, RevealOutputChannelOn, LanguageClientOptions, ErrorCodes, MessageTransports, ProvideWorkspaceSymbolsSignature, ShowMessageParams, NotificationHandler } from '@sourcegraph/vscode-languageclient';
 import { v4 as uuidV4 } from 'uuid';
 import { MessageTrace, webSocketStreamOpener } from './connection';
-import { lspWorkspace } from './workspace';
+import { lspWorkspace } from './main';
 import * as log from './log';
 
 export function activateLSP(): vscode.Disposable {

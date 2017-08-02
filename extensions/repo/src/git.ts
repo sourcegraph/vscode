@@ -36,9 +36,9 @@ interface ISerializedRepositoryState {
 export class GitRepository implements Repository, vscode.Disposable {
 
 	public readonly fileSystem: vscode.FileSystemProvider & Revisioned;
-	public readonly sourceControl: vscode.SourceControl;
+	private readonly sourceControl: vscode.SourceControl;
 
-	private resolveRevisionOperation?: Thenable<vscode.SCMRevision>;
+	private resolveRevisionOperation: Thenable<vscode.SCMRevision>;
 
 	/**
 	 * The error, if any, from the last resolveRevisionOperation.
@@ -89,7 +89,17 @@ export class GitRepository implements Repository, vscode.Disposable {
 		this.fileSystem = fileSystem;
 	}
 
-	set revision(revision: vscode.SCMRevision) {
+	public get resolvedRevision(): Thenable<vscode.SCMRevision> {
+		return this.resolveRevisionOperation;
+	}
+
+	public get revision(): vscode.SCMRevision { return this.sourceControl.revision!; }
+
+	public set revision(revision: vscode.SCMRevision) {
+		if (!revision) {
+			throw new Error(`invalid empty revision for repository ${this.root.toString()}`);
+		}
+
 		if (revisionsEqual(revision, this.sourceControl.revision)) {
 			return;
 		}

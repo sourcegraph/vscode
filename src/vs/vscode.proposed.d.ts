@@ -153,11 +153,6 @@ declare module 'vscode' {
 		 * control). Can be undefined if the resource is not in any known source control.
 		 */
 		export function getSourceControlForResource(resource: Uri): SourceControl | undefined;
-
-		/**
-		 * An event which fires when a source control is updated.
-		 */
-		export const onDidUpdateSourceControl: Event<SourceControl>;
 	}
 
 	/**

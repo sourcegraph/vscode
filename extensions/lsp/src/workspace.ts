@@ -38,7 +38,7 @@ export interface IWorkspace extends vscode.Disposable {
 	removeRootIfUnused(folder: vscode.Uri): void;
 }
 
-class Workspace implements vscode.Disposable {
+export class Workspace implements vscode.Disposable {
 
 	/**
 	 * All known roots. The keys are the URI of the root.
@@ -148,12 +148,6 @@ class Workspace implements vscode.Disposable {
 		this.toDispose.forEach(disposable => disposable.dispose());
 	}
 }
-
-/**
- * The global LSP workspace, consisting of all LSP roots. See the IWorkspace documentation
- * for how this differs from the VS Code workspace root folders.
- */
-export const lspWorkspace: IWorkspace = new Workspace();
 
 /**
  * Reports whether resource is a repo:// or repo+version:// URI (the two URI schemes that

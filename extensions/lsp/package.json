@@ -5,7 +5,7 @@
   "categories": [
     "Other"
   ],
-  "main": "./out/main",
+  "main": "./out/lsp/src/main",
   "version": "0.0.1",
   "publisher": "sourcegraph",
   "engines": {

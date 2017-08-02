@@ -481,9 +481,6 @@ export function createApiFactory(
 			getSourceControlForResource(resource: vscode.Uri) {
 				return extHostSCM.getSourceControlForResource(resource);
 			},
-			get onDidUpdateSourceControl() {
-				return extHostSCM.onDidUpdateSourceControl;
-			},
 		};
 
 		// namespace: debug

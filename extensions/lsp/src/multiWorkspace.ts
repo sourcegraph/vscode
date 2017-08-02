@@ -9,7 +9,7 @@ import * as vscode from 'vscode';
 import { LanguageClient, TextDocumentPositionParams } from '@sourcegraph/vscode-languageclient';
 import { Dependent, listDependents } from './dependents';
 import { SymbolLocationInformation, TextDocumentXDefinitionRequest, WorkspaceReferencesParams, ReferenceInformation, WorkspaceXReferencesRequest } from './lsp';
-import { lspWorkspace } from './workspace';
+import { lspWorkspace } from './main';
 import { Language } from './languages';
 
 /**

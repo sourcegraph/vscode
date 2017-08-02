@@ -180,7 +180,7 @@ export class Workspace implements vscode.Disposable {
 
 		repo.listRefs().then(
 			(refs: Ref[]) => {
-				const currentRef = repo.sourceControl.revision!.specifier;
+				const currentRef = repo.revision!.specifier;
 				const picks: (vscode.QuickPickItem & { id: string, ref: Ref })[] = refs
 					.map(ref => {
 						let description = '';

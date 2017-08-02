@@ -238,7 +238,6 @@ class ExtHostSourceControl implements vscode.SourceControl {
 		this._revision = revision;
 
 		this._proxy.$updateSourceControl(this._handle, { revision });
-		this._scm.onSourceControlUpdate(this._handle);
 	}
 
 	private _handle: number = ExtHostSourceControl._handlePool++;
@@ -288,9 +287,6 @@ export class ExtHostSCM {
 
 	private _activeProvider: vscode.SourceControl | undefined;
 	get activeProvider(): vscode.SourceControl | undefined { return this._activeProvider; }
-
-	private _onDidUpdateSourceControl = new Emitter<vscode.SourceControl>();
-	get onDidUpdateSourceControl(): Event<vscode.SourceControl> { return this._onDidUpdateSourceControl.event; }
 
 	private _inputBox: ExtHostSCMInputBox;
 	get inputBox(): ExtHostSCMInputBox { return this._inputBox; }
@@ -364,8 +360,6 @@ export class ExtHostSCM {
 			this.updateFolderSourceControlsMap();
 		}
 
-		this._onDidUpdateSourceControl.fire(sourceControl);
-
 		return sourceControl;
 	}
 
@@ -395,12 +389,6 @@ export class ExtHostSCM {
 	$onActiveSourceControlChange(handle: number): TPromise<void> {
 		this._activeProvider = this._sourceControls.get(handle);
 		return TPromise.as(null);
-	}
-
-	onSourceControlUpdate(handle: number): void {
-		const sourceControl = this._sourceControls.get(handle);
-
-		this._onDidUpdateSourceControl.fire(sourceControl);
 	}
 
 	$onInputBoxValueChange(value: string): TPromise<void> {

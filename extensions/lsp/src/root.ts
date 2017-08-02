@@ -10,13 +10,8 @@ import { Language, getLanguage, getLanguageForResource, isEnabled } from './lang
 import { newClient } from './client';
 import { MultiWorkspaceProvider } from './multiWorkspace';
 import { FuzzyDefinitionProvider } from './fuzzyDefinition';
-
-/**
- * IRepoExtension is the public API of the 'repo' extension.
- */
-export interface IRepoExtension {
-	getOrCreateSourceControl(repo: vscode.Uri): vscode.SourceControl | undefined;
-}
+import { repoExtension } from './main';
+import { IRepository } from '../../repo/src/api';
 
 /**
  * Per-workspace root folder state.
@@ -28,7 +23,7 @@ export class Root {
 	 */
 	private modeClients = new Map<string, LanguageClient>();
 
-	private sourceControl: vscode.SourceControl;
+	private repo: IRepository;
 
 	/**
 	 * Things that should be disposed when the root is reset (i.e., when the revision of
@@ -38,42 +33,13 @@ export class Root {
 
 	private toDispose: vscode.Disposable[] = [];
 
-	/**
-	 * A promise that is resolved immediately if the source control revision is available,
-	 * or else when it becomes available.
-	 */
-	private get sourceControlRevisionResolved(): Thenable<void> {
-		if (this.sourceControl && this.sourceControl.revision && this.sourceControl.revision.id) {
-			return Promise.resolve();
-		}
-
-		// Wait until we see a source control for our resource that has a
-		// revision.
-		return new Promise((resolve, reject) => {
-			const disposable = vscode.scm.onDidUpdateSourceControl(() => {
-				if (this.sourceControl && this.sourceControl.revision && this.sourceControl.revision.id) {
-					resolve();
-					disposable.dispose();
-				}
-			});
-		});
-	}
-
 	constructor(
 		/**
 		 * The root resource (e.g., "repo://github.com/foo/bar").
 		 */
 		public readonly resource: vscode.Uri,
 	) {
-		this.sourceControl = vscode.scm.getSourceControlForResource(resource);
-		if (!this.sourceControl) {
-			vscode.extensions.getExtension<IRepoExtension>('sourcegraph.repo').activate().then((ext => {
-				this.sourceControl = ext.getOrCreateSourceControl(resource);
-				if (this.sourceControl) {
-					this.toDispose.push(this.sourceControl);
-				}
-			}));
-		}
+		this.repo = repoExtension.getRepository(resource);
 
 		this.activate();
 
@@ -91,18 +57,15 @@ export class Root {
 		// If the revision changed, we need to kill the LSP clients because the
 		// revision is specified immutable in our LSP initialization request.
 		let lastRevision: vscode.SCMRevision | undefined;
-		vscode.scm.onDidUpdateSourceControl(sourceControl => {
-			const rootSourceControl = vscode.scm.getSourceControlForResource(this.resource);
-			if (rootSourceControl === sourceControl) {
-				if (!revisionsEqual(lastRevision, sourceControl && sourceControl.revision)) {
-					this.deactivate();
-				}
-				if (sourceControl && sourceControl.revision && sourceControl.revision.id) {
-					this.activate();
-				}
-				lastRevision = sourceControl && sourceControl.revision;
+		this.repo.onDidChangeStatus(() => {
+			if (!revisionsEqual(lastRevision, this.repo.revision)) {
+				this.deactivate();
 			}
-		}, null, this.toDispose);
+			if (this.repo.revision.id) {
+				this.activate();
+			}
+			lastRevision = this.repo.revision;
+		});
 	}
 
 	/**
@@ -110,7 +73,7 @@ export class Root {
 	 * this root.
 	 */
 	private activate(): Thenable<void> {
-		return this.sourceControlRevisionResolved.then<any>(() => {
+		return this.repo.resolvedRevision.then<any>(() => {
 			// Search the workspace for file types to know what to activate. This lets us
 			// start initializing language features when the user first loads a workspace, not
 			// just when they view a file, which reduces perceived load time. It also makes
@@ -180,17 +143,13 @@ export class Root {
 			return Promise.resolve(undefined);
 		}
 
-		return this.sourceControlRevisionResolved.then(() => {
+		return this.repo.resolvedRevision.then(revision => {
 			if (this.modeClients.has(lang.mode)) {
 				const client = this.modeClients.get(lang.mode);
 				return client.onReady().then(() => client);
 			}
 
-			if (!this.sourceControl.revision || !this.sourceControl.revision.id) {
-				return Promise.resolve(undefined);
-			}
-
-			const client = newClient(lang.mode, lang.allLanguageIds, this.resource, this.sourceControl.revision.id);
+			const client = newClient(lang.mode, lang.allLanguageIds, this.resource, revision.id);
 			this.modeClients.set(lang.mode, client);
 			this.toDisposeOnReset.push(client.start());
 
