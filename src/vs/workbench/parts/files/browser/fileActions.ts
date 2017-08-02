@@ -51,6 +51,7 @@ import { IEnvironmentService } from 'vs/platform/environment/common/environment'
 import { ITextModelService, ITextModelContentProvider } from "vs/editor/common/services/resolverService";
 import { IModelService } from "vs/editor/common/services/modelService";
 import { IModeService } from "vs/editor/common/services/modeService";
+import * as arrays from 'vs/base/common/arrays';
 
 export interface IEditableData {
 	action: IAction;
@@ -2061,6 +2062,39 @@ export class CompareWithSavedAction extends Action implements ITextModelContentP
 
 			return codeEditorModel;
 		});
+	}
+}
+
+export class ShowAllPathsAction extends Action {
+
+	public static ID = 'workbench.action.files.showAllPaths';
+	public static LABEL = nls.localize('showAllPaths', "Show Paths of All Open Files");
+
+	constructor(
+		id: string,
+		label: string,
+		@IWorkbenchEditorService private editorService: IWorkbenchEditorService,
+		@IEditorGroupService private editorGroupService: IEditorGroupService,
+		@IMessageService private messageService: IMessageService,
+		@IInstantiationService private instantiationService: IInstantiationService
+	) {
+		super(id, label);
+	}
+
+	public run(): TPromise<any> {
+		const model = this.editorGroupService.getStacksModel();
+		const allEditors = arrays.flatten(model.groups.map(group => group.getEditors()));
+		console.group('Open file paths');
+		allEditors.forEach(editor => {
+			const resource = toResource(editor);
+			if (resource) {
+				console.log(resource.toString());
+			} else {
+				console.log('-');
+			}
+		});
+		console.groupEnd();
+		return TPromise.as(true);
 	}
 }
 
