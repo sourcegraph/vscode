@@ -100,7 +100,8 @@ export function newClient(mode: string, languageIds: string[], root: vscode.Uri,
 			// workspace root or (2) the same root as that of the active document.
 			provideWorkspaceSymbols(query: string, token: vscode.CancellationToken, next: ProvideWorkspaceSymbolsSignature): vscode.ProviderResult<vscode.SymbolInformation[]> {
 				const isSameRootAsActiveDocument = vscode.window.activeTextEditor && vscode.window.activeTextEditor.document.uri.toString().startsWith(root.toString() + '/');
-				if (vscode.workspace.getWorkspaceFolder(root) || isSameRootAsActiveDocument) {
+				const isInWorkspace = vscode.workspace.getWorkspaceFolder(root) || (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.some(folder => folder.uri.toString() === root.toString()));
+				if (isSameRootAsActiveDocument || isInWorkspace) {
 					return next(query, token);
 				}
 				return [];
