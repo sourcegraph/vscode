@@ -137,6 +137,19 @@ export class ResourceLabel extends IconLabel {
 			extraClasses.push(...this.options.extraClasses);
 		}
 
+		// TODO(sqs): this is hacky, find a better way to implement this.
+		const isRepoRevisionPinned = resource.scheme === Schemas.repoVersion;
+		if (isRepoRevisionPinned) {
+			let rev: string;
+			if (resource.query && resource.query.length === 40) {
+				rev = ` @ ${resource.query.slice(0, 6)}`;
+			} else {
+				rev = ` @ ${resource.query || 'HEAD'}`;
+			}
+			this.label.name += rev;
+			title += rev;
+		}
+
 		const italic = this.options && this.options.italic;
 		const matches = this.options && this.options.matches;
 
