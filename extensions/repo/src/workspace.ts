@@ -169,10 +169,12 @@ export class Workspace implements vscode.Disposable {
 	 * of its open documents to that revision.
 	 */
 	private showSwitchRevision(): void {
-		// TODO(sqs): make this work for multi-root, don't assume the first root
-		const folder = vscode.workspace.workspaceFolders![0].uri;
-		const repo = this.repositories.get(folder.toString())!;
+		const uri = vscode.window.activeTextEditor ? vscode.window.activeTextEditor.document.uri : undefined;
+		if (!uri) {
+			return;
+		}
 
+		const repo = this.getRepository(uri)!;
 		repo.listRefs().then(
 			(refs: Ref[]) => {
 				const currentRef = repo.revision!.specifier;
