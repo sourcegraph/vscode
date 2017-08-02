@@ -137,7 +137,11 @@ export class Workspace implements vscode.Disposable {
 		if (!isWorkspaceRoot && !hasOpenDocuments) {
 			log.outputChannel.appendLine(`Remove LSP root: ${folder.toString()} ${reason || ''}`);
 			this.roots.delete(folder.toString());
-			root.dispose();
+
+			// Delay before disposing our LanguageClient so that it can run its on
+			// DidCloseTextDocument event handlers (e.g., to notify the server that the
+			// document was closed).
+			setTimeout(() => root.dispose(), 500);
 		}
 	};
 
