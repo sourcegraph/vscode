@@ -23,12 +23,25 @@ export function activate(context: vscode.ExtensionContext) {
 				return;
 			}
 
-			// GitHub repositories always have 2 path components after the hostname.
-			const repo = resource.authority + resource.path.split('/', 3).join('/');
-			const path = resource.path.split('/').slice(3).join('/');
-			const revision = sourceControl.revision && sourceControl.revision.rawSpecifier ? sourceControl.revision.rawSpecifier : 'HEAD';
-
+			const { repo, path, revision } = parseGitHubRepo(resource, sourceControl);
 			vscode.commands.executeCommand('vscode.open', vscode.Uri.parse(`https://${repo}/blob/${encodeURIComponent(revision)}/${path}`));
+		}),
+	);
+	context.subscriptions.push(
+		vscode.commands.registerCommand('file-links.goToSourcegraph', (arg?: vscode.Uri) => {
+			const args = getSourceControl(arg);
+			if (!args) {
+				return;
+			}
+			const { resource, sourceControl } = args;
+
+			if (resource.authority !== 'github.com') {
+				vscode.window.showErrorMessage(localize('notSourcegraph', "Unable to open on Sourcegraph.com: the active document is not from a GitHub.com repository."));
+				return;
+			}
+
+			const { repo, path, revision } = parseGitHubRepo(resource, sourceControl);
+			vscode.commands.executeCommand('vscode.open', vscode.Uri.parse(`https://sourcegraph.com/${repo}@${encodeURIComponent(revision)}/-/blob/${path}`));
 		}),
 	);
 	context.subscriptions.push(
@@ -122,4 +135,12 @@ function guessResource(): vscode.Uri | undefined {
 		return vscode.workspace.workspaceFolders[0].uri;
 	}
 	return;
+}
+
+function parseGitHubRepo(resource: vscode.Uri, sourceControl: vscode.SourceControl): { repo: string, path: string, revision: string } {
+	// GitHub repositories always have 2 path components after the hostname.
+	const repo = resource.authority + resource.path.split('/', 3).join('/');
+	const path = resource.path.split('/').slice(3).join('/');
+	const revision = sourceControl.revision && sourceControl.revision.rawSpecifier ? sourceControl.revision.rawSpecifier : 'HEAD';
+	return { repo, path, revision };
 }

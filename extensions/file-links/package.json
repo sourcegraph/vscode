@@ -12,13 +12,18 @@
     "vscode": "*"
   },
   "enableProposedApi": true,
-  "activationEvents": [
+    "activationEvents": [
+    "onCommand:file-links.goToSourcegraph",
     "onCommand:file-links.goToGitHub",
     "onCommand:file-links.goToImmutableRevision",
     "onCommand:file-links.addResourceRoot"
   ],
   "contributes": {
     "commands": [
+      {
+        "command": "file-links.goToSourcegraph",
+        "title": "View on Sourcegraph"
+      },
       {
         "command": "file-links.goToGitHub",
         "title": "View on GitHub",
@@ -37,7 +42,12 @@
       }
     ],
     "menus": {
-      "explorer/context": [
+		"explorer/context": [
+        {
+          "when": "resourceScheme == repo && resourceAuthority == github.com",
+          "command": "file-links.goToSourcegraph",
+          "group": "file-links"
+        },
         {
           "when": "resourceScheme == repo && resourceAuthority == github.com",
           "command": "file-links.goToGitHub",
@@ -45,6 +55,11 @@
         }
       ],
       "editor/title": [
+        {
+          "when": "resourceScheme == repo && resourceAuthority == github.com",
+          "command": "file-links.goToSourcegraph",
+          "group": "file-links"
+        },
         {
           "when": "resourceScheme == repo && resourceAuthority == github.com",
           "command": "file-links.goToGitHub",
