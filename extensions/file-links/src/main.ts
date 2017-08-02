@@ -18,17 +18,17 @@ export function activate(context: vscode.ExtensionContext) {
 			}
 			const { resource, sourceControl } = args;
 
-			let info = vscode.workspace.extractResourceInfo(resource);
-			if (!info) {
-				vscode.window.showErrorMessage(localize('noRepository', "Unable to determine the GitHub repository for the active document.."));
+			if (resource.authority !== 'github.com') {
+				vscode.window.showErrorMessage(localize('notGitHub', "Unable to open on GitHub.com: the active document is not from a GitHub.com repository."));
 				return;
 			}
-			if (!info.revisionSpecifier) {
-				if (sourceControl && sourceControl.revision) {
-					info.revisionSpecifier = sourceControl.revision.rawSpecifier;
-				}
-			}
-			vscode.commands.executeCommand('vscode.open', vscode.Uri.parse(`https://${info.repo}/blob/${info.revisionSpecifier ? encodeURIComponent(info.revisionSpecifier) : 'HEAD'}/${info.relativePath}`));
+
+			// GitHub repositories always have 2 path components after the hostname.
+			const repo = resource.authority + resource.path.split('/', 3).join('/');
+			const path = resource.path.split('/').slice(3).join('/');
+			const revision = sourceControl.revision && sourceControl.revision.rawSpecifier ? sourceControl.revision.rawSpecifier : 'HEAD';
+
+			vscode.commands.executeCommand('vscode.open', vscode.Uri.parse(`https://${repo}/blob/${encodeURIComponent(revision)}/${path}`));
 		}),
 	);
 	context.subscriptions.push(
