@@ -102,3 +102,38 @@ Registry.as<IWorkbenchActionRegistry>(WorkbenchActionExtensions.WorkbenchActions
 
 Registry.as<IWorkbenchActionRegistry>(WorkbenchActionExtensions.WorkbenchActions)
 	.registerWorkbenchAction(new SyncActionDescriptor(SwitchProvider, SwitchProvider.ID, SwitchProvider.LABEL), 'SCM: Switch SCM Provider', 'SCM');
+
+export class ShowAllProvidersAction extends Action {
+
+	public static ID = 'scm.showAllProviders';
+	public static LABEL = localize('scm.showAllProviders', "Show All SCM Providers");
+
+	constructor(
+		id: string,
+		label: string,
+		@ISCMService private scmService: ISCMService,
+	) {
+		super(id, label);
+	}
+
+	public run(): TPromise<any> {
+		console.group('SCM providers');
+		const data: any = [];
+		this.scmService.providers.forEach(provider => {
+			data.push({
+				// id: provider.id,
+				// label: provider.label,
+				root: provider.rootFolder ? provider.rootFolder.toString() : '',
+				'rev.rawSpecifier': provider.revision ? provider.revision.rawSpecifier : '',
+				// 'rev.specifier': provider.revision ? provider.revision.specifier : '',
+				'rev.id': provider.revision ? provider.revision.id : '',
+			});
+		});
+		console.table(data);
+		console.groupEnd();
+		return TPromise.as(true);
+	}
+}
+
+Registry.as<IWorkbenchActionRegistry>(WorkbenchActionExtensions.WorkbenchActions)
+	.registerWorkbenchAction(new SyncActionDescriptor(ShowAllProvidersAction, ShowAllProvidersAction.ID, ShowAllProvidersAction.LABEL), 'Developer: Show All SCM Providers', 'SCM');
