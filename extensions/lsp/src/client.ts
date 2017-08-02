@@ -5,18 +5,17 @@
 'use strict';
 
 import * as vscode from 'vscode';
-import { LanguageClient, RevealOutputChannelOn, LanguageClientOptions, ErrorCodes, MessageTransports } from '@sourcegraph/vscode-languageclient';
+import { LanguageClient, RevealOutputChannelOn, LanguageClientOptions, ErrorCodes, MessageTransports, ProvideWorkspaceSymbolsSignature } from '@sourcegraph/vscode-languageclient';
 import { v4 as uuidV4 } from 'uuid';
 import { MessageTrace, webSocketStreamOpener } from './connection';
-import { Workspace } from './workspace';
+import { lspWorkspace } from './workspace';
 import * as log from './log';
 
 export function activateLSP(): vscode.Disposable {
 	const toDispose: vscode.Disposable[] = []; // things that should live for this extension's lifetime
 
 	// Start workspace and initialize roots.
-	const workspace = new Workspace();
-	toDispose.push(workspace);
+	toDispose.push(lspWorkspace);
 
 	// Other disposables.
 	toDispose.push(log.outputChannel);
@@ -92,6 +91,17 @@ export function newClient(mode: string, languageIds: string[], root: vscode.Uri,
 					return uri.with({ scheme: 'gitremote', path: uri.path.replace(/\/$/, '') + '/' + decodeURIComponent(uri.fragment), fragment: '' });
 				}
 				throw new Error('language server sent URI with unsupported scheme: ' + value);
+			},
+		},
+		middleware: {
+			// Ignore workspace/symbol for clients whose root is not either (1) a
+			// workspace root or (2) the same root as that of the active document.
+			provideWorkspaceSymbols(query: string, token: vscode.CancellationToken, next: ProvideWorkspaceSymbolsSignature): vscode.ProviderResult<vscode.SymbolInformation[]> {
+				const isSameRootAsActiveDocument = vscode.window.activeTextEditor && vscode.window.activeTextEditor.document.uri.toString().startsWith(root.toString() + '/');
+				if (vscode.workspace.getWorkspaceFolder(root) || isSameRootAsActiveDocument) {
+					return next(query, token);
+				}
+				return [];
 			},
 		},
 	};

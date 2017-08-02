@@ -34,12 +34,13 @@ export class Workspace implements vscode.Disposable {
 	constructor(
 		private workspaceState: vscode.Memento,
 	) {
-		this.toDispose.push(vscode.workspace.onDidChangeWorkspaceFolders(e => this.onDidChangeWorkspaceFolders(e)));
-
 		// Load initial workspace folders.
 		if (vscode.workspace.workspaceFolders) {
 			this.onDidChangeWorkspaceFolders({ added: vscode.workspace.workspaceFolders, removed: [] });
 		}
+
+		// Add/remove source controls when workspace roots change.
+		this.toDispose.push(vscode.workspace.onDidChangeWorkspaceFolders(e => this.onDidChangeWorkspaceFolders(e)));
 
 		this.registerUnionFileSystem();
 
@@ -105,17 +106,20 @@ export class Workspace implements vscode.Disposable {
 		}
 	};
 
-	private getRemoteRepository(resource: vscode.Uri): RemoteGitRepository | undefined {
+	public getRemoteRepository(resource: vscode.Uri): RemoteGitRepository | undefined {
 		const info = vscode.workspace.extractResourceInfo(resource);
 		if (!info) {
 			return undefined;
 		}
 
 		const repoName = info.repo;
-		const folder = info.workspace;
-		if (!this.repositories.has(folder)) {
-			const repo = new RemoteGitRepository(vscode.Uri.parse(folder), repoName, this.workspaceState);
-			this.repositories.set(folder, repo);
+		let folder = vscode.Uri.parse(info.workspace);
+		if (info.revisionSpecifier) {
+			folder = folder.with({ query: info.revisionSpecifier });
+		}
+		if (!this.repositories.has(folder.toString())) {
+			const repo = new RemoteGitRepository(folder, repoName, this.workspaceState);
+			this.repositories.set(folder.toString(), repo);
 
 			const forwardChanges = repo.fileSystem.onDidChange(e => this.onDidFileSystemChange.fire(e));
 
@@ -126,7 +130,7 @@ export class Workspace implements vscode.Disposable {
 				},
 			});
 		}
-		return this.repositories.get(folder)!;
+		return this.repositories.get(folder.toString())!;
 	}
 
 	private onDidFileSystemChange = new vscode.EventEmitter<vscode.Uri>();

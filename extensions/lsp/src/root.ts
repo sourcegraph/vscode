@@ -8,8 +8,15 @@ import * as vscode from 'vscode';
 import { LanguageClient } from '@sourcegraph/vscode-languageclient';
 import { Language, getLanguage, getLanguageForResource, isEnabled } from './languages';
 import { newClient } from './client';
-import { registerMultiWorkspaceProviders } from './multiWorkspace';
-import { registerFuzzyDefinitionProvider } from './fuzzyDefinition';
+import { MultiWorkspaceProvider } from './multiWorkspace';
+import { FuzzyDefinitionProvider } from './fuzzyDefinition';
+
+/**
+ * IRemoteExtension is the public API of the 'remote' extension.
+ */
+export interface IRemoteExtension {
+	getOrCreateSourceControl(remoteRepository: vscode.Uri): vscode.SourceControl | undefined;
+}
 
 /**
  * Per-workspace root folder state.
@@ -20,6 +27,8 @@ export class Root {
 	 * All active language clients for this root, keyed on the mode of the server.
 	 */
 	private modeClients = new Map<string, LanguageClient>();
+
+	private sourceControl: vscode.SourceControl;
 
 	/**
 	 * Things that should be disposed when the root is reset (i.e., when the revision of
@@ -34,8 +43,7 @@ export class Root {
 	 * or else when it becomes available.
 	 */
 	private get sourceControlRevisionResolved(): Thenable<void> {
-		const sourceControl = vscode.scm.getSourceControlForResource(this.resource);
-		if (sourceControl && sourceControl.revision && sourceControl.revision.id) {
+		if (this.sourceControl && this.sourceControl.revision && this.sourceControl.revision.id) {
 			return Promise.resolve();
 		}
 
@@ -43,8 +51,7 @@ export class Root {
 		// revision.
 		return new Promise((resolve, reject) => {
 			const disposable = vscode.scm.onDidUpdateSourceControl(() => {
-				const sourceControl = vscode.scm.getSourceControlForResource(this.resource);
-				if (sourceControl && sourceControl.revision && sourceControl.revision.id) {
+				if (this.sourceControl && this.sourceControl.revision && this.sourceControl.revision.id) {
 					resolve();
 					disposable.dispose();
 				}
@@ -53,8 +60,21 @@ export class Root {
 	}
 
 	constructor(
+		/**
+		 * The root resource (e.g., "repo://github.com/foo/bar").
+		 */
 		public readonly resource: vscode.Uri,
 	) {
+		this.sourceControl = vscode.scm.getSourceControlForResource(resource);
+		if (!this.sourceControl) {
+			vscode.extensions.getExtension<IRemoteExtension>('sourcegraph.remote').activate().then((ext => {
+				this.sourceControl = ext.getOrCreateSourceControl(resource);
+				if (this.sourceControl) {
+					this.toDispose.push(this.sourceControl);
+				}
+			}));
+		}
+
 		this.activate();
 
 		this.registerListeners();
@@ -120,9 +140,13 @@ export class Root {
 		});
 	}
 
-	private isInRoot(resource: vscode.Uri): boolean {
-		const folder = vscode.workspace.getWorkspaceFolder(resource);
-		return folder && folder.uri.toString() === this.resource.toString();
+	/**
+	 * Returns whether the resource is at or inside this root.
+	 */
+	public isInRoot(uri: vscode.Uri): boolean {
+		const root = vscode.workspace.extractResourceInfo(this.resource);
+		const resource = vscode.workspace.extractResourceInfo(uri);
+		return root && resource && root.repo === resource.repo && root.revisionSpecifier === resource.revisionSpecifier && (!root.relativePath || resource.relativePath.startsWith(root.relativePath + '/'));
 	}
 
 	/**
@@ -145,36 +169,36 @@ export class Root {
 			throw new Error(`unable to activate language client for resource ${resource.toString()} not in root ${this.resource.toString()}`);
 		}
 
-		return this.ensureLanguageActivated(lang);
+		return this.ensureLanguageActivated(lang) as Thenable<any>;
 	}
 
 	/**
-	 * Ensures that the language client for the language's mode is activated.
+	 * Ensures that the language client for the language and root is connected and ready.
 	 */
-	private ensureLanguageActivated(lang: Language): Thenable<void> {
+	public ensureLanguageActivated(lang: Language): Thenable<LanguageClient | undefined> {
 		if (!isEnabled(lang)) {
-			return Promise.resolve();
+			return Promise.resolve(undefined);
 		}
 
-		const sourceControl = vscode.scm.getSourceControlForResource(this.resource);
 		return this.sourceControlRevisionResolved.then(() => {
 			if (this.modeClients.has(lang.mode)) {
-				return this.modeClients.get(lang.mode).onReady();
+				const client = this.modeClients.get(lang.mode);
+				return client.onReady().then(() => client);
 			}
 
-			if (!sourceControl.revision || !sourceControl.revision.id) {
-				return Promise.resolve();
+			if (!this.sourceControl.revision || !this.sourceControl.revision.id) {
+				return Promise.resolve(undefined);
 			}
 
-			const client = newClient(lang.mode, lang.allLanguageIds, this.resource, sourceControl.revision.id);
+			const client = newClient(lang.mode, lang.allLanguageIds, this.resource, this.sourceControl.revision.id);
 			this.modeClients.set(lang.mode, client);
 			this.toDisposeOnReset.push(client.start());
 
 			// Initialize cross-repo and fuzzy support.
-			this.toDisposeOnReset.push(registerMultiWorkspaceProviders(lang.mode, lang.allLanguageIds, this.resource, client));
-			this.toDisposeOnReset.push(registerFuzzyDefinitionProvider(lang.mode, this.resource, client));
+			this.toDisposeOnReset.push(new MultiWorkspaceProvider(lang, this.resource, client));
+			this.toDisposeOnReset.push(new FuzzyDefinitionProvider(lang, this.resource, client));
 
-			return client.onReady();
+			return client.onReady().then(() => client);
 		});
 	}
 

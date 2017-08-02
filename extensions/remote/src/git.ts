@@ -68,10 +68,20 @@ export class RemoteGitRepository implements Repository, vscode.Disposable {
 		this.toDispose.push(this.sourceControl);
 
 		// Load last-viewed revision for repository.
-		const repoState = workspaceState.get<ISerializedRepositoryState>(`repostate:${repo}`);
-		this.revision = repoState && typeof repoState.lastRawRevisionSpecifier === 'string' ?
-			{ rawSpecifier: repoState.lastRawRevisionSpecifier } :
-			{ rawSpecifier: 'HEAD' };
+		let revision: vscode.SCMRevision | undefined;
+		const info = vscode.workspace.extractResourceInfo(root);
+		if (info && info.revisionSpecifier) {
+			revision = { rawSpecifier: info.revisionSpecifier };
+		}
+		if (!revision) {
+			const repoState = workspaceState.get<ISerializedRepositoryState>(`repostate:${repo}`);
+			revision = repoState && typeof repoState.lastRawRevisionSpecifier === 'string' ?
+				{ rawSpecifier: repoState.lastRawRevisionSpecifier } : undefined;
+		}
+		if (!revision) {
+			revision = { rawSpecifier: 'HEAD' };
+		}
+		this.revision = revision;
 
 		const fileSystem = new RemoteFileSystem(repo, this.sourceControl.revision!.rawSpecifier!);
 		this.toDispose.push(fileSystem);

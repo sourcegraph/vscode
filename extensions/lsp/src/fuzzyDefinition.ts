@@ -7,12 +7,7 @@
 
 import * as vscode from 'vscode';
 import { LanguageClient, WorkspaceSymbolRequest, SymbolInformation } from '@sourcegraph/vscode-languageclient';
-
-export function registerFuzzyDefinitionProvider(mode: string, root: vscode.Uri, client: LanguageClient): vscode.Disposable {
-	const p = new FuzzyDefinitionProvider(mode, root, client);
-	p.register();
-	return p;
-}
+import { Language } from './languages';
 
 /**
  * FuzzyDefinitionProvider provides fuzzy jump-to-def results by
@@ -20,28 +15,27 @@ export function registerFuzzyDefinitionProvider(mode: string, root: vscode.Uri, 
  * point. Its accuracy is roughly equivalent (but probably better)
  * than most CTAGS implementations.
  */
-class FuzzyDefinitionProvider implements vscode.DefinitionProvider {
+export class FuzzyDefinitionProvider implements vscode.DefinitionProvider, vscode.Disposable {
 
 	private toDispose: vscode.Disposable[] = [];
 
 	constructor(
-		private mode: string,
+		private lang: Language,
 		private root: vscode.Uri,
 		private client: LanguageClient,
-	) { }
+	) {
+		this.register();
+	}
 
-	public register() {
+	private register() {
 		// register each new instance as a definition provider
 		const info = vscode.workspace.extractResourceInfo(this.root);
 		const workspace = vscode.Uri.parse(info.workspace);
-		vscode.languages.registerDefinitionProvider({
-			language: this.mode, scheme: workspace.scheme, pattern: `${workspace.path}/**/*`,
-		}, this);
-	}
-
-	public dispose(): void {
-		this.toDispose.forEach(d => d.dispose());
-		// Do not dispose the client because we do not own it.
+		this.toDispose.push(vscode.languages.registerDefinitionProvider(this.lang.allLanguageIds.map(languageId => ({
+			language: languageId,
+			scheme: workspace.scheme,
+			pattern: `${workspace.path}/**/*`,
+		})), this));
 	}
 
 	public provideDefinition(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): vscode.ProviderResult<vscode.Definition> {
@@ -61,5 +55,9 @@ class FuzzyDefinitionProvider implements vscode.DefinitionProvider {
 					return { ...loc, score: 0.5 };
 				});
 		});
+	}
+
+	public dispose(): void {
+		this.toDispose.forEach(d => d.dispose());
 	}
 }

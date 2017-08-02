@@ -6,19 +6,11 @@
 'use strict';
 
 import * as vscode from 'vscode';
-import { LanguageClient, TextDocumentPositionParams, ProvideWorkspaceSymbolsSignature } from '@sourcegraph/vscode-languageclient';
-import { newClient } from './client';
+import { LanguageClient, TextDocumentPositionParams } from '@sourcegraph/vscode-languageclient';
 import { Dependent, listDependents } from './dependents';
 import { SymbolLocationInformation, TextDocumentXDefinitionRequest, WorkspaceReferencesParams, ReferenceInformation, WorkspaceXReferencesRequest } from './lsp';
-
-/**
- * Sets up provider for cross-workspace references.
- */
-export function registerMultiWorkspaceProviders(mode: string, languageIds: string[], root: vscode.Uri, client: LanguageClient): vscode.Disposable {
-	const p = new MultiWorkspaceProvider(mode, languageIds, root, client);
-	p.register();
-	return p;
-}
+import { lspWorkspace } from './workspace';
+import { Language } from './languages';
 
 /**
  * Provides references drawn from multiple external roots. To obtain the
@@ -31,32 +23,31 @@ export function registerMultiWorkspaceProviders(mode: string, languageIds: strin
  * connections on the server instead of here in the client. Also, this technique
  * exposes more of Sourcegraph's API than is strictly necessary.
  */
-class MultiWorkspaceProvider implements vscode.ReferenceProvider {
+export class MultiWorkspaceProvider implements vscode.ReferenceProvider, vscode.Disposable {
 	private static MAX_DEPENDENT_REPOS = 10;
 
 	private toDispose: vscode.Disposable[] = [];
-	private rootClients = new Map<string, LanguageClient>(); // key is root URI
 
 	constructor(
-		private mode: string,
-		private languageIds: string[],
+		private lang: Language,
 		private root: vscode.Uri,
-		private currentRootClient: LanguageClient,
-	) { }
 
-	public register(): void {
+		/**
+		 * The LSP client for the root from which these requests originate.
+		 */
+		private sourceRootClient: LanguageClient,
+	) {
+		this.register();
+	}
+
+	private register(): void {
 		const info = vscode.workspace.extractResourceInfo(this.root);
 		const workspace = vscode.Uri.parse(info.workspace);
-		this.toDispose.push(vscode.languages.registerReferenceProvider(this.languageIds.map(languageId => ({
+		this.toDispose.push(vscode.languages.registerReferenceProvider(this.lang.allLanguageIds.map(languageId => ({
 			language: languageId,
 			scheme: workspace.scheme,
 			pattern: `${workspace.path}/**/*`,
 		})), this));
-	}
-
-	public dispose(): void {
-		this.toDispose.forEach(d => d.dispose());
-		// Do not dispose the currentRootClient because we do not own it.
 	}
 
 	public provideReferences(document: vscode.TextDocument, position: vscode.Position, context: vscode.ReferenceContext, token: vscode.CancellationToken, progress: vscode.ProgressCallback<vscode.Location[]>): vscode.ProviderResult<vscode.Location[]> {
@@ -70,10 +61,12 @@ class MultiWorkspaceProvider implements vscode.ReferenceProvider {
 			this.onlySuccesses(definitionInfos.map(definitionInfo =>
 				this.listDependents(document, position).then(dependents =>
 					this.onlySuccesses(dependents.map(dependent => {
-						const client = this.getClientForRoot(dependent.workspace);
-						return client.onReady().then(() => {
+						return this.getClientForRoot(dependent.workspace).then(client => {
+							if (!client) {
+								return [];
+							}
 							const refs2Locations = (references: ReferenceInformation[]): vscode.Location[] => {
-								return references.map(r => this.currentRootClient.protocol2CodeConverter.asLocation(r.reference));
+								return references.map(r => this.sourceRootClient.protocol2CodeConverter.asLocation(r.reference));
 							};
 							const progressHandler = (references: ReferenceInformation[]) => {
 								progress(refs2Locations(references));
@@ -110,42 +103,18 @@ class MultiWorkspaceProvider implements vscode.ReferenceProvider {
 		}));
 	}
 
-	private getClientForRoot(uri: vscode.Uri): LanguageClient {
-		if (uri.toString() === this.root.toString()) {
-			return this.currentRootClient;
+	private getClientForRoot(folder: vscode.Uri): Thenable<LanguageClient | undefined> {
+		let root = lspWorkspace.getRoot(folder);
+		if (!root) {
+			root = lspWorkspace.addRoot(folder);
 		}
-
-		// Reuse if we're already connected.
-		let client = this.rootClients.get(uri.toString());
-		if (client) { return client; }
-
-		const info = vscode.workspace.extractResourceInfo(uri);
-		client = newClient(this.mode, this.languageIds, uri, info.revisionSpecifier);
-		this.rootClients.set(uri.toString(), client);
-
-		// Ignore workspace/symbol in this client, or else workspace/symbol becomes very
-		// slow after using any cross-repo features because very many LSP connections have
-		// been opened and the workspace/symbol query must wait for all of them to return
-		// results. The user only cares about workspace/symbol from their workspace's
-		// roots, not from external roots.
-		if (!client.clientOptions.middleware) {
-			client.clientOptions.middleware = {};
-		}
-		client.clientOptions.middleware.provideWorkspaceSymbols = (query: string, token: vscode.CancellationToken, next: ProvideWorkspaceSymbolsSignature): vscode.ProviderResult<vscode.SymbolInformation[]> => {
-			if (vscode.workspace.getWorkspaceFolder(uri)) {
-				return next(query, token);
-			}
-			return [];
-		};
-
-		this.toDispose.push(client.start());
-		return client;
+		return root.ensureLanguageActivated(this.lang);
 	}
 
 	private queryDefinitionInfo(document: vscode.TextDocument, position: vscode.Position): Thenable<SymbolLocationInformation[]> {
-		return this.currentRootClient.sendRequest(TextDocumentXDefinitionRequest.type, {
-			textDocument: { uri: this.currentRootClient.code2ProtocolConverter.asUri(document.uri).toString() },
-			position: this.currentRootClient.code2ProtocolConverter.asPosition(position),
+		return this.sourceRootClient.sendRequest(TextDocumentXDefinitionRequest.type, {
+			textDocument: { uri: this.sourceRootClient.code2ProtocolConverter.asUri(document.uri).toString() },
+			position: this.sourceRootClient.code2ProtocolConverter.asPosition(position),
 		} as TextDocumentPositionParams);
 	}
 
@@ -177,9 +146,14 @@ class MultiWorkspaceProvider implements vscode.ReferenceProvider {
 			repo: workspace.authority + workspace.path,
 			rev,
 			path: info.relativePath,
-			mode: this.mode,
+			mode: this.lang.mode,
 			line: position.line,
 			character: position.character,
 		}).then(dependents => dependents.slice(0, MultiWorkspaceProvider.MAX_DEPENDENT_REPOS));
+	}
+
+	public dispose(): void {
+		this.toDispose.forEach(d => d.dispose());
+		// Do not dispose the currentRootClient because we do not own it.
 	}
 }
