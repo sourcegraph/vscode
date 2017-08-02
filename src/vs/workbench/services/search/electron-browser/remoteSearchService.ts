@@ -100,7 +100,7 @@ export class RemoteSearchService extends SearchService implements ISearchService
 					// (usual) format.
 					const oldFormatResource = URI.parse(fileMatch.resource);
 					const resource = URI.from({
-						scheme: Schemas.remoteGitRepo,
+						scheme: Schemas.repoVersion,
 						authority: oldFormatResource.authority,
 						path: oldFormatResource.path + '/' + oldFormatResource.fragment,
 						query: oldFormatResource.query,
@@ -109,7 +109,7 @@ export class RemoteSearchService extends SearchService implements ISearchService
 					const { repo, revisionSpecifier, relativePath } = extractResourceInfo(resource);
 					const resourceLocallyNamed = this.contextService.isInsideWorkspace(resource) ?
 						URI.parse(`repo://${repo}/${relativePath}`) :
-						URI.parse(`gitremote://${repo}/${relativePath}?${revisionSpecifier}`);
+						URI.parse(`repo+version://${repo}/${relativePath}?${revisionSpecifier}`);
 					return { ...fileMatch, resource: resourceLocallyNamed };
 				});
 				complete({

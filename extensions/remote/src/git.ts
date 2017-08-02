@@ -127,7 +127,7 @@ export class RemoteGitRepository implements Repository, vscode.Disposable {
 			statusBarItem.command = SWITCH_REVISION_COMMAND_ID;
 			switchRevisionTooltip = localize('switchRevision', "Repository {0}: Switch Git revision...", this.repo);;
 		} else {
-			// Can't change revision of gitremote (immutable) repos.
+			// Can't change revision of repo+version (immutable) repos.
 			statusBarItem.command = undefined;
 			switchRevisionTooltip = localize('cantSwitchRevision', "Repository {0}: Open Containing Repository to switch revision.");
 		}

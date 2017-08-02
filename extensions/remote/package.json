@@ -13,7 +13,7 @@
   },
   "activationEvents": [
     "resource:repo",
-    "resource:gitremote"
+    "resource:repo+version"
   ],
   "enableProposedApi": true,
   "contributes": {

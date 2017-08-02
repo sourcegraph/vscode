@@ -13,18 +13,19 @@ import * as vscode from 'vscode';
 export const REPO_SCHEME = 'repo';
 
 /**
- * The URI scheme for a remote Git repository (at a specific revision) handled by this
- * extension. It differs from REPO_SCHEME in that its files are immutable and always drawn
- * from the same revision; it is not possible to change the revision.
+ * The URI scheme for a Git repository (at a specific revision) handled by this
+ * extension. It differs from REPO_SCHEME in that it refers to a specific revision that is
+ * inherent in the URI and not subject to external modification (e.g., when the user
+ * switches the revision).
  */
-export const GIT_REMOTE_SCHEME = 'gitremote';
+export const REPO_VERSION_SCHEME = 'repo+version';
 
 /**
- * Reports whether resource is a repo:// or gitremote:// URI (the two URI schemes that
+ * Reports whether resource is a repo:// or repo+version:// URI (the two URI schemes that
  * refer to remote resources handled by this extension).
  */
 export function isRemoteResource(resource: vscode.Uri): boolean {
-	return resource.scheme === REPO_SCHEME || resource.scheme === GIT_REMOTE_SCHEME;
+	return resource.scheme === REPO_SCHEME || resource.scheme === REPO_VERSION_SCHEME;
 }
 
 /**

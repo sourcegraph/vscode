@@ -67,7 +67,7 @@ export function newClient(mode: string, languageIds: string[], root: vscode.Uri,
 				if (value.scheme === 'file') {
 					return value.toString();
 				}
-				if (value.scheme === 'repo' || value.scheme === 'gitremote') {
+				if (value.scheme === 'repo' || value.scheme === 'repo+version') {
 					const info = vscode.workspace.extractResourceInfo(value);
 					// Convert to the format that the LSP proxy server expects.
 					return vscode.Uri.parse(`git://${info.repo}`).with({
@@ -87,8 +87,8 @@ export function newClient(mode: string, languageIds: string[], root: vscode.Uri,
 						return root.with({ scheme: 'repo', path: root.path + `${uri.fragment !== '' ? `/${decodeURIComponent(uri.fragment)}` : ''}` });
 					}
 
-					// Convert to gitremote://github.com/owner/repo/dir/file.txt?gitrev.
-					return uri.with({ scheme: 'gitremote', path: uri.path.replace(/\/$/, '') + '/' + decodeURIComponent(uri.fragment), fragment: '' });
+					// Convert to repo+version://github.com/owner/repo/dir/file.txt?gitrev.
+					return uri.with({ scheme: 'repo+version', path: uri.path.replace(/\/$/, '') + '/' + decodeURIComponent(uri.fragment), fragment: '' });
 				}
 				throw new Error('language server sent URI with unsupported scheme: ' + value);
 			},

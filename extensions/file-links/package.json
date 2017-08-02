@@ -55,7 +55,7 @@
           "group": "file"
         },
         {
-          "when": "resourceScheme == gitremote",
+          "when": "resourceScheme == repo+version",
           "command": "file-links.addResourceRoot",
           "group": "navigation"
         }

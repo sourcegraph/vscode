@@ -17,10 +17,10 @@ suite('extractResourceInfo', () => {
 		);
 	});
 
-	test('gitremote scheme', () => {
+	test('repo+version scheme', () => {
 		assert.deepEqual(
-			extractResourceInfo('gitremote://a/b/c/d/f'),
-			{ workspace: URI.parse('gitremote://a/b/c'), repo: 'a/b/c', relativePath: 'd/f' },
+			extractResourceInfo('repo+version://a/b/c/d/f'),
+			{ workspace: URI.parse('repo+version://a/b/c'), repo: 'a/b/c', relativePath: 'd/f' },
 		);
 	});
 

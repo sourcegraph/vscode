@@ -31,7 +31,7 @@ export function extractResourceInfo(uri: string | URI): IWorkspaceResourceInfo |
 	// TODO(sqs:vscode): support URIs of the form
 	switch (uri.scheme) {
 		case Schemas.remoteRepo:   // repo://github.com/owner/repo/dir/file
-		case Schemas.remoteGitRepo: // gitremote://github.com/owner/repo/dir/file?gitrev
+		case Schemas.repoVersion: // repo+version://github.com/owner/repo/dir/file?gitrev
 			if (uri.fragment) {
 				throw new Error('unexpected old-style URI: ' + uri.toString());
 			}

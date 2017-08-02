@@ -79,7 +79,7 @@ export class SourcegraphSearchViewlet extends SearchViewlet {
 	protected onFocus(lineMatch: any, preserveFocus?: boolean, sideBySide?: boolean, pinned?: boolean): TPromise<any> {
 		if (lineMatch instanceof Match) {
 			const fileUri = lineMatch.parent().resource();
-			const external = fileUri.scheme === 'gitremote';
+			const external = fileUri.scheme === 'repo+version';
 			const filePath = fileUri.with({ scheme: '', authority: '', path: fileUri.authority + fileUri.path }).toString();
 			this.telemetryService.publicLog('codeSearch.openResult', {
 				codeSearch: {

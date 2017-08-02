@@ -156,9 +156,9 @@ class Workspace implements vscode.Disposable {
 export const lspWorkspace: IWorkspace = new Workspace();
 
 /**
- * Reports whether resource is a repo:// or gitremote:// URI (the two URI schemes that
+ * Reports whether resource is a repo:// or repo+version:// URI (the two URI schemes that
  * refer to remote resources handled by this extension).
  */
 export function isRemoteResource(resource: vscode.Uri): boolean {
-	return resource.scheme === 'repo' || resource.scheme === 'gitremote';
+	return resource.scheme === 'repo' || resource.scheme === 'repo+version';
 }

@@ -38,7 +38,7 @@ export namespace Schemas {
 
 	export const remoteRepo: string = 'repo';
 
-	export const remoteGitRepo: string = 'gitremote';
+	export const repoVersion: string = 'repo+version';
 
 	export const file: string = 'file';
 

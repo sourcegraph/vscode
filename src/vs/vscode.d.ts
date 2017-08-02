@@ -4940,7 +4940,7 @@ declare module 'vscode' {
 
 		/**
 		 * Returns information about a resource inside a workspace (which can differ from
-		 * the active workspace). If the URI's scheme is not 'repo' or 'gitremote', it
+		 * the active workspace). If the URI's scheme is not 'repo' or 'repo+version', it
 		 * returns undefined.
 		 */
 		export function extractResourceInfo(resource: Uri | string): { workspace: string, repo: string, revisionSpecifier?: string, relativePath?: string } | undefined;

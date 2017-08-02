@@ -79,7 +79,7 @@ export function listDependents(vars: Vars): Thenable<Dependent[]> {
 		return data.dependencyReferenceData.references.map(ref => {
 			const repo = idToRepo(ref.repoId);
 			const commit = repo.lastIndexedRevOrLatest.commit;
-			const workspace = commit ? vscode.Uri.parse(`gitremote://${repo.uri}?${repo.lastIndexedRevOrLatest.commit.sha1}`) : undefined;
+			const workspace = commit ? vscode.Uri.parse(`repo+version://${repo.uri}?${repo.lastIndexedRevOrLatest.commit.sha1}`) : undefined;
 			return {
 				workspace,
 				hints: ref.hints ? JSON.parse(ref.hints) : {},
