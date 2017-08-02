@@ -43,7 +43,8 @@ const extensions = [
 	'merge-conflict',
 	'emmet',
 	'npm',
-	'jake'
+	'jake',
+	'vscode-code-outline'
 ];
 
 extensions.forEach(extension => npmInstall(`extensions/${extension}`));
