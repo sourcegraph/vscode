@@ -99,6 +99,7 @@ import { foreground, selectionBackground, focusBorder, scrollbarShadow, scrollba
 import { TextMateService } from 'vs/workbench/services/textMate/electron-browser/TMSyntax';
 import { ITextMateService } from 'vs/workbench/services/textMate/electron-browser/textMateService';
 import { IBroadcastService, BroadcastService } from "vs/platform/broadcast/electron-browser/broadcastService";
+import { IFolderContainmentService, FolderContainmentService } from 'vs/platform/folder/common/folderContainment';
 
 /**
  * Services that we require for the Shell
@@ -328,6 +329,10 @@ export class WorkbenchShell {
 		const extensionEnablementService = instantiationService.createInstance(ExtensionEnablementService);
 		serviceCollection.set(IExtensionEnablementService, extensionEnablementService);
 		disposables.push(extensionEnablementService);
+
+		const folderContainmentService = instantiationService.createInstance(FolderContainmentService);
+		serviceCollection.set(IFolderContainmentService, folderContainmentService);
+		disposables.push(folderContainmentService);
 
 		const extensionHostProcessWorker = instantiationService.createInstance(ExtensionHostProcessWorker);
 		this.threadService = instantiationService.createInstance(MainThreadService, extensionHostProcessWorker.messagingProtocol);

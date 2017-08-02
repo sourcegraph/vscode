@@ -21,6 +21,11 @@ export interface IRepoExtension {
 	 * Returns the resolved source control revision information for the resource.
 	 */
 	resolveResourceRevision(resource: vscode.Uri): Thenable<vscode.SCMRevision | undefined>;
+
+	/**
+	 * Returns the relative file path of resource inside folder.
+	 */
+	toRelativePath(folder: vscode.Uri, resource: vscode.Uri): string;
 }
 
 /**

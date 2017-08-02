@@ -187,13 +187,13 @@ export class Workspace implements IWorkspace {
 			return null;
 		}
 
-		return this._rootsMap.findSubstr(resource.fsPath);
+		return this._rootsMap.findSubstr(resource.toString());
 	}
 
 	private updateRootsMap(): void {
 		this._rootsMap = new TrieMap<URI>(TrieMap.PathSplitter);
 		for (const root of this.roots) {
-			this._rootsMap.insert(root.fsPath, root);
+			this._rootsMap.insert(root.toString(), root);
 		}
 	}
 

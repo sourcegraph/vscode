@@ -6,8 +6,8 @@
 
 import * as vscode from 'vscode';
 import { toFileStat, toICustomResolveFileOptions } from './fileStat';
-import { Revisioned, isRepoResource } from './repository';
-import { requestGraphQL } from './util';
+import { Revisioned } from './repository';
+import { requestGraphQL, toRelativePath } from './util';
 
 /**
  * Models a file system that exists in a Git repository at a specific revision.
@@ -20,6 +20,7 @@ export class RepoFileSystem implements vscode.FileSystemProvider, vscode.Disposa
 	private toDispose: vscode.Disposable[] = [];
 
 	constructor(
+		private root: vscode.Uri,
 		private repo: string,
 		private revision: string,
 	) {
@@ -31,8 +32,8 @@ export class RepoFileSystem implements vscode.FileSystemProvider, vscode.Disposa
 
 			// Trigger a refresh of all documents.
 			vscode.workspace.textDocuments.forEach(doc => {
-				const info = vscode.workspace.extractResourceInfo(doc.uri);
-				if (info && isRepoResource(doc.uri) && info.repo === this.repo) {
+				const root = vscode.workspace.findContainingFolder(doc.uri);
+				if (root && root.toString() === this.root.toString()) {
 					this._onDidChange.fire(doc.uri);
 				}
 			});
@@ -40,15 +41,15 @@ export class RepoFileSystem implements vscode.FileSystemProvider, vscode.Disposa
 	}
 
 	resolveFile(resource: vscode.Uri, options?: vscode.ResolveFileOptions): Thenable<vscode.FileStat | null> {
-		const { relativePath, workspace } = vscode.workspace.extractResourceInfo(resource)!;
-		return listAllFiles(this.repo, this.revision).then(files =>
-			toFileStat(vscode.Uri.parse(workspace), files, toICustomResolveFileOptions(relativePath, options))
-		);
+		return listAllFiles(this.repo, this.revision).then(files => {
+			const path = toRelativePath(this.root, resource);
+			return toFileStat(this.root, files, toICustomResolveFileOptions(this.root, path, options));
+		});
 	}
 
 	resolveContents(resource: vscode.Uri): Thenable<string> {
-		const { relativePath } = vscode.workspace.extractResourceInfo(resource)!;
-		return getFileContents(this.repo, this.revision, relativePath!);
+		const path = toRelativePath(this.root, resource);
+		return getFileContents(this.repo, this.revision, path);
 	}
 
 	writeContents(resource: vscode.Uri, value: string): void {

@@ -6,7 +6,7 @@
 
 import * as vscode from 'vscode';
 import { RepoFileSystem } from './fileSystem';
-import { Revisioned, Repository, REPO_SCHEME } from './repository';
+import { Revisioned, Repository, REPO_SCHEME, parseResourceRevision } from './repository';
 import { requestGraphQL } from './util';
 import * as nls from 'vscode-nls';
 import { SWITCH_REVISION_COMMAND_ID } from './workspace';
@@ -57,7 +57,6 @@ export class GitRepository implements Repository, vscode.Disposable {
 
 	constructor(
 		private root: vscode.Uri,
-		private repo: string,
 		private workspaceState: vscode.Memento,
 	) {
 		this.sourceControl = vscode.scm.createSourceControl('git', {
@@ -69,12 +68,12 @@ export class GitRepository implements Repository, vscode.Disposable {
 
 		// Load last-viewed revision for repository.
 		let revision: vscode.SCMRevision | undefined;
-		const info = vscode.workspace.extractResourceInfo(root);
-		if (info && info.revisionSpecifier) {
-			revision = { rawSpecifier: info.revisionSpecifier };
+		const rawRevisionSpecifier = parseResourceRevision(root);
+		if (rawRevisionSpecifier) {
+			revision = { rawSpecifier: rawRevisionSpecifier };
 		}
 		if (!revision) {
-			const repoState = workspaceState.get<ISerializedRepositoryState>(`repostate:${repo}`);
+			const repoState = workspaceState.get<ISerializedRepositoryState>(`repostate:${root.toString()}`);
 			revision = repoState && typeof repoState.lastRawRevisionSpecifier === 'string' ?
 				{ rawSpecifier: repoState.lastRawRevisionSpecifier } : undefined;
 		}
@@ -83,10 +82,14 @@ export class GitRepository implements Repository, vscode.Disposable {
 		}
 		this.revision = revision;
 
-		const fileSystem = new RepoFileSystem(repo, this.sourceControl.revision!.rawSpecifier!);
+		const fileSystem = new RepoFileSystem(this.root, this.label, this.sourceControl.revision!.rawSpecifier!);
 		this.toDispose.push(fileSystem);
 		this.toRevision.push(fileSystem);
 		this.fileSystem = fileSystem;
+	}
+
+	private get label(): string {
+		return this.root.authority + this.root.path;
 	}
 
 	public get resolvedRevision(): Thenable<vscode.SCMRevision> {
@@ -122,7 +125,7 @@ export class GitRepository implements Repository, vscode.Disposable {
 
 			// Serialize last-viewed revision for next time we open this repository.
 			const data: ISerializedRepositoryState = { lastRawRevisionSpecifier: revision.rawSpecifier };
-			this.workspaceState.update(`repostate:${this.repo}`, data);
+			this.workspaceState.update(`repostate:${this.root.toString()}`, data);
 		}, err => {
 			this.resolveRevisionError = err;
 		})
@@ -135,7 +138,7 @@ export class GitRepository implements Repository, vscode.Disposable {
 		let switchRevisionTooltip: string;
 		if (canSwitchRevision) {
 			statusBarItem.command = SWITCH_REVISION_COMMAND_ID;
-			switchRevisionTooltip = localize('switchRevision', "Repository {0}: Switch Git revision...", this.repo);;
+			switchRevisionTooltip = localize('switchRevision', "Repository {0}: Switch Git revision...", this.label);
 		} else {
 			// Can't change revision of repo+version (immutable) repos.
 			statusBarItem.command = undefined;
@@ -149,7 +152,7 @@ export class GitRepository implements Repository, vscode.Disposable {
 			statusBarItem.tooltip = switchRevisionTooltip;
 		} else if (!this.sourceControl.revision!.id) {
 			statusBarItem.text = '$(ellipses) (${path.basename(this.repo)})';
-			statusBarItem.tooltip = localize('revisionLoading', "Loading revision {0} in repository {1}", this.sourceControl.revision!.rawSpecifier!, this.repo);
+			statusBarItem.tooltip = localize('revisionLoading', "Loading revision {0} in repository {1}", this.sourceControl.revision!.rawSpecifier!, this.label);
 		} else {
 			let label: string;
 
@@ -160,7 +163,7 @@ export class GitRepository implements Repository, vscode.Disposable {
 			} else {
 				label = this.sourceControl.revision!.specifier!.replace(/^refs\/(heads|tags)\//, '');
 			}
-			statusBarItem.text = `$(git-branch) ${label} (${path.basename(this.repo)})`;
+			statusBarItem.text = `$(git-branch) ${label} (${path.basename(this.label)})`;
 			statusBarItem.tooltip = switchRevisionTooltip;
 		}
 	}
@@ -184,17 +187,17 @@ export class GitRepository implements Repository, vscode.Disposable {
 					}
 				}
 			}`,
-			{ repo: this.repo, revision: revision.specifier },
+			{ repo: this.label, revision: revision.specifier },
 			'repo/repository/resolveRevisionSpecifier',
 		).then(root => {
 			if (!root || !root.repository) {
-				throw new Error(localize('repositoryNotFound', "Repository not found: {0}", this.repo));
+				throw new Error(localize('repositoryNotFound', "Repository not found: {0}", this.label));
 			}
 			if (root.repository.commit.cloneInProgress) {
 				if (!messageShown) {
 					messageShown = true;
 					vscode.window.showInformationMessage(
-						localize('waitForClone', "Cloning {0}", this.repo),
+						localize('waitForClone', "Cloning {0}", this.label),
 						localize('dismiss', "Dismiss"),
 					);
 				}
@@ -235,7 +238,7 @@ export class GitRepository implements Repository, vscode.Disposable {
 					}
 				}
 			}`,
-			{ repo: this.repo },
+			{ repo: this.label },
 			'repo/repository/listRefs',
 		).then(root => {
 			const refs: Ref[] = [];
@@ -269,7 +272,7 @@ export class GitRepository implements Repository, vscode.Disposable {
 					}
 				}
 			}`,
-			{ repo: this.repo, params: args },
+			{ repo: this.label, params: args },
 			'repo/repository/gitCmdRaw',
 		).then(root => root.repository.gitCmdRaw || '');
 	}

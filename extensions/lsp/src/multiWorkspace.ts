@@ -9,7 +9,7 @@ import * as vscode from 'vscode';
 import { LanguageClient, TextDocumentPositionParams } from '@sourcegraph/vscode-languageclient';
 import { Dependent, listDependents } from './dependents';
 import { SymbolLocationInformation, TextDocumentXDefinitionRequest, WorkspaceReferencesParams, ReferenceInformation, WorkspaceXReferencesRequest } from './lsp';
-import { lspWorkspace } from './main';
+import { lspWorkspace, repoExtension } from './main';
 import { Language } from './languages';
 
 /**
@@ -41,12 +41,11 @@ export class MultiWorkspaceProvider implements vscode.ReferenceProvider, vscode.
 	}
 
 	private register(): void {
-		const info = vscode.workspace.extractResourceInfo(this.root);
-		const workspace = vscode.Uri.parse(info.workspace);
+		const folder = vscode.workspace.findContainingFolder(this.root);
 		this.toDispose.push(vscode.languages.registerReferenceProvider(this.lang.allLanguageIds.map(languageId => ({
 			language: languageId,
-			scheme: workspace.scheme,
-			pattern: `${workspace.path}/**/*`,
+			scheme: folder.scheme,
+			pattern: `${folder.path}/**/*`,
 		})), this));
 	}
 
@@ -122,34 +121,21 @@ export class MultiWorkspaceProvider implements vscode.ReferenceProvider, vscode.
 	 * Returns reference information about the given definition.
 	 */
 	private listDependents(document: vscode.TextDocument, position: vscode.Position): Thenable<Dependent[]> {
-		const info = vscode.workspace.extractResourceInfo(document.uri);
-		if (!info) {
-			throw new Error(`unable to extract resource information for ${document.uri}`);
-		}
-		const workspace = vscode.Uri.parse(info.workspace);
-
-		let rev: string;
-		if (info.workspace === this.root.toString()) {
-			const sourceControl = vscode.scm.getSourceControlForResource(document.uri);
-			if (!sourceControl) {
-				throw new Error(`no source control found for ${document.uri.toString()}`);
-			}
-			rev = sourceControl.revision.id;
-		} else if (info.revisionSpecifier) {
-			rev = info.revisionSpecifier;
-		}
-		if (!rev) {
-			throw new Error(`unable to resolve revision for ${document.uri}`);
+		const folder = vscode.workspace.findContainingFolder(document.uri);
+		if (!folder) {
+			throw new Error(`unable to find root for ${document.uri}`);
 		}
 
-		return listDependents({
-			repo: workspace.authority + workspace.path,
-			rev,
-			path: info.relativePath,
-			mode: this.lang.mode,
-			line: position.line,
-			character: position.character,
-		}).then(dependents => dependents.slice(0, MultiWorkspaceProvider.MAX_DEPENDENT_REPOS));
+		return repoExtension.resolveResourceRevision(document.uri).then(revision => {
+			return listDependents({
+				repo: folder.authority + folder.path,
+				rev: revision.id,
+				path: repoExtension.toRelativePath(folder, document.uri),
+				mode: this.lang.mode,
+				line: position.line,
+				character: position.character,
+			}).then(dependents => dependents.slice(0, MultiWorkspaceProvider.MAX_DEPENDENT_REPOS));
+		});
 	}
 
 	public dispose(): void {

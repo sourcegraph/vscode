@@ -30,11 +30,11 @@ import { IHistoryMainService } from "vs/platform/history/common/history";
 import { IProcessEnvironment, isLinux, isMacintosh, isWindows } from 'vs/base/common/platform';
 import { TPromise } from "vs/base/common/winjs.base";
 import { parseFragment } from 'vs/base/common/urlRoutes';
-import { extractResourceInfo } from 'vs/platform/workspace/common/resource';
 import { IWorkspacesMainService, IWorkspaceIdentifier, ISingleFolderWorkspaceIdentifier, IWorkspaceSavedEvent, WORKSPACE_FILTER, isSingleFolderWorkspaceIdentifier } from "vs/platform/workspaces/common/workspaces";
 import { IInstantiationService } from "vs/platform/instantiation/common/instantiation";
 import { mnemonicButtonLabel } from "vs/base/common/labels";
 import URI from "vs/base/common/uri";
+import { findContainingFolder } from 'vs/platform/folder/common/folderContainment';
 
 enum WindowError {
 	UNRESPONSIVE,
@@ -815,21 +815,22 @@ export class WindowsManager implements IWindowsMainService {
 		const selection = parseFragment(uri.fragment).selection;
 		uri = uri.with({ fragment: null });
 
-		const info = extractResourceInfo(uri);
 		if (uri.scheme) {
-			if (!info) {
+			const folder = findContainingFolder(uri);
+
+			if (!folder) {
 				return null; // path not found
 			}
 
-			if (info.relativePath) {
+			if (folder.toString() !== uri.toString()) {
 				return {
 					filePath: uri.toString(),
-					folderPath: info.workspace.toString(),
+					folderPath: folder.toString(),
 					lineNumber: selection ? selection.startLineNumber : void 0,
 					columnNumber: selection ? selection.startColumn : void 0
 				};
 			}
-			return { folderPath: info.workspace.toString() };
+			return { folderPath: folder.toString() };
 		}
 
 		let parsedPath: IPathWithLineAndColumn;

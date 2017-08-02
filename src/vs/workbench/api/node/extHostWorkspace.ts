@@ -12,7 +12,6 @@ import { delta } from 'vs/base/common/arrays';
 import { relative, basename } from 'path';
 import { Workspace } from 'vs/platform/workspace/common/workspace';
 import { IThreadService } from 'vs/workbench/services/thread/common/threadService';
-import { extractResourceInfo } from 'vs/platform/workspace/common/resource';
 import { IResourceEdit } from 'vs/editor/common/services/bulkEdit';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { fromRange, EndOfLine } from 'vs/workbench/api/node/extHostTypeConverters';
@@ -23,6 +22,7 @@ import { asWinJsPromise } from 'vs/base/common/async';
 import { Disposable } from 'vs/workbench/api/node/extHostTypes';
 import { TrieMap } from 'vs/base/common/map';
 import { IFileStat, IResolveFileOptions } from 'vs/platform/files/common/files';
+import { findContainingFolder } from 'vs/platform/folder/common/folderContainment';
 
 class Workspace2 extends Workspace {
 
@@ -212,17 +212,6 @@ export class ExtHostWorkspace extends ExtHostWorkspaceShape {
 		return this._proxy.$applyWorkspaceEdit(resourceEdits);
 	}
 
-	extractResourceInfo(resource: URI | string): { workspace: string, repo: string, revisionSpecifier?: string, relativePath?: string } | undefined {
-		const info = extractResourceInfo(resource);
-		if (!info) { return undefined; }
-		return {
-			workspace: info.workspace.toString(),
-			repo: info.repo,
-			revisionSpecifier: info.revisionSpecifier,
-			relativePath: info.relativePath,
-		};
-	}
-
 	// --- EXPERIMENT: workspace resolver
 
 	private readonly _provider = new Map<number, vscode.FileSystemProvider>();
@@ -252,5 +241,18 @@ export class ExtHostWorkspace extends ExtHostWorkspaceShape {
 	$storeFile(handle: number, resource: URI, content: string): TPromise<any> {
 		const provider = this._provider.get(handle);
 		return asWinJsPromise(token => provider.writeContents(resource, content));
+	}
+
+	// --- EXPERIMENT: folder containment
+
+	// TODO(sqs): make asynchronous
+	findContainingFolder(resource: URI): URI | undefined {
+		if (this._workspace) {
+			const root = this._workspace.getRoot(resource);
+			if (root) {
+				return root;
+			}
+		}
+		return findContainingFolder(resource);
 	}
 }

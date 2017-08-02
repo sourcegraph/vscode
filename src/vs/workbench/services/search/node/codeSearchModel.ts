@@ -11,7 +11,7 @@ import { EditorModel } from 'vs/workbench/common/editor';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { IRemoteService, requestGraphQL } from 'vs/platform/remote/node/remote';
 import { ILineMatch } from 'vs/platform/search/common/search';
-import { extractResourceInfo } from 'vs/platform/workspace/common/resource';
+import { findContainingFolder } from 'vs/platform/folder/common/folderContainment';
 
 /**
  * A code search query.
@@ -162,9 +162,9 @@ function toRepositoryRevisions(workspaces: WorkspaceRevision[]): RepositoryRevis
 	const repos: RepositoryRevision[] = [];
 	workspaces.forEach(({ workspace, revision }) => {
 		try {
-			const info = extractResourceInfo(workspace);
-			if (info && info.repo) {
-				repos.push({ repo: info.repo, rev: revision });
+			const folder = findContainingFolder(workspace);
+			if (folder) {
+				repos.push({ repo: folder.authority + folder.path, rev: revision });
 			}
 		} catch (err) {
 			errors.onUnexpectedError(errors.illegalArgument(workspace.toString()));

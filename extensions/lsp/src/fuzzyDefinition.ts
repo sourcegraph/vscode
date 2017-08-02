@@ -29,12 +29,11 @@ export class FuzzyDefinitionProvider implements vscode.DefinitionProvider, vscod
 
 	private register() {
 		// register each new instance as a definition provider
-		const info = vscode.workspace.extractResourceInfo(this.root);
-		const workspace = vscode.Uri.parse(info.workspace);
+		const folder = vscode.workspace.findContainingFolder(this.root);
 		this.toDispose.push(vscode.languages.registerDefinitionProvider(this.lang.allLanguageIds.map(languageId => ({
 			language: languageId,
-			scheme: workspace.scheme,
-			pattern: `${workspace.path}/**/*`,
+			scheme: folder.scheme,
+			pattern: `${folder.path}/**/*`,
 		})), this));
 	}
 

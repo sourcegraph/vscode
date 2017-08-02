@@ -7,6 +7,7 @@
 
 import * as vscode from 'vscode';
 import * as path from 'path';
+import { toRelativePath } from './util';
 
 /**
  * ICustomResolveFileOptions is based on vscode.ResolveFileOptions. It is only used when
@@ -48,22 +49,19 @@ export interface ICustomResolveFileOptions {
  * passing toFileStat a full URI for each resolveTo entry, it only passes the relative
  * paths. This lets toFileStat avoid URI operations in its tight loop.
  */
-export function toICustomResolveFileOptions(parentPath?: string, options?: vscode.ResolveFileOptions): ICustomResolveFileOptions {
+export function toICustomResolveFileOptions(root: vscode.Uri, parentPath?: string, options?: vscode.ResolveFileOptions): ICustomResolveFileOptions {
 	return {
 		parentPath,
 		resolveSingleChildDescendants: options ? options.resolveSingleChildDescendants : undefined,
-		resolveTo: options && options.resolveTo ? toRelativePaths(options.resolveTo) : undefined,
+		resolveTo: options && options.resolveTo ? toRelativePaths(root, options.resolveTo) : undefined,
 		resolveAllDescendants: options && options.resolveAllDescendants,
 	};
 }
 
-function toRelativePaths(resources: vscode.Uri[]): string[] {
+function toRelativePaths(root: vscode.Uri, resources: vscode.Uri[]): string[] {
 	const relativePaths: string[] = [];
 	for (const resource of resources) {
-		const info = vscode.workspace.extractResourceInfo(resource);
-		if (info && info.relativePath) {
-			relativePaths.push(info.relativePath);
-		}
+		relativePaths.push(toRelativePath(root, resource));
 	}
 	return relativePaths;
 }

@@ -69,24 +69,22 @@ export function activate(context: vscode.ExtensionContext) {
 				return;
 			}
 
-			let info = vscode.workspace.extractResourceInfo(resource);
-			if (!info) {
-				vscode.window.showErrorMessage(localize('noResourceInfo', "Unable to determine the root for {0}.", resource.toString()));
+			let rootFolder = vscode.workspace.findContainingFolder(resource);
+			if (!rootFolder) {
+				vscode.window.showErrorMessage(localize('noResourceInfo', "Unable to determine the root folder for {0}.", resource.toString()));
 				return;
 			}
-			if (!info.revisionSpecifier) {
-				if (sourceControl && sourceControl.revision) {
-					info.revisionSpecifier = sourceControl.revision.rawSpecifier;
-				}
-			}
+
+			rootFolder = rootFolder.with({ scheme: 'repo', query: '' });
+
+			// TODO(sqs): allow adding repo+version: roots
 
 			// TODO(sqs): handle updating revision of newly added root (and handle case
 			// when root is already open to another revision).
-			const rootToAdd = vscode.Uri.parse(info.workspace).with({ scheme: 'repo' });
-			vscode.commands.executeCommand('_workbench.addRoots', [rootToAdd]).then(
+			vscode.commands.executeCommand('_workbench.addRoots', [rootFolder]).then(
 				() => void 0,
 				err => {
-					vscode.window.showErrorMessage(localize('addRootsFailed', "Adding root {0} failed: {1}.", info!.workspace, err));
+					vscode.window.showErrorMessage(localize('addRootsFailed', "Adding root folder {0} failed: {1}.", rootFolder!.toString(), err));
 				},
 			);
 		}),
@@ -102,7 +100,13 @@ function getSourceControl(resource: vscode.Uri | undefined): { resource: vscode.
 		return;
 	}
 
-	const sourceControl = vscode.scm.getSourceControlForResource(resource);
+	const folder = vscode.workspace.findContainingFolder(resource);
+	if (!folder) {
+		vscode.window.showErrorMessage(localize('noContainingFolder', "Unable to find containing folder for current document."));
+		return;
+	}
+
+	const sourceControl = vscode.scm.getSourceControlForResource(folder);
 	if (!sourceControl) {
 		vscode.window.showErrorMessage(localize('noActiveSourceControl', "Unable to determine immutable revision because no SCM repository was found."));
 		return;

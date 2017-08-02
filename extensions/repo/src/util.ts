@@ -20,3 +20,18 @@ export function requestGraphQL<T>(query: string, variables: { [name: string]: an
 		.then(resp => resp.json() as Thenable<T>)
 		.then((body: any) => body.data.root);
 }
+
+export function toRelativePath(folder: vscode.Uri, resource: vscode.Uri): string {
+	// Handle root with revision in querystring and resources with revision in
+	// querystring.
+	const folderString = folder.with({ query: '' }).toString();
+	const resourceString = resource.with({ query: '' }).toString();
+
+	const baseMatches = resourceString === folderString || resourceString.startsWith(folderString + '/');
+	const queryMatches = (!folder.query && !resource.query) || (folder.query === resource.query);
+	if (baseMatches && queryMatches) {
+		return resourceString.slice(folderString.length + 1);
+	}
+
+	throw new Error(`unable to make ${resource.toString()} relative to ${folder.toString()}`);
+}

@@ -16,7 +16,6 @@ import { IConfigurationService } from 'vs/platform/configuration/common/configur
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 import { IFileService } from 'vs/platform/files/common/files';
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
-import { extractResourceInfo } from 'vs/platform/workspace/common/resource';
 import { IRemoteService } from 'vs/platform/remote/node/remote';
 import { ISCMService } from 'vs/workbench/services/scm/common/scm';
 import { CodeSearchModel, CodeSearchQuery, WorkspaceRevision, CodeSearchResponse } from 'vs/workbench/services/search/node/codeSearchModel';
@@ -99,17 +98,27 @@ export class RemoteSearchService extends SearchService implements ISearchService
 					// git://github.com/foo/bar?rev#dir/file syntax. Convert it to the new
 					// (usual) format.
 					const oldFormatResource = URI.parse(fileMatch.resource);
-					const resource = URI.from({
-						scheme: Schemas.repoVersion,
-						authority: oldFormatResource.authority,
-						path: oldFormatResource.path + '/' + oldFormatResource.fragment,
-						query: oldFormatResource.query,
-					});
 
-					const { repo, revisionSpecifier, relativePath } = extractResourceInfo(resource);
-					const resourceLocallyNamed = this.contextService.isInsideWorkspace(resource) ?
-						URI.parse(`repo://${repo}/${relativePath}`) :
-						URI.parse(`repo+version://${repo}/${relativePath}?${revisionSpecifier}`);
+					const repoRoot = URI.from({ scheme: Schemas.repo, authority: oldFormatResource.authority, path: oldFormatResource.path });
+					const resultRevision = oldFormatResource.query;
+
+					const scmProvider = this.scmService.getProviderForResource(repoRoot);
+					let resourceLocallyNamed: URI;
+					if (scmProvider && scmProvider.revision && scmProvider.revision && scmProvider.revision.id === resultRevision) {
+						resourceLocallyNamed = URI.from({
+							scheme: Schemas.repoVersion,
+							authority: oldFormatResource.authority,
+							path: oldFormatResource.path + '/' + oldFormatResource.fragment,
+						});
+					} else {
+						resourceLocallyNamed = URI.from({
+							scheme: Schemas.repoVersion,
+							authority: oldFormatResource.authority,
+							path: oldFormatResource.path + '/' + oldFormatResource.fragment,
+							query: oldFormatResource.query,
+						});
+					}
+
 					return { ...fileMatch, resource: resourceLocallyNamed };
 				});
 				complete({

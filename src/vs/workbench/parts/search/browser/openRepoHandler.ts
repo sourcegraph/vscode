@@ -24,7 +24,6 @@ import { IConfigurationService } from 'vs/platform/configuration/common/configur
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { IWorkspaceSearchService, ISearchStats, ISearchQuery, IWorkspaceMatch } from 'vs/platform/multiWorkspace/common/search';
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
-import { extractResourceInfo } from 'vs/platform/workspace/common/resource';
 import { IWindowsService } from 'vs/platform/windows/common/windows';
 import { ThrottledDelayer } from 'vs/base/common/async';
 import { IMessageService, Severity } from 'vs/platform/message/common/message';
@@ -193,8 +192,11 @@ export class WorkspaceEntry extends QuickOpenEntry {
 	) {
 		super();
 
-		const { repo } = extractResourceInfo(match.resource);
-		this.label = repo.replace(/^github.com\//, '');
+		if (match.resource.authority === 'github.com') {
+			this.label = match.resource.path.slice(1);
+		} else {
+			this.label = match.resource.authority + match.resource.path;
+		}
 	}
 
 	/**

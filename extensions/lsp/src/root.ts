@@ -107,9 +107,8 @@ export class Root {
 	 * Returns whether the resource is at or inside this root.
 	 */
 	public isInRoot(uri: vscode.Uri): boolean {
-		const root = vscode.workspace.extractResourceInfo(this.resource);
-		const resource = vscode.workspace.extractResourceInfo(uri);
-		return root && resource && root.repo === resource.repo && root.revisionSpecifier === resource.revisionSpecifier && (!root.relativePath || resource.relativePath.startsWith(root.relativePath + '/'));
+		const folder = vscode.workspace.findContainingFolder(uri);
+		return folder && folder.toString() === this.resource.toString();
 	}
 
 	/**

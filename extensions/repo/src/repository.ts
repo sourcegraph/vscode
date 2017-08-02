@@ -22,6 +22,14 @@ export const REPO_SCHEME = 'repo';
 export const REPO_VERSION_SCHEME = 'repo+version';
 
 /**
+* Returns the revision obtained purely by parsing the input URI. For example, returns "x"
+* if resource is "repo+version://github.com/foo/bar/baz?x".
+*/
+export function parseResourceRevision(resource: vscode.Uri): string | undefined {
+	return resource.scheme === REPO_VERSION_SCHEME && resource.query ? resource.query : undefined;
+}
+
+/**
  * Reports whether resource is a repo:// or repo+version:// URI (the two URI schemes that
  * refer to repo resources handled by this extension).
  */

@@ -453,15 +453,15 @@ export function createApiFactory(
 			getConfiguration: (section?: string, resource?: vscode.Uri): vscode.WorkspaceConfiguration => {
 				return extHostConfiguration.getConfiguration(section, <URI>resource);
 			},
-			extractResourceInfo(resource: vscode.Uri | string): { workspace: string, repo: string, revisionSpecifier?: string, relativePath?: string } | undefined {
-				return extHostWorkspace.extractResourceInfo(resource as (string | URI));
-			},
 			registerTaskProvider: (type: string, provider: vscode.TaskProvider) => {
 				return extHostTask.registerTaskProvider(extension, provider);
 			},
 			registerFileSystemProvider: proposedApiFunction(extension, (scheme, provider) => {
 				return extHostWorkspace.registerFileSystemProvider(scheme, provider);
-			})
+			}),
+			findContainingFolder: proposedApiFunction(extension, (resource) => {
+				return extHostWorkspace.findContainingFolder(resource);
+			}),
 		};
 
 		// namespace: scm

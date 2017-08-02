@@ -107,18 +107,13 @@ export class Workspace implements vscode.Disposable {
 	};
 
 	public getRepository(resource: vscode.Uri): GitRepository | undefined {
-		const info = vscode.workspace.extractResourceInfo(resource);
-		if (!info) {
+		const folder = vscode.workspace.findContainingFolder(resource);
+		if (!folder) {
 			return undefined;
 		}
 
-		const repoName = info.repo;
-		let folder = vscode.Uri.parse(info.workspace);
-		if (info.revisionSpecifier) {
-			folder = folder.with({ query: info.revisionSpecifier });
-		}
 		if (!this.repositories.has(folder.toString())) {
-			const repo = new GitRepository(folder, repoName, this.workspaceState);
+			const repo = new GitRepository(folder, this.workspaceState);
 			this.repositories.set(folder.toString(), repo);
 
 			const forwardChanges = repo.fileSystem.onDidChange(e => this.onDidFileSystemChange.fire(e));

@@ -8,7 +8,7 @@ import * as vscode from 'vscode';
 import { LanguageClient, RevealOutputChannelOn, LanguageClientOptions, ErrorCodes, MessageTransports, ProvideWorkspaceSymbolsSignature, ShowMessageParams, NotificationHandler } from '@sourcegraph/vscode-languageclient';
 import { v4 as uuidV4 } from 'uuid';
 import { MessageTrace, webSocketStreamOpener } from './connection';
-import { lspWorkspace } from './main';
+import { lspWorkspace, repoExtension } from './main';
 import * as log from './log';
 
 export function activateLSP(): vscode.Disposable {
@@ -68,12 +68,14 @@ export function newClient(mode: string, languageIds: string[], root: vscode.Uri,
 					return value.toString();
 				}
 				if (value.scheme === 'repo' || value.scheme === 'repo+version') {
-					const info = vscode.workspace.extractResourceInfo(value);
-					// Convert to the format that the LSP proxy server expects.
-					return vscode.Uri.parse(`git://${info.repo}`).with({
-						query: commitID,
-						fragment: info.relativePath,
-					}).toString();
+					const folder = vscode.workspace.findContainingFolder(value);
+					if (folder) {
+						// Convert to the format that the LSP proxy server expects.
+						return vscode.Uri.parse(`git://${folder.authority}${folder.path}`).with({
+							query: commitID,
+							fragment: repoExtension.toRelativePath(folder, value),
+						}).toString();
+					}
 				}
 				throw new Error(`unknown URI scheme in ${value.toString()}`);
 			},
@@ -107,8 +109,8 @@ export function newClient(mode: string, languageIds: string[], root: vscode.Uri,
 				// Suppress warnings and errors from workspaces that aren't currently open (shown when fetching
 				// external refs) to cut down on noise.
 				if (!vscode.workspace.textDocuments.some(textDocument => {
-					const textDocumentInfo = vscode.workspace.extractResourceInfo(textDocument.uri);
-					return textDocumentInfo ? root.toString() === textDocumentInfo.workspace : false;
+					const folder = vscode.workspace.findContainingFolder(textDocument.uri);
+					return folder ? root.toString() === folder.toString() : false;
 				})) {
 					return;
 				}

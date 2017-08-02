@@ -52,7 +52,7 @@ export class Workspace implements vscode.Disposable {
 		// work across all of them.
 		if (vscode.workspace.workspaceFolders) {
 			for (const folder of vscode.workspace.workspaceFolders) {
-				this.addRoot(folder.uri);
+				this.addRoot(folder.uri, 'initial workspaceFolders');
 			}
 		}
 
@@ -60,11 +60,11 @@ export class Workspace implements vscode.Disposable {
 		this.toDispose.push(vscode.workspace.onDidChangeWorkspaceFolders(e => {
 			for (const folder of e.added) {
 				if (this.isValidRoot(folder.uri)) {
-					this.addRoot(folder.uri);
+					this.addRoot(folder.uri, 'added to workspaceFolders');
 				}
 			}
 			for (const folder of e.removed) {
-				this.removeRootIfUnused(folder.uri);
+				this.removeRootIfUnused(folder.uri, 'removed from workspaceFolders');
 			}
 		}));
 
@@ -76,7 +76,7 @@ export class Workspace implements vscode.Disposable {
 			}
 			const folder = this.getRootURI(editor.document.uri);
 			if (folder && this.isValidRoot(folder)) {
-				this.addRoot(folder);
+				this.addRoot(folder, 'initial visibleTextEditors');
 			}
 		}
 
@@ -84,27 +84,19 @@ export class Workspace implements vscode.Disposable {
 		vscode.workspace.onDidOpenTextDocument(doc => {
 			const folder = this.getRootURI(doc.uri);
 			if (folder && this.isValidRoot(folder)) {
-				this.addRoot(folder);
+				this.addRoot(folder, 'opened document');
 			}
 		});
 		vscode.workspace.onDidCloseTextDocument(doc => {
 			const folder = this.getRootURI(doc.uri);
 			if (folder) {
-				this.removeRootIfUnused(folder);
+				this.removeRootIfUnused(folder, 'closed document');
 			}
 		});
 	}
 
 	private getRootURI(resource: vscode.Uri): vscode.Uri | undefined {
-		const info = vscode.workspace.extractResourceInfo(resource);
-		if (info && info.workspace) {
-			let root = vscode.Uri.parse(info.workspace);
-			if (info.revisionSpecifier) {
-				root = root.with({ query: info.revisionSpecifier });
-			}
-			return root;
-		}
-		return undefined;
+		return vscode.workspace.findContainingFolder(resource);
 	}
 
 	public getRoot(folder: vscode.Uri): Root | undefined {
@@ -115,17 +107,17 @@ export class Workspace implements vscode.Disposable {
 		return isRemoteResource(folder);
 	}
 
-	public addRoot(folder: vscode.Uri): Root {
+	public addRoot(folder: vscode.Uri, reason?: string): Root {
 		let root = this.roots.get(folder.toString());
 		if (!root) {
-			log.outputChannel.appendLine(`Add LSP root: ${folder.toString()}`);
+			log.outputChannel.appendLine(`Add LSP root: ${folder.toString()} ${reason || ''}`);
 			root = new Root(folder);
 		}
 		this.roots.set(folder.toString(), root);
 		return root;
 	}
 
-	public removeRootIfUnused(folder: vscode.Uri): void {
+	public removeRootIfUnused(folder: vscode.Uri, reason?: string): void {
 		const root = this.roots.get(folder.toString());
 		if (!root) {
 			return;
@@ -134,7 +126,7 @@ export class Workspace implements vscode.Disposable {
 		const isWorkspaceRoot = vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.some(f => f.uri.toString() === folder.toString());
 		const hasOpenDocuments = vscode.workspace.textDocuments.some(doc => root.isInRoot(doc.uri));
 		if (!isWorkspaceRoot && !hasOpenDocuments) {
-			log.outputChannel.appendLine(`Remove LSP root: ${folder.toString()}`);
+			log.outputChannel.appendLine(`Remove LSP root: ${folder.toString()} ${reason || ''}`);
 			this.roots.delete(folder.toString());
 			root.dispose();
 		}

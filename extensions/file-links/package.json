@@ -11,6 +11,7 @@
   "engines": {
     "vscode": "*"
   },
+  "enableProposedApi": true,
   "activationEvents": [
     "onCommand:file-links.goToGitHub",
     "onCommand:file-links.goToImmutableRevision",
