@@ -104,13 +104,13 @@ export function newClient(mode: string, languageIds: string[], root: vscode.Uri,
 				return [];
 			},
 			onShowMessage: (params: ShowMessageParams, next: NotificationHandler<ShowMessageParams>) => {
-				if (vscode.window.activeTextEditor) {
-					const currentInfo = vscode.workspace.extractResourceInfo(vscode.window.activeTextEditor.document.uri);
-					if (currentInfo.workspace !== root.toString()) {
-						// Suppress warnings and errors from other workspaces (shown when fetching external refs) to cut
-						// down on noise.
-						return;
-					}
+				// Suppress warnings and errors from workspaces that aren't currently open (shown when fetching
+				// external refs) to cut down on noise.
+				if (!vscode.workspace.textDocuments.some(textDocument => {
+					const textDocumentInfo = vscode.workspace.extractResourceInfo(textDocument.uri);
+					return textDocumentInfo ? root.toString() === textDocumentInfo.workspace : false;
+				})) {
+					return;
 				}
 				next(params);
 			},
