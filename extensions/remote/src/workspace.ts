@@ -7,7 +7,7 @@
 
 import * as vscode from 'vscode';
 import { RemoteGitRepository, Ref, RefType } from './git';
-import { isRemoteResource, REPO_SCHEME, REPO_VERSION_SCHEME } from './repository';
+import { isRepoResource, REPO_SCHEME, REPO_VERSION_SCHEME } from './repository';
 import * as nls from 'vscode-nls';
 
 const localize = nls.loadMessageBundle();
@@ -100,7 +100,7 @@ export class Workspace implements vscode.Disposable {
 		}
 
 		for (const addedFolder of event.added) {
-			if (isRemoteResource(addedFolder.uri)) {
+			if (isRepoResource(addedFolder.uri)) {
 				this.getRemoteRepository(addedFolder.uri);
 			}
 		}

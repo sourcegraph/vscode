@@ -337,7 +337,7 @@ export function indexOf(path: string, candidate: string, ignoreCase?: boolean): 
 	return path.indexOf(candidate);
 }
 
-const fileLikeSchemes = [Schemas.file, Schemas.remoteRepo, Schemas.repoVersion];
+const fileLikeSchemes = [Schemas.file, Schemas.repo, Schemas.repoVersion];
 
 export function isFileLikeResource(resource: URI | string): boolean {
 	if (typeof resource === 'string') {

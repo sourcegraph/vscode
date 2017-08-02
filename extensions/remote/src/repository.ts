@@ -22,9 +22,9 @@ export const REPO_VERSION_SCHEME = 'repo+version';
 
 /**
  * Reports whether resource is a repo:// or repo+version:// URI (the two URI schemes that
- * refer to remote resources handled by this extension).
+ * refer to repo resources handled by this extension).
  */
-export function isRemoteResource(resource: vscode.Uri): boolean {
+export function isRepoResource(resource: vscode.Uri): boolean {
 	return resource.scheme === REPO_SCHEME || resource.scheme === REPO_VERSION_SCHEME;
 }
 

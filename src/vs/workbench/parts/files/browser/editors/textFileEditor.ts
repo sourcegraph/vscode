@@ -220,7 +220,7 @@ export class TextFileEditor extends BaseTextEditor {
 		const options = super.getConfigurationOverrides();
 
 		// Make remote resources readonly.
-		options.readOnly = this.input && (this.input.getResource().scheme === Schemas.remoteRepo);
+		options.readOnly = this.input && (this.input.getResource().scheme === Schemas.repo);
 
 		return options;
 	}

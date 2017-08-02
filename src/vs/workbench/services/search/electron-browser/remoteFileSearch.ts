@@ -80,7 +80,7 @@ abstract class Engine implements ISearchEngine<IRawFileMatch> {
 
 		const remoteFolders = this.config.folderQueries
 			.map(q => URI.parse(q.folder))
-			.filter(uri => uri.scheme === Schemas.remoteRepo);
+			.filter(uri => uri.scheme === Schemas.repo);
 
 		TPromise.join(
 			remoteFolders.map(folderResource => {

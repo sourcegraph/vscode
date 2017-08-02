@@ -149,8 +149,8 @@ export class RemoteSearchService extends SearchService implements ISearchService
 		this.extendQuery(query);
 
 		// Split out local and external resources
-		const localFolderQueries = query.folderQueries.filter(fq => fq.folder.scheme !== Schemas.remoteRepo);
-		const remoteFolderQueries = query.folderQueries.filter(fq => fq.folder.scheme === Schemas.remoteRepo);
+		const localFolderQueries = query.folderQueries.filter(fq => fq.folder.scheme !== Schemas.repo);
+		const remoteFolderQueries = query.folderQueries.filter(fq => fq.folder.scheme === Schemas.repo);
 
 		return PPromise.join({
 			local: this.localSearch({ ...query, folderQueries: localFolderQueries }),

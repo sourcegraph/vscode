@@ -36,7 +36,7 @@ export namespace Schemas {
 
 	export const https: string = 'https';
 
-	export const remoteRepo: string = 'repo';
+	export const repo: string = 'repo';
 
 	export const repoVersion: string = 'repo+version';
 
