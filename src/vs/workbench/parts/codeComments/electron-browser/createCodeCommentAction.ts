@@ -1,30 +1,30 @@
 /*---------------------------------------------------------------------------------------------
- *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Copyright (c) Sourcegraph. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 'use strict';
 
-import { localize } from 'vs/nls';
 import { TPromise } from 'vs/base/common/winjs.base';
-import { ICodeCommentsService } from 'vs/editor/common/services/codeCommentsService';
 import { ICommonCodeEditor } from 'vs/editor/common/editorCommon';
 import { ServicesAccessor, editorAction, EditorAction } from 'vs/editor/common/editorCommonExtensions';
 import { Range } from 'vs/editor/common/core/range';
+import { CREATE_CODE_COMMENT_ACTION_LABEL, VIEWLET_ID } from 'vs/workbench/parts/codeComments/common/constants';
+import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
+import { ICodeCommentsViewlet } from 'vs/workbench/parts/codeComments/common/codeComments';
 
 /**
- * Editor action that opens UI to create a comment
- * for the current text selection or line.
+ * Editor action that opens the code comments viewlet
+ * to create a new comment for the current text selection or line.
  */
 @editorAction
 export class CreateCodeCommentAction extends EditorAction {
 
 	private static ID = 'workbench.action.createCodeComment';
-	private static LABEL = localize('createCodeCommentActionLabel', "Comment on this code");
 
 	constructor() {
 		super({
 			id: CreateCodeCommentAction.ID,
-			label: CreateCodeCommentAction.LABEL,
+			label: CREATE_CODE_COMMENT_ACTION_LABEL,
 			alias: 'Comment on this code',
 			precondition: null,
 			menuOpts: {
@@ -35,16 +35,15 @@ export class CreateCodeCommentAction extends EditorAction {
 	}
 
 	public async run(accessor: ServicesAccessor, editor: ICommonCodeEditor): TPromise<any> {
-		const codeCommentsService = accessor.get(ICodeCommentsService);
-		const range = this.getCommentRange(editor);
-		const selection = editor.getModel().getValueInRange(range);
-
-		// We don't have a UI for creating comments yet, so just pre-populate some fake content.
+		const viewletService = accessor.get(IViewletService);
 		const file = editor.getModel().uri;
-		const comment = `This is a comment in ${file} at ${range} on text ${selection}`;
-		return new TPromise((complete, error) => {
-			codeCommentsService.createThread(editor.getModel().uri, range, comment).then(complete, error);
-		});
+		const range = this.getCommentRange(editor);
+		viewletService.openViewlet(VIEWLET_ID, true)
+			.then(viewlet => viewlet as ICodeCommentsViewlet)
+			.then(viewlet => {
+				viewlet.createThread(file, range);
+				viewlet.focus();
+			});
 	}
 
 	/**
@@ -58,7 +57,12 @@ export class CreateCodeCommentAction extends EditorAction {
 			// and we don't want a zero width range, so default to the whole line.
 			const model = editor.getModel();
 			const line = start.lineNumber;
-			return new Range(line, model.getLineFirstNonWhitespaceColumn(line), line, model.getLineLastNonWhitespaceColumn(line));
+			const first = model.getLineFirstNonWhitespaceColumn(line);
+			const last = model.getLineLastNonWhitespaceColumn(line);
+			if (first !== last) {
+				return new Range(line, first, line, last);
+			}
+			return new Range(line, 0, line, model.getLineMaxColumn(line));
 		}
 		return selection;
 	}

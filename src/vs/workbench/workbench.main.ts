@@ -39,7 +39,7 @@ import 'vs/workbench/parts/files/browser/files.contribution';
 
 import 'vs/workbench/parts/backup/common/backup.contribution';
 
-// import 'vs/workbench/parts/codeComments/electron-browser/codeComments.contribution';
+import 'vs/workbench/parts/codeComments/electron-browser/codeComments.contribution';
 
 import 'vs/workbench/parts/search/browser/search.contribution';
 import 'vs/workbench/parts/search/browser/searchViewlet'; // can be packaged separately

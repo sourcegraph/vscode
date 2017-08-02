@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------
- *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Copyright (c) Sourcegraph. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 'use strict';
@@ -11,6 +11,8 @@ import { ICodeCommentsService } from 'vs/editor/common/services/codeCommentsServ
 import { ISCMService } from 'vs/workbench/services/scm/common/scm';
 import URI from 'vs/base/common/uri';
 import { isFileLikeResource } from 'vs/platform/files/common/files';
+import { buttonBackground } from 'vs/platform/theme/common/colorRegistry';
+import { IThemeService } from 'vs/platform/theme/common/themeService';
 
 const DECORATION_KEY = 'codeComment';
 
@@ -26,7 +28,8 @@ export class CodeCommentsDecorationRenderer extends Disposable {
 	constructor(
 		@ICodeEditorService private codeEditorService: ICodeEditorService,
 		@ICodeCommentsService private codeCommentsService: ICodeCommentsService,
-		@ISCMService private scmService: ISCMService,
+		@ISCMService scmService: ISCMService,
+		@IThemeService themeService: IThemeService,
 	) {
 		super();
 		this._register(this.codeEditorService.onCodeEditorAdd(editor => {
@@ -40,19 +43,19 @@ export class CodeCommentsDecorationRenderer extends Disposable {
 			}
 		}));
 
-		this.scmService.onDidChangeProvider(e => this.renderDecorations());
+		scmService.onDidChangeProvider(e => this.renderDecorations());
 
 		const gutterIconPath = URI.parse(require.toUrl('./media/comment.svg')).fsPath;
+		const color = themeService.getTheme().getColor(buttonBackground).toString();
 		codeEditorService.registerDecorationType(DECORATION_KEY, {
-			backgroundColor: 'rgba(255, 0, 0, 0.5)',
+			backgroundColor: color,
 			overviewRulerLane: OverviewRulerLane.Full,
-			overviewRulerColor: 'rgba(255, 0, 0, 0.5)',
+			overviewRulerColor: color,
 			gutterIconPath: gutterIconPath,
 			gutterIconSize: 'contain',
 		});
 
-		// TODO: use event or remove it
-		this._register(codeCommentsService.onCommentsDidChange(e => this.renderDecorations()));
+		this._register(codeCommentsService.onCommentsDidChange(() => this.renderDecorations()));
 	}
 
 	public getId(): string {

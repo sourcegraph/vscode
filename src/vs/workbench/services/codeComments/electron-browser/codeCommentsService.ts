@@ -1,12 +1,11 @@
 /*---------------------------------------------------------------------------------------------
- *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Copyright (c) Sourcegraph. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 'use strict';
 
 import { ICodeCommentsService, IThread, CommentsDidChangeEvent } from 'vs/editor/common/services/codeCommentsService';
 import { Range } from 'vs/editor/common/core/range';
-import { Position } from 'vs/editor/common/core/position';
 import Event, { Emitter } from 'vs/base/common/event';
 import { Diff } from 'vs/workbench/services/codeComments/common/diff';
 import { ISCMService } from 'vs/workbench/services/scm/common/scm';
@@ -15,6 +14,18 @@ import URI from 'vs/base/common/uri';
 import { startsWith } from 'vs/base/common/strings';
 import { isFileLikeResource } from 'vs/platform/files/common/files';
 
+let nextId = 0;
+
+/**
+ * Temporary until the server is wired up.
+ */
+function getNextId(): number {
+	const id = nextId;
+	nextId++;
+	return id;
+}
+
+// TODO: sorting, validation (at least one comment per thread)
 export class CodeCommentsService implements ICodeCommentsService {
 	public _serviceBrand: any;
 
@@ -41,10 +52,10 @@ export class CodeCommentsService implements ICodeCommentsService {
 	/**
 	 * See documentation on ICodeCommentsService.
 	 */
-	public createThread(file: URI, range: Range, comment: string): Promise<IThread> {
+	public createThread(file: URI, range: Range, content: string): Promise<IThread> {
 		// TODO: do network request
 		// in the meantime, simulate network request latency
-		return new Promise(resolve => setTimeout(resolve, 100))
+		return new Promise(resolve => setTimeout(resolve, 10))
 			.then(() => {
 				return Promise.all([
 					this.git.getRevisionSHA(file),
@@ -54,17 +65,20 @@ export class CodeCommentsService implements ICodeCommentsService {
 					this.git.getRemoteRepo(file),
 				]);
 			})
-			.then(([revision, userName, userEmail, root, repo]) => {
+			.then(([revision, authorName, authorEmail, root, repo]) => {
 				const relativeFile = this.relativePath(root, file);
 				const thread: IThread = {
+					id: getNextId(),
 					repo,
 					revision,
 					file: relativeFile,
 					range,
 					comments: [{
-						authorEmail: userEmail,
-						authorName: userName,
-						text: comment,
+						id: getNextId(),
+						authorEmail,
+						authorName,
+						content,
+						createdAt: new Date(),
 					}],
 				};
 				const id = this.joinDocumentId(repo, relativeFile);
@@ -76,9 +90,30 @@ export class CodeCommentsService implements ICodeCommentsService {
 				threads.push(thread);
 				this.commentsDidChangeEmitter.fire({
 					file,
+					threads: [thread],
 				});
 				return thread;
 			});
+	}
+
+	/**
+	 * See the documentation on ICommentService.
+	 */
+	public replyToThread(file: URI, thread: IThread, content: string): Promise<IThread> {
+		return Promise.all([
+			this.git.getUserName(file),
+			this.git.getUserEmail(file),
+		]).then(([authorName, authorEmail]) => {
+			thread.comments.push({
+				id: getNextId(),
+				authorEmail,
+				authorName,
+				content,
+				createdAt: new Date(),
+			});
+			this.commentsDidChangeEmitter.fire({ file, threads: [thread] });
+			return thread;
+		});
 	}
 
 	/**
@@ -141,22 +176,6 @@ export class CodeCommentsService implements ICodeCommentsService {
 	}
 
 	/**
-	 * See documentation on ICodeCommentsService.
-	 */
-	public async getThreadsForRange(file: URI, range: Range): Promise<IThread[]> {
-		const threads = await this.getThreads(file);
-		return threads.filter(thread => thread.range.intersectRanges(range));
-	}
-
-	/**
-	 * See documentation on ICodeCommentsService.
-	 */
-	public async getThreadsForPosition(file: URI, position: Position): Promise<IThread[]> {
-		const threads = await this.getThreads(file);
-		return threads.filter(thread => thread.range.containsPosition(position));
-	}
-
-	/**
 	 * Returns the subset of threads that are attached to the file at its current revision.
 	 */
 	private async adjustThreadRanges(file: URI, threads: IThread[]): Promise<IThread[]> {
@@ -188,10 +207,15 @@ export class CodeCommentsService implements ICodeCommentsService {
 				adjustedThreads.push({ ...thread, range });
 			}
 		}
-		return adjustedThreads;
+		// TODO: remove sort once server does this
+		return adjustedThreads.sort(mostRecentCommentTimeDescending);
 	}
 }
 
 function uniqueFilter<T>(value: T, index: number, values: T[]): boolean {
 	return values.indexOf(value) === index;
+}
+
+function mostRecentCommentTimeDescending(left: IThread, right: IThread): number {
+	return right.comments[0].createdAt.getTime() - left.comments[0].createdAt.getTime();
 }

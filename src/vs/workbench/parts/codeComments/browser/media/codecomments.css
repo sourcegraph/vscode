@@ -1,0 +1,81 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Sourcegraph. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.monaco-workbench > .activitybar > .content .monaco-action-bar .action-label.codeComments {
+	-webkit-mask: url('comment.svg') no-repeat 50% 50%;
+	-webkit-mask-size: 22px;
+}
+
+.monaco-workbench .recentThreads {
+	background: url('close.svg') center center no-repeat;
+}
+
+.vs-dark .monaco-workbench .recentThreads,
+.hc-black .monaco-workbench .recentThreads {
+	background: url('close-inverse.svg') center center no-repeat;
+}
+
+.codeComments {
+	word-wrap: break-word;
+	display: flex;
+	flex-direction: column;
+}
+
+.codeComments .empty {
+	padding: 16px;
+}
+
+.codeComments .create {
+	display: flex;
+	flex-direction: column;
+}
+
+.codeComments .monaco-inputbox > .wrapper > .input,
+.codeComments .monaco-inputbox > .wrapper > .mirror {
+	min-height: 90px;
+	padding: 8px 12px;
+}
+
+.codeComments .create .submit {
+	align-self: flex-end;
+	margin-top: 16px;
+}
+
+.codeComments .create .submit .monaco-button {
+	padding: 4px 12px;
+	border-radius: 4px;
+}
+
+.codeComments .leftRight {
+	display: flex;
+}
+
+.codeComments .left {
+	flex-grow: 1;
+}
+
+.codeComments .right {
+	flex-shrink: 0;
+}
+
+.codeComments .comment .content,
+.codeComments .thread .content {
+	white-space: pre-wrap;
+	margin-top: 8px;
+}
+
+.codeComments .thread, .codeComments .comment, .codeComments .create {
+	padding: 16px;
+	border-top: 1px solid;
+}
+
+.codeComments .scrollContainer {
+	flex-grow: 0;
+	flex-shrink: 1;
+}
+
+.codeComments .scrollContainer .list {
+	position: relative;
+}
