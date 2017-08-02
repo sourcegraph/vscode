@@ -10,9 +10,9 @@ import { Revisioned, isRepoResource } from './repository';
 import { requestGraphQL } from './util';
 
 /**
- * Models a file system that exists on a remote Git repository at a specific revision.
+ * Models a file system that exists in a Git repository at a specific revision.
  */
-export class RemoteFileSystem implements vscode.FileSystemProvider, vscode.Disposable, Revisioned {
+export class RepoFileSystem implements vscode.FileSystemProvider, vscode.Disposable, Revisioned {
 
 	private _onDidChange = new vscode.EventEmitter<vscode.Uri>();
 	public get onDidChange(): vscode.Event<vscode.Uri> { return this._onDidChange.event; }
@@ -52,7 +52,7 @@ export class RemoteFileSystem implements vscode.FileSystemProvider, vscode.Dispo
 	}
 
 	writeContents(resource: vscode.Uri, value: string): void {
-		throw new Error('not implemented: RemoteFileSystem writeContents');
+		throw new Error('not implemented: RepoFileSystem writeContents');
 	}
 
 	dispose(): void {
@@ -83,7 +83,7 @@ function listAllFiles(repo: string, revision: string): Thenable<string[]> {
 			}
 		}`,
 		{ repo, revision },
-		'remote/fileSystem/listAllFiles',
+		'repo/fileSystem/listAllFiles',
 	).then(root => root.repository!.commit.commit!.tree!.files.map((file: any) => file.name));
 }
 
@@ -107,7 +107,7 @@ function getFileContents(repo: string, revision: string, path: string): Thenable
 			}
 		}`,
 		{ repo, revision, path },
-		'remote/fileSystem/getFileContents',
+		'repo/fileSystem/getFileContents',
 	)
 		.then(root => {
 			if (!root || !root.repository || !root.repository.commit.commit) {

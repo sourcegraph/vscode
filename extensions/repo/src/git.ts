@@ -5,7 +5,7 @@
 'use strict';
 
 import * as vscode from 'vscode';
-import { RemoteFileSystem } from './fileSystem';
+import { RepoFileSystem } from './fileSystem';
 import { Revisioned, Repository, REPO_SCHEME } from './repository';
 import { requestGraphQL } from './util';
 import * as nls from 'vscode-nls';
@@ -33,7 +33,7 @@ interface ISerializedRepositoryState {
 	lastRawRevisionSpecifier?: string;
 }
 
-export class RemoteGitRepository implements Repository, vscode.Disposable {
+export class GitRepository implements Repository, vscode.Disposable {
 
 	public readonly fileSystem: vscode.FileSystemProvider & Revisioned;
 	public readonly sourceControl: vscode.SourceControl;
@@ -83,7 +83,7 @@ export class RemoteGitRepository implements Repository, vscode.Disposable {
 		}
 		this.revision = revision;
 
-		const fileSystem = new RemoteFileSystem(repo, this.sourceControl.revision!.rawSpecifier!);
+		const fileSystem = new RepoFileSystem(repo, this.sourceControl.revision!.rawSpecifier!);
 		this.toDispose.push(fileSystem);
 		this.toRevision.push(fileSystem);
 		this.fileSystem = fileSystem;
@@ -175,7 +175,7 @@ export class RemoteGitRepository implements Repository, vscode.Disposable {
 				}
 			}`,
 			{ repo: this.repo, revision: revision.specifier },
-			'remote/repository/resolveRevisionSpecifier',
+			'repo/repository/resolveRevisionSpecifier',
 		).then(root => {
 			if (!root || !root.repository) {
 				throw new Error(localize('repositoryNotFound', "Repository not found: {0}", this.repo));
@@ -226,7 +226,7 @@ export class RemoteGitRepository implements Repository, vscode.Disposable {
 				}
 			}`,
 			{ repo: this.repo },
-			'remote/repository/listRefs',
+			'repo/repository/listRefs',
 		).then(root => {
 			const refs: Ref[] = [];
 			if (root.repository) {
@@ -260,7 +260,7 @@ export class RemoteGitRepository implements Repository, vscode.Disposable {
 				}
 			}`,
 			{ repo: this.repo, params: args },
-			'remote/repository/gitCmdRaw',
+			'repo/repository/gitCmdRaw',
 		).then(root => root.repository.gitCmdRaw || '');
 	}
 

@@ -12,10 +12,10 @@ import { MultiWorkspaceProvider } from './multiWorkspace';
 import { FuzzyDefinitionProvider } from './fuzzyDefinition';
 
 /**
- * IRemoteExtension is the public API of the 'remote' extension.
+ * IRepoExtension is the public API of the 'repo' extension.
  */
-export interface IRemoteExtension {
-	getOrCreateSourceControl(remoteRepository: vscode.Uri): vscode.SourceControl | undefined;
+export interface IRepoExtension {
+	getOrCreateSourceControl(repo: vscode.Uri): vscode.SourceControl | undefined;
 }
 
 /**
@@ -67,7 +67,7 @@ export class Root {
 	) {
 		this.sourceControl = vscode.scm.getSourceControlForResource(resource);
 		if (!this.sourceControl) {
-			vscode.extensions.getExtension<IRemoteExtension>('sourcegraph.remote').activate().then((ext => {
+			vscode.extensions.getExtension<IRepoExtension>('sourcegraph.repo').activate().then((ext => {
 				this.sourceControl = ext.getOrCreateSourceControl(resource);
 				if (this.sourceControl) {
 					this.toDispose.push(this.sourceControl);

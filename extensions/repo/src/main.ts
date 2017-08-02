@@ -7,17 +7,17 @@
 import * as vscode from 'vscode';
 import { Workspace } from './workspace';
 
-export interface IRemoteExtension {
-	getOrCreateSourceControl(remoteRepository: vscode.Uri): vscode.SourceControl | undefined;
+export interface IRepoExtension {
+	getOrCreateSourceControl(repo: vscode.Uri): vscode.SourceControl | undefined;
 }
 
-export function activate(context: vscode.ExtensionContext): IRemoteExtension {
+export function activate(context: vscode.ExtensionContext): IRepoExtension {
 	const workspace = new Workspace(context.workspaceState);
 	context.subscriptions.push(workspace);
 
 	return {
-		getOrCreateSourceControl: (remoteRepository: vscode.Uri): vscode.SourceControl | undefined => {
-			const repo = workspace.getRemoteRepository(remoteRepository);
+		getOrCreateSourceControl: (repoResource: vscode.Uri): vscode.SourceControl | undefined => {
+			const repo = workspace.getRepository(repoResource);
 			return repo ? repo.sourceControl : undefined;
 		},
 	};

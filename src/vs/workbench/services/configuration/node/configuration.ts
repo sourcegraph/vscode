@@ -488,8 +488,8 @@ export class WorkspaceServiceImpl extends WorkspaceService {
 
 	private initializeSingleFolderWorkspace(): TPromise<void> {
 		if (this.folderPath.scheme === Schemas.repo) {
-			// Don't stat folderPath because it is a remote repo:// URI. Use a random ID
-			// instead of ctime and don't pass ctime to LegacyWorkspace.
+			// Don't stat folderPath because it is a repo:// URI. Use a random ID instead
+			// of ctime and don't pass ctime to LegacyWorkspace.
 			//
 			// TODO figure out whether we can avoid this by always using
 			// initializeMultiFolderWorkspace()

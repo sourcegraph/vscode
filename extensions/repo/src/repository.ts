@@ -8,7 +8,7 @@
 import * as vscode from 'vscode';
 
 /**
- * The URI scheme for a remote repository handled by this extension.
+ * The URI scheme for a repository handled by this extension.
  */
 export const REPO_SCHEME = 'repo';
 
@@ -46,7 +46,7 @@ export interface Repository {
 
 	/**
 	 * Called by its parent (Workspace) to render information about this repository in the
-	 * global remote SCM status bar item.
+	 * global SCM status bar item.
 	 */
 	renderStatusBarItem(statusBarItem: vscode.StatusBarItem): void;
 }

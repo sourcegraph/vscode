@@ -6,16 +6,16 @@
 'use strict';
 
 import * as vscode from 'vscode';
-import { RemoteGitRepository, Ref, RefType } from './git';
+import { GitRepository, Ref, RefType } from './git';
 import { isRepoResource, REPO_SCHEME, REPO_VERSION_SCHEME } from './repository';
 import * as nls from 'vscode-nls';
 
 const localize = nls.loadMessageBundle();
 
-export const SWITCH_REVISION_COMMAND_ID = 'remote.repository.action.switchRevision';
+export const SWITCH_REVISION_COMMAND_ID = 'repo.action.switchRevision';
 
 /**
- * Manages all of the remote repositories inside of a workspace.
+ * Manages all of the repositories inside of a workspace.
  */
 export class Workspace implements vscode.Disposable {
 
@@ -23,7 +23,7 @@ export class Workspace implements vscode.Disposable {
 	 * All known repositories in the workspace. The keys are the URI of the repository's
 	 * root (e.g., repo://github.com/gorilla/mux).
 	 */
-	private repositories = new Map<string, RemoteGitRepository>();
+	private repositories = new Map<string, GitRepository>();
 
 	private statusBarItem: vscode.StatusBarItem;
 
@@ -60,7 +60,7 @@ export class Workspace implements vscode.Disposable {
 		vscode.window.onDidChangeActiveTextEditor(editor => {
 			let visible = false;
 			if (editor) {
-				const repo = this.getRemoteRepository(editor.document.uri);
+				const repo = this.getRepository(editor.document.uri);
 
 				if (this.activeRepositoryListener && repo !== this.activeRepositoryListener) {
 					this.activeRepositoryListener.dispose();
@@ -74,7 +74,7 @@ export class Workspace implements vscode.Disposable {
 					// Listen for other changes for as long as this is the active
 					// repository.
 					this.activeRepositoryListener = repo.onDidChangeStatus(() => {
-						const stillActive = vscode.window.activeTextEditor && this.getRemoteRepository(vscode.window.activeTextEditor.document.uri) === repo;
+						const stillActive = vscode.window.activeTextEditor && this.getRepository(vscode.window.activeTextEditor.document.uri) === repo;
 						if (stillActive) {
 							repo.renderStatusBarItem(this.statusBarItem);
 						}
@@ -101,12 +101,12 @@ export class Workspace implements vscode.Disposable {
 
 		for (const addedFolder of event.added) {
 			if (isRepoResource(addedFolder.uri)) {
-				this.getRemoteRepository(addedFolder.uri);
+				this.getRepository(addedFolder.uri);
 			}
 		}
 	};
 
-	public getRemoteRepository(resource: vscode.Uri): RemoteGitRepository | undefined {
+	public getRepository(resource: vscode.Uri): GitRepository | undefined {
 		const info = vscode.workspace.extractResourceInfo(resource);
 		if (!info) {
 			return undefined;
@@ -118,7 +118,7 @@ export class Workspace implements vscode.Disposable {
 			folder = folder.with({ query: info.revisionSpecifier });
 		}
 		if (!this.repositories.has(folder.toString())) {
-			const repo = new RemoteGitRepository(folder, repoName, this.workspaceState);
+			const repo = new GitRepository(folder, repoName, this.workspaceState);
 			this.repositories.set(folder.toString(), repo);
 
 			const forwardChanges = repo.fileSystem.onDidChange(e => this.onDidFileSystemChange.fire(e));
@@ -143,13 +143,13 @@ export class Workspace implements vscode.Disposable {
 		const provider = {
 			onDidChange: this.onDidFileSystemChange.event,
 			resolveFile: (resource: vscode.Uri, options?: vscode.ResolveFileOptions): Thenable<vscode.FileStat | null> => {
-				return this.getRemoteRepository(resource)!.fileSystem.resolveFile(resource, options);
+				return this.getRepository(resource)!.fileSystem.resolveFile(resource, options);
 			},
 			resolveContents: (resource: vscode.Uri): string | Thenable<string> => {
-				return this.getRemoteRepository(resource)!.fileSystem.resolveContents(resource);
+				return this.getRepository(resource)!.fileSystem.resolveContents(resource);
 			},
 			writeContents: (resource: vscode.Uri, value: string): void => {
-				this.getRemoteRepository(resource)!.fileSystem.writeContents(resource, value);
+				this.getRepository(resource)!.fileSystem.writeContents(resource, value);
 			},
 		};
 		this.toDispose.push(vscode.workspace.registerFileSystemProvider(REPO_SCHEME, provider));
@@ -163,7 +163,7 @@ export class Workspace implements vscode.Disposable {
 		this.toDispose.push(vscode.workspace.registerTextDocumentContentProvider(REPO_VERSION_SCHEME, {
 			onDidChange: this.onDidFileSystemChange.event,
 			provideTextDocumentContent: (uri: vscode.Uri, token: vscode.CancellationToken): vscode.ProviderResult<string> => {
-				return this.getRemoteRepository(uri)!.fileSystem.resolveContents(uri);
+				return this.getRepository(uri)!.fileSystem.resolveContents(uri);
 			},
 		}));
 	}
