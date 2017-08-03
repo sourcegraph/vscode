@@ -106,7 +106,7 @@ export class SymbolOutlineProvider implements TreeDataProvider<SymbolNode> {
 			}
 		});
 		workspace.onDidChangeTextDocument(event => {
-			if (!event.document.isDirty && event.document === this.editor.document) {
+			if (!event.document.isDirty && this.editor && event.document === this.editor.document) {
 				this.refresh();
 			}
 		});
