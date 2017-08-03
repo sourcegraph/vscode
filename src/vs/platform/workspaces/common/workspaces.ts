@@ -48,6 +48,8 @@ export interface IWorkspacesMainService extends IWorkspacesService {
 	onWorkspaceSaved: Event<IWorkspaceSavedEvent>;
 	onWorkspaceDeleted: Event<IWorkspaceIdentifier>;
 
+	createUntitledWorkspaceSync(): IWorkspaceIdentifier;
+
 	resolveWorkspaceSync(path: string): IStoredWorkspace;
 	isUntitledWorkspace(workspace: IWorkspaceIdentifier): boolean;
 

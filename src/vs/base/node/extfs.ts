@@ -75,6 +75,22 @@ export function mkdirp(path: string, mode: number, callback: (error: Error) => v
 	});
 }
 
+export function mkdirpSync(path: string, mode?: number): void {
+	try {
+		fs.mkdirSync(path, mode);
+	} catch (err) {
+		switch (err.code) {
+			case 'ENOTDIR':
+				throw new Error('"' + path + '" is not a directory.');
+			case 'EEXIST':
+				return; // nothing to do
+			case 'ENOENT':
+				mkdirpSync(paths.dirname(path), mode);
+				return;
+		}
+	}
+}
+
 function isDirectory(path: string, callback: (error: Error, isDirectory?: boolean) => void): void {
 	fs.stat(path, (error, stat) => {
 		if (error) { return callback(error); }

@@ -11,9 +11,9 @@ import { isParent } from "vs/platform/files/common/files";
 import { IEnvironmentService } from "vs/platform/environment/common/environment";
 import { extname, join, dirname } from "path";
 import { mkdirp, writeFile } from "vs/base/node/pfs";
-import { readFileSync } from "fs";
+import { readFileSync, writeFileSync } from "fs";
 import { isLinux } from "vs/base/common/platform";
-import { copy, delSync, readdirSync } from "vs/base/node/extfs";
+import { copy, delSync, readdirSync, mkdirpSync } from "vs/base/node/extfs";
 import { nfcall } from "vs/base/common/async";
 import Event, { Emitter } from "vs/base/common/event";
 import { ILogService } from "vs/platform/log/common/log";
@@ -45,6 +45,24 @@ export class WorkspacesMainService implements IWorkspacesMainService {
 
 	public get onWorkspaceDeleted(): Event<IWorkspaceIdentifier> {
 		return this._onWorkspaceDeleted.event;
+	}
+
+	public createUntitledWorkspaceSync(): IWorkspaceIdentifier {
+		const workspaceId = this.nextWorkspaceId();
+		const workspaceConfigFolder = join(this.workspacesHome, workspaceId);
+		const workspaceConfigPath = join(workspaceConfigFolder, UNTITLED_WORKSPACE_NAME);
+
+		mkdirpSync(workspaceConfigFolder);
+		const storedWorkspace: IStoredWorkspace = {
+			id: workspaceId,
+			folders: [],
+		};
+
+		writeFileSync(workspaceConfigPath, JSON.stringify(storedWorkspace, null, '\t'));
+		return {
+			id: workspaceId,
+			configPath: workspaceConfigPath
+		};
 	}
 
 	public resolveWorkspaceSync(path: string): IStoredWorkspace {

@@ -954,6 +954,12 @@ export class WindowsManager implements IWindowsMainService {
 		configuration.filesToDiff = options.filesToDiff;
 		configuration.nodeCachedDataDir = this.environmentService.nodeCachedDataDir;
 
+		// Force open in multi-root workspace (prevent opening in non-multi-root
+		// workspace).
+		if (!configuration.workspace) {
+			configuration.workspace = this.workspacesService.createUntitledWorkspaceSync();
+		}
+
 		// if we know the backup folder upfront (for empty windows to restore), we can set it
 		// directly here which helps for restoring UI state associated with that window.
 		// For all other cases we first call into registerEmptyWindowBackupSync() to set it before

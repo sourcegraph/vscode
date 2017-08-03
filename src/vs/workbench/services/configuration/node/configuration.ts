@@ -436,12 +436,14 @@ export class WorkspaceServiceImpl extends WorkspaceService {
 		return this.workspaceConfiguration.load(this.workspaceConfigPath)
 			.then(() => {
 				const workspaceConfigurationModel = this.workspaceConfiguration.workspaceConfigurationModel;
-				if (!workspaceConfigurationModel.id || !workspaceConfigurationModel.folders.length) {
+				if (!workspaceConfigurationModel.id || !workspaceConfigurationModel.folders) {
 					return TPromise.wrapError<void>(new Error('Invalid workspace configuraton file ' + this.workspaceConfigPath));
 				}
 				const workspaceName = getWorkspaceLabel({ id: workspaceConfigurationModel.id, configPath: this.workspaceConfigPath.fsPath }, this.environmentService);
 				this.workspace = new Workspace(workspaceConfigurationModel.id, workspaceName, workspaceConfigurationModel.folders, this.workspaceConfigPath);
-				this.legacyWorkspace = new LegacyWorkspace(this.workspace.roots[0]);
+				if (this.workspace.roots.length) {
+					this.legacyWorkspace = new LegacyWorkspace(this.workspace.roots[0]);
+				}
 				this._register(this.workspaceConfiguration.onDidUpdateConfiguration(() => this.onWorkspaceConfigurationChanged()));
 				return null;
 			});
@@ -593,7 +595,7 @@ export class WorkspaceServiceImpl extends WorkspaceService {
 	}
 
 	protected triggerConfigurationChange(): void {
-		this._onDidUpdateConfiguration.fire({ source: ConfigurationSource.Workspace, sourceConfig: this._configuration.getFolderConfigurationModel(this.workspace.roots[0]).contents });
+		this._onDidUpdateConfiguration.fire({ source: ConfigurationSource.Workspace, sourceConfig: this.workspace.roots[0] ? this._configuration.getFolderConfigurationModel(this.workspace.roots[0]).contents : void 0 });
 	}
 }
 
