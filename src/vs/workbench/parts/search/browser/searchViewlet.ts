@@ -959,7 +959,18 @@ export class SearchViewlet extends Viewlet {
 		// Allow subclass to modify list of folder resources without affecting ContextService
 		const folderResources = (this.contextService.hasWorkspace() ? this.contextService.getWorkspace().roots : []).concat();
 		this.onQueryChangedCreate(content, folderResources, options);
-		const query = this.queryBuilder.text(content, folderResources, options);
+
+		const onQueryValidationError = (err: Error) => {
+			this.searchWidget.searchInput.showMessage({ content: err.message, type: MessageType.ERROR });
+			this.viewModel.searchResult.clear();
+		};
+
+		let query: ISearchQuery;
+		try {
+			query = this.queryBuilder.text(content, folderResources, options);
+		} catch (err) {
+			onQueryValidationError(err);
+		}
 
 		this.validateQuery(query).then(() => {
 			this.onQueryTriggered(query, excludePatternText, includePatternText);
@@ -967,9 +978,7 @@ export class SearchViewlet extends Viewlet {
 			if (!preserveFocus) {
 				this.searchWidget.focus(false); // focus back to input field
 			}
-		}, (err: Error) => {
-			this.searchWidget.searchInput.showMessage({ content: err.message, type: MessageType.ERROR });
-		});
+		}, onQueryValidationError);
 	}
 
 	private validateQuery(query: ISearchQuery): TPromise<void> {
@@ -999,6 +1008,9 @@ export class SearchViewlet extends Viewlet {
 	protected onQueryChangedCreate(contentPattern: IPatternInfo, folderResources: URI[], options: IQueryOptions): void { }
 
 	private onQueryTriggered(query: ISearchQuery, excludePatternText: string, includePatternText: string): void {
+		this.inputPatternExcludes.onSearchSubmit();
+		this.inputPatternIncludes.onSearchSubmit();
+
 		this.viewModel.cancelSearch();
 
 		// Progress total is 100.0% for more progress bar granularity

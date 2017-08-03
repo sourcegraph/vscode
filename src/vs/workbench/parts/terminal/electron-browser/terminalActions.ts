@@ -619,11 +619,12 @@ export class RenameTerminalAction extends Action {
 	}
 
 	public run(terminal?: TerminalEntry): TPromise<any> {
-		const terminalInstance = terminal ? this.terminalService.getInstanceFromId(parseInt(terminal.getLabel().split(':')[0], 10)) : this.terminalService.getActiveInstance();
+		const terminalInstance = terminal ? this.terminalService.getInstanceFromIndex(parseInt(terminal.getLabel().split(':')[0], 10) - 1) : this.terminalService.getActiveInstance();
 		if (!terminalInstance) {
 			return TPromise.as(void 0);
 		}
 		return this.quickOpenService.input({
+			value: terminalInstance.title,
 			prompt: nls.localize('workbench.action.terminal.rename.prompt', "Enter terminal name"),
 		}).then(name => {
 			if (name) {

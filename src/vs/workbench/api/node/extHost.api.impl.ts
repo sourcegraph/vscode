@@ -519,7 +519,7 @@ export function createApiFactory(
 		};
 
 
-		return {
+		const api: typeof vscode = {
 			version: pkg.version,
 			// namespaces
 			commands,
@@ -530,11 +530,7 @@ export function createApiFactory(
 			workspace,
 			scm,
 			debug,
-			get credentials() {
-				return proposedApiFunction(extension, () => {
-					return credentials;
-				})();
-			},
+			credentials,
 			// types
 			CancellationTokenSource: CancellationTokenSource,
 			CodeLens: extHostTypes.CodeLens,
@@ -588,6 +584,10 @@ export function createApiFactory(
 			Task: extHostTypes.Task,
 			ConfigurationTarget: extHostTypes.ConfigurationTarget
 		};
+		if (!extension.enableProposedApi) {
+			delete api.credentials; // Instead of error to avoid #31854
+		}
+		return api;
 	};
 }
 

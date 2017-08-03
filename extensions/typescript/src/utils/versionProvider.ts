@@ -15,17 +15,17 @@ import API from './api';
 
 
 export class TypeScriptVersion {
-	public readonly label: string;
-
 	constructor(
 		public readonly path: string,
-		label?: string
-	) {
-		this.label = label || path;
-	}
+		private readonly _pathLabel?: string
+	) { }
 
 	public get tsServerPath(): string {
 		return path.join(this.path, 'tsserver.js');
+	}
+
+	public get pathLabel(): string {
+		return typeof this._pathLabel === 'undefined' ? this.path : this._pathLabel;
 	}
 
 	public get isValid(): boolean {
@@ -49,7 +49,8 @@ export class TypeScriptVersion {
 
 	public get versionString(): string {
 		const version = this.version;
-		return version ? version.versionString : this.path;
+		return version ? version.versionString : localize(
+			'couldNotLoadTsVersion', 'Could not load the TypeScript version at this path');
 	}
 
 	private getTypeScriptVersion(serverPath: string): API | undefined {
@@ -119,13 +120,9 @@ export class TypeScriptVersionProvider {
 	}
 
 	public get localVersions(): TypeScriptVersion[] {
-		const tsdkVersions = this.localTsdkVersions;
-		if (tsdkVersions && tsdkVersions.length) {
-			return [tsdkVersions[0]];
-		}
-
+		const allVersions = this.localTsdkVersions.concat(this.localNodeModulesVersions);
 		const paths = new Set<string>();
-		return this.localNodeModulesVersions.filter(x => {
+		return allVersions.filter(x => {
 			if (paths.has(x.path)) {
 				return false;
 			}
@@ -136,7 +133,9 @@ export class TypeScriptVersionProvider {
 
 	public get bundledVersion(): TypeScriptVersion {
 		try {
-			const bundledVersion = new TypeScriptVersion(path.dirname(require.resolve('typescript/lib/tsserver.js')));
+			const bundledVersion = new TypeScriptVersion(
+				path.dirname(require.resolve('typescript/lib/tsserver.js')),
+				'');
 			if (bundledVersion.isValid) {
 				return bundledVersion;
 			}
@@ -145,7 +144,7 @@ export class TypeScriptVersionProvider {
 		}
 		window.showErrorMessage(localize(
 			'noBundledServerFound',
-			'VSCode\'s tsserver was deleted by another application such as a misbehaving virus detection tool. Please reinstall VS Code.'));
+			'VS Code\'s tsserver was deleted by another application such as a misbehaving virus detection tool. Please reinstall VS Code.'));
 		throw new Error('Could not find bundled tsserver.js');
 	}
 

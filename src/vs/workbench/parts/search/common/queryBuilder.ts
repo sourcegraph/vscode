@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 'use strict';
 
-// import nls = require('vs/nls');
+import nls = require('vs/nls');
 import * as arrays from 'vs/base/common/arrays';
 import * as objects from 'vs/base/common/objects';
 import * as collections from 'vs/base/common/collections';
@@ -13,7 +13,7 @@ import * as paths from 'vs/base/common/paths';
 import * as strings from 'vs/base/common/strings';
 import uri from 'vs/base/common/uri';
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
-import { IPatternInfo, IQueryOptions, IFolderQuery, ISearchQuery, QueryType, ISearchConfiguration, getExcludes } from 'vs/platform/search/common/search';
+import { IPatternInfo, IQueryOptions, IFolderQuery, ISearchQuery, QueryType, ISearchConfiguration, getExcludes, pathIncludedInQuery } from 'vs/platform/search/common/search';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 
 export interface ISearchPathPattern {
@@ -60,35 +60,11 @@ export class QueryBuilder {
 			return folderConfig.search.useRipgrep;
 		});
 
-		// Filter extraFileResources against global include/exclude patterns - they are already expected to not belong to a workspace
-		let extraFileResources = options.extraFileResources && options.extraFileResources.filter(extraFile => {
-			if (excludePattern && glob.match(excludePattern, extraFile.fsPath)) {
-				return false;
-			}
-
-			if (includePattern && !glob.match(includePattern, extraFile.fsPath)) {
-				return false;
-			}
-
-			// If searchPaths are being used, the extra file must be in a subfolder and match the pattern, if present
-			if (searchPaths) {
-				return searchPaths.every(searchPath => {
-					if (paths.isEqualOrParent(extraFile.fsPath, searchPath.searchPath.fsPath)) {
-						return !searchPath.pattern || glob.match(searchPath.pattern, extraFile.fsPath);
-					} else {
-						return false;
-					}
-				});
-			}
-
-			return true;
-		});
-		extraFileResources = extraFileResources && extraFileResources.length ? extraFileResources : undefined;
-
-		return {
+		const query = <ISearchQuery>{
 			type,
 			folderQueries,
-			extraFileResources,
+			usingSearchPaths: !!(searchPaths && searchPaths.length),
+			extraFileResources: options.extraFileResources,
 			filePattern: options.filePattern,
 			excludePattern,
 			includePattern,
@@ -100,6 +76,12 @@ export class QueryBuilder {
 			disregardIgnoreFiles: options.disregardIgnoreFiles,
 			disregardExcludeSettings: options.disregardExcludeSettings
 		};
+
+		// Filter extraFileResources against global include/exclude patterns - they are already expected to not belong to a workspace
+		let extraFileResources = options.extraFileResources && options.extraFileResources.filter(extraFile => pathIncludedInQuery(query, extraFile.fsPath));
+		query.extraFileResources = extraFileResources && extraFileResources.length ? extraFileResources : undefined;
+
+		return query;
 	}
 
 	/**
@@ -111,7 +93,7 @@ export class QueryBuilder {
 	public parseSearchPaths(pattern: string): ISearchPathsResult {
 		const isSearchPath = (segment: string) => {
 			// A segment is a search path if it is an absolute path or starts with ./
-			return paths.isAbsolute(segment) || strings.startsWith(segment, './');
+			return paths.isAbsolute(segment) || strings.startsWith(segment, './') || strings.startsWith(segment, '.\\');
 		};
 
 		const segments = splitGlobPattern(pattern);
@@ -236,7 +218,7 @@ export class QueryBuilder {
 		} else if (searchPath === './') {
 			return []; // ./ or ./**/foo makes sense for single-folder but not multi-folder workspaces
 		} else {
-			const relativeSearchPathMatch = searchPath.match(/\.\/([^\/]+)(\/.+)?/);
+			const relativeSearchPathMatch = searchPath.match(/\.[\/\\]([^\/\\]+)([\/\\].+)?/);
 			if (relativeSearchPathMatch) {
 				const searchPathRoot = relativeSearchPathMatch[1];
 				const matchingRoots = workspace.roots.filter(root => paths.basename(root.fsPath) === searchPathRoot);
@@ -247,7 +229,9 @@ export class QueryBuilder {
 							root.fsPath;
 					});
 				} else {
-					// No root folder with name, ignore
+					// No root folder with name
+					const searchPathNotFoundError = nls.localize('search.noWorkspaceWithName', "No folder in workspace with name: {0}", searchPathRoot);
+					throw new Error(searchPathNotFoundError);
 				}
 			} else {
 				// Malformed ./ search path, ignore
