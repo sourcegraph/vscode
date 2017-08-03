@@ -26,6 +26,17 @@ gulp.task('watch-client-build', ['clean-client-build'], compilation.watchTask('o
 // Default
 gulp.task('default', ['compile']);
 
+// Sourcegraph graphql interfaces
+const gopath = process.env.GOPATH;
+const graphqlInterfaces = gopath ? gopath.split(path.delimiter).map(dir => dir + '/src/sourcegraph.com/sourcegraph/sourcegraph/client/graphqlInterfaces.gen.d.ts') : [];
+gulp.task('copy-graphql', () => {
+	gulp.src(graphqlInterfaces)
+		.pipe(gulp.dest('src/typings'));
+});
+gulp.task('watch-graphql', ['copy-graphql'], () => {
+	gulp.watch(graphqlInterfaces, ['copy-graphql']);
+});
+
 // All
 gulp.task('clean', ['clean-client', 'clean-extensions']);
 gulp.task('compile', ['compile-client', 'compile-extensions']);
