@@ -8,6 +8,7 @@ import * as vscode from 'vscode';
 import { Workspace } from './workspace';
 import { IRepoExtension, IRepository } from './api';
 import { toRelativePath } from './util';
+import { isRepoResource } from './repository';
 
 export function activate(context: vscode.ExtensionContext): IRepoExtension {
 	const workspace = new Workspace(context.workspaceState);
@@ -26,5 +27,6 @@ export function activate(context: vscode.ExtensionContext): IRepoExtension {
 			return repo.resolvedRevision;
 		},
 		toRelativePath,
+		isRepoResource,
 	};
 }

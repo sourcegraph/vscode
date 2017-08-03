@@ -8,6 +8,7 @@
 import * as vscode from 'vscode';
 import { Root } from './root';
 import * as log from './log';
+import { repoExtension } from './main';
 
 /**
  * Manages all of the LSP roots inside of a workspace. The workspace roots and the LSP
@@ -52,14 +53,16 @@ export class Workspace implements vscode.Disposable {
 		// work across all of them.
 		if (vscode.workspace.workspaceFolders) {
 			for (const folder of vscode.workspace.workspaceFolders) {
-				this.addRoot(folder.uri, 'initial workspaceFolders');
+				if (repoExtension.isRepoResource(folder.uri)) {
+					this.addRoot(folder.uri, 'initial workspaceFolders');
+				}
 			}
 		}
 
 		// Add/remove LSP roots when workspace roots change.
 		this.toDispose.push(vscode.workspace.onDidChangeWorkspaceFolders(e => {
 			for (const folder of e.added) {
-				if (this.isValidRoot(folder.uri)) {
+				if (repoExtension.isRepoResource(folder.uri)) {
 					this.addRoot(folder.uri, 'added to workspaceFolders');
 				}
 			}
@@ -75,7 +78,7 @@ export class Workspace implements vscode.Disposable {
 				continue;
 			}
 			const folder = this.getRootURI(editor.document.uri);
-			if (folder && this.isValidRoot(folder)) {
+			if (folder && repoExtension.isRepoResource(folder)) {
 				this.addRoot(folder, 'initial visibleTextEditors');
 			}
 		}
@@ -91,7 +94,7 @@ export class Workspace implements vscode.Disposable {
 				}
 
 				const folder = this.getRootURI(doc.uri);
-				if (folder && this.isValidRoot(folder)) {
+				if (folder && repoExtension.isRepoResource(folder)) {
 					this.addRoot(folder, 'opened document');
 				}
 			}, visible ? 0 : 1000);
@@ -110,10 +113,6 @@ export class Workspace implements vscode.Disposable {
 
 	public getRoot(folder: vscode.Uri): Root | undefined {
 		return this.roots.get(folder.toString());
-	}
-
-	private isValidRoot(folder: vscode.Uri): boolean {
-		return isRemoteResource(folder);
 	}
 
 	public addRoot(folder: vscode.Uri, reason?: string): Root {
@@ -152,12 +151,4 @@ export class Workspace implements vscode.Disposable {
 
 		this.toDispose.forEach(disposable => disposable.dispose());
 	}
-}
-
-/**
- * Reports whether resource is a repo:// or repo+version:// URI (the two URI schemes that
- * refer to remote resources handled by this extension).
- */
-export function isRemoteResource(resource: vscode.Uri): boolean {
-	return resource.scheme === 'repo' || resource.scheme === 'repo+version';
 }

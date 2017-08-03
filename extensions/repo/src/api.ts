@@ -26,6 +26,12 @@ export interface IRepoExtension {
 	 * Returns the relative file path of resource inside folder.
 	 */
 	toRelativePath(folder: vscode.Uri, resource: vscode.Uri): string;
+
+	/**
+	 * Reports whether resource is a repo:// or repo+version:// URI (the two URI schemes that
+	 * refer to repo resources handled by this extension).
+	 */
+	isRepoResource(resource: vscode.Uri): boolean;
 }
 
 /**

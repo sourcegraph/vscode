@@ -112,6 +112,10 @@ export class Workspace implements vscode.Disposable {
 			return undefined;
 		}
 
+		if (!isRepoResource(folder)) {
+			return undefined;
+		}
+
 		if (!this.repositories.has(folder.toString())) {
 			const repo = new GitRepository(folder, this.workspaceState);
 			this.repositories.set(folder.toString(), repo);
