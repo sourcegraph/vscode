@@ -142,7 +142,7 @@ export class GitRepository implements Repository, vscode.Disposable {
 		} else {
 			// Can't change revision of repo+version (immutable) repos.
 			statusBarItem.command = undefined;
-			switchRevisionTooltip = localize('cantSwitchRevision', "Repository {0}: Open Containing Repository to switch revision.");
+			switchRevisionTooltip = localize('cantSwitchRevision', "Repository {0}: Open Containing Repository to switch revision.", this.label);
 		}
 
 		if (this.resolveRevisionError) {
