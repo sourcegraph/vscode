@@ -186,7 +186,7 @@ export class RemoteSearchService extends SearchService implements ISearchService
 
 		const EngineClass = this.instantiationService.invokeFunction(createRemoteFileSearchEngineClass);
 
-		type IgnoreExtraFields = { type?: any, extraFileResources?: any, fileEncoding?: any, disregardExcludeSettings?: any };
+		type IgnoreExtraFields = { type?: any, extraFileResources?: any, fileEncoding?: any, disregardExcludeSettings?: any, usingSearchPaths?: any };
 		const rawSearch: IRawSearch & IgnoreExtraFields = {
 			...query,
 			folderQueries: query.folderQueries ? query.folderQueries.map(q => {
