@@ -345,7 +345,7 @@ export class LauncherPart extends Part implements IDisposable {
 		this.repos = arrays.distinct([
 			...HARDCODED_ROOTS.map(uri => URI.parse(uri)),
 			...(this.memento.repos || []).map(repo => URI.parse(repo)),
-			...this.workspaceContextService.getWorkspace().roots
+			...(this.workspaceContextService.hasWorkspace() ? this.workspaceContextService.getWorkspace().roots : [])
 		], uri => uri.toString())
 			.map(uri => ({
 				uri,
