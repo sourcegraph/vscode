@@ -232,6 +232,46 @@ export const ACTIVITY_BAR_BADGE_FOREGROUND = registerColor('activityBarBadge.for
 
 
 
+// < --- Launcher Bar --- >
+
+export const LAUNCHER_BAR_BACKGROUND = registerColor('launcherBar.background', {
+	dark: lighten(ACTIVITY_BAR_BACKGROUND, 0.05),
+	light: darken(ACTIVITY_BAR_BACKGROUND, 0.05),
+	hc: ACTIVITY_BAR_BACKGROUND,
+}, nls.localize('launcherBarBackground', "Launcher bar background color. The launcher bar is showing on the far left or right and allows to switch views and workspace roots of the workbench."));
+
+export const LAUNCHER_BAR_FOREGROUND = registerColor('launcherBar.foreground', {
+	dark: ACTIVITY_BAR_FOREGROUND,
+	light: ACTIVITY_BAR_FOREGROUND,
+	hc: ACTIVITY_BAR_FOREGROUND,
+}, nls.localize('launcherBarForeground', "Launcher bar foreground color (e.g. used for the icons and folder names). The launcher bar is showing on the far left or right and allows to switch views and workspace roots of the workbench."));
+
+export const LAUNCHER_BAR_BORDER = registerColor('launcherBar.border', {
+	dark: null,
+	light: null,
+	hc: contrastBorder
+}, nls.localize('launcherBarBorder', "Launcher bar border color separating to the side bar. The launcher bar is showing on the far left or right and allows to switch views and workspace roots of the workbench."));
+
+export const LAUNCHER_BAR_DRAG_AND_DROP_BACKGROUND = registerColor('launcherBar.dropBackground', {
+	dark: ACTIVITY_BAR_DRAG_AND_DROP_BACKGROUND,
+	light: ACTIVITY_BAR_DRAG_AND_DROP_BACKGROUND,
+	hc: ACTIVITY_BAR_DRAG_AND_DROP_BACKGROUND,
+}, nls.localize('launcherBarDragAndDropBackground', "Drag and drop feedback color for the launcher bar items. The color should have transparency so that the launcher bar entries can still shine through. The launcher bar is showing on the far left or right and allows to switch views and workspace roots of the workbench."));
+
+export const LAUNCHER_BAR_BADGE_BACKGROUND = registerColor('launcherBarBadge.background', {
+	dark: ACTIVITY_BAR_BADGE_BACKGROUND,
+	light: ACTIVITY_BAR_BADGE_BACKGROUND,
+	hc: ACTIVITY_BAR_BADGE_BACKGROUND,
+}, nls.localize('launcherBarBadgeBackground', "Launcher notification badge background color. The launcher bar is showing on the far left or right and allows to switch views and workspace roots of the workbench."));
+
+export const LAUNCHER_BAR_BADGE_FOREGROUND = registerColor('launcherBarBadge.foreground', {
+	dark: ACTIVITY_BAR_BADGE_FOREGROUND,
+	light: ACTIVITY_BAR_BADGE_FOREGROUND,
+	hc: ACTIVITY_BAR_BADGE_FOREGROUND,
+}, nls.localize('launcherBarBadgeForeground', "Launcher notification badge foreground color. The launcher bar is showing on the far left or right and allows to switch views and workspace roots of the workbench."));
+
+
+
 // < --- Side Bar --- >
 
 export const SIDE_BAR_BACKGROUND = registerColor('sideBar.background', {

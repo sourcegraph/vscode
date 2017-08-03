@@ -9,6 +9,7 @@ import { createDecorator, ServiceIdentifier } from 'vs/platform/instantiation/co
 import Event from 'vs/base/common/event';
 
 export enum Parts {
+	LAUNCHER_PART,
 	ACTIVITYBAR_PART,
 	SIDEBAR_PART,
 	PANEL_PART,

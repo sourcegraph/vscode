@@ -29,10 +29,12 @@ const HIDE_SIDEBAR_WIDTH_THRESHOLD = 50;
 const HIDE_PANEL_HEIGHT_THRESHOLD = 50;
 const TITLE_BAR_HEIGHT = 22;
 const STATUS_BAR_HEIGHT = 22;
+const LAUNCHER_WIDTH = 170;
 const ACTIVITY_BAR_WIDTH = 50;
 
 interface PartLayoutInfo {
 	titlebar: { height: number; };
+	launcher: { width: number; };
 	activitybar: { width: number; };
 	sidebar: { minWidth: number; };
 	panel: { minHeight: number; };
@@ -51,6 +53,7 @@ export class WorkbenchLayout implements IVerticalSashLayoutProvider, IHorizontal
 	private parent: Builder;
 	private workbenchContainer: Builder;
 	private titlebar: Part;
+	private launcher: Part;
 	private activitybar: Part;
 	private editor: Part;
 	private sidebar: Part;
@@ -66,6 +69,7 @@ export class WorkbenchLayout implements IVerticalSashLayoutProvider, IHorizontal
 	private sidebarWidth: number;
 	private sidebarHeight: number;
 	private titlebarHeight: number;
+	private launcherWidth: number;
 	private activitybarWidth: number;
 	private statusbarHeight: number;
 	private startPanelHeight: number;
@@ -81,6 +85,7 @@ export class WorkbenchLayout implements IVerticalSashLayoutProvider, IHorizontal
 		workbenchContainer: Builder,
 		parts: {
 			titlebar: Part,
+			launcher: Part,
 			activitybar: Part,
 			editor: Part,
 			sidebar: Part,
@@ -99,6 +104,7 @@ export class WorkbenchLayout implements IVerticalSashLayoutProvider, IHorizontal
 		this.parent = parent;
 		this.workbenchContainer = workbenchContainer;
 		this.titlebar = parts.titlebar;
+		this.launcher = parts.launcher;
 		this.activitybar = parts.activitybar;
 		this.editor = parts.editor;
 		this.sidebar = parts.sidebar;
@@ -135,6 +141,9 @@ export class WorkbenchLayout implements IVerticalSashLayoutProvider, IHorizontal
 		return {
 			titlebar: {
 				height: TITLE_BAR_HEIGHT
+			},
+			launcher: {
+				width: LAUNCHER_WIDTH
 			},
 			activitybar: {
 				width: ACTIVITY_BAR_WIDTH
@@ -302,6 +311,7 @@ export class WorkbenchLayout implements IVerticalSashLayoutProvider, IHorizontal
 	public layout(options?: ILayoutOptions): void {
 		this.workbenchSize = this.parent.getClientArea();
 
+		const isLauncherHidden = !this.partService.isVisible(Parts.LAUNCHER_PART);
 		const isActivityBarHidden = !this.partService.isVisible(Parts.ACTIVITYBAR_PART);
 		const isTitlebarHidden = !this.partService.isVisible(Parts.TITLEBAR_PART);
 		const isPanelHidden = !this.partService.isVisible(Parts.PANEL_PART);
@@ -326,6 +336,10 @@ export class WorkbenchLayout implements IVerticalSashLayoutProvider, IHorizontal
 		const previousMaxPanelHeight = this.sidebarHeight - MIN_EDITOR_PART_HEIGHT;
 		this.sidebarHeight = this.workbenchSize.height - this.statusbarHeight - this.titlebarHeight;
 		let sidebarSize = new Dimension(sidebarWidth, this.sidebarHeight);
+
+		// Launcher
+		this.launcherWidth = isLauncherHidden ? 0 : this.partLayoutInfo.launcher.width;
+		let launcherSize = new Dimension(this.launcherWidth, sidebarSize.height);
 
 		// Activity Bar
 		this.activitybarWidth = isActivityBarHidden ? 0 : this.partLayoutInfo.activitybar.width;
@@ -352,7 +366,7 @@ export class WorkbenchLayout implements IVerticalSashLayoutProvider, IHorizontal
 			// To get a nice minimize effect even if a user dragged the panel sash to maximum.
 			this.panelHeightBeforeMaximized = panelHeight;
 		}
-		const panelDimension = new Dimension(this.workbenchSize.width - sidebarSize.width - activityBarSize.width, panelHeight);
+		const panelDimension = new Dimension(this.workbenchSize.width - sidebarSize.width - activityBarSize.width - launcherSize.width, panelHeight);
 		this.panelWidth = panelDimension.width;
 
 		// Editor
@@ -368,13 +382,13 @@ export class WorkbenchLayout implements IVerticalSashLayoutProvider, IHorizontal
 
 		// Sidebar hidden
 		if (isSidebarHidden) {
-			editorSize.width = this.workbenchSize.width - activityBarSize.width;
+			editorSize.width = this.workbenchSize.width - activityBarSize.width - launcherSize.width;
 
 			if (sidebarPosition === Position.LEFT) {
-				editorSize.remainderLeft = Math.round((this.workbenchSize.width - editorSize.width + activityBarSize.width) / 2);
+				editorSize.remainderLeft = Math.round((this.workbenchSize.width - editorSize.width + activityBarSize.width + launcherSize.width) / 2);
 				editorSize.remainderRight = this.workbenchSize.width - editorSize.width - editorSize.remainderLeft;
 			} else {
-				editorSize.remainderRight = Math.round((this.workbenchSize.width - editorSize.width + activityBarSize.width) / 2);
+				editorSize.remainderRight = Math.round((this.workbenchSize.width - editorSize.width + activityBarSize.width + launcherSize.width) / 2);
 				editorSize.remainderLeft = this.workbenchSize.width - editorSize.width - editorSize.remainderRight;
 			}
 		}
@@ -446,18 +460,33 @@ export class WorkbenchLayout implements IVerticalSashLayoutProvider, IHorizontal
 			this.editor.getContainer().position(this.titlebarHeight, editorSize.remainderRight, editorBottom, editorSize.remainderLeft);
 			this.panel.getContainer().position(editorSize.height + this.titlebarHeight, editorSize.remainderRight, this.statusbarHeight, editorSize.remainderLeft);
 		} else if (sidebarPosition === Position.LEFT) {
-			this.editor.getContainer().position(this.titlebarHeight, 0, editorBottom, sidebarSize.width + activityBarSize.width);
-			this.panel.getContainer().position(editorSize.height + this.titlebarHeight, 0, this.statusbarHeight, sidebarSize.width + activityBarSize.width);
+			this.editor.getContainer().position(this.titlebarHeight, 0, editorBottom, sidebarSize.width + launcherSize.width + activityBarSize.width);
+			this.panel.getContainer().position(editorSize.height + this.titlebarHeight, 0, this.statusbarHeight, sidebarSize.width + activityBarSize.width + launcherSize.width);
 		} else {
 			this.editor.getContainer().position(this.titlebarHeight, sidebarSize.width, editorBottom, 0);
 			this.panel.getContainer().position(editorSize.height + this.titlebarHeight, sidebarSize.width, this.statusbarHeight, 0);
+		}
+
+		// Launcher Part
+		this.launcher.getContainer().size(launcherSize.width, launcherSize.height);
+		if (sidebarPosition === Position.LEFT) {
+			this.launcher.getContainer().getHTMLElement().style.right = '';
+			this.launcher.getContainer().position(this.titlebarHeight, null, 0, 0);
+		} else {
+			this.launcher.getContainer().getHTMLElement().style.left = '';
+			this.launcher.getContainer().position(this.titlebarHeight, 0, 0, null);
+		}
+		if (isLauncherHidden) {
+			this.launcher.getContainer().hide();
+		} else {
+			this.launcher.getContainer().show();
 		}
 
 		// Activity Bar Part
 		this.activitybar.getContainer().size(null, activityBarSize.height);
 		if (sidebarPosition === Position.LEFT) {
 			this.activitybar.getContainer().getHTMLElement().style.right = '';
-			this.activitybar.getContainer().position(this.titlebarHeight, null, 0, 0);
+			this.activitybar.getContainer().position(this.titlebarHeight, null, 0, launcherSize.width);
 		} else {
 			this.activitybar.getContainer().getHTMLElement().style.left = '';
 			this.activitybar.getContainer().position(this.titlebarHeight, 0, 0, null);
@@ -472,7 +501,7 @@ export class WorkbenchLayout implements IVerticalSashLayoutProvider, IHorizontal
 		this.sidebar.getContainer().size(sidebarSize.width, sidebarSize.height);
 
 		if (sidebarPosition === Position.LEFT) {
-			this.sidebar.getContainer().position(this.titlebarHeight, editorSize.width, 0, activityBarSize.width);
+			this.sidebar.getContainer().position(this.titlebarHeight, editorSize.width, 0, launcherSize.width + activityBarSize.width);
 		} else {
 			this.sidebar.getContainer().position(this.titlebarHeight, null, 0, editorSize.width);
 		}
@@ -498,6 +527,7 @@ export class WorkbenchLayout implements IVerticalSashLayoutProvider, IHorizontal
 		this.sidebar.layout(sidebarSize);
 		this.panel.layout(panelDimension);
 		this.activitybar.layout(activityBarSize);
+		this.launcher.layout(launcherSize);
 
 		// Propagate to Context View
 		this.contextViewService.layout();
@@ -509,13 +539,18 @@ export class WorkbenchLayout implements IVerticalSashLayoutProvider, IHorizontal
 
 	public getVerticalSashLeft(sash: Sash): number {
 		let isSidebarVisible = this.partService.isVisible(Parts.SIDEBAR_PART);
+		let isLauncherVisible = this.partService.isVisible(Parts.LAUNCHER_PART);
 		let sidebarPosition = this.partService.getSideBarPosition();
-
-		if (sidebarPosition === Position.LEFT) {
-			return isSidebarVisible ? this.sidebarWidth + this.activitybarWidth : this.activitybarWidth;
+		let verticalSashLeft = 0;
+		if (isLauncherVisible) {
+			verticalSashLeft += this.launcherWidth;
 		}
-
-		return isSidebarVisible ? this.workbenchSize.width - this.sidebarWidth - this.activitybarWidth : this.workbenchSize.width - this.activitybarWidth;
+		if (sidebarPosition === Position.LEFT) {
+			verticalSashLeft += isSidebarVisible ? this.sidebarWidth + this.activitybarWidth : this.activitybarWidth;
+		} else {
+			verticalSashLeft += isSidebarVisible ? this.workbenchSize.width - this.sidebarWidth - this.activitybarWidth : this.workbenchSize.width - this.activitybarWidth;
+		}
+		return verticalSashLeft;
 	}
 
 	public getVerticalSashHeight(sash: Sash): number {

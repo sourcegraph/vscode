@@ -120,6 +120,7 @@ function createAndInitializeWorkspaceService(configuration: IWindowConfiguration
 				folderPath = uri.file(configuration.folderPath);
 			}
 		}
+		// TODO if no workspace config path given, create one
 		const workspaceService = (workspaceConfigPath || configuration.folderPath) ? new WorkspaceServiceImpl(workspaceConfigPath, folderPath, environmentService, workspacesService) : new EmptyWorkspaceServiceImpl(environmentService);
 
 		return workspaceService.initialize().then(() => workspaceService, error => {

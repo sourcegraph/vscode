@@ -275,10 +275,12 @@ export class WorkspaceEntry extends QuickOpenEntry {
 			}
 			let p = TPromise.as<void>(void 0);
 			if (!rootExists) {
-				p = this.workspaceEditingService.addRoots([repoResource]).then(() =>
+				const toRemove = this.contextService.getWorkspace().roots.slice(0);
+				p = this.workspaceEditingService.addRoots([repoResource])
 					// Wait for workspace to reload and detect its newly added root.
-					this.configurationService.reloadConfiguration()
-				);
+					.then(() => this.configurationService.reloadConfiguration())
+					.then(() => this.workspaceEditingService.removeRoots(toRemove))
+					.then(() => this.configurationService.reloadConfiguration());
 			}
 
 			// Highlight the root folder in explorer.

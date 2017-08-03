@@ -40,6 +40,9 @@ export class Git {
 		return this.spawnPromiseTrim(file, ['diff', '-U0', '--histogram', from, to, file.fsPath]);
 	}
 
+	/**
+	 * Returns the primary upstream URL of the repository.
+	 */
 	public async getRemoteRepo(context: URI): Promise<string> {
 		const url = await this.spawnPromiseTrim(context, ['ls-remote', '--get-url'])
 			.then(url => url.replace(/\.git$/, ''));
