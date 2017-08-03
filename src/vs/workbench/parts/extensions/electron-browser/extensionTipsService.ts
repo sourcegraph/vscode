@@ -148,7 +148,7 @@ export class ExtensionTipsService implements IExtensionTipsService {
 			return;
 		}
 
-		if (uri.scheme === Schemas.inMemory || uri.scheme === Schemas.internal || uri.scheme === Schemas.vscode) {
+		if (uri.scheme === Schemas.inMemory || uri.scheme === Schemas.internal || uri.scheme === Schemas.vscode || uri.scheme === Schemas.repo || uri.scheme === Schemas.repoVersion) {
 			return;
 		}
 
