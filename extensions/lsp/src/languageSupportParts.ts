@@ -6,6 +6,7 @@
 
 import * as vscode from 'vscode';
 import { getLanguage, ReleaseStatus, FeatureCoverage, isPreviewLanguagesEnabled } from './languages';
+import { repoExtension } from './main';
 
 const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right);
 
@@ -15,19 +16,19 @@ export function activateLanguageSupportParts(): vscode.Disposable {
 	];
 
 	vscode.window.visibleTextEditors.forEach(editor => {
-		onDidOpenDocumentInLanguage(editor.document.languageId);
+		onDidOpenDocumentInLanguage(editor.document.uri, editor.document.languageId);
 	});
 
 	vscode.workspace.onDidOpenTextDocument(doc => {
-		onDidOpenDocumentInLanguage(doc.languageId);
+		onDidOpenDocumentInLanguage(doc.uri, doc.languageId);
 	}, null, toDispose);
 
 	vscode.window.onDidChangeActiveTextEditor(editor => {
-		onDidFocusDocumentInLanguage(editor ? editor.document.languageId : undefined);
+		onDidFocusDocumentInLanguage(editor ? editor.document.uri : undefined, editor ? editor.document.languageId : undefined);
 	}, null, toDispose);
 	if (vscode.window.activeTextEditor) {
 		const editor = vscode.window.activeTextEditor;
-		onDidFocusDocumentInLanguage(editor ? editor.document.languageId : undefined);
+		onDidFocusDocumentInLanguage(editor ? editor.document.uri : undefined, editor ? editor.document.languageId : undefined);
 	}
 
 	return vscode.Disposable.from(...toDispose);
@@ -35,7 +36,11 @@ export function activateLanguageSupportParts(): vscode.Disposable {
 
 const DONT_SHOW_AGAIN = 'Don\'t Show Again';
 
-function onDidOpenDocumentInLanguage(languageId: string): void {
+function onDidOpenDocumentInLanguage(resource: vscode.Uri, languageId: string): void {
+	if (!repoExtension.isRepoResource(resource)) {
+		return;
+	}
+
 	const lang = getLanguage(languageId);
 
 	const ignoreWarning = vscode.workspace.getConfiguration('lsp').get<string[]>('hideLanguageSupportWarnings', []).indexOf(languageId) !== -1;
@@ -61,8 +66,8 @@ function onDidOpenDocumentInLanguage(languageId: string): void {
 	}
 }
 
-function onDidFocusDocumentInLanguage(languageId: string | undefined): void {
-	if (!languageId) {
+function onDidFocusDocumentInLanguage(resource: vscode.Uri, languageId: string | undefined): void {
+	if (!languageId || !repoExtension.isRepoResource(resource)) {
 		statusBarItem.hide();
 		return;
 	}
