@@ -859,6 +859,9 @@ export class ExplorerView extends CollapsibleView {
 
 			// Convert to model
 			const root = this.model.roots.filter(r => r.resource.toString() === rootUri.toString()).pop();
+			if (!root) {
+				return undefined; // Root has gone away
+			}
 			const modelStat = FileStat.create(stat, root, options.resolveTo);
 			// Update Input with disk Stat
 			FileStat.mergeLocalWithDisk(modelStat, root);
