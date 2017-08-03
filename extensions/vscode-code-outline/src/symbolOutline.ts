@@ -101,7 +101,7 @@ export class SymbolOutlineProvider implements TreeDataProvider<SymbolNode> {
 			}
 		});
 		workspace.onDidCloseTextDocument(document => {
-			if (!this.editor.document) {
+			if (this.editor && !this.editor.document) {
 				this.refresh();
 			}
 		});
@@ -111,7 +111,7 @@ export class SymbolOutlineProvider implements TreeDataProvider<SymbolNode> {
 			}
 		});
 		workspace.onDidSaveTextDocument(document => {
-			if (document === this.editor.document) {
+			if (this.editor && document === this.editor.document) {
 				this.refresh();
 			}
 		});
