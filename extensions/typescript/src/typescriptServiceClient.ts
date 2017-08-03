@@ -325,7 +325,8 @@ export default class TypeScriptServiceClient implements ITypescriptServiceClient
 				const options: electron.IForkOptions = {
 					execArgv: [] // [`--debug-brk=5859`]
 				};
-				if (this.mainWorkspaceRootPath) {
+				const isRepoResource = this.mainWorkspaceRootPath && (Uri.parse(this.mainWorkspaceRootPath).scheme !== 'repo' && Uri.parse(this.mainWorkspaceRootPath).scheme !== 'repo+version');
+				if (this.mainWorkspaceRootPath && !isRepoResource) {
 					options.cwd = this.mainWorkspaceRootPath;
 				}
 
@@ -614,6 +615,10 @@ export default class TypeScriptServiceClient implements ITypescriptServiceClient
 		const roots = workspace.workspaceFolders;
 		if (!roots || !roots.length) {
 			return undefined;
+		}
+
+		if (resource.scheme === 'repo' || resource.scheme === 'repo+version') {
+			return resource.toString();
 		}
 
 		if (resource.scheme === 'file' || resource.scheme === 'untitled') {
