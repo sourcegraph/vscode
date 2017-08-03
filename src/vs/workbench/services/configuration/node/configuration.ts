@@ -535,6 +535,12 @@ export class WorkspaceServiceImpl extends WorkspaceService {
 
 	private onWorkspaceConfigurationChanged(): void {
 		let configuredFolders = this.workspaceConfiguration.workspaceConfigurationModel.folders;
+		if (!configuredFolders) {
+			// This can occur when the configuration was read during a concurrent
+			// truncate/write operation. Ignore this; we will receive another file system
+			// event when the write finishes.
+			return;
+		}
 		const foldersChanged = !equals(this.workspace.roots, configuredFolders, (r1, r2) => r1.toString() === r2.toString());
 		if (foldersChanged) {
 			this.workspace.roots = configuredFolders;
