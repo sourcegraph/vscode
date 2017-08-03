@@ -133,6 +133,9 @@ export class FileStat implements IFileStat {
 	 * exists locally.
 	 */
 	public static mergeLocalWithDisk(disk: FileStat, local: FileStat): void {
+		if (!local) {
+			return; // Local has gone away, so nothing to merge
+		}
 		if (disk.resource.toString() !== local.resource.toString()) {
 			return; // Merging only supported for stats with the same resource
 		}
