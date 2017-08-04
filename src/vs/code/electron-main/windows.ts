@@ -956,7 +956,7 @@ export class WindowsManager implements IWindowsMainService {
 
 		// Force open in multi-root workspace (prevent opening in non-multi-root
 		// workspace).
-		if (!configuration.workspace) {
+		if (!configuration.workspace && !configuration.folderPath) {
 			configuration.workspace = this.workspacesService.createUntitledWorkspaceSync();
 		}
 

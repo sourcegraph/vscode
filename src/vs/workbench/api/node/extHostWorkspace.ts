@@ -119,7 +119,7 @@ export class ExtHostWorkspace extends ExtHostWorkspaceShape {
 		}
 		// If root isn't a file: resource, the path is probably meaningless (so just
 		// return undefined).
-		return (roots[0].scheme === Schemas.file) ? roots[0].fsPath : undefined;
+		return (!roots[0].scheme || roots[0].scheme === Schemas.file) ? roots[0].fsPath : undefined;
 	}
 
 	getRelativePath(pathOrUri: string | vscode.Uri, includeWorkspace?: boolean): string {
