@@ -9,7 +9,7 @@ import { localize } from 'vs/nls';
 import { Disposable } from 'vs/base/common/lifecycle';
 import { clearNode } from 'vs/base/browser/dom';
 import { $ } from 'vs/base/browser/builder';
-import { ICodeCommentsService, IThread } from 'vs/editor/common/services/codeCommentsService';
+import { ICodeCommentsService, Thread } from 'vs/editor/common/services/codeCommentsService';
 import URI from 'vs/base/common/uri';
 import { IProgressService } from 'vs/platform/progress/common/progress';
 import { CommentInput } from 'vs/workbench/parts/codeComments/browser/commentInput';
@@ -28,8 +28,8 @@ export class CreateThreadView extends Disposable {
 	private onHeightChangeEmitter = this._register(new Emitter<void>());
 	public readonly onHeightChange: Event<void> = this.onHeightChangeEmitter.event;
 
-	private onCreateThreadEmitter = this._register(new Emitter<IThread>());
-	public readonly onCreateThread: Event<IThread> = this.onCreateThreadEmitter.event;
+	private onCreateThreadEmitter = this._register(new Emitter<Thread>());
+	public readonly onCreateThread: Event<Thread> = this.onCreateThreadEmitter.event;
 
 	private input: CommentInput;
 

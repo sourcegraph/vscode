@@ -17,7 +17,7 @@ import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import * as Constants from 'vs/workbench/parts/codeComments/common/constants';
 import { IThemeService, registerThemingParticipant } from 'vs/platform/theme/common/themeService';
 import { ICommonCodeEditor, isCommonCodeEditor } from 'vs/editor/common/editorCommon';
-import { ICodeCommentsService, IThread, CommentsDidChangeEvent } from 'vs/editor/common/services/codeCommentsService';
+import { ICodeCommentsService, Thread, CommentsDidChangeEvent } from 'vs/editor/common/services/codeCommentsService';
 import URI from 'vs/base/common/uri';
 // import distanceInWordsToNow from 'date-fns/distance_in_words_to_now';
 // import distanceInWordsToNow = require('date-fns/distance_in_words_to_now');
@@ -84,7 +84,7 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 	private recentThreadsView = true;
 
 	private showRecentThreadsAction = new Action('workbench.codeCodeComments.action.showRecentThreads', 'Show recent threads', 'recentThreads', true, () => {
-		this.render(this.getActiveModelUri(), true);
+		this.render(this.getActiveModelUri(), {});
 		return TPromise.as(null);
 	});
 
@@ -144,30 +144,30 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 	}
 
 	private onDidRegisterScmProvider(): void {
-		this.render(this.getActiveModelUri());
+		this.render(this.getActiveModelUri(), {});
 	}
 
 	private onCommentsDidChange(e: CommentsDidChangeEvent) {
 		const modelUri = this.getActiveModelUri();
 		if (e.file === modelUri && this.recentThreadsView) {
-			this.render(modelUri, true);
+			this.render(modelUri, {});
 		}
 	}
 
 	private onEditorsChanged(): void {
 		const editor = this.getActiveCodeEditor();
 		if (!editor) {
-			this.render(undefined);
+			this.render(undefined, {});
 			return;
 		}
 		this.activeEditorListeners = dispose(this.activeEditorListeners);
-		this.activeEditorListeners.push(editor.onDidChangeModel(e => this.render(e.newModelUrl)));
+		this.activeEditorListeners.push(editor.onDidChangeModel(e => this.render(e.newModelUrl, { refreshData: true })));
 		this.activeEditorListeners.push(editor.onDidChangeModelContent(e => {
 			if (e.isFlush) {
-				this.render(this.getModelUri(editor), true);
+				this.render(this.getModelUri(editor), { refreshData: true });
 			}
 		}));
-		this.render(this.getModelUri(editor));
+		this.render(this.getModelUri(editor), { refreshData: true });
 	}
 
 	private getActiveCodeEditor(): ICommonCodeEditor | undefined {
@@ -201,12 +201,20 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 		return this.getModelUri(activeEditor);
 	}
 
-	private render(modelUri: URI | undefined, force = false): void {
-		const renderId = this.renderId++;
-		if (!force && this.equalUris(modelUri, this.renderedModelUri)) {
-			// Don't re-render the same model.
+	/**
+	 * Renders the list of threads for a file.
+	 * Will use cached thread data unless refreshData is true.
+	 *
+	 * TODO: refactor thread list view into separate class like CreateThreadView and ThreadView.
+	 */
+	private render(modelUri: URI | undefined, options: { refreshData?: boolean }): void {
+		if (!modelUri) {
+			this.renderCommentsNotAvailable();
 			return;
 		}
+
+		// Increment the render id and then remember it.
+		const renderId = ++this.renderId;
 
 		this.recentThreadsView = true;
 		this.title = localize('recentComments', "Recent conversations: {0}", basename(modelUri.fsPath));
@@ -216,24 +224,36 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 		clearNode(this.list);
 
 		const progress = this.progressService.show(true);
-		this.codeCommentsService.getThreads(modelUri).then(threads => {
+		this.codeCommentsService.getThreads(modelUri, options.refreshData).then(threads => {
 			if (renderId !== this.renderId) {
+				// Another render has started so don't bother
 				return;
 			}
 			this.renderRecentThreadsView(modelUri, threads);
 			this.renderedModelUri = modelUri;
-
 			progress.done();
 		}, error => {
 			// Silently ignore errors if we weren't able to load comments for this file.
+			// console.log(error);
 			progress.done();
+		});
+	}
+
+	private renderCommentsNotAvailable(): void {
+		clearNode(this.list);
+		$(this.list).div({ class: 'threads' }, div => {
+			div.div({ class: 'empty' }, div => {
+				div.div({}, div => {
+					div.text(localize('commentsNotAvailable', "Comments are not available on this file."));
+				});
+			});
 		});
 	}
 
 	/**
 	 * Renders threads for whole file ordered by most recent comment timestamp descending.
 	 */
-	private renderRecentThreadsView(modelUri: URI, threads: IThread[]): void {
+	private renderRecentThreadsView(modelUri: URI, threads: Thread[]): void {
 		clearNode(this.list);
 		$(this.list).div({ class: 'threads' }, div => {
 			if (threads.length === 0) {
@@ -254,7 +274,7 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 			}
 
 			for (const thread of threads) {
-				const recentComment = thread.comments[0];
+				const recentComment = thread.mostRecentComment;
 				div.div({ class: 'thread' }, div => {
 					div.on('click', () => this.renderThreadView(modelUri, thread));
 					div.div({ class: 'leftRight' }, div => {
@@ -267,7 +287,7 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 						});
 					});
 					div.div({ class: 'content' }, div => {
-						div.text(recentComment.content);
+						div.text(recentComment.contents);
 					});
 				});
 			}
@@ -279,7 +299,7 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 	/**
 	 * Renders comments for a single thread.
 	 */
-	private renderThreadView(modelUri: URI, thread: IThread): void {
+	private renderThreadView(modelUri: URI, thread: Thread): void {
 		this.recentThreadsView = false;
 		this.renderDisposables = dispose(this.renderDisposables);
 
@@ -312,19 +332,6 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 			height: scrollContainer.clientHeight,
 			scrollHeight: this.list.clientHeight,
 		});
-	}
-
-	private equalUris(left: URI | undefined, right: URI | undefined): boolean {
-		if (left === right) {
-			return true;
-		}
-		if (!left && !right) {
-			return true;
-		}
-		if (!left || !right) {
-			return false;
-		}
-		return left.toString() === right.toString();
 	}
 
 	public layout(dimension: Dimension): void {

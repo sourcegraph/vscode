@@ -9,7 +9,7 @@ import { localize } from 'vs/nls';
 import { Disposable } from 'vs/base/common/lifecycle';
 import { clearNode } from 'vs/base/browser/dom';
 import { $ } from 'vs/base/browser/builder';
-import { ICodeCommentsService, IThread, CommentsDidChangeEvent } from 'vs/editor/common/services/codeCommentsService';
+import { ICodeCommentsService, Thread, CommentsDidChangeEvent } from 'vs/editor/common/services/codeCommentsService';
 import URI from 'vs/base/common/uri';
 // import { distanceInWordsToNow } from 'date-fns';
 // import { distanceInWordsToNow } from 'date-fns/distance_in_words_to_now';
@@ -32,7 +32,7 @@ export class ThreadView extends Disposable {
 	constructor(
 		private parent: HTMLElement,
 		private modelUri: URI,
-		private thread: IThread,
+		private thread: Thread,
 		@ICodeCommentsService private codeCommentsService: ICodeCommentsService,
 		@IProgressService private progressService: IProgressService,
 		@IInstantiationService private instantiationService: IInstantiationService,
@@ -67,7 +67,7 @@ export class ThreadView extends Disposable {
 						});
 					});
 					div.div({ class: 'content' }, div => {
-						div.text(comment.content);
+						div.text(comment.contents);
 					});
 				});
 			}
@@ -78,10 +78,10 @@ export class ThreadView extends Disposable {
 		});
 	}
 
-	private submitReply(input: CommentInput, modelUri: URI, thread: IThread, content: string): void {
+	private submitReply(input: CommentInput, modelUri: URI, thread: Thread, content: string): void {
 		input.setEnabled(false);
 		const progress = this.progressService.show(true);
-		this.codeCommentsService.replyToThread(modelUri, thread, content).then(thread => {
+		this.codeCommentsService.replyToThread(modelUri, thread, content).then(() => {
 			// CommentsDidChange event has already been handled so we don't need to re-enable input or clear its content.
 			progress.done();
 		}, error => {

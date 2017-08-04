@@ -45,7 +45,7 @@ export class CodeCommentsDecorationRenderer extends Disposable {
 
 		scmService.onDidChangeProvider(e => this.renderDecorations());
 
-		const gutterIconPath = URI.parse(require.toUrl('./media/comment.svg')).fsPath;
+		const gutterIconPath = URI.parse(require.toUrl('./../electron-browser/media/comment.svg')).fsPath;
 		const color = themeService.getTheme().getColor(buttonBackground).toString();
 		codeEditorService.registerDecorationType(DECORATION_KEY, {
 			backgroundColor: color,
@@ -77,7 +77,7 @@ export class CodeCommentsDecorationRenderer extends Disposable {
 		if (!isFileLikeResource(model.uri)) {
 			return;
 		}
-		this.codeCommentsService.getThreads(model.uri).then(threads => {
+		this.codeCommentsService.getThreads(model.uri, false).then(threads => {
 			const decorations: IDecorationOptions[] = threads.map(thread => ({ range: thread.range }));
 			editor.setDecorations(DECORATION_KEY, decorations);
 		}, err => {

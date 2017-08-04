@@ -36,6 +36,18 @@ export class Git {
 		return URI.parse(path);
 	}
 
+	/**
+	 * For the first iteration, it is security through obscurity.
+	 * Anyone knows the URI of a repo (e.g. github.com/sourcegraph/sourcegraph)
+	 * and the hash of the first commit may fetch code comments for that repo.
+	 *
+	 * Beta testers in this iteration will be explictly told about this limitation.
+	 * Next iteration we will work on proper authorization controls by modeling organizations.
+	 */
+	public getAccessToken(context: URI): Promise<string> {
+		return this.spawnPromiseTrim(context, ['rev-list', '--max-parents=0', 'HEAD']);
+	}
+
 	public getDiff(file: URI, from: string, to: string): Promise<string> {
 		return this.spawnPromiseTrim(file, ['diff', '-U0', '--histogram', from, to, file.fsPath]);
 	}

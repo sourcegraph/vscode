@@ -48,14 +48,14 @@ Registry.as<IConfigurationRegistry>(Extensions.Configuration)
 export function requestGraphQL<T>(remoteService: IRemoteService, query: string, variables: { [name: string]: any }): TPromise<T> {
 	const match = query.match(/.*\bquery\b +([A-Za-z]+)\b.*/m);
 	const caller = match ? match[1] : '';
-	return sendGraphQLRequest<T>(remoteService, query, variables, caller).then(resp => { return resp.data.root; });
+	return sendGraphQLRequest<{ root: T }>(remoteService, query, variables, caller).then(data => data.root);
 }
 
-export function requestGraphQLMutation<T>(remoteService: IRemoteService, query: string, variables: { [name: string]: any }): TPromise<{ [mutation: string]: T }> {
-	return sendGraphQLRequest<T>(remoteService, query, variables, '').then(resp => { return resp.data; });
+export function requestGraphQLMutation<T>(remoteService: IRemoteService, query: string, variables: { [name: string]: any }): TPromise<T> {
+	return sendGraphQLRequest<T>(remoteService, query, variables, '');
 }
 
-function sendGraphQLRequest<T>(remoteService: IRemoteService, query: string, variables: { [name: string]: any }, caller: string): TPromise<{ data: { root?: T, [key: string]: T }, errors: { message: string }[] }> {
+function sendGraphQLRequest<T>(remoteService: IRemoteService, query: string, variables: { [name: string]: any }, caller: string): TPromise<T> {
 	let url = '/.api/graphql';
 	if (caller) {
 		url = url + '?' + caller;
@@ -65,13 +65,13 @@ function sendGraphQLRequest<T>(remoteService: IRemoteService, query: string, var
 		type: 'POST',
 		data: JSON.stringify({ query, variables }),
 	})
-		.then(resp => asJson<{ data: { root: T, [key: string]: T }, errors: { message: string }[] }>(resp))
+		.then(resp => asJson<{ data: T, errors: { message: string }[] }>(resp))
 		.then(resp => {
 			if (resp.errors && resp.errors.length > 0) {
 				const messages = resp.errors.map(e => e.message);
 				return TPromise.wrapError(new Error(messages.join('\n')));
 			}
-			return resp;
+			return resp.data;
 		});
 }
 
