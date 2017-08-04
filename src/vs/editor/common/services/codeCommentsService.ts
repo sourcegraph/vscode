@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 'use strict';
 
+import { TPromise } from 'vs/base/common/winjs.base';
 import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
 import { Range } from 'vs/editor/common/core/range';
 import Event from 'vs/base/common/event';
@@ -24,12 +25,12 @@ export interface ICodeCommentsService {
 	/**
 	 * Creates a new thread and comment on the file at the given range.
 	 */
-	createThread(file: URI, range: Range, content: string): Promise<Thread>;
+	createThread(file: URI, range: Range, content: string): TPromise<Thread>;
 
 	/**
 	 * Adds a new comment to a thread.
 	 */
-	replyToThread(file: URI, thread: Thread, content: string): Promise<void>;
+	replyToThread(file: URI, thread: Thread, content: string): TPromise<void>;
 
 	/**
 	 * Returns all threads that are attached to the current revision of the file.
@@ -37,7 +38,7 @@ export interface ICodeCommentsService {
 	 *
 	 * TODO: separate api that fetches from network from api that returns cached state.
 	 */
-	getThreads(file: URI, skipCache: boolean): Promise<Thread[]>;
+	getThreads(file: URI, skipCache: boolean): TPromise<Thread[]>;
 }
 
 export interface CommentsDidChangeEvent {

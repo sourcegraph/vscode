@@ -57,15 +57,12 @@ export class CreateThreadView extends Disposable {
 
 	private createThread(content: string): void {
 		this.input.setEnabled(false);
-		const progress = this.progressService.show(true);
-		this.codeCommentsService.createThread(this.file, this.range, content).then(thread => {
-			progress.done();
+		const promise = this.codeCommentsService.createThread(this.file, this.range, content).then(thread => {
 			if (this.disposed) {
 				return;
 			}
 			this.onCreateThreadEmitter.fire(thread);
 		}, error => {
-			progress.done();
 			if (this.disposed) {
 				return;
 			}
@@ -75,6 +72,7 @@ export class CreateThreadView extends Disposable {
 				type: MessageType.ERROR,
 			});
 		});
+		this.progressService.showWhile(promise);
 	}
 
 	public dispose(): void {

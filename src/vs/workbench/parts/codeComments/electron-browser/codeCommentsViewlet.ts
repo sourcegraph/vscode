@@ -222,20 +222,18 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 		this.renderDisposables = dispose(this.renderDisposables);
 		clearNode(this.list);
 
-		const progress = this.progressService.show(true);
-		this.codeCommentsService.getThreads(modelUri, options.refreshData).then(threads => {
+		const promise = this.codeCommentsService.getThreads(modelUri, options.refreshData).then(threads => {
 			if (renderId !== this.renderId) {
 				// Another render has started so don't bother
 				return;
 			}
 			this.renderRecentThreadsView(modelUri, threads);
 			this.renderedModelUri = modelUri;
-			progress.done();
 		}, error => {
 			// Silently ignore errors if we weren't able to load comments for this file.
 			// console.log(error);
-			progress.done();
 		});
+		this.progressService.showWhile(promise);
 	}
 
 	private renderCommentsNotAvailable(): void {

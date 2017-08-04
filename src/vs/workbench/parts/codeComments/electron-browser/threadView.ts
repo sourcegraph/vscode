@@ -79,12 +79,9 @@ export class ThreadView extends Disposable {
 
 	private submitReply(input: CommentInput, modelUri: URI, thread: Thread, content: string): void {
 		input.setEnabled(false);
-		const progress = this.progressService.show(true);
-		this.codeCommentsService.replyToThread(modelUri, thread, content).then(() => {
+		const promise = this.codeCommentsService.replyToThread(modelUri, thread, content).then(() => {
 			// CommentsDidChange event has already been handled so we don't need to re-enable input or clear its content.
-			progress.done();
 		}, error => {
-			progress.done();
 			if (this.disposed) {
 				return;
 			}
@@ -94,6 +91,7 @@ export class ThreadView extends Disposable {
 				type: MessageType.ERROR,
 			});
 		});
+		this.progressService.showWhile(promise);
 	}
 
 	public dispose(): void {

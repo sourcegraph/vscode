@@ -9,7 +9,7 @@ import { Range } from 'vs/editor/common/core/range';
 import Event, { Emitter } from 'vs/base/common/event';
 import { Diff } from 'vs/workbench/services/codeComments/common/diff';
 import { ISCMService } from 'vs/workbench/services/scm/common/scm';
-import { Git } from 'vs/workbench/services/codeComments/electron-browser/git';
+import { Git } from 'vs/workbench/services/codeComments/browser/git';
 import URI from 'vs/base/common/uri';
 import { startsWith } from 'vs/base/common/strings';
 import { isFileLikeResource } from 'vs/platform/files/common/files';
@@ -83,8 +83,8 @@ export class CodeCommentsService implements ICodeCommentsService {
 	/**
 	 * See documentation on ICodeCommentsService.
 	 */
-	public createThread(file: URI, range: Range, contents: string): Promise<Thread> {
-		return Promise.all([
+	public createThread(file: URI, range: Range, contents: string): TPromise<Thread> {
+		return TPromise.join([
 			this.git.getRevisionSHA(file),
 			this.git.getUserName(file),
 			this.git.getUserEmail(file),
@@ -93,7 +93,7 @@ export class CodeCommentsService implements ICodeCommentsService {
 			this.git.getAccessToken(file),
 		])
 			.then(([revision, authorName, authorEmail, root, repo, accessToken]) => {
-				const relativeFile = this.relativePath(root, file);
+				const relativeFile = this.relativePath(URI.parse(root), file);
 				return requestGraphQLMutation<{ createThread: GQL.IThread }>(this.remoteService, `mutation {
 					createThread(
 						remoteURI: $remoteURI,
@@ -140,8 +140,8 @@ export class CodeCommentsService implements ICodeCommentsService {
 	/**
 	 * See the documentation on ICommentService.
 	 */
-	public replyToThread(file: URI, thread: Thread, contents: string): Promise<void> {
-		return Promise.all([
+	public replyToThread(file: URI, thread: Thread, contents: string): TPromise<void> {
+		return TPromise.join([
 			this.git.getUserName(file),
 			this.git.getUserEmail(file),
 			this.git.getRemoteRepo(file),
@@ -180,7 +180,7 @@ export class CodeCommentsService implements ICodeCommentsService {
 			});
 	}
 
-	private fireCommentsDidChangeEvent(file: URI, thread: Thread): Promise<Thread> {
+	private fireCommentsDidChangeEvent(file: URI, thread: Thread): TPromise<Thread> {
 		return this.adjustThreadRanges(file, [thread]).then(adjustedThreads => {
 			this.commentsDidChangeEmitter.fire({ file, threads: [thread] });
 			return thread;
@@ -213,15 +213,15 @@ export class CodeCommentsService implements ICodeCommentsService {
 	 * For example:
 	 * file:///Users/nick/dev/vscode-private/README.md -> github.com/sourcegraph/vscode-private/README.md
 	 */
-	private getDocumentId(file: URI): Promise<DocumentId | undefined> {
+	private getDocumentId(file: URI): TPromise<DocumentId | undefined> {
 		if (!isFileLikeResource(file)) {
-			return Promise.resolve();
+			return TPromise.as(void 0);
 		}
-		return Promise.all([
+		return TPromise.join([
 			this.git.getRoot(file),
 			this.git.getRemoteRepo(file),
 		]).then(([root, repo]) => {
-			const relativeFile = this.relativePath(root, file);
+			const relativeFile = this.relativePath(URI.parse(root), file);
 			return { repo, file: relativeFile };
 		});
 	}
@@ -229,26 +229,31 @@ export class CodeCommentsService implements ICodeCommentsService {
 	/**
 	 * See documentation on ICodeCommentsService.
 	 */
-	public async getThreads(file: URI, skipCache: boolean): Promise<Thread[]> {
+	public getThreads(file: URI, skipCache: boolean): TPromise<Thread[]> {
 		const cachedThreads = this.threadCache.get(file);
 		if (cachedThreads && !skipCache) {
 			return this.adjustThreadRanges(file, toArray(cachedThreads));
 		}
-		const id = await this.getDocumentId(file);
-		if (id === undefined) {
-			return [];
-		}
-		const threads = await this.fetchThreads(file, id);
-		this.threadCache.set(file, toMap(threads, thread => thread.id));
-		return this.adjustThreadRanges(file, threads).then(adjustedThreads => {
-			this.commentsDidChangeEmitter.fire({ file, threads: adjustedThreads });
-			return adjustedThreads;
-		});
+
+		return this.getDocumentId(file)
+			.then(id => {
+				if (id === undefined) {
+					return TPromise.as<Thread[]>([]);
+				}
+				return this.fetchThreads(file, id);
+			}).then(threads => {
+				this.threadCache.set(file, toMap(threads, thread => thread.id));
+				return this.adjustThreadRanges(file, threads);
+			}).then(adjustedThreads => {
+				this.commentsDidChangeEmitter.fire({ file, threads: adjustedThreads });
+				return adjustedThreads;
+			});
 	}
 
-	private async fetchThreads(file: URI, id: DocumentId): TPromise<Thread[]> {
-		const accessToken = await this.git.getAccessToken(file);
-		return requestGraphQL<{ threads: GQL.IThread[] }>(this.remoteService, `query ThreadsForFile(
+	private fetchThreads(file: URI, id: DocumentId): TPromise<Thread[]> {
+		return this.git.getAccessToken(file)
+			.then(accessToken => {
+				return requestGraphQL<{ threads: GQL.IThread[] }>(this.remoteService, `query ThreadsForFile(
 			$repo: String!,
 			$accessToken: String!,
 			$file: String!,
@@ -263,9 +268,10 @@ export class CodeCommentsService implements ICodeCommentsService {
 				}
 			}
 		}`, {
-				repo: id.repo,
-				file: id.file,
-				accessToken,
+						repo: id.repo,
+						file: id.file,
+						accessToken,
+					});
 			})
 			.then(data => data.threads.map(thread => Thread.fromGraphQL(thread)));
 	}
@@ -274,37 +280,40 @@ export class CodeCommentsService implements ICodeCommentsService {
 	 * Returns the subset of threads that are attached to the file at its current revision.
 	 * TODO: this should be cached in some way instead of being recomputed.
 	 */
-	private async adjustThreadRanges(file: URI, threads: Thread[]): Promise<Thread[]> {
+	private adjustThreadRanges(file: URI, threads: Thread[]): TPromise<Thread[]> {
 		// TODO: this does not correctly handle uncommitted changes.
-		const toRev = await this.git.getRevisionSHA(file);
-
-		// Collect all relevant diffs.
-		const revs = threads.map(thread => thread.revision).filter(uniqueFilter);
-		const diffs = new Map<string, Diff>();
-		for (const rev of revs) {
-			// We are serially quering diffs for simplicity.
-			// This could be optimized to be done in parallel,
-			// but we would also want to avoid spawing too many commands at once.
-			// Using observable semantics here would be cool.
-			const diff = await this.git.getDiff(file, rev, toRev);
-			diffs.set(rev, new Diff(diff));
-		}
-
-		// Adjust thread ranges.
-		const adjustedThreads: Thread[] = [];
-		for (const thread of threads) {
-			const diff = diffs.get(thread.revision);
-			if (!diff) {
-				// Should never happen assuming the logic above is correct.
-				console.error('missing diff for revision', thread.revision);
-				continue;
-			}
-			const range = diff.transformRange(thread.range);
-			if (range) {
-				adjustedThreads.push(thread.with({ range }));
-			}
-		}
-		return adjustedThreads.sort(mostRecentCommentTimeDescending);
+		return this.git.getRevisionSHA(file)
+			.then(toRev => {
+				// Collect all relevant diffs.
+				const revs = threads.map(thread => thread.revision).filter(uniqueFilter);
+				return TPromise.join(revs.map(rev =>
+					this.git.getDiff(file, rev, toRev)
+						.then(diff => ({ rev, diff: new Diff(diff) }))
+				));
+			})
+			.then(diffs => {
+				return diffs.reduce((map, diff) => {
+					map.set(diff.rev, diff.diff);
+					return map;
+				}, new Map<string, Diff>());
+			})
+			.then(diffs => {
+				// Adjust thread ranges.
+				return threads.reduce<Thread[]>((threads, thread) => {
+					const diff = diffs.get(thread.revision);
+					if (!diff) {
+						// Should never happen assuming the logic above is correct.
+						console.error('missing diff for revision', thread.revision);
+						return threads;
+					}
+					const range = diff.transformRange(thread.range);
+					if (range) {
+						threads.push(thread.with({ range }));
+					}
+					return threads;
+				}, []);
+			})
+			.then(threads => threads.sort(mostRecentCommentTimeDescending));
 	}
 }
 
