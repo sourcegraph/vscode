@@ -11,8 +11,7 @@ import { clearNode } from 'vs/base/browser/dom';
 import { $ } from 'vs/base/browser/builder';
 import { ICodeCommentsService, Thread, CommentsDidChangeEvent } from 'vs/editor/common/services/codeCommentsService';
 import URI from 'vs/base/common/uri';
-// import { distanceInWordsToNow } from 'date-fns';
-// import { distanceInWordsToNow } from 'date-fns/distance_in_words_to_now';
+import * as date from 'date-fns';
 import { IProgressService } from 'vs/platform/progress/common/progress';
 import { CommentInput } from 'vs/workbench/parts/codeComments/browser/commentInput';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
@@ -62,8 +61,8 @@ export class ThreadView extends Disposable {
 							div.text(comment.authorName);
 						});
 						div.div({ class: 'right' }, div => {
-							// div.text(distanceInWordsToNow(comment.createdAt));
-							div.text(comment.createdAt.toLocaleString());
+							const time = localize('timeAgo', "{0} ago", date.distanceInWordsToNow(comment.createdAt));
+							div.text(time);
 						});
 					});
 					div.div({ class: 'content' }, div => {

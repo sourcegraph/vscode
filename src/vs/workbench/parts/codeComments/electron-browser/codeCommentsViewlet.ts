@@ -19,8 +19,7 @@ import { IThemeService, registerThemingParticipant } from 'vs/platform/theme/com
 import { ICommonCodeEditor, isCommonCodeEditor } from 'vs/editor/common/editorCommon';
 import { ICodeCommentsService, Thread, CommentsDidChangeEvent } from 'vs/editor/common/services/codeCommentsService';
 import URI from 'vs/base/common/uri';
-// import distanceInWordsToNow from 'date-fns/distance_in_words_to_now';
-// import distanceInWordsToNow = require('date-fns/distance_in_words_to_now');
+import * as date from 'date-fns';
 import { ISCMService } from 'vs/workbench/services/scm/common/scm';
 import { IProgressService } from 'vs/platform/progress/common/progress';
 import { ScrollableElement } from 'vs/base/browser/ui/scrollbar/scrollableElement';
@@ -30,7 +29,7 @@ import { Action, IAction } from 'vs/base/common/actions';
 import { basename } from 'vs/base/common/paths';
 import { IContextViewService } from 'vs/platform/contextview/browser/contextView';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
-import { ThreadView } from 'vs/workbench/parts/codeComments/browser/threadView';
+import { ThreadView } from 'vs/workbench/parts/codeComments/electron-browser/threadView';
 import { CreateThreadView } from 'vs/workbench/parts/codeComments/browser/createThreadView';
 import { ICodeCommentsViewlet } from 'vs/workbench/parts/codeComments/common/codeComments';
 import { TAB_ACTIVE_FOREGROUND, TAB_INACTIVE_FOREGROUND } from 'vs/workbench/common/theme';
@@ -282,8 +281,8 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 							div.text(recentComment.authorName);
 						});
 						div.div({ class: 'right' }, div => {
-							// div.text(distanceInWordsToNow(recentComment.createdAt));
-							div.text(recentComment.createdAt.toLocaleString());
+							const time = localize('timeAgo', "{0} ago", date.distanceInWordsToNow(recentComment.createdAt));
+							div.text(time);
 						});
 					});
 					div.div({ class: 'content' }, div => {

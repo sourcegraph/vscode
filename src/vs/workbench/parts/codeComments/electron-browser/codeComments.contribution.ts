@@ -17,7 +17,7 @@ import { CodeCommentsService } from 'vs/workbench/services/codeComments/electron
 import 'vs/workbench/parts/codeComments/electron-browser/createCodeCommentAction';
 
 Registry.as<ViewletRegistry>(ViewletExtensions.Viewlets).registerViewlet(new ViewletDescriptor(
-	'vs/workbench/parts/codeComments/browser/codeCommentsViewlet',
+	'vs/workbench/parts/codeComments/electron-browser/codeCommentsViewlet',
 	'CodeCommentsViewlet',
 	Constants.VIEWLET_ID,
 	localize('name', "Code Comments"),

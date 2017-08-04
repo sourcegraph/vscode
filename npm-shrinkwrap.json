@@ -82,6 +82,11 @@
       "from": "core-util-is@>=1.0.0 <1.1.0",
       "resolved": "https://registry.npmjs.org/core-util-is/-/core-util-is-1.0.2.tgz"
     },
+    "date-fns": {
+      "version": "1.28.5",
+      "from": "date-fns@>=1.28.5 <2.0.0",
+      "resolved": "https://registry.npmjs.org/date-fns/-/date-fns-1.28.5.tgz"
+    },
     "debug": {
       "version": "2.2.0",
       "from": "debug@>=2.0.0 <3.0.0",
