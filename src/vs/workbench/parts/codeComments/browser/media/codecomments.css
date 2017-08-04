@@ -3,11 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-.monaco-workbench > .activitybar > .content .monaco-action-bar .action-label.codeComments {
-	-webkit-mask: url('comment.svg') no-repeat 50% 50%;
-	-webkit-mask-size: 22px;
-}
-
 .monaco-workbench .recentThreads {
 	background: url('close.svg') center center no-repeat;
 }
