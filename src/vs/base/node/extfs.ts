@@ -86,7 +86,10 @@ export function mkdirpSync(path: string, mode?: number): void {
 				return; // nothing to do
 			case 'ENOENT':
 				mkdirpSync(paths.dirname(path), mode);
+				fs.mkdirSync(path, mode);
 				return;
+			default:
+				throw err;
 		}
 	}
 }
