@@ -14,6 +14,7 @@ import { findInFolderResourcesCommand } from 'vs/workbench/parts/search/browser/
 import { Builder, $ } from 'vs/base/browser/builder';
 import { SearchProfilePickerWidget } from 'vs/workbench/parts/search/browser/searchProfilePickerWidget';
 import { Match } from 'vs/workbench/parts/search/common/searchModel';
+import { SearchProfileService } from "vs/workbench/services/search/common/searchProfileService";
 
 /**
  * Contains Sourcegraph customizations to VS Code's search viewlet.
@@ -61,10 +62,21 @@ export class SourcegraphSearchViewlet extends SearchViewlet {
 	}
 
 	protected onQueryChangedCreate(contentPattern: IPatternInfo, folderResources: URI[], options: IQueryOptions): void {
+		const beforeFolderCount = folderResources.length;
 		const folderResourcesComparable = folderResources.map(resource => resource.toString());
-		this.inputRepoSelector.workspaces.forEach(resource => {
+		const workspaces = this.inputRepoSelector.workspaces;
+		workspaces.forEach(resource => {
 			if (folderResourcesComparable.indexOf(resource) === -1) {
 				folderResources.push(URI.parse(resource));
+			}
+		});
+		this.telemetryService.publicLog('codeSearch.query', {
+			beforeFolderCount,
+			folderCount: folderResources.length,
+			profile: {
+				name: this.inputRepoSelector.selected,
+				count: workspaces.length,
+				custom: this.inputRepoSelector.selected === SearchProfileService.CUSTOM_TEXT,
 			}
 		});
 	}
@@ -78,13 +90,11 @@ export class SourcegraphSearchViewlet extends SearchViewlet {
 
 	protected onFocus(lineMatch: any, preserveFocus?: boolean, sideBySide?: boolean, pinned?: boolean): TPromise<any> {
 		if (lineMatch instanceof Match) {
-			const fileUri = lineMatch.parent().resource();
-			const external = fileUri.scheme === 'repo+version';
-			const filePath = fileUri.with({ scheme: '', authority: '', path: fileUri.authority + fileUri.path }).toString();
 			this.telemetryService.publicLog('codeSearch.openResult', {
 				codeSearch: {
-					filePath,
-					external,
+					local: lineMatch.parent().resource().scheme === 'file',
+					fileMatchCount: lineMatch.parent().count(),
+					folderMatchCount: lineMatch.parent().parent().count(),
 				},
 			});
 		}

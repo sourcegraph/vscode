@@ -19,7 +19,7 @@ export class SearchProfileService extends Disposable implements ISearchProfileSe
 	_serviceBrand: any;
 
 	private static EMPTY_TEXT = localize('searchProfile.empty', "");
-	private static CUSTOM_TEXT = localize('searchProfile.custom', "Custom");
+	public static CUSTOM_TEXT = localize('searchProfile.custom', "Custom");
 
 	private didSearchProfilesChange = this._register(new Emitter<void>());
 	public onDidSearchProfilesChange: Event<void> = this.didSearchProfilesChange.event;

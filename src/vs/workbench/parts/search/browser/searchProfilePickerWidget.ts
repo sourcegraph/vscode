@@ -18,6 +18,7 @@ import * as arrays from "vs/base/common/arrays";
 import * as errors from 'vs/base/common/errors';
 import { IPreferencesService } from "vs/workbench/parts/preferences/common/preferences";
 import { PreferencesEditor } from "vs/workbench/parts/preferences/browser/preferencesEditor";
+import { ITelemetryService } from "vs/platform/telemetry/common/telemetry";
 
 export class SearchProfilePickerWidget extends Widget {
 
@@ -38,6 +39,7 @@ export class SearchProfilePickerWidget extends Widget {
 		selected: string,
 		@IPreferencesService private preferencesService: IPreferencesService,
 		@ISearchProfileService private searchProfileService: ISearchProfileService,
+		@ITelemetryService private telemetryService: ITelemetryService,
 	) {
 		super();
 
@@ -46,7 +48,10 @@ export class SearchProfilePickerWidget extends Widget {
 	}
 
 	public create(parent: Builder): void {
-		this._register(this.selectBox.onDidSelect(s => { this.selected = s.selected; }));
+		this._register(this.selectBox.onDidSelect(s => {
+			this.selected = s.selected;
+			this.telemetryService.publicLog('codeSearch.profilePicker.selected');
+		}));
 		parent.element('h4', { text: localize('searchProfilePicker.title', "Repositories to search") });
 		parent.div({ class: 'search-profile-picker-widget' }, div => {
 			this.container = div.getHTMLElement();

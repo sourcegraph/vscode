@@ -751,6 +751,7 @@ export class SearchModel extends Disposable {
 		this.telemetryService.publicLog('searchResultsShown', {
 			count: this._searchResult.count(),
 			fileCount: this._searchResult.fileCount(),
+			folderCount: this._searchResult.folderCount(),
 			options,
 			duration,
 			useRipgrep: this._searchQuery.useRipgrep
