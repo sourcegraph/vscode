@@ -49,6 +49,9 @@ export class RepoFileSystem implements vscode.FileSystemProvider, vscode.Disposa
 
 	resolveContents(resource: vscode.Uri): Thenable<string> {
 		const path = toRelativePath(this.root, resource);
+		if (!path) {
+			throw new Error(`repository ${this.root.toString()} does not contain resource ${resource.toString()}`);
+		}
 		return getFileContents(this.repo, this.revision, path);
 	}
 

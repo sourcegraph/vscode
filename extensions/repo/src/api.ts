@@ -23,9 +23,10 @@ export interface IRepoExtension {
 	resolveResourceRevision(resource: vscode.Uri): Thenable<vscode.SCMRevision | undefined>;
 
 	/**
-	 * Returns the relative file path of resource inside folder.
+	 * Returns the relative file path of resource inside folder, or undefined if folder is
+	 * not equal to or a parent of resource.
 	 */
-	toRelativePath(folder: vscode.Uri, resource: vscode.Uri): string;
+	toRelativePath(folder: vscode.Uri, resource: vscode.Uri): string | undefined;
 
 	/**
 	 * Reports whether resource is a repo:// or repo+version:// URI (the two URI schemes that

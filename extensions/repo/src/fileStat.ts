@@ -61,7 +61,10 @@ export function toICustomResolveFileOptions(root: vscode.Uri, parentPath?: strin
 function toRelativePaths(root: vscode.Uri, resources: vscode.Uri[]): string[] {
 	const relativePaths: string[] = [];
 	for (const resource of resources) {
-		relativePaths.push(toRelativePath(root, resource));
+		const path = toRelativePath(root, resource);
+		if (path) {
+			relativePaths.push(path);
+		}
 	}
 	return relativePaths;
 }

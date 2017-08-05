@@ -21,7 +21,7 @@ export function requestGraphQL<T>(query: string, variables: { [name: string]: an
 		.then((body: any) => body.data.root);
 }
 
-export function toRelativePath(folder: vscode.Uri, resource: vscode.Uri): string {
+export function toRelativePath(folder: vscode.Uri, resource: vscode.Uri): string | undefined {
 	// Handle root with revision in querystring and resources with revision in
 	// querystring.
 	const folderString = folder.with({ query: '' }).toString();
@@ -33,5 +33,5 @@ export function toRelativePath(folder: vscode.Uri, resource: vscode.Uri): string
 		return resourceString.slice(folderString.length + 1);
 	}
 
-	throw new Error(`unable to make ${resource.toString()} relative to ${folder.toString()}`);
+	return undefined; // resource is not inside folder
 }
