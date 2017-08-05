@@ -29,7 +29,6 @@ import { IWorkbenchContributionsRegistry, Extensions as WorkbenchExtensions } fr
 import { IEditorRegistry, Extensions as EditorExtensions } from 'vs/workbench/common/editor';
 import { HistoryService } from 'vs/workbench/services/history/browser/history';
 import { ActivitybarPart } from 'vs/workbench/browser/parts/activitybar/activitybarPart';
-import { LauncherPart } from 'vs/workbench/browser/parts/launcher/launcherPart';
 import { EditorPart } from 'vs/workbench/browser/parts/editor/editorPart';
 import { SidebarPart } from 'vs/workbench/browser/parts/sidebar/sidebarPart';
 import { PanelPart } from 'vs/workbench/browser/parts/panel/panelPart';
@@ -138,7 +137,6 @@ export interface IWorkbenchCallbacks {
 const Identifiers = {
 	WORKBENCH_CONTAINER: 'workbench.main.container',
 	TITLEBAR_PART: 'workbench.parts.titlebar',
-	LAUNCHER_PART: 'workbench.parts.launcher',
 	ACTIVITYBAR_PART: 'workbench.parts.activitybar',
 	SIDEBAR_PART: 'workbench.parts.sidebar',
 	PANEL_PART: 'workbench.parts.panel',
@@ -183,7 +181,6 @@ export class Workbench implements IPartService {
 	private backupFileService: IBackupFileService;
 	private configurationEditingService: IConfigurationEditingService;
 	private titlebarPart: TitlebarPart;
-	private launcherPart: LauncherPart;
 	private activitybarPart: ActivitybarPart;
 	private sidebarPart: SidebarPart;
 	private panelPart: PanelPart;
@@ -577,7 +574,6 @@ export class Workbench implements IPartService {
 		this.toShutdown.push(this.activitybarPart);
 		serviceCollection.set(IActivityBarService, this.activitybarPart);
 
-
 		// Editor service (editor part)
 		this.editorPart = this.instantiationService.createInstance(EditorPart, Identifiers.EDITOR_PART, !this.hasFilesToCreateOpenOrDiff);
 		this.toDispose.push(this.editorPart);
@@ -646,12 +642,6 @@ export class Workbench implements IPartService {
 		Registry.as<IActionBarRegistry>(ActionBarExtensions.Actionbar).setInstantiationService(this.instantiationService);
 		Registry.as<IWorkbenchContributionsRegistry>(WorkbenchExtensions.Workbench).setInstantiationService(this.instantiationService);
 		Registry.as<IEditorRegistry>(EditorExtensions.Editors).setInstantiationService(this.instantiationService);
-
-		// Launcher service
-		this.launcherPart = this.instantiationService.createInstance(LauncherPart, Identifiers.LAUNCHER_PART);
-		this.toDispose.push(this.launcherPart);
-		this.toShutdown.push(this.launcherPart);
-		// serviceCollection.set(ILauncherPart, this.launcherPart);
 	}
 
 	private initSettings(): void {
@@ -1104,7 +1094,6 @@ export class Workbench implements IPartService {
 			this.workbench,								// Workbench Container
 			{
 				titlebar: this.titlebarPart,			// Title Bar
-				launcher: this.launcherPart,			// Launcher
 				activitybar: this.activitybarPart,		// Activity Bar
 				editor: this.editorPart,				// Editor
 				sidebar: this.sidebarPart,				// Sidebar
@@ -1150,7 +1139,6 @@ export class Workbench implements IPartService {
 
 		// Create Parts
 		this.createTitlebarPart();
-		this.createLauncherPart();
 		this.createActivityBarPart();
 		this.createSidebarPart();
 		this.createEditorPart();
@@ -1180,17 +1168,6 @@ export class Workbench implements IPartService {
 			});
 
 		this.activitybarPart.create(activitybarPartContainer);
-	}
-
-	private createLauncherPart(): void {
-		const launcherPartContainer = $(this.workbench)
-			.div({
-				'class': ['part', 'launcher', this.sideBarPosition === Position.LEFT ? 'left' : 'right'],
-				id: Identifiers.LAUNCHER_PART,
-				role: 'navigation'
-			});
-
-		this.launcherPart.create(launcherPartContainer);
 	}
 
 	private createSidebarPart(): void {
