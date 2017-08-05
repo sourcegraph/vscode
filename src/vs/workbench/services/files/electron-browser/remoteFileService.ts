@@ -106,7 +106,7 @@ export class RemoteFileService extends FileService {
 	resolveFile(resource: URI, options?: IResolveRemoteFileOptions): TPromise<IFileStat> {
 		return this.getProvider(resource.scheme).then(provider => {
 			if (provider) {
-				return this._doResolveFile(provider, resource);
+				return this._doResolveFile(provider, resource, options);
 			}
 
 			return super.resolveFile(resource, options);
