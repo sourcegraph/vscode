@@ -12,6 +12,7 @@ import { MultiWorkspaceProvider } from './multiWorkspace';
 import { FuzzyDefinitionProvider } from './fuzzyDefinition';
 import { repoExtension } from './main';
 import { IRepository } from '../../repo/src/api';
+import * as log from './log';
 
 /**
  * Per-workspace root folder state.
@@ -143,20 +144,32 @@ export class Root {
 		}
 
 		return this.repo.resolvedRevision.then(revision => {
+			let client: LanguageClient;
+			let created = false;
 			if (this.modeClients.has(lang.mode)) {
-				const client = this.modeClients.get(lang.mode);
-				return client.onReady().then(() => client);
+				// Client already exists.
+				client = this.modeClients.get(lang.mode);
+			} else {
+				// Create new client.
+				client = newClient(lang.mode, lang.allLanguageIds, this.resource, revision.id);
+				created = true;
+				this.modeClients.set(lang.mode, client);
+				this.toDisposeOnReset.push(client.start());
+
+				// Initialize cross-repo and fuzzy support.
+				this.toDisposeOnReset.push(new MultiWorkspaceProvider(lang, this.resource, client));
+				this.toDisposeOnReset.push(new FuzzyDefinitionProvider(lang, this.resource, client));
 			}
 
-			const client = newClient(lang.mode, lang.allLanguageIds, this.resource, revision.id);
-			this.modeClients.set(lang.mode, client);
-			this.toDisposeOnReset.push(client.start());
-
-			// Initialize cross-repo and fuzzy support.
-			this.toDisposeOnReset.push(new MultiWorkspaceProvider(lang, this.resource, client));
-			this.toDisposeOnReset.push(new FuzzyDefinitionProvider(lang, this.resource, client));
-
-			return client.onReady().then(() => client);
+			return client.onReady().then(
+				() => client,
+				err => {
+					if (created) {
+						log.outputChannel.appendLine(`Error activating LSP root ${lang.mode} for ${this.resource.toString()}: ${err}.`);
+					}
+					return undefined;
+				},
+			);
 		});
 	}
 

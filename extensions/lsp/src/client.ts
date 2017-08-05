@@ -5,7 +5,7 @@
 'use strict';
 
 import * as vscode from 'vscode';
-import { LanguageClient, RevealOutputChannelOn, LanguageClientOptions, ErrorCodes, MessageTransports, ProvideWorkspaceSymbolsSignature, ShowMessageParams, NotificationHandler } from '@sourcegraph/vscode-languageclient';
+import { LanguageClient, RevealOutputChannelOn, LanguageClientOptions, ErrorCodes, MessageTransports, ProvideWorkspaceSymbolsSignature, ShowMessageParams, NotificationHandler, ResponseError, InitializeError } from '@sourcegraph/vscode-languageclient';
 import { v4 as uuidV4 } from 'uuid';
 import { MessageTrace, webSocketStreamOpener } from './connection';
 import { lspWorkspace, repoExtension } from './main';
@@ -39,6 +39,13 @@ function dispose(toDispose: vscode.Disposable[]): void {
 const REUSE_BACKEND_LANG_SERVERS = true;
 
 /**
+ * JSON-RPC 2.0 error codes returned by the LSP proxy.
+ */
+enum ProxyErrors {
+	ModeNotFound = -32000
+}
+
+/**
 * Creates a new LSP client. The mode specifies which backend language
 * server to communicate with. The languageIds are the vscode document
 * languages that this client should be used to provide hovers, etc.,
@@ -61,6 +68,18 @@ export function newClient(mode: string, languageIds: string[], root: vscode.Uri,
 			mode: mode,
 			rev: commitID,
 			session: REUSE_BACKEND_LANG_SERVERS ? undefined : uuidV4(),
+		},
+		initializationFailedHandler: (error: ResponseError<InitializeError> | Error | any): boolean => {
+			if (error && error.code === ProxyErrors.ModeNotFound) {
+				// Don't report to the user because we already show a nicer language
+				// support warning.
+				return false;
+			}
+
+			if (error && error.message) {
+				vscode.window.showErrorMessage(error.message);
+			}
+			return false;
 		},
 		uriConverters: {
 			code2Protocol: (value: vscode.Uri): string => {
