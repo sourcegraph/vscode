@@ -83,7 +83,7 @@ suite('languages namespace tests', () => {
 			r1.dispose();
 			assert.ok(ran);
 			console.log(result.items);
-			assert.equal(result.items[0].label, 'foo');
+			assert(result.items.some(item => item.label === 'foo'), 'Result should contain CompletionItem with label foo');
 		});
 	});
 });
