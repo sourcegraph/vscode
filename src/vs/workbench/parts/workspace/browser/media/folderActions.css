@@ -1,0 +1,59 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Sourcegraph. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.monaco-action-bar .action-item .action-label.folder-label {
+	font-size: 100%;
+	
+	padding: 1px 5px;
+	line-height: initial;
+
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	overflow: hidden;
+}
+
+.monaco-action-bar .action-item .action-label.folder-action {
+	padding: 0 5px;
+	line-height: initial;
+}
+
+.monaco-action-bar .action-item .action-label.clear-workspace-viewlet {
+	background: url('clear.svg') center center no-repeat;
+}
+
+.vs-dark .monaco-action-bar .action-item .action-label.clear-workspace-viewlet,
+.hc-black .monaco-action-bar .action-item .action-label.clear-workspace-viewlet {
+	background: url('clear-inverse.svg') center center no-repeat;
+}
+
+.monaco-action-bar .action-item .action-label.add-local-folder {
+	background: url('add.svg') center center no-repeat;
+}
+
+.vs-dark .monaco-action-bar .action-item .action-label.add-local-folder,
+.hc-black .monaco-action-bar .action-item .action-label.add-local-folder {
+	background: url('add-inverse.svg') center center no-repeat;
+}
+
+.monaco-action-bar .action-item.disabled .action-label.folder-action.add:not(.adding),
+.monaco-action-bar .action-item.disabled .action-label.folder-action.remove:not(.removing) {
+	display: none;
+}
+
+.workspace-viewlet>.folders .folder>.details>.footer>.monaco-action-bar .action-item .action-label.folder-action.manage.hide {
+	display: none;
+}
+
+.workspace-viewlet>.folders .folder>.details>.footer>.monaco-action-bar .action-item .action-label.folder-action.manage {
+	height: 18px;
+	width: 10px;
+	border: none;
+	background: url('manage.svg') center center no-repeat;
+}
+
+.hc-black .workspace-viewlet>.folders .folder>.details>.footer>.monaco-action-bar .action-item .action-label.folder-action.manage,
+.vs-dark .workspace-viewlet>.folders .folder>.details>.footer>.monaco-action-bar .action-item .action-label.folder-action.manage {
+	background: url('manage-inverse.svg') center center no-repeat;
+}

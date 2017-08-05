@@ -1,0 +1,37 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Sourcegraph. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.folder-stars {
+	display: inline-block;
+}
+
+.folder-stars.small {
+	font-size: 80%;
+}
+
+.folder-stars > .star {
+	display: inline-block;
+	width: 16px;
+	height: 16px;
+	background-repeat: no-repeat;
+	background-position: center center;
+}
+
+.folder-stars > .star:not(:first-child) {
+	margin-left: 3px;
+}
+
+.folder-stars.small > .star {
+	width: 10px;
+	height: 10px;
+}
+
+.folder-stars > .count {
+	margin-left: 6px;
+}
+
+.folder-stars.small > .count {
+	margin-left: 2px;
+}

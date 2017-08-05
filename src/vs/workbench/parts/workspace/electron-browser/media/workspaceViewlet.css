@@ -1,0 +1,172 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Sourcegraph. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.workspace-viewlet {
+	height: 100%;
+}
+
+.workspace-viewlet .non-multi-root-workspace-view {
+	padding: 0 20px 0 20px;
+}
+
+.workspace-viewlet > .header {
+	height: 38px;
+	box-sizing: border-box;
+	padding: 5px 9px 5px 16px;
+}
+
+.workspace-viewlet > .header > .search-box {
+	width: 100%;
+	height: 28px;
+	line-height: 18px;
+	box-sizing: border-box;
+	padding: 4px;
+	border: 1px solid transparent;
+	-webkit-appearance: textfield;
+}
+
+.workspace-viewlet > .folders {
+	height: calc(100% - 38px);
+}
+
+.workspace-viewlet > .folders .folders-list.hidden,
+.workspace-viewlet > .folders .message.hidden {
+	display: none;
+	visibility: hidden;
+}
+
+.workspace-viewlet > .folders .header > .title {
+	flex: 1;
+}
+
+.workspace-viewlet > .folders .message {
+	padding: 5px 9px 5px 16px;
+	cursor: default;
+}
+
+.workspace-viewlet > .folders .folder {
+	box-sizing: border-box;
+	width: 100%;
+	height: 100%;
+	padding: 0 11px 0 16px;
+	overflow: hidden;
+	display: flex;
+}
+
+.workspace-viewlet > .folders .folder.loading {
+	background: url('loading.svg') center center no-repeat;
+}
+
+.workspace-viewlet > .folders .folder > .icon {
+	width: 42px;
+	height: 42px;
+	padding: 10px 14px 10px 0;
+	flex-shrink: 0;
+	object-fit: contain;
+}
+
+.workspace-viewlet.narrow > .folders .folder > .icon {
+	display: none;
+}
+
+.workspace-viewlet > .folders .folder.loading > .icon {
+	display: none;
+}
+
+.workspace-viewlet > .folders .folder > .details {
+	flex: 1;
+	padding: 4px 0;
+	overflow: hidden;
+}
+
+.workspace-viewlet > .folders .folder > .details > .header-container {
+	height: 19px;
+	display: flex;
+	overflow: hidden;
+}
+
+.workspace-viewlet > .folders .folder > .details > .header-container > .header {
+	display: flex;
+	align-items: flex-start;
+	flex-wrap: nowrap;
+	overflow: hidden;
+	flex: 1;
+	min-width: 0;
+}
+
+.workspace-viewlet > .folders .folder > .details > .header-container > .header > .monaco-action-bar {
+	margin-left: 6px;
+	flex: 0 0 auto;
+}
+
+.workspace-viewlet > .folders .folder > .details > .header-container > .header > .name {
+	font-weight: bold;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	overflow: hidden;
+}
+
+.workspace-viewlet > .folders .folder > .details > .header-container > .header > .stars:not(:empty) {
+	font-size: 80%;
+	margin: 0 6px;
+}
+
+.workspace-viewlet > .folders .folder > .details > .header-container > .header > .stars > .octicon {
+	font-size: 100%;
+	margin-right: 2px;
+}
+
+.workspace-viewlet.narrow > .folders .folder > .details > .header-container > .header > .stars {
+	display: none;
+}
+
+.workspace-viewlet > .folders .folder > .details > .footer {
+	display: flex;
+	justify-content: flex-end;
+	height: 18px;
+	overflow: hidden;
+}
+
+.workspace-viewlet > .folders .folder > .details > .footer > .timestamp:not(:empty) {
+	font-size: 90%;
+	padding-right: 6px;
+	opacity: 0.6;
+}
+
+.workspace-viewlet > .folders .folder > .details > .footer > .monaco-action-bar {
+	flex: 1;
+}
+
+.workspace-viewlet > .folders .folder > .details > .footer > .monaco-action-bar > .actions-container {
+	flex-wrap: wrap-reverse;
+}
+
+.workspace-viewlet > .folders .folder > .details > .footer > .monaco-action-bar .action-label {
+	margin-right: 0;
+	margin-left: 0.3em;
+	line-height: 15px;
+}
+
+.workspace-viewlet > .folders .folder > .details > .footer > .monaco-action-bar .action-label:not(:empty) {
+	opacity: 0.9;
+}
+
+.workspace-viewlet > .folders .folder.disabled > .icon,
+.workspace-viewlet > .folders .folder.disabled > .details > .header-container,
+.workspace-viewlet > .folders .folder.disabled > .details > .description {
+	opacity: 0.5;
+}
+
+.workspace-viewlet > .folders .folder .ellipsis {
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.folders-badge.progress-badge > .badge-content {
+	background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNCIgaGVpZ2h0PSIxNCIgdmlld0JveD0iMiAyIDE0IDE0IiBlbmFibGUtYmFja2dyb3VuZD0ibmV3IDIgMiAxNCAxNCI+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTkgMTZjLTMuODYgMC03LTMuMTQtNy03czMuMTQtNyA3LTdjMy44NTkgMCA3IDMuMTQxIDcgN3MtMy4xNDEgNy03IDd6bTAtMTIuNmMtMy4wODggMC01LjYgMi41MTMtNS42IDUuNnMyLjUxMiA1LjYgNS42IDUuNiA1LjYtMi41MTIgNS42LTUuNi0yLjUxMi01LjYtNS42LTUuNnptMy44NiA3LjFsLTMuMTYtMS44OTZ2LTMuODA0aC0xLjR2NC41OTZsMy44NCAyLjMwNS43Mi0xLjIwMXoiLz48L3N2Zz4=");
+	background-position: center center;
+	background-repeat: no-repeat;
+}

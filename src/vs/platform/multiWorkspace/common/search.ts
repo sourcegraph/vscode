@@ -26,6 +26,11 @@ export interface IWorkspaceSearchService {
 	search(query: ISearchQuery): TPromise<ISearchComplete>;
 
 	/**
+	 * Returns information about a specific workspace.
+	 */
+	getWorkspace(uri: uri): TPromise<IWorkspaceMatch>;
+
+	/**
 	 * Reports whether the query can be satisfied using only the local cache (without
 	 * hitting the network).
 	 */
@@ -116,6 +121,21 @@ export interface IWorkspaceMatch {
 	fork?: boolean;
 
 	/**
+	 * The number of users who have starred this workspace.
+	 */
+	starsCount?: number;
+
+	/**
+	 * The number of forks of this repository that exist.
+	 */
+	forksCount?: number;
+
+	/**
+	 * The primary programming language of the code in this workspace.
+	 */
+	language?: string;
+
+	/**
 	 * The date when this repository was last git-pushed to.
 	 */
 	pushedAt?: number;
@@ -135,6 +155,9 @@ export class WorkspaceMatch implements IWorkspaceMatch {
 		public isPrivate: boolean | undefined,
 		public affiliation: Affiliation | undefined,
 		public fork: boolean | undefined,
+		public starsCount: number | undefined,
+		public forksCount: number | undefined,
+		public language: string | undefined,
 		public pushedAt: number | undefined,
 		public recentlyOpened?: boolean | undefined,
 	) {
@@ -148,6 +171,9 @@ export class WorkspaceMatch implements IWorkspaceMatch {
 			data.isPrivate,
 			data.affiliation,
 			data.fork,
+			data.starsCount,
+			data.forksCount,
+			data.language,
 			data.pushedAt,
 			data.recentlyOpened,
 		);
@@ -160,6 +186,9 @@ export class WorkspaceMatch implements IWorkspaceMatch {
 			isPrivate: this.isPrivate,
 			affiliation: this.affiliation,
 			fork: this.fork,
+			starsCount: this.starsCount,
+			forksCount: this.forksCount,
+			language: this.language,
 			pushedAt: this.pushedAt,
 			recentlyOpened: this.recentlyOpened,
 		};

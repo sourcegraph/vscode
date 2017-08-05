@@ -153,16 +153,23 @@ export class WorkspaceSearchService implements IWorkspaceSearchService {
 		return TPromise.as(cachedValue.result) as TPromise<ISearchComplete>;
 	}
 
+	private toWorkspaceMatch(repo: { uri: string, description: string, private: boolean, fork: boolean, starsCount?: number, forksCount?: number, language?: string, pushedAt: string }, query?: ISearchQuery): WorkspaceMatch {
+		return new WorkspaceMatch(
+			URI.parse(`repo://${repo.uri}`),
+			repo.description,
+			repo.private,
+			query && query.affiliated ? Affiliation.Member : Affiliation.None,
+			repo.fork,
+			repo.starsCount,
+			repo.forksCount,
+			repo.language,
+			repo.pushedAt ? Date.parse(repo.pushedAt) : undefined,
+		);
+	}
+
 	private doSearch(query: ISearchQuery, graphqlField: string, graphqlVars: { [key: string]: any }): TPromise<ISearchComplete> {
-		const convertResults = (repoList: { uri: string, description: string, private: boolean, fork: boolean, pushedAt: string }[]) => {
-			return repoList.map(repo => new WorkspaceMatch(
-				URI.parse(`repo://${repo.uri}`),
-				repo.description,
-				repo.private,
-				query.affiliated ? Affiliation.Member : Affiliation.None,
-				repo.fork,
-				repo.pushedAt ? Date.parse(repo.pushedAt) : undefined,
-			));
+		const convertResults = (repos: any[]) => {
+			return repos.map(repo => this.toWorkspaceMatch(repo, query));
 		};
 
 		const graphqlQuery = `query SearchRepos {
@@ -172,6 +179,9 @@ export class WorkspaceSearchService implements IWorkspaceSearchService {
 						description
 						private
 						fork
+						starsCount
+						forksCount
+						language
 						pushedAt
 					}
 				}
@@ -200,6 +210,29 @@ export class WorkspaceSearchService implements IWorkspaceSearchService {
 			}
 		});
 		return resultPromise;
+	}
+
+	public getWorkspace(uri: URI): TPromise<IWorkspaceMatch | undefined> {
+		return requestGraphQL(this.remoteService, `
+			query GetRepo {
+				root {
+					repository(uri: $uri) {
+						uri
+						description
+						private
+						fork
+						starsCount
+						forksCount
+						language
+						pushedAt
+					}
+				}
+}`,
+			{ uri: uri.authority + uri.path },
+		)
+			.then((root: any) => {
+				return root && root.repository ? this.toWorkspaceMatch(root.repository) : undefined;
+			});
 	}
 
 	public isCached(query: ISearchQuery): boolean {

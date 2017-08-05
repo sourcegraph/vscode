@@ -10,6 +10,7 @@ import { ContextKeyExpr } from 'vs/platform/contextkey/common/contextkey';
 
 export class ViewLocation {
 
+	static readonly Workspace = new ViewLocation('workspace');
 	static readonly Explorer = new ViewLocation('explorer');
 	static readonly Debug = new ViewLocation('debug');
 	static readonly Extensions = new ViewLocation('extensions');
