@@ -8,6 +8,7 @@
 import * as vscode from 'vscode';
 import { GitRepository } from './git';
 import { isRepoResource, REPO_SCHEME, REPO_VERSION_SCHEME } from './repository';
+import { toRelativePath } from './util';
 
 export const SWITCH_REVISION_COMMAND_ID = 'repo.action.switchRevision';
 
@@ -89,11 +90,7 @@ export class Workspace implements vscode.Disposable {
 
 	private onDidChangeWorkspaceFolders(event: vscode.WorkspaceFoldersChangeEvent): void {
 		for (const removedFolder of event.removed) {
-			const repo = this.repositories.get(removedFolder.uri.toString());
-			if (repo) {
-				this.repositories.delete(removedFolder.uri.toString());
-				repo.dispose();
-			}
+			this.removeFolderIfUnused(removedFolder.uri);
 		}
 
 		for (const addedFolder of event.added) {
@@ -102,6 +99,19 @@ export class Workspace implements vscode.Disposable {
 			}
 		}
 	};
+
+	private removeFolderIfUnused(folder: vscode.Uri): void {
+		const isWorkspaceRoot = vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.some(f => f.uri.toString() === folder.toString());
+		const hasOpenDocuments = vscode.workspace.textDocuments.some(doc => !!toRelativePath(folder, doc.uri));
+
+		if (!isWorkspaceRoot && !hasOpenDocuments) {
+			const repo = this.repositories.get(folder.toString());
+			if (repo) {
+				this.repositories.delete(folder.toString());
+				repo.dispose();
+			}
+		}
+	}
 
 	public getRepository(resource: vscode.Uri): GitRepository | undefined {
 		const folder = vscode.workspace.findContainingFolder(resource);
