@@ -84,15 +84,25 @@ export class CodeCommentsService implements ICodeCommentsService {
 	 * See documentation on ICodeCommentsService.
 	 */
 	public createThread(file: URI, range: Range, contents: string): TPromise<Thread> {
+		const revision = this.git.getLastPushedRevision(file);
+		const reverseDiff = revision.then(rev => this.git.getDiff(file, rev, { reverse: true }));
 		return TPromise.join([
-			this.git.getRevisionSHA(file),
+			revision,
+			reverseDiff,
 			this.git.getUserName(file),
 			this.git.getUserEmail(file),
 			this.git.getRoot(file),
 			this.git.getRemoteRepo(file),
 			this.git.getAccessToken(file),
 		])
-			.then(([revision, authorName, authorEmail, root, repo, accessToken]) => {
+			.then(([revision, diff, authorName, authorEmail, root, repo, accessToken]) => {
+				// We adjust the range to be for the last pushed revision.
+				// If this line doesn't exist in the last pushed revision, then we shouldn't publish the comment
+				// because nobody would be able to see it.
+				const adjustedRange = (new Diff(diff)).transformRange(range);
+				if (!adjustedRange) {
+					throw new Error('unable to comment on this line because it has not been pushed');
+				}
 				const relativeFile = this.relativePath(URI.parse(root), file);
 				return requestGraphQLMutation<{ createThread: GQL.IThread }>(this.remoteService, `mutation {
 					createThread(
@@ -111,15 +121,14 @@ export class CodeCommentsService implements ICodeCommentsService {
 						${threadGraphql}
 					}
 				}`, {
-
 						remoteURI: repo,
 						accessToken,
 						file: relativeFile,
 						revision,
-						startLine: range.startLineNumber,
-						endLine: range.endLineNumber,
-						startCharacter: range.startColumn,
-						endCharacter: range.endColumn,
+						startLine: adjustedRange.startLineNumber,
+						endLine: adjustedRange.endLineNumber,
+						startCharacter: adjustedRange.startColumn,
+						endCharacter: adjustedRange.endColumn,
 						contents,
 						authorName,
 						authorEmail,
@@ -281,16 +290,12 @@ export class CodeCommentsService implements ICodeCommentsService {
 	 * TODO: this should be cached in some way instead of being recomputed.
 	 */
 	private adjustThreadRanges(file: URI, threads: Thread[]): TPromise<Thread[]> {
-		// TODO: this does not correctly handle uncommitted changes.
-		return this.git.getRevisionSHA(file)
-			.then(toRev => {
-				// Collect all relevant diffs.
-				const revs = threads.map(thread => thread.revision).filter(uniqueFilter);
-				return TPromise.join(revs.map(rev =>
-					this.git.getDiff(file, rev, toRev)
-						.then(diff => ({ rev, diff: new Diff(diff) }))
-				));
-			})
+		// Collect all relevant diffs.
+		const revs = threads.map(thread => thread.revision).filter(uniqueFilter);
+		return TPromise.join(revs.map(rev =>
+			this.git.getDiff(file, rev)
+				.then(diff => ({ rev, diff: new Diff(diff) }))
+		))
 			.then(diffs => {
 				return diffs.reduce((map, diff) => {
 					map.set(diff.rev, diff.diff);

@@ -10,7 +10,6 @@ import { TPromise } from 'vs/base/common/winjs.base';
 
 /**
  * Interface to intract with Git in the current workspace.
- * TODO: refactor into service so it is easier to mock.
  */
 export class Git {
 
@@ -19,8 +18,35 @@ export class Git {
 	) {
 	}
 
+	/**
+	 * Returns the most recent revision in the current branch that is on the upstream.
+	 */
+	public getLastPushedRevision(context: URI): TPromise<string> {
+		return this.getRemoteTrackingBranches(context).then(remotes => {
+			const remoteArgs = remotes.map(remote => '^' + remote);
+			// This returns oldest revision that is reachable from HEAD but not from any of remoteArgs.
+			return this.spawnPromiseTrim(context, ['rev-list', '--reverse', '--max-count', '1', 'HEAD'].concat(remoteArgs));
+		}).then(oldestUnpushedRevision => {
+			// We want to return a rev that IS pushed so we get this revision's parent.
+			return this.spawnPromiseTrim(context, ['rev-parse', oldestUnpushedRevision + '~']);
+		});
+	}
+
+	/**
+	 * Returns all remote tracking branches
+	 * (e.g. origin/HEAD, origin/master, origin/featurebranch)
+	 */
+	private getRemoteTrackingBranches(context: URI): TPromise<string[]> {
+		return this.spawnPromiseTrim(context, ['branch', '-r', '-v']).then(refs => {
+			return refs.split('\n').map(line => {
+				line = line.trim();
+				const end = line.indexOf(' ');
+				return line.substr(0, end);
+			});
+		});
+	}
+
 	public getRevisionSHA(context: URI): TPromise<string> {
-		// TODO: return most recent commit that is actually in a upstream
 		return this.spawnPromiseTrim(context, ['rev-parse', 'HEAD']);
 	}
 
@@ -48,8 +74,16 @@ export class Git {
 		return this.spawnPromiseTrim(context, ['rev-list', '--max-parents=0', 'HEAD']);
 	}
 
-	public getDiff(file: URI, from: string, to: string): TPromise<string> {
-		return this.spawnPromiseTrim(file, ['diff', '-U0', '--histogram', from, to, file.fsPath]);
+	/**
+	 * Returns the diff of file from a revision to the current state.
+	 */
+	public getDiff(file: URI, fromRev: string, options?: { reverse?: boolean }): TPromise<string> {
+		const args = ['diff', '-U0', '--histogram'];
+		if (options && options.reverse) {
+			args.push('-R');
+		}
+		args.push(fromRev, file.fsPath);
+		return this.spawnPromiseTrim(file, args);
 	}
 
 	/**
