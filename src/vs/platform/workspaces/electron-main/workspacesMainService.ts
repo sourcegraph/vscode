@@ -92,10 +92,6 @@ export class WorkspacesMainService implements IWorkspacesMainService {
 	}
 
 	public createWorkspace(folders: string[]): TPromise<IWorkspaceIdentifier> {
-		if (!folders.length) {
-			return TPromise.wrapError(new Error('Creating a workspace requires at least one folder.'));
-		}
-
 		const workspaceId = this.nextWorkspaceId();
 		const workspaceConfigFolder = join(this.workspacesHome, workspaceId);
 		const workspaceConfigPath = join(workspaceConfigFolder, UNTITLED_WORKSPACE_NAME);

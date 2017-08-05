@@ -58,8 +58,14 @@ suite('WorkspacesMainService', () => {
 	});
 
 	test('createWorkspace (no folders)', done => {
-		return service.createWorkspace([]).then(null, error => {
-			assert.ok(error);
+		return service.createWorkspace([]).then(workspace => {
+			assert.ok(workspace);
+			assert.ok(fs.existsSync(workspace.configPath));
+			assert.ok(service.isUntitledWorkspace(workspace));
+
+			const ws = JSON.parse(fs.readFileSync(workspace.configPath).toString()) as IStoredWorkspace;
+			assert.equal(ws.id, workspace.id);
+			assert.equal(ws.folders.length, 0);
 
 			done();
 		});
