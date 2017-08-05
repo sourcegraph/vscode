@@ -240,6 +240,20 @@ class ExtHostSourceControl implements vscode.SourceControl {
 		this._proxy.$updateSourceControl(this._handle, { revision });
 	}
 
+	private _setRevisionCommand: vscode.Command | undefined = undefined;
+
+	get setRevisionCommand(): vscode.Command | undefined {
+		return this._setRevisionCommand;
+	}
+
+	set setRevisionCommand(setRevisionCommand: vscode.Command | undefined) {
+		this._setRevisionCommand = setRevisionCommand;
+
+		const internal = this._commands.toInternal(setRevisionCommand);
+		this._proxy.$updateSourceControl(this._handle, { setRevisionCommand: internal });
+	}
+
+
 	private _handle: number = ExtHostSourceControl._handlePool++;
 
 	constructor(

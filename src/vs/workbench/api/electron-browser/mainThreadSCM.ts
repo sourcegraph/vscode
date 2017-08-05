@@ -11,7 +11,7 @@ import Event, { Emitter } from 'vs/base/common/event';
 import { assign } from 'vs/base/common/objects';
 import { IDisposable, dispose } from 'vs/base/common/lifecycle';
 import { IThreadService } from 'vs/workbench/services/thread/common/threadService';
-import { ISCMService, ISCMProvider, ISCMResource, ISCMResourceGroup, ISCMResourceDecorations } from 'vs/workbench/services/scm/common/scm';
+import { ISCMService, ISCMProvider, ISCMRevision, ISCMResource, ISCMResourceGroup, ISCMResourceDecorations } from 'vs/workbench/services/scm/common/scm';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { ICommandService } from 'vs/platform/commands/common/commands';
 import { ExtHostContext, MainThreadSCMShape, ExtHostSCMShape, SCMProviderFeatures, SCMRawResource, SCMGroupFeatures } from '../node/extHost.protocol';
@@ -78,6 +78,7 @@ class MainThreadSCMProvider implements ISCMProvider {
 	get handle(): number { return this._handle; }
 	get label(): string { return this._label; }
 	get id(): string { return this._id; }
+	get revision(): ISCMRevision | undefined { return this.features.revision; }
 	get rootFolder(): URI | undefined { return this._rootFolder; }
 
 	get commitTemplate(): string | undefined { return this.features.commitTemplate; }
