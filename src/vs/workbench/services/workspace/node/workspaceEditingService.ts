@@ -68,13 +68,7 @@ export class WorkspaceEditingService implements IWorkspaceEditingService {
 		}
 
 		// Apply to config
-		if (newWorkspaceRoots.length) {
-			return this.jsonEditingService.write(workspace.configuration, { key: 'folders', value: newWorkspaceRoots }, true);
-		} else {
-			// TODO: Sandeep - Removing all roots?
-		}
-
-		return TPromise.as(null);
+		return this.jsonEditingService.write(workspace.configuration, { key: 'folders', value: newWorkspaceRoots }, true);
 	}
 
 	private validateRoots(roots: URI[]): string[] {
