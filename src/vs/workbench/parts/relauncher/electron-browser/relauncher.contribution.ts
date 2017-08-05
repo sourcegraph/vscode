@@ -128,7 +128,7 @@ export class SettingsChangeRelauncher implements IWorkbenchContribution {
 		// HACK(sqs): Reloading is only necessary for extensions that incorrectly use
 		// vscode.workspace.rootPath. None of the extensions we rely on use that, so we
 		// can skip reloading in most cases.
-		reload = this.rootCount === 0 && newRootCount > 0;
+		reload = !workspace;
 
 		if (reload) {
 			this.doConfirm(
