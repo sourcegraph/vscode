@@ -51,6 +51,13 @@ export interface Repository extends IRepository {
 	 * global SCM status bar item.
 	 */
 	renderStatusBarItem(statusBarItem: vscode.StatusBarItem): void;
+
+	/**
+	 * Shows a quickopen that lists available revisions for the current
+	 * repository. Selecting any of these revisions switches the current repository to
+	 * that revision, updating all of its open documents to that revision.
+	 */
+	openRevisionPicker(): void;
 }
 
 /**

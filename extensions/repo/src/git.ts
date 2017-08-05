@@ -66,6 +66,23 @@ export class GitRepository implements Repository, vscode.Disposable {
 		this.sourceControl.commandExecutor = this;
 		this.toDispose.push(this.sourceControl);
 
+		// Register setRevisionCommand.
+		//
+		// TODO(sqs): rethink this setRevisionCommand API because it requires registering
+		// one command per source control, which is excessive.
+		const commandId = `repo.git.setRevision[${root.toString()}]`;
+		this.toDispose.push(vscode.commands.registerCommand(commandId, (revision?: vscode.SCMRevision): void => {
+			if (revision) {
+				this.revision = revision;
+			} else {
+				this.openRevisionPicker();
+			}
+		}));
+		this.sourceControl.setRevisionCommand = {
+			title: localize('repo.git.setRevision', "Set revision for {0}", this.label),
+			command: commandId,
+		};
+
 		// Load last-viewed revision for repository.
 		let revision: vscode.SCMRevision | undefined;
 		const rawRevisionSpecifier = parseResourceRevision(root);
@@ -275,6 +292,41 @@ export class GitRepository implements Repository, vscode.Disposable {
 			{ repo: this.label, params: args },
 			'repo/repository/gitCmdRaw',
 		).then(root => root.repository.gitCmdRaw || '');
+	}
+
+	public openRevisionPicker(): void {
+		this.listRefs().then(
+			(refs: Ref[]) => {
+				const currentRef = this.revision.specifier;
+				const picks: (vscode.QuickPickItem & { id: string, ref: Ref })[] = refs
+					.map(ref => {
+						let description = '';
+						if (ref.isHEAD) {
+							description = localize('scmDefaultBranch', "default branch");
+						} else if (ref.type === RefType.Head) {
+							description = localize('scmBranch', "branch");
+						} else if (ref.type === RefType.Tag) {
+							description = localize('scmTag', "tag");
+						}
+						return {
+							id: ref.ref,
+							label: `${ref.name} ${ref.ref === currentRef ? '*' : ''}`,
+							description,
+							ref,
+						};
+					})
+					.sort((t1, t2) => t1.label.localeCompare(t2.label));
+
+				return vscode.window.showQuickPick(picks, {
+					placeHolder: localize('selectRef', "Select a Git ref to switch to..."),
+				}).then(pick => {
+					if (pick) {
+						this.revision = { rawSpecifier: pick.ref.name, specifier: pick.ref.ref };
+					}
+				});
+			},
+			err => vscode.window.showErrorMessage(localize('switchRevisionError', "Error switching revision: {0}", err)),
+		);
 	}
 
 	public dispose(): void {

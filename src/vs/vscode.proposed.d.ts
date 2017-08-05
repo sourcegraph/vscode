@@ -127,6 +127,9 @@ declare module 'vscode' {
 		 * This command will be invoked to set the revision of the source control. An
 		 * argument of type SCMRevision (specifying the revision to set) is appended to
 		 * the Command's arguments array.
+		 *
+		 * If there is no argument, the source control should present the user with a menu
+		 * to select a revision.
 		 */
 		setRevisionCommand?: Command;
 

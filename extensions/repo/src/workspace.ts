@@ -6,11 +6,8 @@
 'use strict';
 
 import * as vscode from 'vscode';
-import { GitRepository, Ref, RefType } from './git';
+import { GitRepository } from './git';
 import { isRepoResource, REPO_SCHEME, REPO_VERSION_SCHEME } from './repository';
-import * as nls from 'vscode-nls';
-
-const localize = nls.loadMessageBundle();
 
 export const SWITCH_REVISION_COMMAND_ID = 'repo.action.switchRevision';
 
@@ -44,7 +41,7 @@ export class Workspace implements vscode.Disposable {
 
 		this.registerUnionFileSystem();
 
-		this.toDispose.push(vscode.commands.registerCommand(SWITCH_REVISION_COMMAND_ID, () => this.showSwitchRevision()));
+		this.toDispose.push(vscode.commands.registerCommand(SWITCH_REVISION_COMMAND_ID, () => this.openRevisionPickerForActiveRepository()));
 
 		// Create status bar item for switching the revision for the repository that is
 		// relevant to the active editor's document.
@@ -167,50 +164,14 @@ export class Workspace implements vscode.Disposable {
 		}));
 	}
 
-	/**
-	 * Shows a quickopen that lists available revisions for the current repository. Selecting
-	 * any of these revisions switches the current repository to that Git revision, updating all
-	 * of its open documents to that revision.
-	 */
-	private showSwitchRevision(): void {
+	private openRevisionPickerForActiveRepository(): void {
 		const uri = vscode.window.activeTextEditor ? vscode.window.activeTextEditor.document.uri : undefined;
 		if (!uri) {
 			return;
 		}
 
 		const repo = this.getRepository(uri)!;
-		repo.listRefs().then(
-			(refs: Ref[]) => {
-				const currentRef = repo.revision!.specifier;
-				const picks: (vscode.QuickPickItem & { id: string, ref: Ref })[] = refs
-					.map(ref => {
-						let description = '';
-						if (ref.isHEAD) {
-							description = localize('scmDefaultBranch', "default branch");
-						} else if (ref.type === RefType.Head) {
-							description = localize('scmBranch', "branch");
-						} else if (ref.type === RefType.Tag) {
-							description = localize('scmTag', "tag");
-						}
-						return {
-							id: ref.ref,
-							label: `${ref.name} ${ref.ref === currentRef ? '*' : ''}`,
-							description,
-							ref,
-						};
-					})
-					.sort((t1, t2) => t1.label.localeCompare(t2.label));
-
-				return vscode.window.showQuickPick(picks, {
-					placeHolder: localize('selectRef', "Select a Git ref to switch to..."),
-				}).then(pick => {
-					if (pick) {
-						repo.revision = { rawSpecifier: pick.ref.name, specifier: pick.ref.ref };
-					}
-				});
-			},
-			err => vscode.window.showErrorMessage(localize('switchRevisionError', "Error switching revision: {0}", err)),
-		);
+		return repo.openRevisionPicker();
 	}
 
 	dispose(): void {
