@@ -78,7 +78,10 @@ export class Git {
 	 * Returns the diff of file from a revision to the current state.
 	 */
 	public getDiff(file: URI, fromRev: string, options?: { reverse?: boolean }): TPromise<string> {
-		const args = ['diff', '-U0', '--histogram'];
+		// To help range transformations for comments:
+		// -U1 to request the minimum useful amount of context (git default is three)
+		// --histogram to spend extra time making more semantically correct diffs
+		const args = ['diff', '-U1', '--histogram'];
 		if (options && options.reverse) {
 			args.push('-R');
 		}

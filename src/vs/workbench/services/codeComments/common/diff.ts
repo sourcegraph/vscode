@@ -4,12 +4,16 @@
  *--------------------------------------------------------------------------------------------*/
 'use strict';
 
+import { Position } from 'vs/editor/common/core/position';
 import { Range } from 'vs/editor/common/core/range';
 import * as strings from 'vs/base/common/strings';
 
 /**
  * Diff is constructed from a unified diff string and provides a transformRange method
  * to transform a range according to the diff.
+ *
+ * For best results, construct with a diff that has at least one line of context.
+ * Git diff defaults to three lines of context (and you can change it with the -U option).
  */
 export class Diff {
 	/**
@@ -18,18 +22,35 @@ export class Diff {
 	private lineDiffs: LineDiff[] = [];
 
 	/**
-	 * A index on deleted lines by line number.
+	 * An index on deleted lines by line number.
 	 */
 	private deletedIndex = new Map<number, LineDiff>();
 
+	/**
+	 * An index on added lines by content.
+	 */
+	private addedIndexExact = new Map<string, LineDiff>();
+
+	/**
+	 * An index on added lines by content with leading and trailing whitespace removed.
+	 */
+	private addedIndexTrim = new Map<string, LineDiff>();
+
+	/**
+	 * An index on unchanged lines by line number.
+	 */
+	private unchangedIndex = new Map<number, LineDiff>();
+
 	public constructor(diff: string) {
 		const lines = diff.trim().split('\n');
-		let offset = -1;
+		let beforeLine = -1;
+		let afterLine = -1;
 		let header = true;
 		for (const line of lines) {
 			if (strings.startsWith(line, '@@')) {
 				const hunk = parseHunkHeader(line);
-				offset = hunk.before.count > 0 ? hunk.before.start : hunk.before.start + 1;
+				beforeLine = hunk.before.count > 0 ? hunk.before.start : hunk.before.start + 1;
+				afterLine = hunk.after.count > 0 ? hunk.after.start : hunk.after.start + 1;
 				header = false;
 				continue;
 			}
@@ -40,19 +61,28 @@ export class Diff {
 			const content = line.substr(1);
 			switch (line[0]) {
 				case '+': {
-					const lineDiff: LineDiff = { line: offset, content, type: DiffType.Add };
+					const lineDiff: LineDiff = { beforeLine, afterLine, content, lineDelta: 1 };
 					this.lineDiffs.push(lineDiff);
+					// If there are duplicates, we just choose the last one.
+					// Future improvement: update transformRange to return an array of ranges
+					// so ranges can be split. We would need to store all values here.
+					this.addedIndexExact.set(content, lineDiff);
+					this.addedIndexTrim.set(content.trim(), lineDiff);
+					afterLine += 1;
 					break;
 				}
 				case '-': {
-					const lineDiff: LineDiff = { line: offset, content, type: DiffType.Delete };
+					const lineDiff: LineDiff = { beforeLine, afterLine, content, lineDelta: -1 };
 					this.lineDiffs.push(lineDiff);
-					this.deletedIndex.set(offset, lineDiff);
-					offset += 1;
+					this.deletedIndex.set(beforeLine, lineDiff);
+					beforeLine += 1;
 					break;
 				}
 				case ' ':
-					offset += 1;
+					const lineDiff: LineDiff = { beforeLine, afterLine, content, lineDelta: 0 };
+					this.unchangedIndex.set(beforeLine, lineDiff);
+					beforeLine += 1;
+					afterLine += 1;
 					break;
 				default:
 					throw new Error('invalid diff line: ' + line);
@@ -66,52 +96,156 @@ export class Diff {
 	 * does not exist after the diff.
 	 */
 	public transformRange(range: Range): Range | undefined {
-		// If any part of the range is deleted, then treat the entire range as deleted.
-		// This could be improved upon in the future.
-		for (let line = range.startLineNumber; line <= range.endLineNumber; line++) {
-			if (this.deletedIndex.has(line)) {
-				return undefined;
-			}
+		const result = this.trimDeletedLines(range);
+		if (!result) {
+			return this.findMovedRange(range);
 		}
+		range = result.range;
 
-		// This could use binary search, but I am lazy.
-		let lineOffset = 0;
+		let startLineOffset = 0;
+		let endLineOffset = 0;
 		for (const lineDiff of this.lineDiffs) {
-			if (lineDiff.line > range.startLineNumber) {
+			if (lineDiff.beforeLine > result.effectiveEndLine) {
 				break;
 			}
-			switch (lineDiff.type) {
-				case DiffType.Add:
-					lineOffset += 1;
-					break;
-				case DiffType.Delete:
-					lineOffset -= 1;
-					break;
+			if (lineDiff.beforeLine <= range.startLineNumber) {
+				startLineOffset += lineDiff.lineDelta;
 			}
+			endLineOffset += lineDiff.lineDelta;
 		}
-		if (lineOffset === 0) {
+		if (startLineOffset === 0 && endLineOffset === 0) {
 			return range;
 		}
-		return new Range(range.startLineNumber + lineOffset, range.startColumn, range.endLineNumber + lineOffset, range.endColumn);
+		return new Range(range.startLineNumber + startLineOffset, range.startColumn, range.endLineNumber + endLineOffset, range.endColumn);
 	}
-}
 
-enum DiffType {
-	Add, Delete
+	/**
+	 * Returns the range with leading and trailing deleted lines removed.
+	 * If no lines remain, it returns undefined.
+	 * If lines are trimmed from the end of the range, the end position might be
+	 * the first character on the line after the effectiveEndLine
+	 * if the diff doesn't contain at least one line of context around each hunk.
+	 */
+	private trimDeletedLines(range: Range): { range: Range, effectiveEndLine: number } | undefined {
+		let endPosition: Position | undefined;
+		let startPosition: Position | undefined;
+		let effectiveEndLine: number;
+		for (let line = range.startLineNumber; line <= range.endLineNumber; line++) {
+			if (this.deletedIndex.has(line)) {
+				continue;
+			}
+			if (!startPosition) {
+				if (line === range.startLineNumber) {
+					startPosition = range.getStartPosition();
+				} else {
+					startPosition = new Position(line, 1);
+				}
+			}
+			if (line === range.endLineNumber) {
+				endPosition = range.getEndPosition();
+			} else if (this.unchangedIndex.has(line)) {
+				// The diff has this unchanged line in it so we can
+				// determine the end position based on the content.
+				const lineDiff = this.unchangedIndex.get(line);
+				endPosition = new Position(line, lineDiff.content.length + 1);
+			} else {
+				// Either we are in the middle of the range and this endPosition will get overwritten
+				// on the next loop iteration, or the diff doesn't contain any context around changes (i.e. -U0).
+				// In either case we don't know the length of this line, so the end position
+				// of the range is just the first character in the next line.
+				// The existance of this case is why we store effectiveEndLine separately.
+				endPosition = new Position(line + 1, 1);
+			}
+			effectiveEndLine = line;
+		}
+		if (!startPosition || !endPosition) {
+			return undefined;
+		}
+		return {
+			range: new Range(startPosition.lineNumber, startPosition.column, endPosition.lineNumber, endPosition.column),
+			effectiveEndLine,
+		};
+	}
+
+	/**
+	 * Returns the moved version of range if it has been moved.
+	 * The input range is assumed to be completely deleted.
+	 */
+	private findMovedRange(range: Range): Range | undefined {
+		let startPosition: Position | undefined;
+		let endPosition: Position | undefined;
+		for (let line = range.startLineNumber; line <= range.endLineNumber; line++) {
+			const deletedLine = this.deletedIndex.get(line);
+			if (!deletedLine) {
+				throw new Error('findMovedRange expected all lines to be deleted');
+			}
+			let addedLine = this.addedIndexExact.get(deletedLine.content);
+			let columnDelta = 0;
+			if (!addedLine) {
+				const deletedLineTrimmed = deletedLine.content.trim();
+				addedLine = this.addedIndexTrim.get(deletedLineTrimmed);
+				if (addedLine) {
+					const addedLineTrimmed = addedLine.content.trim();
+					const leadingWhitespaceBefore = Math.max(deletedLine.content.indexOf(deletedLineTrimmed[0]), 0);
+					const leadingWhitespaceAfter = Math.max(addedLine.content.indexOf(addedLineTrimmed[0]), 0);
+					columnDelta = leadingWhitespaceAfter - leadingWhitespaceBefore;
+				}
+			}
+			if (!addedLine) {
+				if (startPosition) {
+					// If we already found some part of the range moved,
+					// then we are done.
+					break;
+				}
+				// Keep looking to see if part of the range was moved.
+				continue;
+			}
+			if (!startPosition || addedLine.afterLine === endPosition.lineNumber + 1) {
+				// Starting or continuing a range.
+				if (line === range.endLineNumber) {
+					const endColumn = Math.max(range.endColumn + columnDelta, 1);
+					endPosition = new Position(addedLine.afterLine, endColumn);
+				} else {
+					endPosition = new Position(addedLine.afterLine, addedLine.content.length + 1);
+				}
+			}
+			if (!startPosition) {
+				// Starting a new range.
+				if (line === range.startLineNumber) {
+					const startColumn = Math.max(range.startColumn + columnDelta, 1);
+					startPosition = new Position(addedLine.afterLine, startColumn);
+				} else {
+					startPosition = new Position(addedLine.afterLine, 1);
+				}
+			}
+		}
+		if (!startPosition || !endPosition) {
+			return undefined;
+		}
+		return new Range(startPosition.lineNumber, startPosition.column, endPosition.lineNumber, endPosition.column);
+	}
 }
 
 interface LineDiff {
 	/**
 	 * Line number (the first line of the file is 1).
 	 */
-	line: number;
+	beforeLine: number;
+
+	/**
+	 * The line number after the diff is applied.
+	 */
+	afterLine: number;
 
 	/**
 	 * The content of the line that was added or deleted.
 	 */
 	content: string;
 
-	type: DiffType;
+	/**
+	 * 1 for add, -1 for delete.
+	 */
+	lineDelta: number;
 }
 
 const beforeHunkRegex = /-([0-9]+)(?:,([0-9]+))?/;

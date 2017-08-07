@@ -8,134 +8,106 @@ import { Diff } from 'vs/workbench/services/codeComments/common/diff';
 import { Range } from 'vs/editor/common/core/range';
 import * as assert from 'assert';
 
+const diffHeader = `diff --git a/comments.txt b/comments.txt
+index 63ef680..47010db 100644
+--- a/comments.txt
++++ b/comments.txt`;
+
 /**
- * These tests were originally written in VSCode's extension context
- * where vscode.Range is 0-indexed. The code and tests were then moved
- * inside of the core codebase where Range is 1-indexed. This shim was
- * created instead of manually transforming all the test cases.
+ * Helper class for testing different forms of equivalent diffs.
+ * u3 is a diff with 3 lines of context around each change (the default).
+ * u0 is a diff with 0 lines of context around each change (-U0 option).
  */
-class ZeroIndexedRange extends Range {
-	constructor(startLineNumber: number, startColumn: number, endLineNumber: number, endColumn: number) {
-		super(startLineNumber + 1, startColumn + 1, endLineNumber + 1, endColumn + 1);
+class TestDiff {
+	constructor(
+		private u3Hunks: string,
+		private u0Hunks: string,
+	) { }
+
+	/**
+	 * Asserts that the diff transforms `from` to `to`.
+	 * If `toU0` is provided, that value is used for the case
+	 * where no diff context is provided.
+	 */
+	public assertTransformRange(from: Range, to: Range, toU0?: Range) {
+		toU0 = toU0 || to;
+		this.assertDiffTransformRange('u3\n' + diffHeader + this.u3Hunks, new Diff(diffHeader + this.u3Hunks), from, to);
+		this.assertDiffTransformRange('u0\n' + diffHeader + this.u0Hunks, new Diff(diffHeader + this.u0Hunks), from, toU0);
+	}
+
+	private assertDiffTransformRange(label: string, diff: Diff, from: Range, to: Range) {
+		assert.deepEqual(diff.transformRange(from), to, label);
 	}
 }
 
 suite('diff', () => {
 	suite('transformRange', () => {
 		test('add one line at beginning', () => {
-			const diff = new Diff(`diff --git a/comments.txt b/comments.txt
-index 63ef680..47010db 100644
---- a/comments.txt
-+++ b/comments.txt
+			const diff = new TestDiff(`
 @@ -1,3 +1,4 @@
 +added line
  this is line 1
  this is line 2
  this is line 3
-`);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(0, 0, 0, 1)), new ZeroIndexedRange(1, 0, 1, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(1, 0, 1, 1)), new ZeroIndexedRange(2, 0, 2, 1));
-		});
-
-		test('add one line at beginning -U0', () => {
-			const diff = new Diff(`diff --git a/comments.txt b/comments.txt
-index 63ef680..47010db 100644
---- a/comments.txt
-+++ b/comments.txt
+`, `
 @@ -0,0 +1 @@
 +added line
 `);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(0, 0, 0, 1)), new ZeroIndexedRange(1, 0, 1, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(1, 0, 1, 1)), new ZeroIndexedRange(2, 0, 2, 1));
+			diff.assertTransformRange(new Range(1, 1, 1, 2), new Range(2, 1, 2, 2));
+			diff.assertTransformRange(new Range(2, 1, 2, 2), new Range(3, 1, 3, 2));
 		});
 
 		test('add one line in middle', () => {
-			const diff = new Diff(`diff --git a/comments.txt b/comments.txt
-index 63ef680..fe7fab6 100644
---- a/comments.txt
-+++ b/comments.txt
+			const diff = new TestDiff(`
 @@ -1,4 +1,5 @@
  this is line 1
 +added line
  this is line 2
  this is line 3
  this is line 4
- `);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(0, 0, 0, 1)), new ZeroIndexedRange(0, 0, 0, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(1, 0, 1, 1)), new ZeroIndexedRange(2, 0, 2, 1));
-		});
-
-		test('add one line in middle -U0', () => {
-			const diff = new Diff(`diff --git a/comments.txt b/comments.txt
-index 63ef680..fe7fab6 100644
---- a/comments.txt
-+++ b/comments.txt
+`, `
 @@ -1,0 +2 @@ this is line 1
 +added line
 `);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(0, 0, 0, 1)), new ZeroIndexedRange(0, 0, 0, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(1, 0, 1, 1)), new ZeroIndexedRange(2, 0, 2, 1));
+			diff.assertTransformRange(new Range(1, 1, 1, 2), new Range(1, 1, 1, 2));
+			diff.assertTransformRange(new Range(2, 1, 2, 2), new Range(3, 1, 3, 2));
+
+			diff.assertTransformRange(new Range(1, 1, 2, 2), new Range(1, 1, 3, 2));
 		});
 
 		test('add one line at end', () => {
-			const diff = new Diff(`diff --git a/comments.txt b/comments.txt
-index 63ef680..47010db 100644
---- a/comments.txt
-+++ b/comments.txt
+			const diff = new TestDiff(`
 @@ -18,3 +18,4 @@ this is line 17
  this is line 18
  this is line 19
  this is line 20
 +added line
-`);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(19, 0, 19, 1)), new ZeroIndexedRange(19, 0, 19, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(20, 0, 20, 1)), new ZeroIndexedRange(21, 0, 21, 1));
-		});
-
-		test('add one line at end -U0', () => {
-			const diff = new Diff(`diff --git a/comments.txt b/comments.txt
-index 63ef680..47010db 100644
---- a/comments.txt
-+++ b/comments.txt
+`, `
 @@ -20,0 +21 @@ this is line 20
 +added line
 `);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(19, 0, 19, 1)), new ZeroIndexedRange(19, 0, 19, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(20, 0, 20, 1)), new ZeroIndexedRange(21, 0, 21, 1));
+			diff.assertTransformRange(new Range(20, 1, 20, 2), new Range(20, 1, 20, 2));
+			diff.assertTransformRange(new Range(21, 1, 21, 2), new Range(22, 1, 22, 2));
 		});
 
 		test('add two lines at beginning', () => {
-			const diff = new Diff(`diff --git a/comments.txt b/comments.txt
-index 63ef680..47010db 100644
---- a/comments.txt
-+++ b/comments.txt
+			const diff = new TestDiff(`
 @@ -1,3 +1,5 @@
 +added line a
 +added line b
  this is line 1
  this is line 2
  this is line 3
-`);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(0, 0, 0, 1)), new ZeroIndexedRange(2, 0, 2, 1));
-		});
-
-		test('add two lines at beginning -U0', () => {
-			const diff = new Diff(`diff --git a/comments.txt b/comments.txt
-index 63ef680..47010db 100644
---- a/comments.txt
-+++ b/comments.txt
+`, `
 @@ -0,0 +1,2 @@
 +added line a
 +added line b
 `);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(0, 0, 0, 1)), new ZeroIndexedRange(2, 0, 2, 1));
+			diff.assertTransformRange(new Range(1, 1, 1, 2), new Range(3, 1, 3, 2));
 		});
 
 		test('add two lines in middle', () => {
-			const diff = new Diff(`diff --git a/comments.txt b/comments.txt
-index 63ef680..47010db 100644
---- a/comments.txt
-+++ b/comments.txt
+			const diff = new TestDiff(`
 @@ -7,6 +7,8 @@ this is line 6
  this is line 7
  this is line 8
@@ -145,58 +117,36 @@ index 63ef680..47010db 100644
  this is line 10
  this is line 11
  this is line 12
-`);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(8, 0, 8, 1)), new ZeroIndexedRange(8, 0, 8, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(9, 0, 9, 1)), new ZeroIndexedRange(11, 0, 11, 1));
-		});
-
-		test('add two lines in middle -U0', () => {
-			const diff = new Diff(`diff --git a/comments.txt b/comments.txt
-index 63ef680..47010db 100644
---- a/comments.txt
-+++ b/comments.txt
+`, `
 @@ -9,0 +10,2 @@ this is line 9
 +added line
 +added line
 `);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(8, 0, 8, 1)), new ZeroIndexedRange(8, 0, 8, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(9, 0, 9, 1)), new ZeroIndexedRange(11, 0, 11, 1));
+			diff.assertTransformRange(new Range(9, 1, 9, 2), new Range(9, 1, 9, 2));
+			diff.assertTransformRange(new Range(10, 1, 10, 2), new Range(12, 1, 12, 2));
+
+			diff.assertTransformRange(new Range(9, 1, 10, 2), new Range(9, 1, 12, 2));
 		});
 
 		test('add two lines at end', () => {
-			const diff = new Diff(`diff --git a/comments.txt b/comments.txt
-index 63ef680..47010db 100644
---- a/comments.txt
-+++ b/comments.txt
+			const diff = new TestDiff(`
 @@ -18,3 +18,5 @@ this is line 17
  this is line 18
  this is line 19
  this is line 20
 +added line
 +added line
-`);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(19, 0, 19, 1)), new ZeroIndexedRange(19, 0, 19, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(20, 0, 20, 1)), new ZeroIndexedRange(22, 0, 22, 1));
-		});
-
-		test('add two lines at end -U0', () => {
-			const diff = new Diff(`diff --git a/comments.txt b/comments.txt
-index 63ef680..47010db 100644
---- a/comments.txt
-+++ b/comments.txt
+`, `
 @@ -20,0 +21,2 @@ this is line 20
 +added line
 +added line
 `);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(19, 0, 19, 1)), new ZeroIndexedRange(19, 0, 19, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(20, 0, 20, 1)), new ZeroIndexedRange(22, 0, 22, 1));
+			diff.assertTransformRange(new Range(20, 1, 20, 2), new Range(20, 1, 20, 2));
+			diff.assertTransformRange(new Range(21, 1, 21, 2), new Range(23, 1, 23, 2));
 		});
 
 		test('add one line in multiple hunks', () => {
-			const diff = new Diff(`diff --git a/comments.txt b/comments.txt
-index 63ef680..47010db 100644
---- a/comments.txt
-+++ b/comments.txt
+			const diff = new TestDiff(`
 @@ -1,6 +1,7 @@
  this is line 1
  this is line 2
@@ -221,20 +171,7 @@ index 63ef680..47010db 100644
  this is line 18
  this is line 19
  this is line 20
-`);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(2, 0, 2, 1)), new ZeroIndexedRange(2, 0, 2, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(3, 0, 3, 1)), new ZeroIndexedRange(4, 0, 4, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(9, 0, 9, 1)), new ZeroIndexedRange(10, 0, 10, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(10, 0, 10, 1)), new ZeroIndexedRange(12, 0, 12, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(16, 0, 16, 1)), new ZeroIndexedRange(18, 0, 18, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(17, 0, 17, 1)), new ZeroIndexedRange(20, 0, 20, 1));
-		});
-
-		test('add one line in multiple hunks -U0', () => {
-			const diff = new Diff(`diff --git a/comments.txt b/comments.txt
-index 63ef680..47010db 100644
---- a/comments.txt
-+++ b/comments.txt
+`, `
 @@ -3,0 +4 @@ this is line 3
 +added line
 @@ -10,0 +12 @@ this is line 10
@@ -242,19 +179,18 @@ index 63ef680..47010db 100644
 @@ -17,0 +20 @@ this is line 17
 +added line
 `);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(2, 0, 2, 1)), new ZeroIndexedRange(2, 0, 2, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(3, 0, 3, 1)), new ZeroIndexedRange(4, 0, 4, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(9, 0, 9, 1)), new ZeroIndexedRange(10, 0, 10, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(10, 0, 10, 1)), new ZeroIndexedRange(12, 0, 12, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(16, 0, 16, 1)), new ZeroIndexedRange(18, 0, 18, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(17, 0, 17, 1)), new ZeroIndexedRange(20, 0, 20, 1));
+			diff.assertTransformRange(new Range(3, 1, 3, 2), new Range(3, 1, 3, 2));
+			diff.assertTransformRange(new Range(4, 1, 4, 2), new Range(5, 1, 5, 2));
+			diff.assertTransformRange(new Range(10, 1, 10, 2), new Range(11, 1, 11, 2));
+			diff.assertTransformRange(new Range(11, 1, 11, 2), new Range(13, 1, 13, 2));
+			diff.assertTransformRange(new Range(17, 1, 17, 2), new Range(19, 1, 19, 2));
+			diff.assertTransformRange(new Range(18, 1, 18, 2), new Range(21, 1, 21, 2));
+
+			diff.assertTransformRange(new Range(3, 1, 18, 2), new Range(3, 1, 21, 2));
 		});
 
 		test('add two lines in multiple hunks', () => {
-			const diff = new Diff(`diff --git a/comments.txt b/comments.txt
-index 63ef680..47010db 100644
---- a/comments.txt
-+++ b/comments.txt
+			const diff = new TestDiff(`
 @@ -1,6 +1,8 @@
  this is line 1
  this is line 2
@@ -282,20 +218,7 @@ index 63ef680..47010db 100644
  this is line 18
  this is line 19
  this is line 20
-`);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(2, 0, 2, 1)), new ZeroIndexedRange(2, 0, 2, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(3, 0, 3, 1)), new ZeroIndexedRange(5, 0, 5, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(9, 0, 9, 1)), new ZeroIndexedRange(11, 0, 11, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(10, 0, 10, 1)), new ZeroIndexedRange(14, 0, 14, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(16, 0, 16, 1)), new ZeroIndexedRange(20, 0, 20, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(17, 0, 17, 1)), new ZeroIndexedRange(23, 0, 23, 1));
-		});
-
-		test('add two lines in multiple hunks -U0', () => {
-			const diff = new Diff(`diff --git a/comments.txt b/comments.txt
-index 63ef680..47010db 100644
---- a/comments.txt
-+++ b/comments.txt
+`, `
 @@ -3,0 +4,2 @@ this is line 3
 +added line
 +added line
@@ -306,46 +229,33 @@ index 63ef680..47010db 100644
 +added line
 +added line
 `);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(2, 0, 2, 1)), new ZeroIndexedRange(2, 0, 2, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(3, 0, 3, 1)), new ZeroIndexedRange(5, 0, 5, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(9, 0, 9, 1)), new ZeroIndexedRange(11, 0, 11, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(10, 0, 10, 1)), new ZeroIndexedRange(14, 0, 14, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(16, 0, 16, 1)), new ZeroIndexedRange(20, 0, 20, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(17, 0, 17, 1)), new ZeroIndexedRange(23, 0, 23, 1));
+			diff.assertTransformRange(new Range(3, 1, 3, 2), new Range(3, 1, 3, 2));
+			diff.assertTransformRange(new Range(4, 1, 4, 2), new Range(6, 1, 6, 2));
+			diff.assertTransformRange(new Range(10, 1, 10, 2), new Range(12, 1, 12, 2));
+			diff.assertTransformRange(new Range(11, 1, 11, 2), new Range(15, 1, 15, 2));
+			diff.assertTransformRange(new Range(17, 1, 17, 2), new Range(21, 1, 21, 2));
+			diff.assertTransformRange(new Range(18, 1, 18, 2), new Range(24, 1, 24, 2));
+
+			diff.assertTransformRange(new Range(3, 1, 18, 2), new Range(3, 1, 24, 2));
 		});
 
 		test('delete one line at beginning', () => {
-			const diff = new Diff(`diff --git a/comments.txt b/comments.txt
-index 63ef680..47010db 100644
---- a/comments.txt
-+++ b/comments.txt
+			const diff = new TestDiff(`
 @@ -1,4 +1,3 @@
 -this is line 1
  this is line 2
  this is line 3
  this is line 4
-`);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(0, 0, 0, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(1, 0, 1, 1)), new ZeroIndexedRange(0, 0, 0, 1));
-		});
-
-		test('delete one line at beginning -U0', () => {
-			const diff = new Diff(`diff --git a/comments.txt b/comments.txt
-index 63ef680..47010db 100644
---- a/comments.txt
-+++ b/comments.txt
+`, `
 @@ -1 +0,0 @@
 -this is line 1
 `);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(0, 0, 0, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(1, 0, 1, 1)), new ZeroIndexedRange(0, 0, 0, 1));
+			diff.assertTransformRange(new Range(1, 1, 1, 2), undefined);
+			diff.assertTransformRange(new Range(2, 1, 2, 2), new Range(1, 1, 1, 2));
 		});
 
 		test('delete one line in middle', () => {
-			const diff = new Diff(`diff --git a/comments.txt b/comments.txt
-index 63ef680..47010db 100644
---- a/comments.txt
-+++ b/comments.txt
+			const diff = new TestDiff(`
 @@ -7,7 +7,6 @@ this is line 6
  this is line 7
  this is line 8
@@ -354,90 +264,55 @@ index 63ef680..47010db 100644
  this is line 11
  this is line 12
  this is line 13
-`);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(8, 0, 8, 1)), new ZeroIndexedRange(8, 0, 8, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(9, 0, 9, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(10, 0, 10, 1)), new ZeroIndexedRange(9, 0, 9, 1));
-		});
-
-		test('delete one line in middle -U0', () => {
-			const diff = new Diff(`diff --git a/comments.txt b/comments.txt
-index 63ef680..47010db 100644
---- a/comments.txt
-+++ b/comments.txt
+`, `
 @@ -10 +9,0 @@ this is line 9
 -this is line 10
 `);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(8, 0, 8, 1)), new ZeroIndexedRange(8, 0, 8, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(9, 0, 9, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(10, 0, 10, 1)), new ZeroIndexedRange(9, 0, 9, 1));
+			diff.assertTransformRange(new Range(9, 1, 9, 2), new Range(9, 1, 9, 2));
+			diff.assertTransformRange(new Range(10, 1, 10, 2), undefined);
+			diff.assertTransformRange(new Range(11, 1, 11, 2), new Range(10, 1, 10, 2));
+
+			diff.assertTransformRange(new Range(9, 1, 11, 2), new Range(9, 1, 10, 2));
+			diff.assertTransformRange(new Range(10, 1, 11, 2), new Range(10, 1, 10, 2));
+			diff.assertTransformRange(new Range(9, 1, 10, 2), new Range(9, 1, 9, 15), new Range(9, 1, 10, 1));
 		});
 
 		test('delete one line at end', () => {
-			const diff = new Diff(`diff --git a/comments.txt b/comments.txt
-index 63ef680..47010db 100644
---- a/comments.txt
-+++ b/comments.txt
+			const diff = new TestDiff(`
 @@ -17,4 +17,3 @@ this is line 16
  this is line 17
  this is line 18
  this is line 19
 -this is line 20
-`);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(18, 0, 18, 1)), new ZeroIndexedRange(18, 0, 18, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(19, 0, 19, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(20, 0, 20, 1)), new ZeroIndexedRange(19, 0, 19, 1));
-		});
-
-		test('delete one line at end -U0', () => {
-			const diff = new Diff(`diff --git a/comments.txt b/comments.txt
-index 63ef680..47010db 100644
---- a/comments.txt
-+++ b/comments.txt
+`, `
 @@ -20 +19,0 @@ this is line 19
 -this is line 20
 `);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(18, 0, 18, 1)), new ZeroIndexedRange(18, 0, 18, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(19, 0, 19, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(20, 0, 20, 1)), new ZeroIndexedRange(19, 0, 19, 1));
+			diff.assertTransformRange(new Range(19, 1, 19, 2), new Range(19, 1, 19, 2));
+			diff.assertTransformRange(new Range(20, 1, 20, 2), undefined);
+			diff.assertTransformRange(new Range(21, 1, 21, 2), new Range(20, 1, 20, 2));
 		});
 
 		test('delete two lines at beginning', () => {
-			const diff = new Diff(`diff --git a/comments.txt b/comments.txt
-index 63ef680..47010db 100644
---- a/comments.txt
-+++ b/comments.txt
+			const diff = new TestDiff(`
 @@ -1,5 +1,3 @@
 -this is line 1
 -this is line 2
  this is line 3
  this is line 4
  this is line 5
-`);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(0, 0, 0, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(1, 0, 1, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(2, 0, 2, 1)), new ZeroIndexedRange(0, 0, 0, 1));
-		});
-
-		test('delete two lines at beginning -U0', () => {
-			const diff = new Diff(`diff --git a/comments.txt b/comments.txt
-index 63ef680..47010db 100644
---- a/comments.txt
-+++ b/comments.txt
+`, `
 @@ -1,2 +0,0 @@
 -this is line 1
 -this is line 2
 `);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(0, 0, 0, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(1, 0, 1, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(2, 0, 2, 1)), new ZeroIndexedRange(0, 0, 0, 1));
+			diff.assertTransformRange(new Range(1, 1, 1, 2), undefined);
+			diff.assertTransformRange(new Range(2, 1, 2, 2), undefined);
+			diff.assertTransformRange(new Range(3, 1, 3, 2), new Range(1, 1, 1, 2));
 		});
 
 		test('delete two lines in middle', () => {
-			const diff = new Diff(`diff --git a/comments.txt b/comments.txt
-index 63ef680..47010db 100644
---- a/comments.txt
-+++ b/comments.txt
+			const diff = new TestDiff(`
 @@ -7,8 +7,6 @@ this is line 6
  this is line 7
  this is line 8
@@ -447,66 +322,46 @@ index 63ef680..47010db 100644
  this is line 12
  this is line 13
  this is line 14
-`);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(8, 0, 8, 1)), new ZeroIndexedRange(8, 0, 8, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(9, 0, 9, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(10, 0, 10, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(11, 0, 11, 1)), new ZeroIndexedRange(9, 0, 9, 1));
-		});
-
-		test('delete two lines in middle -U0', () => {
-			const diff = new Diff(`diff --git a/comments.txt b/comments.txt
-index 63ef680..47010db 100644
---- a/comments.txt
-+++ b/comments.txt
+`, `
 @@ -10,2 +9,0 @@ this is line 9
 -this is line 10
 -this is line 11
 `);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(8, 0, 8, 1)), new ZeroIndexedRange(8, 0, 8, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(9, 0, 9, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(10, 0, 10, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(11, 0, 11, 1)), new ZeroIndexedRange(9, 0, 9, 1));
+			diff.assertTransformRange(new Range(9, 1, 9, 2), new Range(9, 1, 9, 2));
+			diff.assertTransformRange(new Range(10, 1, 10, 2), undefined);
+			diff.assertTransformRange(new Range(11, 1, 11, 2), undefined);
+			diff.assertTransformRange(new Range(12, 1, 12, 2), new Range(10, 1, 10, 2));
+
+			diff.assertTransformRange(new Range(9, 1, 12, 2), new Range(9, 1, 10, 2));
+
+			diff.assertTransformRange(new Range(10, 1, 12, 2), new Range(10, 1, 10, 2));
+			diff.assertTransformRange(new Range(11, 1, 12, 2), new Range(10, 1, 10, 2));
+
+			diff.assertTransformRange(new Range(9, 1, 10, 2), new Range(9, 1, 9, 15), new Range(9, 1, 10, 1));
+			diff.assertTransformRange(new Range(9, 1, 11, 2), new Range(9, 1, 9, 15), new Range(9, 1, 10, 1));
 		});
 
 		test('delete two lines at end', () => {
-			const diff = new Diff(`diff --git a/comments.txt b/comments.txt
-index 63ef680..47010db 100644
---- a/comments.txt
-+++ b/comments.txt
+			const diff = new TestDiff(`
 @@ -16,5 +16,3 @@ this is line 15
  this is line 16
  this is line 17
  this is line 18
 -this is line 19
 -this is line 20
-`);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(17, 0, 17, 1)), new ZeroIndexedRange(17, 0, 17, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(18, 0, 18, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(19, 0, 19, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(20, 0, 20, 1)), new ZeroIndexedRange(18, 0, 18, 1));
-		});
-
-		test('delete two lines at end -U0', () => {
-			const diff = new Diff(`diff --git a/comments.txt b/comments.txt
-index 63ef680..47010db 100644
---- a/comments.txt
-+++ b/comments.txt
+`, `
 @@ -19,2 +18,0 @@ this is line 18
 -this is line 19
 -this is line 20
 `);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(17, 0, 17, 1)), new ZeroIndexedRange(17, 0, 17, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(18, 0, 18, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(19, 0, 19, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(20, 0, 20, 1)), new ZeroIndexedRange(18, 0, 18, 1));
+			diff.assertTransformRange(new Range(18, 1, 18, 2), new Range(18, 1, 18, 2));
+			diff.assertTransformRange(new Range(19, 1, 19, 2), undefined);
+			diff.assertTransformRange(new Range(20, 1, 20, 2), undefined);
+			diff.assertTransformRange(new Range(21, 1, 21, 2), new Range(19, 1, 19, 2));
 		});
 
 		test('delete one line in multiple hunks', () => {
-			const diff = new Diff(`diff --git a/comments.txt b/comments.txt
-index 63ef680..47010db 100644
---- a/comments.txt
-+++ b/comments.txt
+			const diff = new TestDiff(`
 @@ -1,5 +1,4 @@
  this is line 1
 -this is line 2
@@ -527,20 +382,7 @@ index 63ef680..47010db 100644
  this is line 18
 -this is line 19
  this is line 20
-`);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(9, 0, 9, 1)), new ZeroIndexedRange(8, 0, 8, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(10, 0, 10, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(11, 0, 11, 1)), new ZeroIndexedRange(9, 0, 9, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(17, 0, 17, 1)), new ZeroIndexedRange(15, 0, 15, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(18, 0, 18, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(19, 0, 19, 1)), new ZeroIndexedRange(16, 0, 16, 1));
-		});
-
-		test('delete one line in multiple hunks -U0', () => {
-			const diff = new Diff(`diff --git a/comments.txt b/comments.txt
-index 63ef680..47010db 100644
---- a/comments.txt
-+++ b/comments.txt
+`, `
 @@ -2 +1,0 @@ this is line 1
 -this is line 2
 @@ -11 +9,0 @@ this is line 10
@@ -548,19 +390,18 @@ index 63ef680..47010db 100644
 @@ -19 +16,0 @@ this is line 18
 -this is line 19
 `);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(9, 0, 9, 1)), new ZeroIndexedRange(8, 0, 8, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(10, 0, 10, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(11, 0, 11, 1)), new ZeroIndexedRange(9, 0, 9, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(17, 0, 17, 1)), new ZeroIndexedRange(15, 0, 15, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(18, 0, 18, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(19, 0, 19, 1)), new ZeroIndexedRange(16, 0, 16, 1));
+			diff.assertTransformRange(new Range(10, 1, 10, 2), new Range(9, 1, 9, 2));
+			diff.assertTransformRange(new Range(11, 1, 11, 2), undefined);
+			diff.assertTransformRange(new Range(12, 1, 12, 2), new Range(10, 1, 10, 2));
+			diff.assertTransformRange(new Range(18, 1, 18, 2), new Range(16, 1, 16, 2));
+			diff.assertTransformRange(new Range(19, 1, 19, 2), undefined);
+			diff.assertTransformRange(new Range(20, 1, 20, 2), new Range(17, 1, 17, 2));
+
+			diff.assertTransformRange(new Range(1, 1, 20, 2), new Range(1, 1, 17, 2));
 		});
 
 		test('delete two lines in multiple hunks', () => {
-			const diff = new Diff(`diff --git a/comments.txt b/comments.txt
-index 63ef680..47010db 100644
---- a/comments.txt
-+++ b/comments.txt
+			const diff = new TestDiff(`
 @@ -1,5 +1,3 @@
 -this is line 1
 -this is line 2
@@ -582,27 +423,7 @@ index 63ef680..47010db 100644
  this is line 18
 -this is line 19
 -this is line 20
-`);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(0, 0, 0, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(1, 0, 1, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(2, 0, 2, 1)), new ZeroIndexedRange(0, 0, 0, 1));
-
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(8, 0, 8, 1)), new ZeroIndexedRange(6, 0, 6, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(9, 0, 9, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(10, 0, 10, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(11, 0, 11, 1)), new ZeroIndexedRange(7, 0, 7, 1));
-
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(17, 0, 17, 1)), new ZeroIndexedRange(13, 0, 13, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(18, 0, 18, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(19, 0, 19, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(20, 0, 20, 1)), new ZeroIndexedRange(14, 0, 14, 1));
-		});
-
-		test('delete two lines in multiple hunks -U0', () => {
-			const diff = new Diff(`diff --git a/comments.txt b/comments.txt
-index 63ef680..47010db 100644
---- a/comments.txt
-+++ b/comments.txt
+`, `
 @@ -1,2 +0,0 @@
 -this is line 1
 -this is line 2
@@ -613,55 +434,42 @@ index 63ef680..47010db 100644
 -this is line 19
 -this is line 20
 `);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(0, 0, 0, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(1, 0, 1, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(2, 0, 2, 1)), new ZeroIndexedRange(0, 0, 0, 1));
+			diff.assertTransformRange(new Range(1, 1, 1, 2), undefined);
+			diff.assertTransformRange(new Range(2, 1, 2, 2), undefined);
+			diff.assertTransformRange(new Range(3, 1, 3, 2), new Range(1, 1, 1, 2));
 
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(8, 0, 8, 1)), new ZeroIndexedRange(6, 0, 6, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(9, 0, 9, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(10, 0, 10, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(11, 0, 11, 1)), new ZeroIndexedRange(7, 0, 7, 1));
+			diff.assertTransformRange(new Range(9, 1, 9, 2), new Range(7, 1, 7, 2));
+			diff.assertTransformRange(new Range(10, 1, 10, 2), undefined);
+			diff.assertTransformRange(new Range(11, 1, 11, 2), undefined);
+			diff.assertTransformRange(new Range(12, 1, 12, 2), new Range(8, 1, 8, 2));
 
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(17, 0, 17, 1)), new ZeroIndexedRange(13, 0, 13, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(18, 0, 18, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(19, 0, 19, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(20, 0, 20, 1)), new ZeroIndexedRange(14, 0, 14, 1));
+			diff.assertTransformRange(new Range(18, 1, 18, 2), new Range(14, 1, 14, 2));
+			diff.assertTransformRange(new Range(19, 1, 19, 2), undefined);
+			diff.assertTransformRange(new Range(20, 1, 20, 2), undefined);
+			diff.assertTransformRange(new Range(21, 1, 21, 2), new Range(15, 1, 15, 2));
+
+			diff.assertTransformRange(new Range(1, 1, 21, 2), new Range(1, 1, 15, 2));
 		});
 
 		test('edit one line at beginning', () => {
-			const diff = new Diff(`diff --git a/comments.txt b/comments.txt
-index 63ef680..47010db 100644
---- a/comments.txt
-+++ b/comments.txt
+			const diff = new TestDiff(`
 @@ -1,4 +1,4 @@
 -this is line 1
 +edited line
  this is line 2
  this is line 3
  this is line 4
-`);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(0, 0, 0, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(1, 0, 1, 1)), new ZeroIndexedRange(1, 0, 1, 1));
-		});
-
-		test('edit one line at beginning -U0', () => {
-			const diff = new Diff(`diff --git a/comments.txt b/comments.txt
-index 63ef680..47010db 100644
---- a/comments.txt
-+++ b/comments.txt
+`, `
 @@ -1 +1 @@
 -this is line 1
 +edited line
 `);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(0, 0, 0, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(1, 0, 1, 1)), new ZeroIndexedRange(1, 0, 1, 1));
+			diff.assertTransformRange(new Range(1, 1, 1, 2), undefined);
+			diff.assertTransformRange(new Range(2, 1, 2, 2), new Range(2, 1, 2, 2));
 		});
 
 		test('edit one line in middle', () => {
-			const diff = new Diff(`diff --git a/comments.txt b/comments.txt
-index 63ef680..47010db 100644
---- a/comments.txt
-+++ b/comments.txt
+			const diff = new TestDiff(`
 @@ -7,7 +7,7 @@ this is line 6
  this is line 7
  this is line 8
@@ -671,29 +479,21 @@ index 63ef680..47010db 100644
  this is line 11
  this is line 12
  this is line 13
-`);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(9, 0, 9, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(10, 0, 10, 1)), new ZeroIndexedRange(10, 0, 10, 1));
-		});
-
-		test('edit one line in middle -U0', () => {
-			const diff = new Diff(`diff --git a/comments.txt b/comments.txt
-index 63ef680..47010db 100644
---- a/comments.txt
-+++ b/comments.txt
+`, `
 @@ -10 +10 @@ this is line 9
 -this is line 10
 +edited line
 `);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(9, 0, 9, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(10, 0, 10, 1)), new ZeroIndexedRange(10, 0, 10, 1));
+			diff.assertTransformRange(new Range(10, 1, 10, 2), undefined);
+			diff.assertTransformRange(new Range(11, 1, 11, 2), new Range(11, 1, 11, 2));
+
+			diff.assertTransformRange(new Range(9, 1, 11, 2), new Range(9, 1, 11, 2));
+			diff.assertTransformRange(new Range(10, 1, 11, 2), new Range(11, 1, 11, 2));
+			diff.assertTransformRange(new Range(9, 1, 10, 2), new Range(9, 1, 9, 15), new Range(9, 1, 10, 1));
 		});
 
 		test('edit one line in multiple hunks', () => {
-			const diff = new Diff(`diff --git a/comments.txt b/comments.txt
-index 63ef680..47010db 100644
---- a/comments.txt
-+++ b/comments.txt
+			const diff = new TestDiff(`
 @@ -1,5 +1,5 @@
  this is line 1
 -this is line 2
@@ -717,24 +517,7 @@ index 63ef680..47010db 100644
 -this is line 19
 +edited line
  this is line 20
-`);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(1, 0, 1, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(2, 0, 2, 1)), new ZeroIndexedRange(2, 0, 2, 1));
-
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(8, 0, 8, 1)), new ZeroIndexedRange(8, 0, 8, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(9, 0, 9, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(10, 0, 10, 1)), new ZeroIndexedRange(10, 0, 10, 1));
-
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(17, 0, 17, 1)), new ZeroIndexedRange(17, 0, 17, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(18, 0, 18, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(19, 0, 19, 1)), new ZeroIndexedRange(19, 0, 19, 1));
-		});
-
-		test('edit one line in multiple hunks -U0', () => {
-			const diff = new Diff(`diff --git a/comments.txt b/comments.txt
-index 63ef680..47010db 100644
---- a/comments.txt
-+++ b/comments.txt
+`, `
 @@ -2 +2 @@ this is line 1
 -this is line 2
 +edited line
@@ -745,19 +528,22 @@ index 63ef680..47010db 100644
 -this is line 19
 +edited line
 `);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(1, 0, 1, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(2, 0, 2, 1)), new ZeroIndexedRange(2, 0, 2, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(9, 0, 9, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(10, 0, 10, 1)), new ZeroIndexedRange(10, 0, 10, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(18, 0, 18, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(19, 0, 19, 1)), new ZeroIndexedRange(19, 0, 19, 1));
+			diff.assertTransformRange(new Range(2, 1, 2, 2), undefined);
+			diff.assertTransformRange(new Range(3, 1, 3, 2), new Range(3, 1, 3, 2));
+
+			diff.assertTransformRange(new Range(9, 1, 9, 2), new Range(9, 1, 9, 2));
+			diff.assertTransformRange(new Range(10, 1, 10, 2), undefined);
+			diff.assertTransformRange(new Range(11, 1, 11, 2), new Range(11, 1, 11, 2));
+
+			diff.assertTransformRange(new Range(18, 1, 18, 2), new Range(18, 1, 18, 2));
+			diff.assertTransformRange(new Range(19, 1, 19, 2), undefined);
+			diff.assertTransformRange(new Range(20, 1, 20, 2), new Range(20, 1, 20, 2));
+
+			diff.assertTransformRange(new Range(1, 1, 20, 2), new Range(1, 1, 20, 2));
 		});
 
 		test('edit two lines in multiple hunks', () => {
-			const diff = new Diff(`diff --git a/comments.txt b/comments.txt
-index 63ef680..47010db 100644
---- a/comments.txt
-+++ b/comments.txt
+			const diff = new TestDiff(`
 @@ -1,5 +1,5 @@
 -this is line 1
 -this is line 2
@@ -785,27 +571,7 @@ index 63ef680..47010db 100644
 -this is line 20
 +edited line
 +edited line
-`);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(0, 0, 0, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(1, 0, 1, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(2, 0, 2, 1)), new ZeroIndexedRange(2, 0, 2, 1));
-
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(8, 0, 8, 1)), new ZeroIndexedRange(8, 0, 8, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(9, 0, 9, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(10, 0, 10, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(11, 0, 11, 1)), new ZeroIndexedRange(11, 0, 11, 1));
-
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(17, 0, 17, 1)), new ZeroIndexedRange(17, 0, 17, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(18, 0, 18, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(19, 0, 19, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(20, 0, 20, 1)), new ZeroIndexedRange(20, 0, 20, 1));
-		});
-
-		test('edit two lines in multiple hunks -U0', () => {
-			const diff = new Diff(`diff --git a/comments.txt b/comments.txt
-index 63ef680..47010db 100644
---- a/comments.txt
-+++ b/comments.txt
+`, `
 @@ -1,2 +1,2 @@
 -this is line 1
 -this is line 2
@@ -822,26 +588,25 @@ index 63ef680..47010db 100644
 +edited line
 +edited line
 `);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(0, 0, 0, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(1, 0, 1, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(2, 0, 2, 1)), new ZeroIndexedRange(2, 0, 2, 1));
+			diff.assertTransformRange(new Range(1, 1, 1, 2), undefined);
+			diff.assertTransformRange(new Range(2, 1, 2, 2), undefined);
+			diff.assertTransformRange(new Range(3, 1, 3, 2), new Range(3, 1, 3, 2));
 
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(8, 0, 8, 1)), new ZeroIndexedRange(8, 0, 8, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(9, 0, 9, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(10, 0, 10, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(11, 0, 11, 1)), new ZeroIndexedRange(11, 0, 11, 1));
+			diff.assertTransformRange(new Range(9, 1, 9, 2), new Range(9, 1, 9, 2));
+			diff.assertTransformRange(new Range(10, 1, 10, 2), undefined);
+			diff.assertTransformRange(new Range(11, 1, 11, 2), undefined);
+			diff.assertTransformRange(new Range(12, 1, 12, 2), new Range(12, 1, 12, 2));
 
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(17, 0, 17, 1)), new ZeroIndexedRange(17, 0, 17, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(18, 0, 18, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(19, 0, 19, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(20, 0, 20, 1)), new ZeroIndexedRange(20, 0, 20, 1));
+			diff.assertTransformRange(new Range(18, 1, 18, 2), new Range(18, 1, 18, 2));
+			diff.assertTransformRange(new Range(19, 1, 19, 2), undefined);
+			diff.assertTransformRange(new Range(20, 1, 20, 2), undefined);
+			diff.assertTransformRange(new Range(21, 1, 21, 2), new Range(21, 1, 21, 2));
+
+			diff.assertTransformRange(new Range(1, 1, 20, 2), new Range(3, 1, 18, 16), new Range(3, 1, 19, 1));
 		});
 
 		test('net add lines in multiple hunks', () => {
-			const diff = new Diff(`diff --git a/comments.txt b/comments.txt
-index 63ef680..47010db 100644
---- a/comments.txt
-+++ b/comments.txt
+			const diff = new TestDiff(`
 @@ -1,4 +1,5 @@
 -this is line 1
 +added line
@@ -866,24 +631,7 @@ index 63ef680..47010db 100644
 -this is line 20
 +added line
 +added line
-`);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(0, 0, 0, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(1, 0, 1, 1)), new ZeroIndexedRange(2, 0, 2, 1));
-
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(8, 0, 8, 1)), new ZeroIndexedRange(9, 0, 9, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(9, 0, 9, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(10, 0, 10, 1)), new ZeroIndexedRange(12, 0, 12, 1));
-
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(18, 0, 18, 1)), new ZeroIndexedRange(20, 0, 20, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(19, 0, 19, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(20, 0, 20, 1)), new ZeroIndexedRange(23, 0, 23, 1));
-		});
-
-		test('net add lines in multiple hunks -U0', () => {
-			const diff = new Diff(`diff --git a/comments.txt b/comments.txt
-index 63ef680..47010db 100644
---- a/comments.txt
-+++ b/comments.txt
+`, `
 @@ -1 +1,2 @@
 -this is line 1
 +added line
@@ -897,23 +645,22 @@ index 63ef680..47010db 100644
 +added line
 +added line
 `);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(0, 0, 0, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(1, 0, 1, 1)), new ZeroIndexedRange(2, 0, 2, 1));
+			diff.assertTransformRange(new Range(1, 1, 1, 2), undefined);
+			diff.assertTransformRange(new Range(2, 1, 2, 2), new Range(3, 1, 3, 2));
 
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(8, 0, 8, 1)), new ZeroIndexedRange(9, 0, 9, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(9, 0, 9, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(10, 0, 10, 1)), new ZeroIndexedRange(12, 0, 12, 1));
+			diff.assertTransformRange(new Range(9, 1, 9, 2), new Range(10, 1, 10, 2));
+			diff.assertTransformRange(new Range(10, 1, 10, 2), undefined);
+			diff.assertTransformRange(new Range(11, 1, 11, 2), new Range(13, 1, 13, 2));
 
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(18, 0, 18, 1)), new ZeroIndexedRange(20, 0, 20, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(19, 0, 19, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(20, 0, 20, 1)), new ZeroIndexedRange(23, 0, 23, 1));
+			diff.assertTransformRange(new Range(19, 1, 19, 2), new Range(21, 1, 21, 2));
+			diff.assertTransformRange(new Range(20, 1, 20, 2), undefined);
+			diff.assertTransformRange(new Range(21, 1, 21, 2), new Range(24, 1, 24, 2));
+
+			diff.assertTransformRange(new Range(1, 1, 20, 2), new Range(3, 1, 21, 16), new Range(3, 1, 22, 1));
 		});
 
 		test('net delete lines in multiple hunks', () => {
-			const diff = new Diff(`diff --git a/comments.txt b/comments.txt
-index 63ef680..47010db 100644
---- a/comments.txt
-+++ b/comments.txt
+			const diff = new TestDiff(`
 @@ -1,5 +1,4 @@
 -this is line 1
 -this is line 2
@@ -938,27 +685,7 @@ index 63ef680..47010db 100644
 -this is line 19
 -this is line 20
 +added line
-`);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(0, 0, 0, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(1, 0, 1, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(2, 0, 2, 1)), new ZeroIndexedRange(1, 0, 1, 1));
-
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(8, 0, 8, 1)), new ZeroIndexedRange(7, 0, 7, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(9, 0, 9, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(10, 0, 10, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(11, 0, 11, 1)), new ZeroIndexedRange(9, 0, 9, 1));
-
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(17, 0, 17, 1)), new ZeroIndexedRange(15, 0, 15, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(18, 0, 18, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(19, 0, 19, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(20, 0, 20, 1)), new ZeroIndexedRange(17, 0, 17, 1));
-		});
-
-		test('net delete lines in multiple hunks -U0', () => {
-			const diff = new Diff(`diff --git a/comments.txt b/comments.txt
-index 63ef680..47010db 100644
---- a/comments.txt
-+++ b/comments.txt
+`, `
 @@ -1,2 +1 @@
 -this is line 1
 -this is line 2
@@ -972,19 +699,413 @@ index 63ef680..47010db 100644
 -this is line 20
 +added line
 `);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(0, 0, 0, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(1, 0, 1, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(2, 0, 2, 1)), new ZeroIndexedRange(1, 0, 1, 1));
+			diff.assertTransformRange(new Range(1, 1, 1, 2), undefined);
+			diff.assertTransformRange(new Range(2, 1, 2, 2), undefined);
+			diff.assertTransformRange(new Range(3, 1, 3, 2), new Range(2, 1, 2, 2));
 
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(8, 0, 8, 1)), new ZeroIndexedRange(7, 0, 7, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(9, 0, 9, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(10, 0, 10, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(11, 0, 11, 1)), new ZeroIndexedRange(9, 0, 9, 1));
+			diff.assertTransformRange(new Range(9, 1, 9, 2), new Range(8, 1, 8, 2));
+			diff.assertTransformRange(new Range(10, 1, 10, 2), undefined);
+			diff.assertTransformRange(new Range(11, 1, 11, 2), undefined);
+			diff.assertTransformRange(new Range(12, 1, 12, 2), new Range(10, 1, 10, 2));
 
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(17, 0, 17, 1)), new ZeroIndexedRange(15, 0, 15, 1));
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(18, 0, 18, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(19, 0, 19, 1)), undefined);
-			assert.deepEqual(diff.transformRange(new ZeroIndexedRange(20, 0, 20, 1)), new ZeroIndexedRange(17, 0, 17, 1));
+			diff.assertTransformRange(new Range(18, 1, 18, 2), new Range(16, 1, 16, 2));
+			diff.assertTransformRange(new Range(19, 1, 19, 2), undefined);
+			diff.assertTransformRange(new Range(20, 1, 20, 2), undefined);
+			diff.assertTransformRange(new Range(21, 1, 21, 2), new Range(18, 1, 18, 2));
+
+			diff.assertTransformRange(new Range(1, 1, 20, 2), new Range(2, 1, 16, 16), new Range(2, 1, 17, 1));
+		});
+
+		test('move first line forward one', () => {
+			const diff = new TestDiff(`
+@@ -1,5 +1,5 @@
+-this is line 1
+ this is line 2
++this is line 1
+ this is line 3
+ this is line 4
+ this is line 5
+`, `
+@@ -1 +0,0 @@
+-this is line 1
+@@ -2,0 +2 @@ this is line 2
++this is line 1
+`);
+			diff.assertTransformRange(new Range(1, 1, 1, 15), new Range(2, 1, 2, 15));
+			diff.assertTransformRange(new Range(1, 6, 1, 15), new Range(2, 6, 2, 15));
+			diff.assertTransformRange(new Range(1, 6, 1, 8), new Range(2, 6, 2, 8));
+		});
+
+		test('move first line forward two', () => {
+			const diff = new TestDiff(`
+@@ -1,6 +1,6 @@
+-this is line 1
+ this is line 2
+ this is line 3
++this is line 1
+ this is line 4
+ this is line 5
+ this is line 6
+`, `
+@@ -1 +0,0 @@
+-this is line 1
+@@ -3,0 +3 @@ this is line 3
++this is line 1
+`);
+			diff.assertTransformRange(new Range(1, 1, 1, 15), new Range(3, 1, 3, 15));
+			diff.assertTransformRange(new Range(1, 6, 1, 15), new Range(3, 6, 3, 15));
+			diff.assertTransformRange(new Range(1, 6, 1, 8), new Range(3, 6, 3, 8));
+		});
+
+		test('move middle line forward one', () => {
+			const diff = new TestDiff(`
+@@ -7,8 +7,8 @@ this is line 6
+ this is line 7
+ this is line 8
+ this is line 9
+-this is line 10
+ this is line 11
++this is line 10
+ this is line 12
+ this is line 13
+ this is line 14
+`, `
+@@ -10 +9,0 @@ this is line 9
+-this is line 10
+@@ -11,0 +11 @@ this is line 11
++this is line 10
+`);
+			diff.assertTransformRange(new Range(10, 1, 10, 16), new Range(11, 1, 11, 16));
+			diff.assertTransformRange(new Range(10, 6, 10, 16), new Range(11, 6, 11, 16));
+			diff.assertTransformRange(new Range(10, 6, 10, 8), new Range(11, 6, 11, 8));
+		});
+
+		test('move middle line forward two', () => {
+			const diff = new TestDiff(`
+@@ -7,9 +7,9 @@ this is line 6
+ this is line 7
+ this is line 8
+ this is line 9
+-this is line 10
+ this is line 11
+ this is line 12
++this is line 10
+ this is line 13
+ this is line 14
+ this is line 15
+`, `
+@@ -10 +9,0 @@ this is line 9
+-this is line 10
+@@ -12,0 +12 @@ this is line 12
++this is line 10
+`);
+			diff.assertTransformRange(new Range(10, 1, 10, 16), new Range(12, 1, 12, 16));
+			diff.assertTransformRange(new Range(10, 6, 10, 16), new Range(12, 6, 12, 16));
+			diff.assertTransformRange(new Range(10, 6, 10, 8), new Range(12, 6, 12, 8));
+		});
+
+		test('move middle line back to first line', () => {
+			const diff = new TestDiff(`
+@@ -1,6 +1,6 @@
++this is line 3
+ this is line 1
+ this is line 2
+-this is line 3
+ this is line 4
+ this is line 5
+ this is line 6
+`, `
+@@ -0,0 +1 @@
++this is line 3
+@@ -3 +3,0 @@ this is line 2
+-this is line 3
+`);
+			diff.assertTransformRange(new Range(3, 1, 3, 15), new Range(1, 1, 1, 15));
+			diff.assertTransformRange(new Range(3, 6, 3, 15), new Range(1, 6, 1, 15));
+			diff.assertTransformRange(new Range(3, 6, 3, 8), new Range(1, 6, 1, 8));
+		});
+
+		test('move middle line back to middle line', () => {
+			const diff = new TestDiff(`
+@@ -4,9 +4,9 @@ this is line 3
+ this is line 4
+ this is line 5
+ this is line 6
++this is line 9
+ this is line 7
+ this is line 8
+-this is line 9
+ this is line 10
+ this is line 11
+ this is line 12
+`, `
+@@ -6,0 +7 @@ this is line 6
++this is line 9
+@@ -9 +9,0 @@ this is line 8
+-this is line 9
+`);
+			diff.assertTransformRange(new Range(9, 1, 9, 15), new Range(7, 1, 7, 15));
+			diff.assertTransformRange(new Range(9, 6, 9, 15), new Range(7, 6, 7, 15));
+			diff.assertTransformRange(new Range(9, 6, 9, 8), new Range(7, 6, 7, 8));
+		});
+
+		test('move and duplicate', () => {
+			const diff = new TestDiff(`
+@@ -1,10 +1,11 @@
+ this is line 1
+ this is line 2
++this is line 5
+ this is line 3
+ this is line 4
+-this is line 5
+ this is line 6
+ this is line 7
++this is line 5
+ this is line 8
+ this is line 9
+ this is line 10
+`, `
+@@ -2,0 +3 @@ this is line 2
++this is line 5
+@@ -5 +5,0 @@ this is line 4
+-this is line 5
+@@ -7,0 +8 @@ this is line 7
++this is line 5
+`);
+			// Either line (3 or 8) would be acceptible, but our implementation chooses the last line.
+			// Ideally it would return both but that requires cascading API changes.
+			diff.assertTransformRange(new Range(5, 1, 5, 15), new Range(8, 1, 8, 15));
+			diff.assertTransformRange(new Range(5, 6, 5, 15), new Range(8, 6, 8, 15));
+			diff.assertTransformRange(new Range(5, 6, 5, 8), new Range(8, 6, 8, 8));
+		});
+
+		test('move three lines contiguous', () => {
+			const diff = new TestDiff(`
+@@ -1,12 +1,12 @@
+ this is line 1
+-this is line 2
+-this is line 3
+-this is line 4
+ this is line 5
+ this is line 6
+ this is line 7
+ this is line 8
+ this is line 9
++this is line 2
++this is line 3
++this is line 4
+ this is line 10
+ this is line 11
+ this is line 12
+`, `
+@@ -2,3 +1,0 @@ this is line 1
+-this is line 2
+-this is line 3
+-this is line 4
+@@ -9,0 +7,3 @@ this is line 9
++this is line 2
++this is line 3
++this is line 4
+`);
+			diff.assertTransformRange(new Range(2, 6, 3, 8), new Range(7, 6, 8, 8));
+			diff.assertTransformRange(new Range(2, 6, 4, 8), new Range(7, 6, 9, 8));
+			diff.assertTransformRange(new Range(3, 6, 4, 8), new Range(8, 6, 9, 8));
+		});
+
+		test('move not contiguous', () => {
+			const diff = new TestDiff(`
+@@ -1,12 +1,12 @@
+ this is line 1
+-this is line 2
+-this is line 3
+-this is line 4
+ this is line 5
+ this is line 6
+ this is line 7
+ this is line 8
++this is line 2
++this is line 3
+ this is line 9
++this is line 4
+ this is line 10
+ this is line 11
+ this is line 12
+`, `
+@@ -2,3 +1,0 @@ this is line 1
+-this is line 2
+-this is line 3
+-this is line 4
+@@ -8,0 +6,2 @@ this is line 8
++this is line 2
++this is line 3
+@@ -9,0 +9 @@ this is line 9
++this is line 4
+`);
+			// Ideally we would split the range into two.
+			diff.assertTransformRange(new Range(2, 6, 3, 8), new Range(6, 6, 7, 8));
+			diff.assertTransformRange(new Range(2, 6, 4, 8), new Range(6, 6, 7, 15));
+			diff.assertTransformRange(new Range(3, 6, 4, 8), new Range(7, 6, 7, 15));
+		});
+
+		test('move and add', () => {
+			const diff = new TestDiff(`
+@@ -1,12 +1,13 @@
+ this is line 1
+-this is line 2
+-this is line 3
+-this is line 4
+ this is line 5
+ this is line 6
+ this is line 7
+ this is line 8
+ this is line 9
++this is line 2
++this is line 3
++new line
++this is line 4
+ this is line 10
+ this is line 11
+ this is line 12
+`, `
+@@ -2,3 +1,0 @@ this is line 1
+-this is line 2
+-this is line 3
+-this is line 4
+@@ -9,0 +7,4 @@ this is line 9
++this is line 2
++this is line 3
++new line
++this is line 4
+`);
+			// Ideally we would split the range into two.
+			diff.assertTransformRange(new Range(2, 6, 3, 8), new Range(7, 6, 8, 8));
+			diff.assertTransformRange(new Range(2, 6, 4, 8), new Range(7, 6, 8, 15));
+			diff.assertTransformRange(new Range(3, 6, 4, 8), new Range(8, 6, 8, 15));
+		});
+
+		test('indent lines', () => {
+			const diff = new TestDiff(`
+@@ -4,9 +4,9 @@ this is line 3
+ this is line 4
+ this is line 5
+ this is line 6
+-this is line 7
+-this is line 8
+-this is line 9
++  this is line 7
++  this is line 8
++  this is line 9
+ this is line 10
+ this is line 11
+ this is line 12
+`, `
+@@ -7,3 +7,3 @@ this is line 6
+-this is line 7
+-this is line 8
+-this is line 9
++  this is line 7
++  this is line 8
++  this is line 9
+`);
+			diff.assertTransformRange(new Range(7, 1, 7, 8), new Range(7, 3, 7, 10));
+			diff.assertTransformRange(new Range(7, 1, 7, 15), new Range(7, 3, 7, 17));
+			diff.assertTransformRange(new Range(7, 1, 8, 8), new Range(7, 3, 8, 10));
+			diff.assertTransformRange(new Range(7, 1, 8, 15), new Range(7, 3, 8, 17));
+			diff.assertTransformRange(new Range(7, 1, 9, 8), new Range(7, 3, 9, 10));
+
+			diff.assertTransformRange(new Range(8, 1, 8, 8), new Range(8, 3, 8, 10));
+			diff.assertTransformRange(new Range(8, 1, 8, 15), new Range(8, 3, 8, 17));
+			diff.assertTransformRange(new Range(8, 1, 9, 8), new Range(8, 3, 9, 10));
+			diff.assertTransformRange(new Range(9, 1, 9, 8), new Range(9, 3, 9, 10));
+		});
+
+		test('unindent lines', () => {
+			const diff = new TestDiff(`
+@@ -4,9 +4,9 @@ this is line 3
+ this is line 4
+ this is line 5
+ this is line 6
+-  this is line 7
+-  this is line 8
+-  this is line 9
++this is line 7
++this is line 8
++this is line 9
+ this is line 10
+ this is line 11
+ this is line 12
+`, `
+@@ -7,3 +7,3 @@ this is line 6
+-  this is line 7
+-  this is line 8
+-  this is line 9
++this is line 7
++this is line 8
++this is line 9
+`);
+			diff.assertTransformRange(new Range(7, 1, 7, 10), new Range(7, 1, 7, 8));
+			diff.assertTransformRange(new Range(7, 2, 7, 10), new Range(7, 1, 7, 8));
+			diff.assertTransformRange(new Range(7, 3, 7, 10), new Range(7, 1, 7, 8));
+			diff.assertTransformRange(new Range(7, 4, 7, 10), new Range(7, 2, 7, 8));
+
+			diff.assertTransformRange(new Range(7, 3, 8, 10), new Range(7, 1, 8, 8));
+			diff.assertTransformRange(new Range(7, 3, 9, 10), new Range(7, 1, 9, 8));
+			diff.assertTransformRange(new Range(8, 3, 9, 10), new Range(8, 1, 9, 8));
+			diff.assertTransformRange(new Range(9, 3, 9, 10), new Range(9, 1, 9, 8));
+		});
+
+		test('move line and add similar line below', () => {
+			const diff = new TestDiff(`
+@@ -1,10 +1,11 @@
+ this is line 1
+-this is line 2
+ this is line 3
+ this is line 4
+ this is line 5
++this is line 2
+ this is line 6
+ this is line 7
++  this is line 2
+ this is line 8
+ this is line 9
+ this is line 10
+`, `
+@@ -2 +1,0 @@ this is line 1
+-this is line 2
+@@ -5,0 +5 @@ this is line 5
++this is line 2
+@@ -7,0 +8 @@ this is line 7
++  this is line 2
+`);
+			// Expect match of exact line.
+			diff.assertTransformRange(new Range(2, 1, 2, 2), new Range(5, 1, 5, 2));
+		});
+
+		test('move line and add similar line above', () => {
+			const diff = new TestDiff(`
+@@ -1,10 +1,11 @@
+ this is line 1
+-this is line 2
+ this is line 3
+ this is line 4
+ this is line 5
++  this is line 2
+ this is line 6
+ this is line 7
++this is line 2
+ this is line 8
+ this is line 9
+ this is line 10
+`, `
+@@ -2 +1,0 @@ this is line 1
+-this is line 2
+@@ -5,0 +5 @@ this is line 5
++  this is line 2
+@@ -7,0 +8 @@ this is line 7
++this is line 2
+`);
+			// Expect match of exact line.
+			diff.assertTransformRange(new Range(2, 1, 2, 2), new Range(8, 1, 8, 2));
 		});
 	});
 });
