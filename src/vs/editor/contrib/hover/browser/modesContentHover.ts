@@ -312,6 +312,9 @@ export class ModesContentHoverWidget extends SourcegraphHoverWidget {
 
 		// PATCH(Sourcegraph): allow j2d, refs, search via tooltip buttons
 		const isLoading = messages.length === 1 && !(messages[0] instanceof ColorHover) && (messages[0] as Hover).contents[0] === loadingMessage;
+		// Don't show buttons if the only hovers are from SCM blame. (Their hovers start
+		// with the hacky comment syntax `[](scm)`.)
+		const showButtons = messages.some(msg => !(msg instanceof ColorHover) && msg.contents.some(ms => (typeof ms === 'string' ? ms : ms.value).indexOf('[](scm)') !== 0));
 
 		messages.forEach((msg) => {
 			if (!msg.range) {
@@ -388,7 +391,7 @@ export class ModesContentHoverWidget extends SourcegraphHoverWidget {
 		this.showAt(new Position(renderRange.startLineNumber, renderColumn), this._shouldFocus);
 
 		// PATCH(Sourcegraph): allow j2d, refs, search via tooltip buttons
-		this.updateContents(fragment, isLoading);
+		this.updateContents(fragment, !isLoading && showButtons);
 
 		if (this._colorPicker) {
 			this._colorPicker.layout();

@@ -1,0 +1,8 @@
+{
+	"scm.category": "SCM",
+	"scm.blame.file.title": "SCM: Blame File",
+	"scm.blame.lines.title": "SCM: Blame Selected Lines",
+	"scm.config.debug": "Enable debug logging for SCM features",
+	"scm.config.blame.file": "Show file blame before all lines in files",
+	"scm.config.blame.lines": "Show blame after selected lines in files"
+}

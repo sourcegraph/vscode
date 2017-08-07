@@ -228,6 +228,10 @@ class ExtHostSourceControl implements vscode.SourceControl {
 		this._proxy.$updateSourceControl(this._handle, { statusBarCommands: internal });
 	}
 
+	get rootFolder(): vscode.Uri | undefined {
+		return this._rootFolder;
+	}
+
 	private _revision: vscode.SCMRevision | undefined = undefined;
 
 	get revision(): vscode.SCMRevision {

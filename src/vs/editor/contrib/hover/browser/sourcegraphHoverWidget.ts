@@ -75,12 +75,12 @@ export class SourcegraphHoverWidget extends ContentHoverWidget {
 		this.referencesAction.style.display = visible ? '' : 'none';
 	}
 
-	protected updateContents(node: Node, isLoading?: boolean): void {
+	protected updateContents(node: Node, showButtons?: boolean): void {
 		this.updateJumpToDefinitionVisibility();
 		this.updateFindAllReferencesVisibility();
 
 		const wordAtPosition = this._editor.getModel().getWordAtPosition(this._showAtPosition);
-		const isEmpty = isLoading || !wordAtPosition || !wordAtPosition.word;
+		const isEmpty = !showButtons && (!wordAtPosition || !wordAtPosition.word);
 
 		this._containerDomNode.style.minWidth = isEmpty ? '0px' : minTooltipWidth;
 		this._actionBarNode.style.display = isEmpty ? 'none' : 'flex';

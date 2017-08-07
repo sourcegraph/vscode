@@ -1,0 +1,67 @@
+{
+  "name": "scm",
+  "displayName": "SCM extras",
+  "description": "A Visual Studio Code extension that displays SCM information in code lenses, the status bar, etc.",
+  "categories": [
+    "Other"
+  ],
+  "main": "./out/scm/src/main",
+  "version": "0.0.1",
+  "publisher": "sourcegraph",
+  "engines": {
+    "vscode": "*"
+  },
+  "activationEvents": [
+    "*"
+  ],
+  "enableProposedApi": true,
+  "contributes": {
+    "commands": [
+      {
+        "command": "scm.action.blame.toggleFile",
+        "title": "%scm.blame.file.title%",
+        "category": "%scm.category%"
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "SCM extras",
+      "order": 21,
+      "properties": {
+        "scm.debug": {
+          "type": "boolean",
+          "default": false,
+          "description": "%scm.config.debug%"
+        },
+        "scm.blame.file": {
+          "type": "boolean",
+          "default": false,
+          "description": "%scm.config.blame.file%"
+        },
+        "scm.blame.lines": {
+          "type": "boolean",
+          "default": true,
+          "description": "%scm.config.blame.lines%"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "gulp compile-extension:scm",
+    "watch": "gulp watch-extension:scm"
+  },
+  "dependencies": {
+    "date-fns": "^1.28.5",
+    "lodash": "^4.17.4",
+    "lru_map": "^0.3.3",
+    "moment": "^2.18.1",
+    "vscode-nls": "^2.0.2"
+  },
+  "devDependencies": {
+    "@types/date-fns": "^2.6.0",
+    "@types/lodash": "^4.14.71",
+    "@types/mocha": "^2.2.38",
+    "@types/node": "^7.0.12",
+    "vscode": "1.0.1"
+  }
+}
