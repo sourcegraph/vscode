@@ -1,5 +1,5 @@
 {
-  "name": "code-oss-dev",
+  "name": "src-oss-dev",
   "version": "1.15.0",
   "dependencies": {
     "agent-base": {
