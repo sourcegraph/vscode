@@ -474,7 +474,7 @@ export class WorkspaceServiceImpl extends WorkspaceService {
 						description: nls.localize('workspaceConfig.folders.description', "List of folders to be loaded in the workspace. Must be a file path. e.g. `file:///root/folderA`"),
 						items: {
 							type: 'string',
-							pattern: '^file:\/\/[^/]*\/'
+							format: 'uri'
 						}
 					},
 					'settings': {
