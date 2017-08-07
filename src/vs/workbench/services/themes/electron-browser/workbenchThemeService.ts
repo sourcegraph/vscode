@@ -153,6 +153,7 @@ interface IconsAssociation {
 	folder?: string;
 	file?: string;
 	folderExpanded?: string;
+	repo?: string;
 	rootFolder?: string;
 	rootFolderExpanded?: string;
 	folderNames?: { [folderName: string]: string; };
@@ -808,8 +809,14 @@ function _processIconThemeDocument(id: string, iconThemeDocumentPath: string, ic
 				result.hasFolderIcons = true;
 			}
 
+			let repo = associations.repo;
 			let rootFolder = associations.rootFolder || associations.folder;
 			let rootFolderExpanded = associations.rootFolderExpanded || associations.folderExpanded;
+
+			if (repo) {
+				addSelector(`${qualifier} .repo-icon::before`, repo);
+				result.hasFolderIcons = true;
+			}
 
 			if (rootFolder) {
 				addSelector(`${qualifier} .rootfolder-icon::before`, rootFolder);

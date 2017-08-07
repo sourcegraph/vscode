@@ -217,7 +217,19 @@ export class FileLabel extends ResourceLabel {
 export function getIconClasses(modelService: IModelService, modeService: IModeService, resource: uri, fileKind?: FileKind): string[] {
 
 	// we always set these base classes even if we do not have a path
-	const classes = fileKind === FileKind.ROOT_FOLDER ? ['rootfolder-icon'] : fileKind === FileKind.FOLDER ? ['folder-icon'] : ['file-icon'];
+	let classes: string[];
+	if (fileKind === FileKind.ROOT_FOLDER) {
+		// TODO icons for private, fork
+		if (resource.scheme === 'repo') {
+			classes = ['repo-icon'];
+		} else {
+			classes = ['rootfolder-icon'];
+		}
+	} else if (fileKind === FileKind.FOLDER) {
+		classes = ['folder-icon'];
+	} else {
+		classes = ['file-icon'];
+	}
 
 	let path: string;
 	if (resource) {

@@ -1,5 +1,8 @@
 {
 	"iconDefinitions": {
+		"_repo_dark": {
+			"iconPath": "./images/Repo_16x_inverse.svg"
+		},
 		"_root_folder_dark": {
 			"iconPath": "./images/RootFolder_16x_inverse.svg"
 		},
@@ -14,6 +17,9 @@
 		},
 		"_file_dark": {
 			"iconPath": "./images/Document_16x_inverse.svg"
+		},
+		"_repo": {
+			"iconPath": "./images/Repo_16x.svg"
 		},
 		"_root_folder": {
 			"iconPath": "./images/RootFolder_16x.svg"
@@ -37,6 +43,7 @@
 	"file": "_file_dark",
 	"rootFolderExpanded": "_root_folder_open_dark",
 	"rootFolder": "_root_folder_dark",
+	"repo": "_repo_dark",
 	"fileExtensions": {
 		// icons by file extension
 	},
@@ -51,6 +58,7 @@
 		"folder": "_folder_light",
 		"rootFolderExpanded": "_root_folder_open",
 		"rootFolder": "_root_folder",
+		"repo": "_repo",
 		"file": "_file_light",
 		"fileExtensions": {
 			// icons by file extension
