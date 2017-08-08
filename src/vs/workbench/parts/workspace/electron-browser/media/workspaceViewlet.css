@@ -136,14 +136,14 @@
 }
 
 .workspace-viewlet > .folders .folder > .details > .footer > .monaco-action-bar {
-	flex: 1 0 auto;
+	flex: 1;
 }
 
 .workspace-viewlet > .folders .folder > .details > .footer > .monaco-action-bar > .actions-container {
 	flex-wrap: wrap-reverse;
 }
 
-.workspace-viewlet > .folders .folder > .details > .footer > .monaco-action-bar .action-label {
+.workspace-viewlet > .folders .folder .monaco-action-bar .action-label {
 	margin-right: 0;
 	margin-left: 0.3em;
 	line-height: 15px;
