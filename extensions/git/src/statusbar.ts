@@ -167,13 +167,15 @@ export class StatusBarCommands {
 		const checkout = this.checkoutStatusBar.command;
 
 		if (checkout) {
-			result.push(checkout);
+			// Disable status bar commands until the extension supports workspaceFolders properly
+			// result.push(checkout);
 		}
 
 		const sync = this.syncStatusBar.command;
 
 		if (sync) {
-			result.push(sync);
+			// Disable status bar commands until the extension supports workspaceFolders properly
+			// result.push(sync);
 		}
 
 		return result;

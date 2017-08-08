@@ -7,7 +7,7 @@
 
 import * as nls from 'vscode-nls';
 const localize = nls.config(process.env.VSCODE_NLS_CONFIG)();
-import { ExtensionContext, workspace, window, Disposable, commands, Uri } from 'vscode';
+import { ExtensionContext, workspace, window, Disposable, commands, Uri, OutputChannel } from 'vscode';
 import { findGit, Git, IGit } from './git';
 import { Model } from './model';
 import { GitSCMProvider } from './scmProvider';
@@ -29,7 +29,6 @@ async function init(context: ExtensionContext, disposables: Disposable[]): Promi
 
 	const config = workspace.getConfiguration('git');
 	const enabled = config.get<boolean>('enabled') === true;
-	const workspaceRootPath = workspace.rootPath;
 
 	const pathHint = workspace.getConfiguration('git').get<string>('path');
 	const info = await findGit(pathHint);
@@ -37,11 +36,21 @@ async function init(context: ExtensionContext, disposables: Disposable[]): Promi
 	const env = await askpass.getEnv();
 	const git = new Git({ gitPath: info.path, version: info.version, env });
 
-	if (!workspaceRootPath || !enabled) {
+	if (!workspace.workspaceFolders || !enabled) {
 		const commandCenter = new CommandCenter(git, undefined, outputChannel, telemetryReporter);
 		disposables.push(commandCenter);
 		return;
 	}
+
+	workspace.workspaceFolders.forEach(w => initWorkspaceFolder({
+		telemetryReporter, outputChannel, info, git, workspaceRootPath: w.uri.fsPath, disposables,
+	}));
+
+	await checkGitVersion(info);
+}
+
+function initWorkspaceFolder(state: { telemetryReporter: TelemetryReporter, outputChannel: OutputChannel, info: IGit, git: Git, workspaceRootPath: string, disposables: Disposable[] }) {
+	const { telemetryReporter, outputChannel, info, git, workspaceRootPath, disposables } = state;
 
 	const workspaceRoot = Uri.parse(workspaceRootPath);
 	if (workspaceRoot.scheme && workspaceRoot.scheme !== 'file') {
@@ -58,26 +67,28 @@ async function init(context: ExtensionContext, disposables: Disposable[]): Promi
 	git.onOutput.addListener('log', onOutput);
 	disposables.push(toDisposable(() => git.onOutput.removeListener('log', onOutput)));
 
-	const commandCenter = new CommandCenter(git, model, outputChannel, telemetryReporter);
 	const statusBarCommands = new StatusBarCommands(model);
-	const provider = new GitSCMProvider(model, commandCenter, statusBarCommands);
+	const provider = new GitSCMProvider(model, statusBarCommands);
 	const contentProvider = new GitContentProvider(model);
 	const autoFetcher = new AutoFetcher(model);
 
 	disposables.push(
-		commandCenter,
 		provider,
 		contentProvider,
 		autoFetcher,
 		model
 	);
-
-	await checkGitVersion(info);
 }
 
 export function activate(context: ExtensionContext): any {
 	const disposables: Disposable[] = [];
 	context.subscriptions.push(new Disposable(() => Disposable.from(...disposables).dispose()));
+
+	workspace.onDidChangeWorkspaceFolders(e => {
+		disposables.forEach(d => d.dispose());
+		disposables.length = 0;
+		init(context, disposables).catch(err => console.error(err));
+	});
 
 	init(context, disposables)
 		.catch(err => console.error(err));
