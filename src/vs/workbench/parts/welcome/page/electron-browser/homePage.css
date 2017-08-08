@@ -43,6 +43,7 @@
 	background-color: #1C7CD6;
 	border-radius: 2px;
 	color: #FFFFFF !important;
+	cursor: pointer;
 	display: flex;
 	flex-basis: auto;
 	flex-direction: row;
@@ -72,15 +73,11 @@
 }
 
 .monaco-workbench > .part.editor > .content .homePage .search .addReposButton {
-	/* Currently disabled until we have a better picker */
-	display: none;
-	visibility: hidden;
-
 	align-items: center;
 	background-color: #151D28;
 	border-radius: 2px;
 	cursor: pointer;
-	/*display: flex;*/
+	display: flex;
 	flex: 1;
 	flex-direction: row;
 	height: 32px;

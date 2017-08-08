@@ -26,6 +26,7 @@ import { IViewletService } from "vs/workbench/services/viewlet/browser/viewlet";
 import { VIEWLET_ID as SEARCH_VIEWLET_ID } from 'vs/workbench/parts/search/common/constants';
 import { SourcegraphSearchViewlet } from "vs/workbench/parts/search/browser/sourcegraphSearchViewlet";
 import { EditorInput, IEditorInputFactory } from "vs/workbench/common/editor";
+import { ICommandService } from "vs/platform/commands/common/commands";
 
 used();
 
@@ -71,7 +72,8 @@ class HomePage {
 		@IWorkbenchEditorService private editorService: IWorkbenchEditorService,
 		@IInstantiationService private instantiationService: IInstantiationService,
 		@ILifecycleService lifecycleService: ILifecycleService,
-		@IViewletService private viewletService: IViewletService
+		@IViewletService private viewletService: IViewletService,
+		@ICommandService private commandService: ICommandService,
 	) {
 		this.disposables.push(lifecycleService.onShutdown(() => this.dispose()));
 
@@ -159,6 +161,9 @@ class HomePage {
 			this.viewletService.openViewlet(SEARCH_VIEWLET_ID).then((viewlet: SourcegraphSearchViewlet) => {
 				viewlet.onQueryChanged(true);
 			});
+		});
+		this.addEventListener(<HTMLElement>container.querySelector('.addReposButton'), 'click', () => {
+			this.commandService.executeCommand('workbench.action.search.profilePicker').done(null, onUnexpectedError);
 		});
 	}
 

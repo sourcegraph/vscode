@@ -90,12 +90,12 @@ export class SearchProfileService extends Disposable implements ISearchProfileSe
 	}
 
 	private normalize(workspaces: string[]): string[] {
-		return (workspaces || []).map(workspace => {
+		return arrays.distinct((workspaces || []).map(workspace => {
 			workspace = workspace.trim();
 			if (!strings.startsWith(workspace, 'repo://')) {
 				workspace = 'repo://' + workspace;
 			}
 			return workspace;
-		});
+		}), s => s);
 	}
 }
