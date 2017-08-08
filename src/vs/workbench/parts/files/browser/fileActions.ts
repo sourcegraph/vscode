@@ -108,6 +108,7 @@ export class BaseErrorReportingAction extends Action {
 
 export class BaseFileAction extends BaseErrorReportingAction {
 	private _element: FileStat;
+	private _isWritable: boolean;
 
 	constructor(
 		id: string,
@@ -135,10 +136,24 @@ export class BaseFileAction extends BaseErrorReportingAction {
 
 	public set element(element: FileStat) {
 		this._element = element;
+
+		if (element && this._fileService) {
+			this._fileService.isWritable(element.resource)
+				.then(isWritable => {
+					// Make sure the element hasn't changed in the meantime.
+					if (this._element === element) {
+						this._isWritable = isWritable;
+						this._updateEnablement();
+					}
+				})
+				.done(null, errors.onUnexpectedError);
+		} else {
+			this._isWritable = true; // default
+		}
 	}
 
 	_isEnabled(): boolean {
-		return true;
+		return this._isWritable;
 	}
 
 	_updateEnablement(): void {
@@ -347,6 +362,7 @@ export class BaseNewAction extends BaseFileAction {
 	private tree: ITree;
 	private isFile: boolean;
 	private renameAction: BaseRenameAction;
+	private toDispose: IDisposable[] = [];
 
 	constructor(
 		id: string,
@@ -368,6 +384,13 @@ export class BaseNewAction extends BaseFileAction {
 		this.tree = tree;
 		this.isFile = isFile;
 		this.renameAction = editableAction;
+
+		// Update element (so we can update writable state) as focus changes.
+		if (tree) {
+			this.toDispose.push(tree.addListener('focus', (e: { focus: FileStat }) => {
+				this.element = e ? e.focus : null;
+			}));
+		}
 	}
 
 	public run(context?: any): TPromise<any> {
@@ -435,6 +458,11 @@ export class BaseNewAction extends BaseFileAction {
 				});
 			});
 		});
+	}
+
+	public dispose(): void {
+		super.dispose();
+		this.toDispose = dispose(this.toDispose);
 	}
 }
 
@@ -960,6 +988,9 @@ export class PasteFileAction extends BaseFileAction {
 	}
 
 	_isEnabled(): boolean {
+		if (!super._isEnabled()) {
+			return false;
+		}
 
 		// Need at least a file to copy
 		if (!fileToCopy) {

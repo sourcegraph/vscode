@@ -147,6 +147,24 @@ export class RemoteFileService extends FileService {
 		});
 	}
 
+	isWritable(resource: URI): TPromise<boolean> {
+		// Ideally this would not be synchronous (because it's called from places that
+		// would benefit from it being sync), but it can't be because providers are
+		// registered asynchronously by extensions. Once they're registered, this returns
+		// extremely quickly because it does not need to perform any I/O to return the
+		// answer.
+		return this.getProvider(resource.scheme).then(provider => {
+			if (provider) {
+				// Assume all remote file system providers are read only.
+				//
+				// TODO(sqs): This is true for us currently but is not true in general.
+				return false;
+			}
+
+			return true;
+		});
+	}
+
 	// --- resolve content
 
 	resolveContent(resource: URI, options?: IResolveContentOptions): TPromise<IContent> {

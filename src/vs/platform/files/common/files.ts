@@ -56,6 +56,13 @@ export interface IFileService {
 	existsFile(resource: URI): TPromise<boolean>;
 
 	/**
+	 * Returns whether the resource is writable. This applies to files, directories, and
+	 * file system roots. A true response does not guarantee that a subsequent write will
+	 * succeed.
+	 */
+	isWritable(resource: URI): TPromise<boolean>;
+
+	/**
 	 * Resolve the contents of a file identified by the resource.
 	 *
 	 * The returned object contains properties of the file and the full value as string.
