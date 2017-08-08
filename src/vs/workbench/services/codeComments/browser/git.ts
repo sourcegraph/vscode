@@ -23,11 +23,11 @@ export class Git {
 	 */
 	public getLastPushedRevision(context: URI): TPromise<string> {
 		return TPromise.join<any>([
+			this.isCurrentRevPushed(context),
 			this.getRemoteTrackingBranches(context),
 			this.getRevisionSHA(context),
-		]).then(([remoteRevs, rev]: [Set<string>, string]) => {
-			if (remoteRevs.has(rev)) {
-				// Current revision is already pushed.
+		]).then(([isCurrentRevPushed, remoteRevs, rev]: [boolean, Set<string>, string]) => {
+			if (isCurrentRevPushed) {
 				return rev;
 			}
 			const args: string[] = [];
@@ -38,6 +38,13 @@ export class Git {
 			// We want to return a rev that IS pushed so we get this revision's parent.
 			return this.spawnPromiseTrim(context, ['rev-parse', oldestUnpushedRevision + '~']);
 		});
+	}
+
+	/**
+	 * Returns true if this commit is reachable from at least on remote tracking branch.
+	 */
+	private isCurrentRevPushed(context: URI): TPromise<boolean> {
+		return this.spawnPromiseTrim(context, ['branch', '-r', '--contains', 'HEAD']).then(output => !!output);
 	}
 
 	/**
