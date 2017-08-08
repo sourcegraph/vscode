@@ -201,7 +201,7 @@ export abstract class FoldersListView extends CollapsibleView {
 		const folders = this.list.getFocus().map(index => this.list.model.get(index));
 		let selectNext = false;
 		const promises = folders.map(folder => {
-			const actionClass = e.shiftKey && folders.length === 1 && folder.state === WorkspaceFolderState.Inactive ? AddAndExploreWorkspaceFolderAction : ExploreWorkspaceFolderAction;
+			const actionClass = folder.state === WorkspaceFolderState.Active ? ExploreWorkspaceFolderAction : AddAndExploreWorkspaceFolderAction;
 			const action = this.instantiationService.createInstance<IFolderAction>(actionClass);
 			action.folder = folder;
 			return action.run();
