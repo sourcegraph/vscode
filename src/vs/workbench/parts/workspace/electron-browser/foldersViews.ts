@@ -238,13 +238,10 @@ export class CurrentWorkspaceFoldersView extends FoldersListView {
 export class OtherFoldersView extends FoldersListView {
 	protected query(value: string): TPromise<IPagedModel<IFolder>> {
 		return TPromise.join([
-			this.catalogService.getCurrentWorkspaceFolders(),
 			this.catalogService.getContainingFolders(),
 			this.catalogService.getOtherFolders(),
-		]).then(([currentFolders, containingFolders, otherFolders]) => {
-			const folders = containingFolders.concat(otherFolders)
-				.filter(folder => !currentFolders.some(f2 => f2.id === folder.id));
-			return new PagedModel(folders);
+		]).then(([containingFolders, otherFolders]) => {
+			return new PagedModel(containingFolders.concat(otherFolders));
 		});
 	}
 }
