@@ -587,7 +587,7 @@
         {
           "command": "git.openChange",
           "group": "navigation",
-          "when": "config.git.enabled && scmProvider == git && !isInDiffEditor && resourceScheme != extension"
+          "when": "config.git.enabled && scmProvider == git && !isInDiffEditor && resourceScheme != extension && resourceScheme == file"
         },
         {
           "command": "git.stageSelectedRanges",
