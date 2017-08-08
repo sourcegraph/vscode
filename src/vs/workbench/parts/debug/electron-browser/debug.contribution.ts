@@ -71,7 +71,9 @@ Registry.as<ViewletRegistry>(ViewletExtensions.Viewlets).registerViewlet(new Vie
 	VIEWLET_ID,
 	nls.localize('debug', "Debug"),
 	'debug',
-	40
+	40,
+	undefined,
+	false,
 ));
 
 const openViewletKb: IKeybindings = {

@@ -87,7 +87,7 @@ export class ActivitybarPart extends Part implements IActivityBarService {
 				.map(id => id === 'workbench.view.git' ? 'workbench.view.scm' : id)
 				.filter(arrays.uniqueFilter<string>(str => str));
 		} else {
-			this.pinnedViewlets = this.viewletService.getViewlets().map(v => v.id);
+			this.pinnedViewlets = this.viewletService.getViewlets().filter(v => v.defaultPinned).map(v => v.id);
 		}
 
 		this.registerListeners();
