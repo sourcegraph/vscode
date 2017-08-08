@@ -15,6 +15,7 @@ import { registerSingleton } from 'vs/platform/instantiation/common/extensions';
 import { ICodeCommentsService } from 'vs/editor/common/services/codeCommentsService';
 import { CodeCommentsService } from 'vs/workbench/services/codeComments/electron-browser/codeCommentsService';
 import 'vs/workbench/parts/codeComments/electron-browser/createCodeCommentAction';
+import 'vs/workbench/parts/codeComments/electron-browser/codeCommentsViewlet';
 
 Registry.as<ViewletRegistry>(ViewletExtensions.Viewlets).registerViewlet(new ViewletDescriptor(
 	'vs/workbench/parts/codeComments/electron-browser/codeCommentsViewlet',
