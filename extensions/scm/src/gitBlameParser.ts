@@ -96,7 +96,5 @@ export function parse(raw: string): RawBlameHunk[] {
 		}
 	}
 
-	console.log(entries);
-
 	return entries;
 }
