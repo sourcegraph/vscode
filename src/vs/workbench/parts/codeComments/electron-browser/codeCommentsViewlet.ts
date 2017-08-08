@@ -75,6 +75,7 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 	private scrollContainer: HTMLElement;
 	private title: string;
 	private actions: IAction[] = [];
+	private renderPromise: TPromise<void> | undefined;
 
 	/**
 	 * True if the threads list is rendered.
@@ -222,7 +223,7 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 		this.renderDisposables = dispose(this.renderDisposables);
 		clearNode(this.list);
 
-		const promise = this.codeCommentsService.getThreads(modelUri, options.refreshData).then(threads => {
+		this.renderPromise = this.codeCommentsService.getThreads(modelUri, options.refreshData).then(threads => {
 			if (renderId !== this.renderId) {
 				// Another render has started so don't bother
 				return;
@@ -233,7 +234,7 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 			// Silently ignore errors if we weren't able to load comments for this file.
 			// console.log(error);
 		});
-		this.progressService.showWhile(promise);
+		this.progressService.showWhile(this.renderPromise);
 	}
 
 	private renderCommentsNotAvailable(): void {
@@ -340,6 +341,13 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 			// User switched contexts before we could show this UI.
 			return;
 		}
+		// Invalidate previous renders.
+		this.renderId++;
+		if (this.renderPromise) {
+			// Cancel the promise to hide the progress bar.
+			this.renderPromise.cancel();
+		}
+
 		this.recentThreadsView = false;
 		this.renderDisposables = dispose(this.renderDisposables);
 
