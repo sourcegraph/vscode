@@ -19,13 +19,21 @@ export class Git {
 	}
 
 	/**
-	 * Returns the most recent revision in the current branch that is on the upstream.
+	 * Returns the most recent revision in the current branch that is on any upstream.
 	 */
 	public getLastPushedRevision(context: URI): TPromise<string> {
-		return this.getRemoteTrackingBranches(context).then(remotes => {
-			const remoteArgs = remotes.map(remote => '^' + remote);
-			// This returns oldest revision that is reachable from HEAD but not from any of remoteArgs.
-			return this.spawnPromiseTrim(context, ['rev-list', '--reverse', '--max-count', '1', 'HEAD'].concat(remoteArgs));
+		return TPromise.join<any>([
+			this.getRemoteTrackingBranches(context),
+			this.getRevisionSHA(context),
+		]).then(([remoteRevs, rev]: [Set<string>, string]) => {
+			if (remoteRevs.has(rev)) {
+				// Current revision is already pushed.
+				return rev;
+			}
+			const args: string[] = [];
+			remoteRevs.forEach(remoteRev => args.push('^' + remoteRev));
+			// This returns oldest revision that is reachable from HEAD but not from any of the revs in args.
+			return this.spawnPromiseTrim(context, ['rev-list', '--reverse', '--max-count', '1', 'HEAD'].concat(args));
 		}).then(oldestUnpushedRevision => {
 			// We want to return a rev that IS pushed so we get this revision's parent.
 			return this.spawnPromiseTrim(context, ['rev-parse', oldestUnpushedRevision + '~']);
@@ -33,16 +41,17 @@ export class Git {
 	}
 
 	/**
-	 * Returns all remote tracking branches
-	 * (e.g. origin/HEAD, origin/master, origin/featurebranch)
+	 * Returns the current revisions of all remote tracking branches.
 	 */
-	private getRemoteTrackingBranches(context: URI): TPromise<string[]> {
-		return this.spawnPromiseTrim(context, ['branch', '-r', '-v']).then(refs => {
-			return refs.split('\n').map(line => {
-				line = line.trim();
-				const end = line.indexOf(' ');
-				return line.substr(0, end);
-			});
+	private getRemoteTrackingBranches(context: URI): TPromise<Set<string>> {
+		return this.spawnPromiseTrim(context, ['show-ref']).then(refs => {
+			return refs.split('\n').reduce((remoteRefs, line) => {
+				const [sha, ref] = line.split(' ', 2);
+				if (ref.indexOf('refs/remotes/') === 0) {
+					remoteRefs.add(sha);
+				}
+				return remoteRefs;
+			}, new Set<string>());
 		});
 	}
 
