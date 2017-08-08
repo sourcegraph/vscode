@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 'use strict';
 
-import 'vs/css!./media/codecomments';
+import 'vs/css!./media/codeComments';
 import { localize } from 'vs/nls';
 import { Disposable } from 'vs/base/common/lifecycle';
 import { clearNode } from 'vs/base/browser/dom';
