@@ -106,7 +106,7 @@ export class RemoteSearchService extends SearchService implements ISearchService
 					let resourceLocallyNamed: URI;
 					if (scmProvider && scmProvider.revision && scmProvider.revision && scmProvider.revision.id === resultRevision) {
 						resourceLocallyNamed = URI.from({
-							scheme: Schemas.repoVersion,
+							scheme: Schemas.repo,
 							authority: oldFormatResource.authority,
 							path: oldFormatResource.path + '/' + oldFormatResource.fragment,
 						});
