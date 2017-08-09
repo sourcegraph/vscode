@@ -23,7 +23,7 @@ Registry.as<ViewletRegistry>(ViewletExtensions.Viewlets).registerViewlet(new Vie
 	Constants.VIEWLET_ID,
 	localize('name', "Code Comments"),
 	'codeComments',
-	10
+	11 // after search viewlet
 ));
 
 registerSingleton(ICodeCommentsService, CodeCommentsService);
