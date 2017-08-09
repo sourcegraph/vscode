@@ -42,7 +42,6 @@ export class CreateCodeCommentAction extends EditorAction {
 			.then(viewlet => viewlet as ICodeCommentsViewlet)
 			.then(viewlet => {
 				viewlet.createThread(file, range);
-				viewlet.focus();
 			});
 	}
 

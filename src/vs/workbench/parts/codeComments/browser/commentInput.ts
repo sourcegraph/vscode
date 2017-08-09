@@ -83,4 +83,8 @@ export class CommentInput extends Disposable {
 	private onSubmit(): void {
 		this.onSubmitEmitter.fire({ content: this.inputBox.value });
 	}
+
+	public focus(): void {
+		this.inputBox.focus();
+	}
 }

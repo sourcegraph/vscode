@@ -53,6 +53,7 @@ export class CreateThreadView extends Disposable {
 			this._register(this.input.onDidHeightChange(() => this.onHeightChangeEmitter.fire()));
 			this._register(this.input.onSubmitEvent(e => this.createThread(e.content)));
 		});
+		this.input.focus();
 	}
 
 	private createThread(content: string): void {
