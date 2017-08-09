@@ -248,14 +248,15 @@ class ShowAllSymbolsAction extends Action {
 	}
 }
 
-const OPEN_REPO_ACTION_ID = 'workbench.action.openRepo';
-const OPEN_REPO_ACTION_LABEL = nls.localize('goToRepository', "Go to Repository...");
+export const OPEN_REPO_ACTION_ID = 'workbench.action.openRepo';
+export const OPEN_REPO_ACTION_LABEL = nls.localize('goToRepository', "Go to Repository...");
 const ALL_REPOS_PREFIX = 'repo ';
 
-class OpenRepoAction extends QuickOpenAction {
+export class OpenRepoAction extends QuickOpenAction {
 
 	constructor(actionId: string, actionLabel: string, @IQuickOpenService quickOpenService: IQuickOpenService) {
 		super(actionId, actionLabel, ALL_REPOS_PREFIX, quickOpenService);
+		this.class = 'open-repo';
 	}
 }
 

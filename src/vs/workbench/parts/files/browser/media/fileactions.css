@@ -30,13 +30,25 @@
 	background: url('AddFile_inverse.svg') center center no-repeat;
 }
 
-.monaco-workbench .explorer-action.new-folder {
+.monaco-workbench .explorer-action.new-folder,
+.monaco-workbench .add-root-folder {
 	background: url('AddFolder.svg') center center no-repeat;
 }
 
 .vs-dark .monaco-workbench .explorer-action.new-folder,
-.hc-black .monaco-workbench .explorer-action.new-folder {
+.hc-black .monaco-workbench .explorer-action.new-folder,
+.vs-dark .monaco-workbench .add-root-folder,
+.hc-black .monaco-workbench .add-root-folder {
 	background: url('AddFolder_inverse.svg') center center no-repeat;
+}
+
+.monaco-workbench .open-repo {
+	background: url('AddRepo.svg') center center no-repeat;
+}
+
+.vs-dark .monaco-workbench .open-repo,
+.hc-black .monaco-workbench .open-repo {
+	background: url('AddRepo_inverse.svg') center center no-repeat;
 }
 
 .monaco-workbench .explorer-action.refresh-explorer {

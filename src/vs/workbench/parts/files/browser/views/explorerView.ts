@@ -20,7 +20,7 @@ import { ITree } from 'vs/base/parts/tree/browser/tree';
 import { Tree } from 'vs/base/parts/tree/browser/treeImpl';
 import { IFilesConfiguration, ExplorerFolderContext, FilesExplorerFocussedContext, ExplorerFocussedContext, SortOrderConfiguration, SortOrder } from 'vs/workbench/parts/files/common/files';
 import { FileOperation, FileOperationEvent, IResolveFileOptions, FileChangeType, FileChangesEvent, IFileService } from 'vs/platform/files/common/files';
-import { RefreshViewExplorerAction, NewFolderAction, NewFileAction } from 'vs/workbench/parts/files/browser/fileActions';
+// import { RefreshViewExplorerAction, NewFolderAction, NewFileAction } from 'vs/workbench/parts/files/browser/fileActions';
 import { FileDragAndDrop, FileFilter, FileSorter, FileController, FileRenderer, FileDataSource, FileViewletState, FileAccessibilityProvider } from 'vs/workbench/parts/files/browser/views/explorerViewer';
 import { toResource } from 'vs/workbench/common/editor';
 import { DiffEditorInput } from 'vs/workbench/common/editor/diffEditorInput';
@@ -46,6 +46,8 @@ import { isLinux } from 'vs/base/common/platform';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 import { attachListStyler } from 'vs/platform/theme/common/styler';
 import { ViewSizing } from 'vs/base/browser/ui/splitview/splitview';
+import { AddRootFolderAction } from 'vs/workbench/browser/actions/workspaceActions';
+import { OpenRepoAction, OPEN_REPO_ACTION_ID, OPEN_REPO_ACTION_LABEL } from 'vs/workbench/parts/search/browser/search.contribution';
 
 export interface IExplorerViewOptions extends IViewletViewOptions {
 	viewletState: FileViewletState;
@@ -172,9 +174,11 @@ export class ExplorerView extends CollapsibleView {
 	public getActions(): IAction[] {
 		const actions: Action[] = [];
 
-		actions.push(this.instantiationService.createInstance(NewFileAction, this.getViewer(), null));
-		actions.push(this.instantiationService.createInstance(NewFolderAction, this.getViewer(), null));
-		actions.push(this.instantiationService.createInstance(RefreshViewExplorerAction, this, 'explorer-action refresh-explorer'));
+		// actions.push(this.instantiationService.createInstance(NewFileAction, this.getViewer(), null));
+		// actions.push(this.instantiationService.createInstance(NewFolderAction, this.getViewer(), null));
+		// actions.push(this.instantiationService.createInstance(RefreshViewExplorerAction, this, 'explorer-action refresh-explorer'));
+		actions.push(this.instantiationService.createInstance(AddRootFolderAction, AddRootFolderAction.ID, AddRootFolderAction.LABEL));
+		actions.push(this.instantiationService.createInstance(OpenRepoAction, OPEN_REPO_ACTION_ID, OPEN_REPO_ACTION_LABEL));
 		actions.push(this.instantiationService.createInstance(CollapseAction, this.getViewer(), true, 'explorer-action collapse-explorer'));
 
 		// Set Order

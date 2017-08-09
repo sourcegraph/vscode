@@ -168,6 +168,7 @@ export class AddRootFolderAction extends BaseWorkspacesAction {
 		@IViewletService private viewletService: IViewletService
 	) {
 		super(id, label, windowService, environmentService, contextService);
+		this.class = 'add-root-folder';
 	}
 
 	public run(): TPromise<any> {
