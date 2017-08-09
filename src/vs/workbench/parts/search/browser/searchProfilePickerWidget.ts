@@ -52,7 +52,7 @@ export class SearchProfilePickerWidget extends Widget {
 			this.selected = s.selected;
 			this.telemetryService.publicLog('codeSearch.profilePicker.selected');
 		}));
-		parent.element('h4', { text: localize('searchProfilePicker.title', "Repositories to search") });
+		parent.element('h4', { text: localize('searchProfilePicker.title', "repositories to search") });
 		parent.div({ class: 'search-profile-picker-widget' }, div => {
 			this.container = div.getHTMLElement();
 			this.selectBox.render(this.container);

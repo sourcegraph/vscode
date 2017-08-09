@@ -10,6 +10,7 @@ import Event, { Emitter } from "vs/base/common/event";
 import { localize } from "vs/nls";
 import * as arrays from "vs/base/common/arrays";
 import * as strings from "vs/base/common/strings";
+import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
 
 /**
  * A service which aggregates all the valid Search Profiles for a workspace.
@@ -18,7 +19,8 @@ export class SearchProfileService extends Disposable implements ISearchProfileSe
 
 	_serviceBrand: any;
 
-	private static EMPTY_TEXT = localize('searchProfile.empty', "");
+	private static EMPTY_WORKSPACE_TEXT = localize('searchProfile.emptyWorkspace', "Open Files");
+	private static CURRENT_WORKSPACE_TEXT = localize('searchProfile.currentWorkspace', "Current Workspace ({0})");
 	public static CUSTOM_TEXT = localize('searchProfile.custom', "Custom");
 
 	private didSearchProfilesChange = this._register(new Emitter<void>());
@@ -32,6 +34,7 @@ export class SearchProfileService extends Disposable implements ISearchProfileSe
 
 	constructor(
 		@IConfigurationService private configurationService: IConfigurationService,
+		@IWorkspaceContextService private contextService: IWorkspaceContextService,
 	) {
 		super();
 
@@ -40,19 +43,35 @@ export class SearchProfileService extends Disposable implements ISearchProfileSe
 	}
 
 	public getSearchProfiles(): ISearchProfile[] {
-		let profiles: ISearchProfile[] = [{
-			name: SearchProfileService.EMPTY_TEXT,
+		let profiles: ISearchProfile[] = [];
+
+		profiles.push({
+			name: this.getCurrentWorkspaceText(),
 			workspaces: [],
-		}];
+		});
+
 		if (this._custom.length > 0) {
 			profiles.push({
 				name: SearchProfileService.CUSTOM_TEXT,
-				description: localize('searchProfile.custom.description', "Manually specified workspaces"),
+				description: localize('searchProfile.custom.description', "Manually Specified"),
 				workspaces: this._custom,
 			});
 		}
 		profiles = profiles.concat(this._fromConfig);
 		return profiles;
+	}
+
+	private getCurrentWorkspaceText(): string {
+		if (!this.contextService.hasWorkspace()) {
+			return SearchProfileService.EMPTY_WORKSPACE_TEXT;
+		}
+
+		const roots = this.contextService.getWorkspace().roots;
+		let text = SearchProfileService.CURRENT_WORKSPACE_TEXT;
+		if (roots.length === 0 || roots.length > 1) {
+			return text.replace('{0}', localize('searchProfile.currentWorkspace.multiple', "{0} Repositories", roots.length));
+		}
+		return text.replace('{0}', localize('searchProfile.currentWorkspace.single', "1 Repository"));
 	}
 
 	getProfileForWorkspaces(workspaces: string[]): ISearchProfile {
@@ -71,7 +90,7 @@ export class SearchProfileService extends Disposable implements ISearchProfileSe
 		this.didSearchProfilesChange.fire();
 		return {
 			name: SearchProfileService.CUSTOM_TEXT,
-			description: localize('searchProfile.custom.description', "Manually specified workspaces"),
+			description: localize('searchProfile.custom.description', "Manually Specified"),
 			workspaces: workspaces,
 		};
 	}
