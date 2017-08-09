@@ -74,7 +74,7 @@ export class SearchProfileService extends Disposable implements ISearchProfileSe
 		return text.replace('{0}', localize('searchProfile.currentWorkspace.single', "1 Repository"));
 	}
 
-	getProfileForWorkspaces(workspaces: string[]): ISearchProfile {
+	public getProfileForWorkspaces(workspaces: string[]): ISearchProfile {
 		workspaces = this.normalize(workspaces);
 		const workspacesSorted = workspaces.concat().sort();
 		const profile = arrays.first(this.getSearchProfiles(), profile => {
