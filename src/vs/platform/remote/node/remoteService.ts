@@ -7,39 +7,42 @@
 
 import URI from 'vs/base/common/uri';
 import { TPromise } from 'vs/base/common/winjs.base';
-import { IDisposable } from 'vs/base/common/lifecycle';
+import { Disposable } from 'vs/base/common/lifecycle';
 import { IRequestOptions, IRequestContext } from 'vs/base/node/request';
 import { IRequestService } from 'vs/platform/request/node/request';
 import { IRemoteService, IRemoteConfiguration } from 'vs/platform/remote/node/remote';
-import { IConfigurationService, IConfigurationServiceEvent } from 'vs/platform/configuration/common/configuration';
+import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 
 /**
  * This service exposes the remote endpoint, if any.
  */
-export class RemoteService implements IRemoteService {
+export class RemoteService extends Disposable implements IRemoteService {
 
 	_serviceBrand: any;
 
 	private endpoint: URI | null = null;
-	private disposables: IDisposable[] = [];
+	private cookie: string | null = null;
 
 	constructor(
-		@IConfigurationService private configurationService: IConfigurationService,
+		@IConfigurationService protected configurationService: IConfigurationService,
 		@IRequestService private requestService: IRequestService,
 	) {
+		super();
 		this.configure(configurationService.getConfiguration<IRemoteConfiguration>());
-		configurationService.onDidUpdateConfiguration(this.onDidUpdateConfiguration, this, this.disposables);
+		this._register(configurationService.onDidUpdateConfiguration(() => this.onDidUpdateConfiguration()));
 	}
 
-	private onDidUpdateConfiguration(e: IConfigurationServiceEvent) {
+	private onDidUpdateConfiguration() {
 		this.configure(this.configurationService.getConfiguration<IRemoteConfiguration>());
 	}
 
 	private configure(config: IRemoteConfiguration) {
 		if (config.remote && config.remote.endpoint) {
 			this.endpoint = URI.parse(config.remote.endpoint);
+			this.cookie = config.remote.cookie;
 		} else {
 			this.endpoint = null;
+			this.cookie = null;
 		}
 	}
 
@@ -49,6 +52,12 @@ export class RemoteService implements IRemoteService {
 			return TPromise.wrapError(new Error('invalid remote URL (may only contain path and query): ' + url.toString()));
 		}
 		options = { ...options, url: this.endpoint.with({ path: url.path, query: url.query }).toString() };
+		if (this.cookie) {
+			if (!options.headers) {
+				options.headers = {};
+			}
+			options.headers['Authorization'] = `session ${this.cookie}`;
+		}
 		return this.requestService.request(options);
 	}
 }

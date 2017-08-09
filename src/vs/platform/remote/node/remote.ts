@@ -26,6 +26,7 @@ export interface IRemoteService {
 export interface IRemoteConfiguration {
 	remote?: {
 		endpoint?: string;
+		cookie?: string;
 	};
 }
 
@@ -41,6 +42,10 @@ Registry.as<IConfigurationRegistry>(Extensions.Configuration)
 				pattern: '^https?://([^:]*(:[^@]*)?@)?([^:]+)(:\\d+)?/?$|^$',
 				description: localize('TODO-2', "The URL to the Sourcegraph or Sourcegraph Enterprise server."),
 				default: 'https://sourcegraph.com',
+			},
+			'remote.cookie': {
+				type: 'string',
+				description: localize('remoteCookie', "The HTTP cookie value (a base64-encoded string) used to authenticate to the remote endpoint (use your sg-session cookie for the Sourcegraph web server)"),
 			},
 		}
 	});

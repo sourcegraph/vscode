@@ -88,7 +88,12 @@ function listAllFiles(repo: string, revision: string): Thenable<string[]> {
 		}`,
 		{ repo, revision },
 		'repo/fileSystem/listAllFiles',
-	).then(root => root.repository!.commit.commit!.tree!.files.map((file: any) => file.name));
+	).then(root => {
+		if (!root.repository) {
+			throw new Error(`repository not found: ${repo}`);
+		}
+		return root.repository!.commit.commit!.tree!.files.map((file: any) => file.name);
+	});
 }
 
 /**

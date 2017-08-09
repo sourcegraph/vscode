@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 'use strict';
 
+import * as vscode from 'vscode';
 import { DataCallback, Message, MessageReader, MessageWriter, RequestMessage } from '@sourcegraph/vscode-jsonrpc';
 import { AbstractMessageReader } from '@sourcegraph/vscode-jsonrpc/lib/messageReader';
 import { AbstractMessageWriter } from '@sourcegraph/vscode-jsonrpc/lib/messageWriter';
@@ -22,7 +23,15 @@ import * as WebSocket from 'universal-websocket-client';
 export function webSocketStreamOpener(url: string, requestTracer?: (trace: MessageTrace) => void, connectionRetryTimeout: number = 20000): Promise<MessageTransports> {
 	const deadline = Date.now() + connectionRetryTimeout;
 	return new Promise((resolve, reject) => {
-		let socket = new WebSocket(url);
+		const cookie = vscode.workspace.getConfiguration('remote').get<string>('cookie');
+		const headers: { [name: string]: string } = {
+			'Content-Type': 'application/json; charset=utf-8',
+		};
+		if (cookie) {
+			headers['Authorization'] = `session ${cookie}`;
+		}
+
+		let socket = new WebSocket(url, [], { headers });
 		socket.binaryType = 'arraybuffer';
 		let connected = false;
 		socket.onopen = () => {
