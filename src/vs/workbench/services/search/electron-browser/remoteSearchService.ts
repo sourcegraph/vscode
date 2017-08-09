@@ -157,9 +157,10 @@ export class RemoteSearchService extends SearchService implements ISearchService
 		// extendQuery is idempotent, so it is fine that super.search also calls it.
 		this.extendQuery(query);
 
-		// Split out local and external resources
-		const localFolderQueries = query.folderQueries.filter(fq => fq.folder.scheme !== Schemas.repo);
-		const remoteFolderQueries = query.folderQueries.filter(fq => fq.folder.scheme === Schemas.repo);
+		// Split out local and remote resources
+		const isRemote = (uri: URI): boolean => uri.scheme === Schemas.repo || uri.scheme === Schemas.repoVersion;
+		const localFolderQueries = query.folderQueries.filter(fq => !isRemote(fq.folder));
+		const remoteFolderQueries = query.folderQueries.filter(fq => isRemote(fq.folder));
 
 		return PPromise.join({
 			local: this.localSearch({ ...query, folderQueries: localFolderQueries }),
