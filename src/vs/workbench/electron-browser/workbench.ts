@@ -101,6 +101,8 @@ import { getQuickNavigateHandler, inQuickOpenContext } from 'vs/workbench/browse
 import { IWorkspaceEditingService } from 'vs/workbench/services/workspace/common/workspaceEditing';
 import { WorkspaceEditingService } from 'vs/workbench/services/workspace/node/workspaceEditingService';
 import URI from "vs/base/common/uri";
+// tslint:disable-next-line:import-patterns
+import { ModalPart } from 'vs/workbench/parts/modal/modalPart';
 
 export const MessagesVisibleContext = new RawContextKey<boolean>('globalMessageVisible', false);
 export const EditorsVisibleContext = new RawContextKey<boolean>('editorIsOpen', false);
@@ -141,7 +143,8 @@ const Identifiers = {
 	SIDEBAR_PART: 'workbench.parts.sidebar',
 	PANEL_PART: 'workbench.parts.panel',
 	EDITOR_PART: 'workbench.parts.editor',
-	STATUSBAR_PART: 'workbench.parts.statusbar'
+	STATUSBAR_PART: 'workbench.parts.statusbar',
+	MODAL_PART: 'workbench.parts.modaloverlay'
 };
 
 /**
@@ -186,6 +189,7 @@ export class Workbench implements IPartService {
 	private panelPart: PanelPart;
 	private editorPart: EditorPart;
 	private statusbarPart: StatusbarPart;
+	private modalPart: ModalPart;
 	private quickOpen: QuickOpenController;
 	private workbenchLayout: WorkbenchLayout;
 	private toDispose: IDisposable[];
@@ -588,6 +592,11 @@ export class Workbench implements IPartService {
 		this.toShutdown.push(this.titlebarPart);
 		serviceCollection.set(ITitleService, this.titlebarPart);
 
+		// Modal part
+		this.modalPart = this.instantiationService.createInstance(ModalPart, Identifiers.MODAL_PART);
+		this.toDispose.push(this.modalPart);
+		this.toShutdown.push(this.modalPart);
+
 		// File Service
 		const fileService = this.instantiationService.createInstance(RemoteFileService);
 		serviceCollection.set(IFileService, fileService);
@@ -729,6 +738,9 @@ export class Workbench implements IPartService {
 			case Parts.STATUSBAR_PART:
 				container = this.statusbarPart.getContainer();
 				break;
+			case Parts.MODAL_PART:
+				container = this.modalPart.getContainer();
+				break;
 		}
 		return container && container.getHTMLElement();
 	}
@@ -745,6 +757,8 @@ export class Workbench implements IPartService {
 				return !this.statusBarHidden;
 			case Parts.ACTIVITYBAR_PART:
 				return !this.activityBarHidden;
+			case Parts.MODAL_PART:
+				return !this.modalPart.getContainer().isHidden();
 		}
 
 		return true; // any other part cannot be hidden
@@ -1144,6 +1158,7 @@ export class Workbench implements IPartService {
 		this.createEditorPart();
 		this.createPanelPart();
 		this.createStatusbarPart();
+		this.createModalPart();
 
 		// Add Workbench to DOM
 		this.workbenchContainer.build(this.container);
@@ -1213,6 +1228,15 @@ export class Workbench implements IPartService {
 		this.statusbarPart.create(statusbarContainer);
 	}
 
+	private createModalPart(): void {
+		const modalContainer = $(this.workbench).div({
+			'class': ['part', 'modal'],
+			id: Identifiers.MODAL_PART,
+			role: 'contentinfo',
+		}).hide();
+		this.modalPart.create(modalContainer);
+	}
+
 	public getEditorPart(): EditorPart {
 		assert.ok(this.workbenchStarted, 'Workbench is not started. Call startup() first.');
 
@@ -1229,6 +1253,13 @@ export class Workbench implements IPartService {
 		assert.ok(this.workbenchStarted, 'Workbench is not started. Call startup() first.');
 
 		return this.panelPart;
+	}
+
+
+	public getModalPart(): ModalPart {
+		assert.ok(this.workbenchStarted, 'Workbench is not started. Call startup() first.');
+
+		return this.modalPart;
 	}
 
 	public getInstantiationService(): IInstantiationService {

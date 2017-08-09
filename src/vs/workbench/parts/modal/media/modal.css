@@ -1,0 +1,124 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Sourcegraph. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+/**
+ * Common styles for modals
+ * NOTE: all coloring is themed, handled in modal.ts
+ */
+.modal-body {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	max-height: 90%;
+	overflow: auto;
+	border-radius: 4px;
+	font-size: 14px;
+	border-width: 1px;
+	border-style: solid;
+}
+
+.modal-body .modal-contents {
+	padding: 24px;
+	margin-top: -5px;
+}
+
+.modal-body .modal-contents .modal-title {
+	font-size: 16px;
+	text-transform: uppercase;
+	line-height: 20px;
+	margin-bottom: 24px;
+	font-weight: 600;
+	letter-spacing: 1px;
+}
+
+.modal-body .modal-contents .modal-sub-title {
+	font-size: 14px;
+	text-transform: uppercase;
+	line-height: 20px;
+	margin: 24px 0px 24px 0px;
+	font-weight: 600;
+	letter-spacing: 1px;
+}
+
+.modal-body .modal-contents form label {
+	font-size: 16px;
+	line-height: 24px;
+	font-weight: normal;
+	margin-bottom: 8px;
+	display: block;
+}
+
+.modal-body .modal-contents form input {
+	border-radius: 2px;
+	padding: 5px 12px;
+	width: 296px;
+	border: none;
+	font-size: 16px;
+	line-height: 24px;
+}
+
+.modal-body .modal-contents input[type=submit],
+.modal-body .modal-contents input[type=button],
+.modal-body .modal-contents .modal-button {
+	padding: 4px 12px;
+	font-size: 16px;
+	line-height: 24px;
+	border: none;
+	font-weight: 400;
+	border-radius: 3px;
+	cursor: pointer;
+}
+
+.modal-body .modal-contents input[type=submit].modal-button-error,
+.modal-body .modal-contents input[type=button].modal-button-error,
+.modal-body .modal-contents .modal-button.modal-button-error {
+	cursor: pointer;
+}
+
+.modal-body .modal-contents input[type=submit].modal-button-disabled,
+.modal-body .modal-contents input[type=button].modal-button-disabled,
+.modal-body .modal-contents .modal-button.modal-button-disabled {
+	cursor: default;
+}
+
+.modal-body .modal-contents .modal-panel {
+	border-style: solid;
+	border-width: 1px 1px 0px 1px;
+	padding: 5px;
+	margin: 0px;
+	display: flex;
+}
+
+/**
+ * Layer to prevent user from interacting with the background while a modal is up
+ */
+.modal-background-layer {
+	position: absolute;
+	top: 0px;
+	left: 0px;
+	width: 100%;
+	height: 100%;
+	background-color: rgba(0, 0, 0, 0.5);
+}
+
+.monaco-workbench.blur-background-all #workbench\.parts\.panel,
+.monaco-workbench.blur-background-all #workbench\.parts\.sidebar,
+.monaco-workbench.blur-background-all #workbench\.parts\.editor,
+.monaco-workbench.blur-background-all #workbench\.parts\.activitybar,
+.monaco-workbench.blur-background-all #workbench\.parts\.titlebar,
+.monaco-workbench.blur-background-all #workbench\.parts\.statusbar,
+.monaco-workbench.blur-background-all #workbench\.parts\.reminder {
+	filter: blur(2px);
+}
+
+.hc-black .monaco-workbench.blur-background-all #workbench\.parts\.panel,
+.hc-black .monaco-workbench.blur-background-all #workbench\.parts\.sidebar,
+.hc-black .monaco-workbench.blur-background-all #workbench\.parts\.editor,
+.hc-black .monaco-workbench.blur-background-all #workbench\.parts\.activitybar,
+.hc-black .monaco-workbench.blur-background-all #workbench\.parts\.titlebar,
+.hc-black .monaco-workbench.blur-background-all #workbench\.parts\.statusbar,
+.hc-black .monaco-workbench.blur-background-all #workbench\.parts\.reminder {
+	opacity: .2;
+}

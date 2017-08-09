@@ -205,6 +205,10 @@
 		{
 			"name": "setup_messages",
 			"project": "vscode-workbench"
+		},
+		{
+			"name": "vs/workbench/parts/modal",
+			"project": "vscode-workbench"
 		}
 	]
 }

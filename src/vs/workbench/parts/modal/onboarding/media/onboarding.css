@@ -1,0 +1,125 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Sourcegraph. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+/* Onboarding modal */
+.onboarding-modal {
+	width: 600px;
+	padding: 0px !important;
+}
+
+.onboarding-modal .wrapper {
+	width: 100%;
+	height: 450px;
+	overflow: hidden;
+}
+
+.onboarding-modal .scroll-action {
+	display: block;
+	position: absolute;
+	background: RGBA(201, 212, 223, 0.3);
+	width: 30px;
+	height: 80px;
+	top: 190px;
+	z-index: 2;
+	cursor: pointer;
+	-webkit-transition: all 0.25s;
+	transition: all 0.25s;
+	color: white;
+	line-height: 80px;
+	text-align: center;
+	font-size: 30px;
+}
+
+.onboarding-modal .scroll-action:hover {
+	background-color: RGBA(201, 212, 223, 0.5);
+}
+
+.onboarding-modal .scroll-action-left {
+	left: 0px;
+	border-top-right-radius: 4px;
+	border-bottom-right-radius: 4px;
+}
+
+.onboarding-modal .scroll-action-right {
+	right: 0px;
+	border-top-left-radius: 4px;
+	border-bottom-left-radius: 4px;
+}
+
+.onboarding-modal .contents {
+	display: block;
+	width: 2400px;
+	height: 450px;
+	z-index: 1;
+	-webkit-transition: all 0.5s;
+	transition: all 0.5s;
+}
+
+.onboarding-modal .slide {
+	width: 600px;
+	display: block;
+	float: left;
+	height: 450px;
+}
+
+.onboarding-modal .slide-image {
+	display: block;
+	height: 300px;
+}
+
+.onboarding-modal .slide-image-1 {
+	background: url('https://storage.googleapis.com/sourcegraph-assets/onboarding/add-workspace-1.gif');
+}
+
+.onboarding-modal .slide-image-2 {
+	background: url('https://storage.googleapis.com/sourcegraph-assets/onboarding/cross-repo-search-3.gif');
+}
+
+.onboarding-modal .slide-image-3 {
+	background: url('https://storage.googleapis.com/sourcegraph-assets/onboarding/find-refs-3.gif');
+}
+
+.onboarding-modal .slide-message {
+	display: block;
+	text-align: center;
+	padding: 24px 75px;
+	line-height: 24px;
+}
+
+.onboarding-modal .slide4 {
+	position: relative;
+	height: 450px;
+}
+
+.onboarding-modal .slide4 .modal-title {
+	position: absolute;
+	top: 24px;
+	left: 0;
+	right: 0;
+	text-align: center;
+}
+
+.onboarding-modal .slide4 .slide-message {
+	position: relative;
+	top: 50%;
+	transform: translateY(-50%);
+}
+
+.onboarding-modal .slide4 .slide-message .slide-message-title {
+	font-size: 24px;
+	line-height: 31px;
+	margin-bottom: 15px;
+}
+
+.onboarding-modal .slide4 .slide-message .modal-button {
+	font-size: 24px;
+	padding: 10px 20px;
+	display: inline-block;
+	margin-top: 25px;
+}
+
+.onboarding-modal .shortcuts {
+	font-weight: bold;
+}
