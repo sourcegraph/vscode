@@ -65,6 +65,12 @@ export class SourcegraphSearchViewlet extends SearchViewlet {
 		const beforeFolderCount = folderResources.length;
 		const folderResourcesComparable = folderResources.map(resource => resource.toString());
 		const workspaces = this.inputRepoSelector.workspaces;
+
+		if (workspaces.length) {
+			// Do not include workspace roots if we've specified roots to search.
+			folderResources.length = 0;
+		}
+
 		workspaces.forEach(resource => {
 			if (folderResourcesComparable.indexOf(resource) === -1) {
 				folderResources.push(URI.parse(resource));

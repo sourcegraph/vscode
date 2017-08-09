@@ -441,17 +441,17 @@ configurationRegistry.registerConfiguration({
 			'description': nls.localize('search.profiles', "Configure profiles for searching groups of repositories"),
 			'default': [
 				{
-					'name': 'Go',
+					'name': 'Go standard library  (sample)',
 					'description': 'Repositories part of the Go Programming Language project.',
 					'workspaces': ['github.com/golang/go', 'github.com/golang/net', 'github.com/golang/tools', 'github.com/golang/crypto', 'github.com/golang/sys', 'github.com/golang/arch', 'github.com/golang/sync'],
 				},
 				{
-					'name': 'Angular',
+					'name': 'Angular (sample)',
 					'description': 'Repositories part of the Angular 2 Framework project.',
 					'workspaces': ['github.com/angular/angular', 'github.com/angular/material2', 'github.com/angular/angular-cli'],
 				},
 				{
-					'name': 'vscode',
+					'name': 'vscode (sample)',
 					'description': 'Repositories related to the Visual Studio Code project. Taken from https://github.com/Microsoft/vscode/wiki/Related-Projects',
 					'workspaces': ['github.com/Microsoft/vscode',
 						// Core Repositories
@@ -469,7 +469,7 @@ configurationRegistry.registerConfiguration({
 					],
 				},
 				{
-					'name': 'Dropwizard',
+					'name': 'Dropwizard (sample)',
 					'description': 'Repositories related to the Dropwizard project.',
 					'workspaces': ['github.com/dropwizard/dropwizard',
 						// Jetty for HTTP servin'.
@@ -491,8 +491,8 @@ configurationRegistry.registerConfiguration({
 					],
 				},
 				{
-					'name': 'Kubernetes',
-					'description': 'Projects part of the Kubernetes Container Orchestartion project.',
+					'name': 'Kubernetes (sample)',
+					'description': 'Projects part of the Kubernetes Container Orchestration project.',
 					'workspaces': ['github.com/kubernetes/kubernetes', 'github.com/kubernetes/contrib', 'github.com/kubernetes/charts', 'github.com/kubernetes/client-go'],
 				},
 			],

@@ -128,6 +128,12 @@ class HomePage {
 			this.addEventListener(searchInput, 'input', () => {
 				viewlet.searchAndReplaceWidget.searchInput.setValue(searchInput.value);
 			});
+			this.addEventListener(reposInput, 'blur', () => {
+				if (!(viewlet instanceof SourcegraphSearchViewlet)) {
+					throw new Error();
+				}
+				viewlet.inputRepoSelector.workspaces = reposInput.value.split(/[\s,]+/).filter(repo => !!repo);
+			});
 			this.addEventListener(regexOption, 'change', () => {
 				viewlet.searchAndReplaceWidget.searchInput.setRegex(regexOption.checked);
 			});
