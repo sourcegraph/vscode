@@ -58,6 +58,7 @@
 }
 
 .monaco-workbench > .part.editor > .content .homePage .search .reposInput {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "HelveticaNeue-Light", "Ubuntu", "Droid Sans", sans-serif;
 	background-color: #151D28;
 	border: none;
 	border-radius: 2px;

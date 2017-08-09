@@ -15,31 +15,31 @@ export default () => `
 		<div class="search">
 			<div class="inputSection">
 				<input class="searchInput" type="text" placeholder="Search..." />
-				<a class="searchButton">Search code</a>
+				<a class="searchButton">Search Code</a>
 			</div>
 			<div class="filterSection">
 				<div>Repositories</div>
-				<textarea class="reposInput">active</textarea>
+				<textarea placeholder="All Repositories in Current Workspace" class="reposInput"></textarea>
 				<div class="addReposButton">
 					<span>Select repositories...</span>
 				</div>
 			</div>
 			<div class="filterSection">
-				<div>Files to include</div>
-				<input class="filesInput includePatternInput" placeholder="example: *.go" />
+				<div>Files to Include</div>
+				<input class="filesInput includePatternInput" placeholder="Example: *.go" />
 			</div>
 			<div class="optionsSection">
 				<label class="searchOption">
 					<input class="caseSensitiveOption" type="checkbox" />
-					Match case
+					Match Case
 				</label>
 				<label class="searchOption">
 					<input class="wholeWordsOption" type="checkbox" />
-					Match whole word
+					Match Whole Word
 				</label>
 				<label class="searchOption">
 					<input class="regexOption" type="checkbox" />
-					Regex
+					Regular Expression
 				</label>
 			</div>
 		</div>
