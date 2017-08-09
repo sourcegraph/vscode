@@ -25,7 +25,7 @@ export class CreateCodeCommentAction extends EditorAction {
 		super({
 			id: CreateCodeCommentAction.ID,
 			label: CREATE_CODE_COMMENT_ACTION_LABEL,
-			alias: 'Comment on this code',
+			alias: 'Comment on This Code',
 			precondition: null,
 			menuOpts: {
 				group: '3_codecomments',
