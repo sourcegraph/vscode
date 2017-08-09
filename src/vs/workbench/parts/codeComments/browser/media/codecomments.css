@@ -61,6 +61,14 @@
 	margin-top: 8px;
 }
 
+.codeComments .thread .content {
+	cursor: pointer;
+}
+
+.codeComments .comment .content {
+	user-select: initial;
+}
+
 .codeComments .thread, .codeComments .comment, .codeComments .create {
 	padding: 16px;
 	border-top: 1px solid;

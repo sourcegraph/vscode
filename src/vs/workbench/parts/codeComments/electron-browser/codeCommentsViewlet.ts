@@ -27,7 +27,6 @@ import { ScrollbarVisibility } from 'vs/base/common/scrollable';
 import { Range } from 'vs/editor/common/core/range';
 import { Action, IAction } from 'vs/base/common/actions';
 import { basename } from 'vs/base/common/paths';
-import { IContextViewService } from 'vs/platform/contextview/browser/contextView';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { ThreadView } from 'vs/workbench/parts/codeComments/electron-browser/threadView';
 import { CreateThreadView } from 'vs/workbench/parts/codeComments/browser/createThreadView';
@@ -96,7 +95,6 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 		@ICodeCommentsService private codeCommentsService: ICodeCommentsService,
 		@ISCMService private scmService: ISCMService,
 		@IProgressService private progressService: IProgressService,
-		@IContextViewService private contextViewService: IContextViewService,
 		@IInstantiationService private instantiationService: IInstantiationService,
 	) {
 		super(Constants.VIEWLET_ID, telemetryService, themeService);

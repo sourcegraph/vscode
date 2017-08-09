@@ -5,9 +5,10 @@
 'use strict';
 
 import 'vs/css!./media/codeComments';
+import { TPromise } from 'vs/base/common/winjs.base';
 import { localize } from 'vs/nls';
 import { Disposable } from 'vs/base/common/lifecycle';
-import { clearNode } from 'vs/base/browser/dom';
+import { clearNode, addDisposableListener } from 'vs/base/browser/dom';
 import { $ } from 'vs/base/browser/builder';
 import { ICodeCommentsService, Thread, CommentsDidChangeEvent } from 'vs/editor/common/services/codeCommentsService';
 import URI from 'vs/base/common/uri';
@@ -17,6 +18,8 @@ import { CommentInput } from 'vs/workbench/parts/codeComments/browser/commentInp
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { MessageType } from 'vs/base/browser/ui/inputbox/inputBox';
 import Event, { Emitter } from 'vs/base/common/event';
+import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
+import { Action } from 'vs/base/common/actions';
 
 /**
  * Renders the list of comments in a single thread.
@@ -35,6 +38,7 @@ export class ThreadView extends Disposable {
 		@ICodeCommentsService private codeCommentsService: ICodeCommentsService,
 		@IProgressService private progressService: IProgressService,
 		@IInstantiationService private instantiationService: IInstantiationService,
+		@IContextMenuService private contextMenuService: IContextMenuService,
 	) {
 		super();
 		this._register(this.codeCommentsService.onCommentsDidChange(e => this.onCommentsDidChange(e)));
@@ -67,6 +71,14 @@ export class ThreadView extends Disposable {
 					});
 					div.div({ class: 'content' }, div => {
 						div.text(comment.contents);
+						this._register(addDisposableListener(div.getHTMLElement(), 'contextmenu', (e: MouseEvent) => {
+							this.contextMenuService.showContextMenu({
+								getAnchor: () => e,
+								getActions: () => TPromise.as([
+									new Action('editor.action.clipboardCopyAction', localize('copy', "Copy"), null, true, () => document.execCommand('copy') && TPromise.as(true)),
+								]),
+							});
+						}));
 					});
 				});
 			}
