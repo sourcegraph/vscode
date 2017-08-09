@@ -283,7 +283,6 @@ export class FolderCatalogService implements IFolderCatalogService {
 }
 const HARDCODED_FOLDERS = [
 	'repo://github.com/gorilla/mux',
-	'repo://github.com/Microsoft/vscode',
 	'repo://github.com/dropwizard/dropwizard',
 	'repo://github.com/pallets/flask',
 	'repo://github.com/gorilla/schema',
