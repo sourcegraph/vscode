@@ -492,7 +492,7 @@ configurationRegistry.registerConfiguration({
 				},
 				{
 					'name': 'Kubernetes (sample)',
-					'description': 'Projects part of the Kubernetes Container Orchestartion project.',
+					'description': 'Projects part of the Kubernetes Container Orchestration project.',
 					'workspaces': ['github.com/kubernetes/kubernetes', 'github.com/kubernetes/contrib', 'github.com/kubernetes/charts', 'github.com/kubernetes/client-go'],
 				},
 			],
