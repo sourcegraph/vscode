@@ -28,6 +28,7 @@ import { ITerminalService as IIntegratedTerminalService, KEYBINDING_CONTEXT_TERM
 import { DEFAULT_TERMINAL_WINDOWS, DEFAULT_TERMINAL_LINUX_READY, DEFAULT_TERMINAL_OSX, ITerminalConfiguration } from 'vs/workbench/parts/execution/electron-browser/terminal';
 import { WinTerminalService, MacTerminalService, LinuxTerminalService } from 'vs/workbench/parts/execution/electron-browser/terminalService';
 import { IHistoryService } from 'vs/workbench/services/history/common/history';
+import { Schemas } from 'vs/base/common/network';
 
 if (env.isWindows) {
 	registerSingleton(ITerminalService, WinTerminalService);
@@ -95,7 +96,7 @@ export abstract class AbstractOpenInTerminalAction extends Action {
 
 	public setResource(resource: uri): void {
 		this.resource = resource;
-		this.enabled = !paths.isUNC(this.resource.fsPath);
+		this.enabled = this.resource.scheme === Schemas.file && !paths.isUNC(this.resource.fsPath);
 	}
 
 	public getPathToOpen(): string {
