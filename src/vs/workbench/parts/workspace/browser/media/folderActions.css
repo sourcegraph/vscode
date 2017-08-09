@@ -29,12 +29,12 @@
 }
 
 .monaco-action-bar .action-item .action-label.add-local-folder {
-	background: url('add.svg') center center no-repeat;
+	background: url('../../../files/browser/media/AddFolder.svg') center center no-repeat;
 }
 
 .vs-dark .monaco-action-bar .action-item .action-label.add-local-folder,
 .hc-black .monaco-action-bar .action-item .action-label.add-local-folder {
-	background: url('add-inverse.svg') center center no-repeat;
+	background: url('../../../files/browser/media/AddFolder_inverse.svg') center center no-repeat;
 }
 
 .monaco-action-bar .action-item.disabled .action-label.folder-action.add:not(.adding),
