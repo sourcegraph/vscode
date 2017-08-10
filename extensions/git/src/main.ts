@@ -42,9 +42,11 @@ async function init(context: ExtensionContext, disposables: Disposable[]): Promi
 		return;
 	}
 
-	workspace.workspaceFolders.forEach(w => initWorkspaceFolder({
-		telemetryReporter, outputChannel, info, git, workspaceRoot: w.uri, disposables,
-	}));
+	workspace.workspaceFolders.forEach(w => {
+		initWorkspaceFolder({
+			telemetryReporter, outputChannel, info, git, workspaceRoot: w.uri, disposables,
+		});
+	});
 
 	await checkGitVersion(info);
 }
@@ -66,12 +68,14 @@ function initWorkspaceFolder(state: { telemetryReporter: TelemetryReporter, outp
 	git.onOutput.addListener('log', onOutput);
 	disposables.push(toDisposable(() => git.onOutput.removeListener('log', onOutput)));
 
+	const commandCenter = new CommandCenter(git, model, outputChannel, telemetryReporter);
 	const statusBarCommands = new StatusBarCommands(model);
 	const provider = new GitSCMProvider(model, statusBarCommands);
 	const contentProvider = new GitContentProvider(model);
 	const autoFetcher = new AutoFetcher(model);
 
 	disposables.push(
+		commandCenter,
 		provider,
 		contentProvider,
 		autoFetcher,

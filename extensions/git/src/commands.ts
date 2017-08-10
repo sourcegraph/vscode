@@ -138,6 +138,10 @@ export class CommandCenter {
 			.map(({ commandId, key, method, skipModelCheck, requiresDiffInformation }) => {
 				const command = this.createCommand(commandId, key, method, skipModelCheck);
 
+				if (model) {
+					commandId = `${commandId}[${model.workspaceRoot.toString()}]`;
+				}
+
 				if (requiresDiffInformation) {
 					return commands.registerDiffInformationCommand(commandId, command);
 				} else {
