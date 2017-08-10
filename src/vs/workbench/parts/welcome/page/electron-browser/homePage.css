@@ -11,6 +11,10 @@
 	min-height: 100%;
 }
 
+.monaco-workbench > .part.editor > .content .homePageContainer * {
+	box-sizing: border-box;
+}
+
 .monaco-workbench > .part.editor > .content .homePage .search {
 	background-color: #1C2736;
 	padding: 16px;
@@ -53,6 +57,16 @@
 	text-decoration: none;
 }
 
+.monaco-workbench > .part.editor > .content .homePage .search .searchButton .searchIcon {
+	background-image: url('../../../search/browser/media/search-dark.svg');
+	background-repeat: no-repeat;
+	background-position: center;
+	background-size: contain;
+	height: 18px;
+	width: 18px;
+	margin-right: 8px;
+}
+
 .monaco-workbench > .part.editor > .content .homePage .search .filterSection {
 	margin-top: 16px;
 }
@@ -69,7 +83,6 @@
 	max-width: 100%;
 	min-height: 64px;
 	padding: 10px;
-	box-sizing: border-box;
 	width: 100%;
 }
 
@@ -96,7 +109,6 @@
 	margin-top: 8px;
 	padding: 10px;
 	width: 100%;
-	box-sizing: border-box;
 }
 
 .monaco-workbench > .part.editor > .content .homePage .search .optionsSection {

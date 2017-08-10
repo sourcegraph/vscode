@@ -15,7 +15,9 @@ export default () => `
 		<div class="search">
 			<div class="inputSection">
 				<input class="searchInput" type="text" placeholder="Search..." />
-				<a class="searchButton">Search Code</a>
+				<a class="searchButton">
+				<div class="searchIcon"></div>
+				Search code</a>
 			</div>
 			<div class="filterSection">
 				<div>Repositories</div>
