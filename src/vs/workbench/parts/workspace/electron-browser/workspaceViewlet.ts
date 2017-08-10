@@ -176,7 +176,7 @@ export class WorkspaceViewlet extends ComposedViewsViewlet implements IWorkspace
 		const header = append(this.root, $('.header'));
 
 		this.searchBox = append(header, $<HTMLInputElement>('input.search-box'));
-		this.searchBox.placeholder = localize('searchFolders', "Search for repositories and folders");
+		this.searchBox.placeholder = localize('searchFolders', "Search for remote repositories");
 		this.disposables.push(addStandardDisposableListener(this.searchBox, EventType.FOCUS, () => addClass(this.searchBox, 'synthetic-focus')));
 		this.disposables.push(addStandardDisposableListener(this.searchBox, EventType.BLUR, () => removeClass(this.searchBox, 'synthetic-focus')));
 
