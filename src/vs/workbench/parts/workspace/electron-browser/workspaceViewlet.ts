@@ -120,7 +120,7 @@ export class WorkspaceViewlet extends ComposedViewsViewlet implements IWorkspace
 			ctor: CurrentWorkspaceFoldersView,
 			when: ContextKeyExpr.and(ContextKeyExpr.has('workspaceViewletVisible'), ContextKeyExpr.not('searchFolders')),
 			order: 0,
-			size: 50,
+			size: 100,
 		};
 	}
 
@@ -132,7 +132,7 @@ export class WorkspaceViewlet extends ComposedViewsViewlet implements IWorkspace
 			ctor: OtherFoldersView,
 			when: ContextKeyExpr.and(ContextKeyExpr.has('workspaceViewletVisible'), ContextKeyExpr.not('searchFolders')),
 			order: 2,
-			size: 35,
+			size: 0,
 			canToggleVisibility: true
 		};
 	}
