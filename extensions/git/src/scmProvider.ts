@@ -62,7 +62,7 @@ export class GitSCMProvider implements CommandExecutor {
 		private statusBarCommands: StatusBarCommands
 	) {
 		this._sourceControl = scm.createSourceControl('git', {
-			label: 'Git',
+			label: `${model.workspaceRoot.fsPath} (Git)`,
 			rootFolder: model.workspaceRoot,
 		});
 		this.disposables.push(this._sourceControl);

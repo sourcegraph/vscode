@@ -60,7 +60,7 @@ export class GitRepository implements Repository, vscode.Disposable {
 		private workspaceState: vscode.Memento,
 	) {
 		this.sourceControl = vscode.scm.createSourceControl('git', {
-			label: 'Git',
+			label: `${this.label} (Git)`,
 			rootFolder: this.root,
 		});
 		this.sourceControl.commandExecutor = this;
