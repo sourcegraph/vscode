@@ -17,6 +17,16 @@
   ],
   "enableProposedApi": true,
   "contributes": {
+    "configuration": {
+      "type": "object",
+      "title": "Repository Configuration",
+      "properties": {
+        "repo.mappings": {
+          "type": "object",
+          "description": "Mapping of repository URI to local filesystem location."
+        }
+      }
+    },
     "commands": [
       {
         "command": "repo.action.switchRevision",
