@@ -50,6 +50,10 @@ import { fillInActions } from 'vs/platform/actions/browser/menuItemActionItem';
 import { IBackupFileService } from 'vs/workbench/services/backup/common/backup';
 import { attachInputBoxStyler } from 'vs/platform/theme/common/styler';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
+import { ActionBar } from 'vs/base/browser/ui/actionbar/actionbar';
+import { EventType } from 'vs/base/common/events';
+import { FolderSCMRevisionLabelAction } from 'vs/workbench/parts/workspace/browser/scmFolderActions';
+import { RemoveWorkspaceFolderExplorerAction } from 'vs/workbench/parts/workspace/browser/folderActions';
 
 export class FileDataSource implements IDataSource {
 	constructor(
@@ -260,6 +264,8 @@ export class ActionRunner extends BaseActionRunner implements IActionRunner {
 
 export interface IFileTemplateData {
 	label: FileLabel;
+	actions1: ActionBar;
+	actions2: ActionBar;
 	container: HTMLElement;
 }
 
@@ -275,6 +281,7 @@ export class FileRenderer implements IRenderer {
 		state: FileViewletState,
 		@IContextViewService private contextViewService: IContextViewService,
 		@IInstantiationService private instantiationService: IInstantiationService,
+		@IMessageService private messageService: IMessageService,
 		@IThemeService private themeService: IThemeService
 	) {
 		this.state = state;
@@ -290,27 +297,62 @@ export class FileRenderer implements IRenderer {
 
 	public disposeTemplate(tree: ITree, templateId: string, templateData: IFileTemplateData): void {
 		templateData.label.dispose();
+		templateData.actions1.clear();
+		templateData.actions2.clear();
 	}
 
 	public renderTemplate(tree: ITree, templateId: string, container: HTMLElement): IFileTemplateData {
 		const label = this.instantiationService.createInstance(FileLabel, container, void 0);
 
-		return { label, container };
+		const actions1 = new ActionBar(container, {
+			animated: false,
+		});
+		actions1.domNode.classList.add('actions1');
+		actions1.addListener(EventType.RUN, ({ error }) => error && this.messageService.show(Severity.Error, error));
+
+		const actions2 = new ActionBar(container);
+		actions2.domNode.classList.add('actions2');
+		actions2.addListener(EventType.RUN, ({ error }) => error && this.messageService.show(Severity.Error, error));
+
+		return { label, actions1, actions2, container };
 	}
 
 	public renderElement(tree: ITree, stat: FileStat, templateId: string, templateData: IFileTemplateData): void {
+		templateData.actions1.clear();
+		templateData.actions2.clear();
+
 		const editableData: IEditableData = this.state.getEditableData(stat);
 
 		// File Label
 		if (!editableData) {
-			templateData.label.element.style.display = 'block';
 			const extraClasses = ['explorer-item'];
+
+			if (stat.isRoot) {
+				extraClasses.push('explorer-item-root');
+
+				const revisionLabel = this.instantiationService.createInstance(FolderSCMRevisionLabelAction);
+				revisionLabel.folderResource = stat.resource;
+				templateData.actions1.push([revisionLabel], { label: true, icon: true });
+
+				const removeAction = this.instantiationService.createInstance(RemoveWorkspaceFolderExplorerAction, stat.resource);
+				templateData.actions2.push([removeAction], { label: false, icon: true });
+
+				templateData.actions1.domNode.style.display = 'block';
+				templateData.actions1.domNode.style.display = undefined;
+			} else {
+				templateData.actions1.domNode.style.display = 'none';
+				templateData.actions2.domNode.style.display = 'none';
+			}
+
+			templateData.label.element.style.display = 'block';
 			templateData.label.setFile(stat.resource, { hidePath: true, fileKind: stat.isRoot ? FileKind.ROOT_FOLDER : stat.isDirectory ? FileKind.FOLDER : FileKind.FILE, extraClasses });
 		}
 
 		// Input Box
 		else {
 			templateData.label.element.style.display = 'none';
+			templateData.actions1.domNode.style.display = 'none';
+			templateData.actions2.domNode.style.display = 'none';
 			this.renderInputBox(templateData.container, tree, stat, editableData);
 		}
 	}

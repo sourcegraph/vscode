@@ -189,6 +189,13 @@ export const buttonForeground = registerColor('button.foreground', { dark: Color
 export const buttonBackground = registerColor('button.background', { dark: '#0E639C', light: '#007ACC', hc: null }, nls.localize('buttonBackground', "Button background color."));
 export const buttonHoverBackground = registerColor('button.hoverBackground', { dark: lighten(buttonBackground, 0.2), light: darken(buttonBackground, 0.2), hc: null }, nls.localize('buttonHoverBackground', "Button background color when hovering."));
 
+export const tagBackground = registerColor('tag.background', { dark: null, light: null, hc: null }, nls.localize('tagBackground', "Background color for tags."));
+export const tagForeground = registerColor('tag.foreground', { dark: Color.white.transparent(0.7), light: Color.black.transparent(0.7), hc: null }, nls.localize('tagForeground', "Foreground color for tags."));
+export const tagBorder = registerColor('tag.border', { dark: Color.white.transparent(0.5), light: Color.black.transparent(0.5), hc: null }, nls.localize('tagBorder', "Border color for tags."));
+export const tagHoverBackground = registerColor('tag.hoverBackground', { dark: Color.white.transparent(0.05), light: Color.black.transparent(0.05), hc: Color.white.transparent(0.05) }, nls.localize('tagHoverBackground', "Background hover color for tags."));
+export const tagHoverForeground = registerColor('tag.hoverForeground', { dark: transparent(tagForeground, 1.5), light: transparent(tagForeground, 1.5), hc: null }, nls.localize('tagHoverForeground', "Foreground hover color for tags."));
+export const tagHoverBorder = registerColor('tag.hoverBorder', { dark: transparent(tagBorder, 1.5), light: transparent(tagBorder, 1.5), hc: null }, nls.localize('tagHoverBorder', "Border hover color for tags."));
+
 export const badgeBackground = registerColor('badge.background', { dark: '#4D4D4D', light: '#BEBEBE', hc: Color.black }, nls.localize('badgeBackground', "Badge background color. Badges are small information labels, e.g. for search results count."));
 export const badgeForeground = registerColor('badge.foreground', { dark: Color.white, light: Color.white, hc: Color.white }, nls.localize('badgeForeground', "Badge foreground color. Badges are small information labels, e.g. for search results count."));
 

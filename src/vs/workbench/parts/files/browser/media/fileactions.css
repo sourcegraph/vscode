@@ -137,3 +137,29 @@
 .hc-black .monaco-workbench .explorer-viewlet .explorer-open-editors .close-editor-action {
 	background: url("action-close-dark.svg") center center no-repeat;
 }
+
+.explorer-viewlet .explorer-folders-view .remove-action {
+	background: url("action-close.svg") center center no-repeat;
+}
+
+.explorer-viewlet .explorer-folders-view .focused .monaco-tree-row.selected:not(.highlighted) > .content .remove-action {
+	background: url("action-close-focus.svg") center center no-repeat;
+}
+
+.explorer-viewlet .explorer-folders-view .monaco-tree .monaco-tree-row:not(:hover) > .content.dirty > .monaco-action-bar .remove-action {
+	background: url("action-close-dirty.svg") center center no-repeat;
+}
+
+.vs-dark .explorer-viewlet .explorer-folders-view .monaco-tree .monaco-tree-row:not(:hover) > .content.dirty > .monaco-action-bar .remove-action,
+.hc-black .monaco-workbench .explorer-viewlet .explorer-folders-view .monaco-tree .monaco-tree-row:not(:hover) > .content.dirty > .monaco-action-bar .remove-action {
+	background: url("action-close-dirty-dark.svg") center center no-repeat;
+}
+
+.explorer-viewlet .explorer-folders-view .monaco-tree.focused .monaco-tree-row.selected:not(:hover) > .content.dirty > .monaco-action-bar .remove-action {
+	background: url("action-close-dirty-focus.svg") center center no-repeat;
+}
+
+.vs-dark .monaco-workbench .explorer-viewlet .explorer-folders-view .remove-action,
+.hc-black .monaco-workbench .explorer-viewlet .explorer-folders-view .remove-action {
+	background: url("action-close-dark.svg") center center no-repeat;
+}

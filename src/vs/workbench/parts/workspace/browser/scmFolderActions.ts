@@ -6,6 +6,7 @@
 'use strict';
 
 import 'vs/css!./media/folderActions';
+import URI from 'vs/base/common/uri';
 import { localize } from 'vs/nls';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { Action } from 'vs/base/common/actions';
@@ -20,12 +21,14 @@ export abstract class FolderSCMRevisionAction extends Action {
 	private resolvingClass: string;
 
 	private disposables: IDisposable[] = [];
-	private _folder: IFolder;
-	get folder(): IFolder { return this._folder; }
-	set folder(folder: IFolder) {
+	private _folder: URI;
+	set folderResource(folder: URI) {
 		this._folder = folder;
 		this.updateSCMProvider();
 		this.update();
+	}
+	set folder(folder: IFolder) {
+		this.folderResource = folder ? folder.uri : undefined;
 	}
 
 	protected scmProvider?: ISCMProvider;
@@ -52,8 +55,8 @@ export abstract class FolderSCMRevisionAction extends Action {
 
 	private updateSCMProvider(): void {
 		let provider: ISCMProvider | undefined;
-		if (this.folder) {
-			provider = this.scmService.getProviderForResource(this.folder.uri);
+		if (this._folder) {
+			provider = this.scmService.getProviderForResource(this._folder);
 		}
 
 		// Clear old provider.
@@ -70,7 +73,7 @@ export abstract class FolderSCMRevisionAction extends Action {
 	}
 
 	protected update(): void {
-		if (!this.folder) {
+		if (!this._folder) {
 			this.enabled = false;
 			this.class = this.resolvedClass;
 			this.label = '';
@@ -137,7 +140,7 @@ export class FolderSCMRevisionLabelAction extends FolderSCMRevisionAction {
 		@ISCMService scmService: ISCMService,
 		@ICommandService commandService: ICommandService,
 	) {
-		super('workspace.folder.scm.revisionLabel', 'folder-label', scmService, commandService);
+		super('workspace.folder.scm.revisionLabel', 'folder-label tag', scmService, commandService);
 
 		this.tooltip = localize('folderSCMRevisionLabel.tooltip', "Switch SCM Revision...");
 	}
