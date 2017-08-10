@@ -45,7 +45,7 @@ export class CodeCommentsDecorationRenderer extends Disposable {
 
 		scmService.onDidChangeProvider(e => this.renderDecorations());
 
-		const gutterIconPath = URI.parse(require.toUrl('./../electron-browser/media/comment.svg')).fsPath;
+		const gutterIconPath = URI.parse(require.toUrl('./media/comment.svg')).fsPath;
 		const color = themeService.getTheme().getColor(buttonBackground).toString();
 		codeEditorService.registerDecorationType(DECORATION_KEY, {
 			backgroundColor: color,
