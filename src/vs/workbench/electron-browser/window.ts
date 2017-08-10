@@ -381,8 +381,8 @@ export class ElectronWindow extends Themable {
 			const repoMappings: { [key: string]: string } = this.configurationService.getConfiguration('repo')['mappings'] || {};
 			for (let f of request.filesToOpen) {
 				const fileToOpen = f as IWindowConfiguration;
-				const folder = fileToOpen.folderPath;
-				const file = fileToOpen.filePath.replace(folder, '');
+				const folder = URI.parse(fileToOpen.folderPath).with({ query: '' }).toString();
+				const file = URI.parse(fileToOpen.filePath).with({ query: '' }).toString().replace(folder, '');
 				const uri = folder.replace('repo://', '');
 				if (repoMappings[uri]) {
 					const fsPath = repoMappings[uri];
