@@ -326,8 +326,6 @@ export class CodeCommentsService implements ICodeCommentsService {
 				return threads.reduce<Thread[]>((threads, thread) => {
 					const diff = diffs.get(thread.revision);
 					if (!diff) {
-						// Should never happen assuming the logic above is correct.
-						console.error('missing diff for revision', thread.revision);
 						return threads;
 					}
 					const range = diff.transformRange(thread.range);
