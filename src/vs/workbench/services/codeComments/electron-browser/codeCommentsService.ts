@@ -15,6 +15,8 @@ import { startsWith } from 'vs/base/common/strings';
 import { isFileLikeResource } from 'vs/platform/files/common/files';
 import { IRemoteService, requestGraphQL, requestGraphQLMutation } from 'vs/platform/remote/node/remote';
 import { TPromise } from 'vs/base/common/winjs.base';
+import { uniqueFilter } from 'vs/base/common/arrays';
+import { values } from 'vs/base/common/map';
 
 /**
  * A unique identifier for a file.
@@ -241,7 +243,7 @@ export class CodeCommentsService implements ICodeCommentsService {
 	public getThreads(file: URI, skipCache: boolean): TPromise<Thread[]> {
 		const cachedThreads = this.threadCache.get(file);
 		if (cachedThreads && !skipCache) {
-			return this.adjustThreadRanges(file, toArray(cachedThreads));
+			return this.adjustThreadRanges(file, values(cachedThreads));
 		}
 
 		return this.getDocumentId(file)
@@ -290,15 +292,32 @@ export class CodeCommentsService implements ICodeCommentsService {
 	 * TODO: this should be cached in some way instead of being recomputed.
 	 */
 	private adjustThreadRanges(file: URI, threads: Thread[]): TPromise<Thread[]> {
+		interface RevDiff {
+			rev: string;
+			diff: Diff;
+		};
+
 		// Collect all relevant diffs.
-		const revs = threads.map(thread => thread.revision).filter(uniqueFilter);
-		return TPromise.join(revs.map(rev =>
+		const revs = threads.map(thread => thread.revision).filter(uniqueFilter(rev => rev));
+		return TPromise.join<RevDiff | undefined>(revs.map(rev =>
 			this.git.getDiff(file, rev)
-				.then(diff => ({ rev, diff: new Diff(diff) }))
+				.then(diff => ({ rev, diff: new Diff(diff) }), err => {
+					const stderr = err.stderr;
+					if (typeof stderr === 'string' && stderr.indexOf('bad object') >= 0) {
+						// We were unable to compute the diff because the ref is not accessible on the local machine.
+						// This is what happens if commit is made on a ref in a branch and then the branch is deleted.
+						// Not uncommon since this is what happens when a branch is squash merged into another branch.
+						// We don't want to throw or log an error in this case, just silently skip over this comment.
+						return undefined;
+					}
+					throw err;
+				})
 		))
 			.then(diffs => {
 				return diffs.reduce((map, diff) => {
-					map.set(diff.rev, diff.diff);
+					if (diff) {
+						map.set(diff.rev, diff.diff);
+					}
 					return map;
 				}, new Map<string, Diff>());
 			})
@@ -322,18 +341,8 @@ export class CodeCommentsService implements ICodeCommentsService {
 	}
 }
 
-function uniqueFilter<T>(value: T, index: number, values: T[]): boolean {
-	return values.indexOf(value) === index;
-}
-
 function mostRecentCommentTimeDescending(left: Thread, right: Thread): number {
 	return right.mostRecentComment.createdAt.getTime() - left.mostRecentComment.createdAt.getTime();
-}
-
-function toArray<K, V>(map: Map<K, V>): V[] {
-	const array: V[] = [];
-	map.forEach(value => array.push(value));
-	return array;
 }
 
 function toMap<K, V>(array: V[], key: (value: V) => K): Map<K, V> {
