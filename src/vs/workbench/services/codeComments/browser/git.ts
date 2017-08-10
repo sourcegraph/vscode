@@ -110,25 +110,19 @@ export class Git {
 	 */
 	public getRemoteRepo(context: URI): TPromise<string> {
 		return this.spawnPromiseTrim(context, ['ls-remote', '--get-url'])
-			.then(url => url.replace(/\.git$/, ''))
+			.then(url => url.replace(/\.git$/, '').replace(/\/$/, ''))
 			.then(url => {
-				// We can just remove a prefix for these protocols.
-				const prefixProtocols = [
-					/^https?:\/\//,
-					/^git:\/\//,
-					/^ssh:\/\/[^/@]+@/,
-				];
-				for (let prefixProtocol of prefixProtocols) {
-					if (prefixProtocol.test(url)) {
-						return url.replace(prefixProtocol, '');
-					}
-				}
 				// Parse ssh procotol (e.g. user@company.com:foo/bar)
 				const sshMatch = url.match(/[^/@]+@([^:/]+):(.+)$/);
 				if (sshMatch) {
 					return sshMatch[1] + '/' + sshMatch[2];
 				}
-				throw new Error('unsupported remote url format: ' + url);
+				// We can just remove a prefix for these protocols.
+				const prefix = /^((https?)|(git)|(ssh)):\/\/([^/@]+@)?/;
+				if (!prefix.test(url)) {
+					throw new Error('unsupported remote url format: ' + url);
+				}
+				return url.replace(prefix, '');
 			});
 	}
 

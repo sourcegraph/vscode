@@ -64,21 +64,30 @@ suite('git', function () {
 	let git = new Git(scmService);
 
 	suite('getRemoteRepo', function () {
+		interface Test {
+			in: string;
+			out: string;
+		}
 		var accepts = [
-			'http://github.com/Microsoft/vscode.git',
-			'https://github.com/Microsoft/vscode.git',
-			'git://github.com/Microsoft/vscode.git',
-			'git@github.com:sourcegraph/sourcegraph.git',
-			'user@company.internal:foo/Bar.git',
-			'user@subdomain.company.internal:Bar.git',
-			'user@subdomain.company.internal:foo/Bar.git',
-			'ssh://user@subdomain.company.com/Bar.git',
-			'ssh://user@subdomain.company.com/foo/Bar.git',
+			{ in: 'http://github.com/Microsoft/vscode.git', out: 'github.com/Microsoft/vscode' },
+			{ in: 'https://github.com/Microsoft/vscode.git', out: 'github.com/Microsoft/vscode' },
+			{ in: 'git://github.com/Microsoft/vscode.git', out: 'github.com/Microsoft/vscode' },
+			{ in: 'git@github.com:sourcegraph/sourcegraph.git', out: 'github.com/sourcegraph/sourcegraph' },
+			{ in: 'user@company.internal:foo/Bar.git', out: 'company.internal/foo/Bar' },
+			{ in: 'user@subdomain.company.internal:Bar.git', out: 'subdomain.company.internal/Bar' },
+			{ in: 'user@subdomain.company.internal:foo/Bar.git', out: 'subdomain.company.internal/foo/Bar' },
+			{ in: 'ssh://user@subdomain.company.com/Bar.git', out: 'subdomain.company.com/Bar' },
+			{ in: 'ssh://user@subdomain.company.com/foo/Bar.git', out: 'subdomain.company.com/foo/Bar' },
+			{ in: 'https://user@github.com/sourcegraph/sourcegraph/', out: 'github.com/sourcegraph/sourcegraph' },
 		];
 		accepts.forEach(function (accept) {
-			test(`accepts ${accept}`, function () {
-				scmService.fakeProvider.executeCommandOutput = accept;
-				return git.getRemoteRepo(null);
+			test(`accepts ${accept.in}`, function () {
+				scmService.fakeProvider.executeCommandOutput = accept.in;
+				return git.getRemoteRepo(null).then(actual => {
+					if (actual !== accept.out) {
+						throw new Error(`${accept.in} expected ${accept.out} got ${actual}`);
+					}
+				});
 			});
 		});
 
@@ -93,11 +102,11 @@ suite('git', function () {
 			'file:///foo/bar.git',
 			'/foo/bar.git',
 		];
-		rejects.forEach(function (reject) {
-			test(`rejects ${reject}`, function () {
-				scmService.fakeProvider.executeCommandOutput = reject;
+		rejects.forEach(function (invalid) {
+			test(`rejects ${invalid}`, function () {
+				scmService.fakeProvider.executeCommandOutput = invalid;
 				return new Promise((resolve, reject) => {
-					git.getRemoteRepo(null).then(reject, resolve);
+					git.getRemoteRepo(null).then(repo => reject(new Error(`expected ${invalid} to be rejected; got ${repo}`)), resolve);
 				});
 			});
 		});
