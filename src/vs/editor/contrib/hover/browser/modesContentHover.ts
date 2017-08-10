@@ -22,14 +22,14 @@ import { HoverOperation, IHoverComputer } from './hoverOperation';
 import { SourcegraphHoverWidget } from './sourcegraphHoverWidget';
 import { textToMarkedString, markedStringsEquals, MarkedString } from 'vs/base/common/htmlContent';
 import { ModelDecorationOptions } from 'vs/editor/common/model/textModelWithDecorations';
-import { ColorPickerModel } from "vs/editor/contrib/colorPicker/browser/colorPickerModel";
-import { ColorPickerWidget } from "vs/editor/contrib/colorPicker/browser/colorPickerWidget";
-import { isColorDecorationOptions } from 'vs/editor/contrib/colorPicker/common/color';
-import { ColorFormatter } from 'vs/editor/contrib/colorPicker/common/colorFormatter';
+import { ColorPickerModel } from 'vs/editor/contrib/colorPicker/browser/colorPickerModel';
+import { ColorPickerWidget } from 'vs/editor/contrib/colorPicker/browser/colorPickerWidget';
+import { ColorDetector } from 'vs/editor/contrib/colorPicker/browser/colorDetector';
+import { IColorFormatter, ColorFormatter, CombinedColorFormatter } from 'vs/editor/contrib/colorPicker/common/colorFormatter';
 import { Color, RGBA } from 'vs/base/common/color';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
-import * as lifecycle from 'vs/base/common/lifecycle';
+import { IDisposable, empty as EmptyDisposable, dispose, combinedDisposable } from 'vs/base/common/lifecycle';
 const $ = dom.$;
 
 const loadingMessage = textToMarkedString(nls.localize('modesContentHover.loading', "Loading..."));
@@ -91,8 +91,10 @@ class ModesContentComputer implements IHoverComputer<HoverPart[]> {
 			return contents && (!Array.isArray(contents) || (<MarkedString[]>contents).length > 0);
 		};
 
+		const colorDetector = ColorDetector.get(this._editor);
 		const maxColumn = this._editor.getModel().getLineMaxColumn(lineNumber);
 		const lineDecorations = this._editor.getLineDecorations(lineNumber);
+		let didFindColor = false;
 
 		const result = lineDecorations.map(d => {
 			const startColumn = (d.range.startLineNumber === lineNumber) ? d.range.startColumn : 1;
@@ -103,14 +105,13 @@ class ModesContentComputer implements IHoverComputer<HoverPart[]> {
 			}
 
 			const range = new Range(this._range.startLineNumber, startColumn, this._range.startLineNumber, endColumn);
+			const colorRange = colorDetector.getColorRange(d.range.getStartPosition());
 
-			// TOOD@Joao
-			const options = d.options as any;
-			const extraOptions = options && options.extraOptions;
+			if (!didFindColor && colorRange) {
+				didFindColor = true;
 
-			if (isColorDecorationOptions(extraOptions)) {
-				const { color, format, availableFormats } = extraOptions;
-				return new ColorHover(range, color, format, availableFormats);
+				const { color, format, availableFormats } = colorRange;
+				return new ColorHover(d.range, color, format, availableFormats);
 			} else {
 				if (!hasHoverContent(d.options.hoverMessage)) {
 					return null;
@@ -165,6 +166,12 @@ class ModesContentComputer implements IHoverComputer<HoverPart[]> {
 	}
 }
 
+function createColorFormatter(format: IColorFormat): IColorFormatter {
+	return typeof format === 'string'
+		? new ColorFormatter(format)
+		: new CombinedColorFormatter(new ColorFormatter(format.opaque), new ColorFormatter(format.transparent));
+}
+
 export class ModesContentHoverWidget extends SourcegraphHoverWidget {
 
 	static ID = 'editor.contrib.modesContentHoverWidget';
@@ -179,7 +186,9 @@ export class ModesContentHoverWidget extends SourcegraphHoverWidget {
 	private _modeService: IModeService;
 	private _shouldFocus: boolean;
 	private _colorPicker: ColorPickerWidget;
-	private toDispose: lifecycle.IDisposable[];
+
+	private renderDisposable: IDisposable = EmptyDisposable;
+	private toDispose: IDisposable[];
 
 	constructor(private telemetryService: ITelemetryService, editor: ICodeEditor, openerService: IOpenerService, modeService: IModeService, private contextKeyService: IContextKeyService) {
 		super(ModesContentHoverWidget.ID, editor, contextKeyService);
@@ -209,11 +218,10 @@ export class ModesContentHoverWidget extends SourcegraphHoverWidget {
 	}
 
 	dispose(): void {
+		this.renderDisposable.dispose();
+		this.renderDisposable = EmptyDisposable;
 		this._hoverOperation.cancel();
-		if (this._colorPicker) {
-			this._colorPicker.dispose();
-		}
-		this.toDispose = lifecycle.dispose(this.toDispose);
+		this.toDispose = dispose(this.toDispose);
 		super.dispose();
 	}
 
@@ -280,10 +288,9 @@ export class ModesContentHoverWidget extends SourcegraphHoverWidget {
 		this._isChangingDecorations = true;
 		this._highlightDecorations = this._editor.deltaDecorations(this._highlightDecorations, []);
 		this._isChangingDecorations = false;
+		this.renderDisposable.dispose();
+		this.renderDisposable = EmptyDisposable;
 		this._colorPicker = null;
-		if (this._colorPicker) {
-			this._colorPicker.dispose();
-		}
 	}
 
 	isColorPickerVisible(): boolean {
@@ -304,6 +311,8 @@ export class ModesContentHoverWidget extends SourcegraphHoverWidget {
 	}
 
 	private _renderMessages(renderRange: Range, messages: HoverPart[]): void {
+		this.renderDisposable.dispose();
+		this._colorPicker = null;
 
 		// update column from which to show
 		var renderColumn = Number.MAX_VALUE,
@@ -349,40 +358,28 @@ export class ModesContentHoverWidget extends SourcegraphHoverWidget {
 						fragment.appendChild($('div.hover-row', null, renderedContents));
 					});
 			} else {
-				let opaqueFormatter: ColorFormatter, transparentFormatter: ColorFormatter;
-				if (typeof msg.format === 'string') {
-					opaqueFormatter = new ColorFormatter(msg.format);
-				} else {
-					opaqueFormatter = new ColorFormatter(msg.format.opaque);
-					transparentFormatter = new ColorFormatter(msg.format.transparent);
-				}
-
-				let availableFormatters: ColorFormatter[] = [];
-				if (msg.availableFormats) {
-					msg.availableFormats.forEach(format => {
-						let colorPickerFormatter;
-						if (typeof format === 'string') {
-							colorPickerFormatter = new ColorFormatter(format);
-						} else {
-							colorPickerFormatter = {
-								opaqueFormatter: new ColorFormatter(format.opaque),
-								transparentFormatter: new ColorFormatter(format.transparent)
-							};
-						}
-						availableFormatters.push(colorPickerFormatter);
-					});
-				}
-
+				const formatter = createColorFormatter(msg.format);
+				const availableFormatters = msg.availableFormats.map(format => createColorFormatter(format));
 				const { red, green, blue, alpha } = msg.color;
 				const rgba = new RGBA(red * 255, green * 255, blue * 255, alpha * 255);
-				const color = Color.fromRGBA(rgba);
+				const color = new Color(rgba);
+				const model = new ColorPickerModel(color, formatter, availableFormatters);
+				const widget = new ColorPickerWidget(fragment, model, this._editor.getConfiguration().pixelRatio);
 
-				const model = new ColorPickerModel(rgba.toString(), color, opaqueFormatter, transparentFormatter, availableFormatters, this._editor.getModel(), msg.range);
-				const widget = this._register(new ColorPickerWidget(model, this._editor));
-				model.widget = widget;
+				const editorModel = this._editor.getModel();
+				let range = new Range(msg.range.startLineNumber, msg.range.startColumn, msg.range.endLineNumber, msg.range.endColumn);
+
+				const updateEditorModel = () => {
+					const text = model.formatter.formatColor(model.color);
+					editorModel.pushEditOperations([], [{ identifier: null, range, text, forceMoveMarkers: false }], () => []);
+					range = range.setEndPosition(range.endLineNumber, range.startColumn + text.length);
+				};
+
+				const colorListener = model.onDidChangeColor(updateEditorModel);
+				const formatterListener = model.onDidChangeFormatter(updateEditorModel);
 
 				this._colorPicker = widget;
-				fragment.appendChild(widget.getDomNode());
+				this.renderDisposable = combinedDisposable([colorListener, formatterListener, widget]);
 			}
 		});
 
@@ -395,7 +392,6 @@ export class ModesContentHoverWidget extends SourcegraphHoverWidget {
 
 		if (this._colorPicker) {
 			this._colorPicker.layout();
-			this._colorPicker.layoutSaturationBox();
 		}
 
 		this._isChangingDecorations = true;
