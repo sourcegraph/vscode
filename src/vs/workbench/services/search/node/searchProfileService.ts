@@ -11,6 +11,9 @@ import { localize } from "vs/nls";
 import * as arrays from "vs/base/common/arrays";
 import * as strings from "vs/base/common/strings";
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
+import { IRemoteService, requestGraphQL } from 'vs/platform/remote/node/remote';
+import { onUnexpectedError } from "vs/base/common/errors";
+
 
 /**
  * A service which aggregates all the valid Search Profiles for a workspace.
@@ -26,6 +29,9 @@ export class SearchProfileService extends Disposable implements ISearchProfileSe
 	private didSearchProfilesChange = this._register(new Emitter<void>());
 	public onDidSearchProfilesChange: Event<void> = this.didSearchProfilesChange.event;
 
+	// Search profiles from the server
+	private _fromServer: ISearchProfile[] = [];
+
 	// Search profiles from user preferences
 	private _fromConfig: ISearchProfile[] = [];
 
@@ -35,9 +41,11 @@ export class SearchProfileService extends Disposable implements ISearchProfileSe
 	constructor(
 		@IConfigurationService private configurationService: IConfigurationService,
 		@IWorkspaceContextService private contextService: IWorkspaceContextService,
+		@IRemoteService private remoteService: IRemoteService,
 	) {
 		super();
 
+		this.fetchServerProfiles();
 		this._register(this.configurationService.onDidUpdateConfiguration(e => this.onConfigUpdated()));
 		this.onConfigUpdated();
 	}
@@ -57,7 +65,7 @@ export class SearchProfileService extends Disposable implements ISearchProfileSe
 				workspaces: this._custom,
 			});
 		}
-		profiles = profiles.concat(this._fromConfig);
+		profiles = profiles.concat(this._fromConfig).concat(this._fromServer);
 		return profiles;
 	}
 
@@ -93,6 +101,32 @@ export class SearchProfileService extends Disposable implements ISearchProfileSe
 			description: localize('searchProfile.custom.description', "Manually Specified"),
 			workspaces: workspaces,
 		};
+	}
+
+	private fetchServerProfiles(): void {
+		// Ignore returned promise, just do in background
+		requestGraphQL<{ searchProfiles: GQL.ISearchProfile[] }>(this.remoteService, `query SearchProfiles {
+			root {
+			  searchProfiles {
+				name
+				description
+				repositories {
+					uri
+				}
+			  }
+			}
+		}
+		`, {}).then(({ searchProfiles }) => {
+				this._fromServer = searchProfiles.map(p => {
+					return {
+						name: p.name,
+						description: p.description,
+						workspaces: this.normalize(p.repositories.map(repo => repo.uri)),
+					};
+				});
+				this.didSearchProfilesChange.fire();
+				return null;
+			}).done(null, onUnexpectedError);
 	}
 
 	private onConfigUpdated(): void {

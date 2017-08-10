@@ -28,7 +28,7 @@ import { ITelemetryAppenderChannel, TelemetryAppenderClient } from 'vs/platform/
 import { TelemetryService, ITelemetryServiceConfig } from 'vs/platform/telemetry/common/telemetryService';
 import { IRemoteService } from 'vs/platform/remote/node/remote';
 import { RemoteService } from 'vs/platform/remote/node/remoteService';
-import { SearchProfileService } from "vs/workbench/services/search/common/searchProfileService";
+import { SearchProfileService } from "vs/workbench/services/search/node/searchProfileService";
 import { IdleMonitor, UserStatus } from 'vs/platform/telemetry/browser/idleMonitor';
 import ErrorTelemetry from 'vs/platform/telemetry/browser/errorTelemetry';
 import { ElectronWindow } from 'vs/workbench/electron-browser/window';

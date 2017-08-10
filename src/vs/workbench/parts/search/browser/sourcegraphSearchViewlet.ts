@@ -14,7 +14,6 @@ import { findInFolderResourcesCommand } from 'vs/workbench/parts/search/browser/
 import { Builder, $ } from 'vs/base/browser/builder';
 import { SearchProfilePickerWidget } from 'vs/workbench/parts/search/browser/searchProfilePickerWidget';
 import { Match } from 'vs/workbench/parts/search/common/searchModel';
-import { SearchProfileService } from "vs/workbench/services/search/common/searchProfileService";
 
 /**
  * Contains Sourcegraph customizations to VS Code's search viewlet.
@@ -82,7 +81,7 @@ export class SourcegraphSearchViewlet extends SearchViewlet {
 			profile: {
 				name: this.inputRepoSelector.selected,
 				count: workspaces.length,
-				custom: this.inputRepoSelector.selected === SearchProfileService.CUSTOM_TEXT,
+				custom: this.inputRepoSelector.selected === 'Custom', // TODO(keegan) custom should be a property of profile
 			}
 		});
 	}
