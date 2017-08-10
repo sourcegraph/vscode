@@ -110,8 +110,14 @@ export class SearchProfilePickerWidget extends Widget {
 	 * Returns an array of selected workspaces.
 	 */
 	public get workspaces(): string[] {
-		const profile = arrays.first(this._profiles, profile => profile.name === this._selected);
-		return profile ? profile.workspaces : [];
+		return this.getSelectedProfile().workspaces.concat();
+	}
+
+	public getSelectedProfile(): ISearchProfile {
+		return arrays.first(this._profiles, profile => profile.name === this._selected, {
+			name: '',
+			workspaces: [],
+		});
 	}
 }
 

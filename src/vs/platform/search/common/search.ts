@@ -151,6 +151,14 @@ export class LineMatch implements ILineMatch {
 	}
 }
 
+// Where a search profile is from
+export enum SearchProfileSource {
+	Ephemeral = 'Ephemeral', // Created manually and not saved
+	Config = 'Config',
+	Workspace = 'Workspace', // Currently open workspaces
+	Server = 'Server',
+};
+
 // A search profile
 export interface ISearchProfile {
 	// The name of the profile.
@@ -159,6 +167,8 @@ export interface ISearchProfile {
 	workspaces: string[];
 	// An optional description of the profile.
 	description?: string;
+	// The source of the profile
+	source?: SearchProfileSource;
 }
 
 export const ISearchProfileService = createDecorator<ISearchProfileService>('searchProfileService');

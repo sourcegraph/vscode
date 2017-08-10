@@ -63,14 +63,14 @@ export class SourcegraphSearchViewlet extends SearchViewlet {
 	protected onQueryChangedCreate(contentPattern: IPatternInfo, folderResources: URI[], options: IQueryOptions): void {
 		const beforeFolderCount = folderResources.length;
 		const folderResourcesComparable = folderResources.map(resource => resource.toString());
-		const workspaces = this.inputRepoSelector.workspaces;
+		const profile = this.inputRepoSelector.getSelectedProfile();
 
-		if (workspaces.length) {
+		if (profile.workspaces.length) {
 			// Do not include workspace roots if we've specified roots to search.
 			folderResources.length = 0;
 		}
 
-		workspaces.forEach(resource => {
+		profile.workspaces.forEach(resource => {
 			if (folderResourcesComparable.indexOf(resource) === -1) {
 				folderResources.push(URI.parse(resource));
 			}
@@ -79,9 +79,9 @@ export class SourcegraphSearchViewlet extends SearchViewlet {
 			beforeFolderCount,
 			folderCount: folderResources.length,
 			profile: {
-				name: this.inputRepoSelector.selected,
-				count: workspaces.length,
-				custom: this.inputRepoSelector.selected === 'Custom', // TODO(keegan) custom should be a property of profile
+				name: profile.name,
+				count: profile.workspaces.length,
+				source: profile.source,
 			}
 		});
 	}

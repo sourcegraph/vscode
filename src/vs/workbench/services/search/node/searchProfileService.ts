@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Disposable } from "vs/base/common/lifecycle";
-import { ISearchProfileService, ISearchProfile, ISearchConfiguration } from "vs/platform/search/common/search";
+import { ISearchProfileService, ISearchProfile, ISearchConfiguration, SearchProfileSource } from "vs/platform/search/common/search";
 import { IConfigurationService } from "vs/platform/configuration/common/configuration";
 import Event, { Emitter } from "vs/base/common/event";
 import { localize } from "vs/nls";
@@ -24,7 +24,7 @@ export class SearchProfileService extends Disposable implements ISearchProfileSe
 
 	private static EMPTY_WORKSPACE_TEXT = localize('searchProfile.emptyWorkspace', "Open Files");
 	private static CURRENT_WORKSPACE_TEXT = localize('searchProfile.currentWorkspace', "Current Workspace ({0})");
-	public static CUSTOM_TEXT = localize('searchProfile.custom', "Custom");
+	private static CUSTOM_TEXT = localize('searchProfile.custom', "Custom");
 
 	private didSearchProfilesChange = this._register(new Emitter<void>());
 	public onDidSearchProfilesChange: Event<void> = this.didSearchProfilesChange.event;
@@ -56,6 +56,7 @@ export class SearchProfileService extends Disposable implements ISearchProfileSe
 		profiles.push({
 			name: this.getCurrentWorkspaceText(),
 			workspaces: [],
+			source: SearchProfileSource.Workspace,
 		});
 
 		if (this._custom.length > 0) {
@@ -63,9 +64,24 @@ export class SearchProfileService extends Disposable implements ISearchProfileSe
 				name: SearchProfileService.CUSTOM_TEXT,
 				description: localize('searchProfile.custom.description', "Manually Specified"),
 				workspaces: this._custom,
+				source: SearchProfileSource.Ephemeral,
 			});
 		}
-		profiles = profiles.concat(this._fromConfig).concat(this._fromServer);
+
+		profiles = profiles.concat(this._fromConfig.map(p => {
+			return {
+				...p,
+				source: SearchProfileSource.Config,
+			};
+		}));
+
+		profiles = profiles.concat(this._fromServer.map(p => {
+			return {
+				...p,
+				source: SearchProfileSource.Server,
+			};
+		}));
+
 		return profiles;
 	}
 
