@@ -27,6 +27,7 @@ import { VIEWLET_ID as SEARCH_VIEWLET_ID } from 'vs/workbench/parts/search/commo
 import { SourcegraphSearchViewlet } from "vs/workbench/parts/search/browser/sourcegraphSearchViewlet";
 import { EditorInput, IEditorInputFactory } from "vs/workbench/common/editor";
 import { ICommandService } from "vs/platform/commands/common/commands";
+import { Action } from "vs/base/common/actions";
 
 used();
 
@@ -180,6 +181,26 @@ class HomePage {
 
 	dispose(): void {
 		this.disposables = dispose(this.disposables);
+	}
+}
+
+export class HomePageAction extends Action {
+
+	public static ID = 'workbench.action.showHomePage';
+	public static LABEL = localize('search', "Search");
+
+	constructor(
+		id: string,
+		label: string,
+		@IInstantiationService private instantiationService: IInstantiationService
+	) {
+		super(id, label);
+	}
+
+	public run(): TPromise<void> {
+		return this.instantiationService.createInstance(HomePage)
+			.openEditor()
+			.then(() => undefined);
 	}
 }
 

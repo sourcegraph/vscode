@@ -9,7 +9,9 @@ import { IWorkbenchContributionsRegistry, Extensions as WorkbenchExtensions } fr
 import { Registry } from 'vs/platform/registry/common/platform';
 import { IConfigurationRegistry, Extensions as ConfigurationExtensions } from 'vs/platform/configuration/common/configurationRegistry';
 import { IEditorRegistry, Extensions as EditorExtensions } from 'vs/workbench/common/editor';
-import { HomePageContribution, HomeInputFactory } from "vs/workbench/parts/welcome/page/electron-browser/homePage";
+import { HomePageContribution, HomeInputFactory, HomePageAction } from "vs/workbench/parts/welcome/page/electron-browser/homePage";
+import { IWorkbenchActionRegistry, Extensions as ActionExtensions } from "vs/workbench/common/actionRegistry";
+import { SyncActionDescriptor } from "vs/platform/actions/common/actions";
 
 Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration)
 	.registerConfiguration({
@@ -33,5 +35,8 @@ Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration)
 
 Registry.as<IWorkbenchContributionsRegistry>(WorkbenchExtensions.Workbench)
 	.registerWorkbenchContribution(HomePageContribution);
+
+Registry.as<IWorkbenchActionRegistry>(ActionExtensions.WorkbenchActions)
+	.registerWorkbenchAction(new SyncActionDescriptor(HomePageAction, HomePageAction.ID, HomePageAction.LABEL), 'Home: Search', localize('home', "Home"));
 
 Registry.as<IEditorRegistry>(EditorExtensions.Editors).registerEditorInputFactory(HomeInputFactory.ID, HomeInputFactory);
