@@ -982,6 +982,11 @@ export class SearchViewlet extends Viewlet {
 	}
 
 	private validateQuery(query: ISearchQuery): TPromise<void> {
+		// PATCH(sourcegraph) We know all folders exist. Avoid slow remote existence checks, our remote backend will do the check for us.
+		if (true === true) {
+			return TPromise.as<void>(null);
+		}
+
 		// Validate folderQueries
 		const folderQueriesExistP =
 			query.folderQueries.map(fq => {
