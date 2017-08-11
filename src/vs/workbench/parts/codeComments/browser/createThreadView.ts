@@ -67,10 +67,11 @@ export class CreateThreadView extends Disposable {
 			if (this.disposed) {
 				return;
 			}
-			const err = Array.isArray(error) ? error.join(', ') : error;
+			const err = Array.isArray(error) ? error.filter(e => !!e).join('\n') : error;
 			this.input.setEnabled(true);
 			this.input.showMessage({
 				content: err,
+				formatContent: true,
 				type: MessageType.ERROR,
 			});
 		});
