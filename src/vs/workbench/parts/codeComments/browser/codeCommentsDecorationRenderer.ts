@@ -14,7 +14,8 @@ import { isFileLikeResource } from 'vs/platform/files/common/files';
 import { buttonBackground } from 'vs/platform/theme/common/colorRegistry';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 
-const DECORATION_KEY = 'codeComment';
+const HIGHLIGHT_DECORATION_KEY = 'codeCommentHighlight';
+const GUTTER_ICON_DECORATION_KEY = 'codeCommentGutterIcon';
 
 /**
  * DecorationRenderer is responsible for decorating the text editor
@@ -47,10 +48,12 @@ export class CodeCommentsDecorationRenderer extends Disposable {
 
 		const gutterIconPath = URI.parse(require.toUrl('./media/comment.svg')).fsPath;
 		const color = themeService.getTheme().getColor(buttonBackground).toString();
-		codeEditorService.registerDecorationType(DECORATION_KEY, {
+		codeEditorService.registerDecorationType(HIGHLIGHT_DECORATION_KEY, {
 			backgroundColor: color,
 			overviewRulerLane: OverviewRulerLane.Full,
 			overviewRulerColor: color,
+		});
+		codeEditorService.registerDecorationType(GUTTER_ICON_DECORATION_KEY, {
 			gutterIconPath: gutterIconPath,
 			gutterIconSize: 'contain',
 		});
@@ -78,8 +81,11 @@ export class CodeCommentsDecorationRenderer extends Disposable {
 			return;
 		}
 		this.codeCommentsService.getThreads(model.uri, false).then(threads => {
-			const decorations: IDecorationOptions[] = threads.map(thread => ({ range: thread.range }));
-			editor.setDecorations(DECORATION_KEY, decorations);
+			const highlights: IDecorationOptions[] = threads.map(thread => ({ range: thread.range }));
+			editor.setDecorations(HIGHLIGHT_DECORATION_KEY, highlights);
+
+			const gutterIcons: IDecorationOptions[] = threads.map(thread => ({ range: thread.range.collapseToStart() }));
+			editor.setDecorations(GUTTER_ICON_DECORATION_KEY, gutterIcons);
 		}, err => {
 			// Ignore errors.
 			// This commonly happens if decorations are requested before a scm provider is registered.
