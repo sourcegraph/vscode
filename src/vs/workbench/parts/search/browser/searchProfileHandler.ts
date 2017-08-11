@@ -23,7 +23,7 @@ export const PROFILE_PICKER_PREFIX = 'sp ';
 class ProfileEntry extends QuickOpenEntryGroup {
 
 	constructor(
-		private label: string,
+		public label: string,
 		private description: string,
 		private category: string,
 		private doRun: () => void,
@@ -94,12 +94,18 @@ export class ProfilePickerHandler extends QuickOpenHandler {
 			let workspaces = arrays.flatten(searchProfiles.map(profile => profile.workspaces));
 			workspaces = arrays.distinct(workspaces, s => s);
 			const workspaceEntries = workspaces.map(name => {
-				name = name.replace(/^.*:\/\//, ''); // humans prefer reading paths not uris
-				const category = nls.localize('workspace', "Workspace");
+				const category = nls.localize('workspaces', "Workspaces");
 				return new ProfileEntry(name, '', category, () => {
 					viewlet.inputRepoSelector.workspaces = viewlet.inputRepoSelector.workspaces.concat([name]);
 				});
 			}).filter(searchFilter);
+			// Now that we have filtered, clean up the label for presentation
+			workspaceEntries.forEach(p => {
+				p.label = p.label
+					.replace(/^.*:\/\//, '') // humans prefer reading paths not uris
+					.replace(/^github.com\//, '') // github.com is so common just leave it off
+					.replace(/\//g, '／'); // Use a wider slash character, looks nice
+			});
 
 			let workspaceActionEntries: ProfileEntry[] = [];
 			if (workspaceEntries.length > 1 && searchValue) {
