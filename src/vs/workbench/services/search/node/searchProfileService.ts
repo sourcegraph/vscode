@@ -46,6 +46,7 @@ export class SearchProfileService extends Disposable implements ISearchProfileSe
 		super();
 
 		this.fetchServerProfiles();
+		this._register(this.contextService.onDidChangeWorkspaceRoots(() => this.didSearchProfilesChange.fire()));
 		this._register(this.configurationService.onDidUpdateConfiguration(e => this.onConfigUpdated()));
 		this.onConfigUpdated();
 	}
