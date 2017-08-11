@@ -367,6 +367,7 @@ registerThemingParticipant((theme, collector) => {
 		collector.addRule(`.codeComments .thread .content { color: ${contentColor}; }`);
 		collector.addRule(`.codeComments .comment .leftRight { color: ${headerColor}; }`);
 		collector.addRule(`.codeComments .thread .leftRight { color: ${headerColor}; }`);
+		collector.addRule(`.codeComments .create .hint { color: ${headerColor}; }`);
 		collector.addRule(`.codeComments .thread, .codeComments .comment, .codeComments .create { border-color: ${listHoverColor}; }`);
 		collector.addRule(`.codeComments .thread:hover { background-color: ${listHoverColor}; }`);
 	}

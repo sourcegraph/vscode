@@ -33,6 +33,10 @@
 	padding: 8px 12px;
 }
 
+.codeComments .create .hint {
+	padding-left: 8px;
+}
+
 .codeComments .create .submit {
 	align-self: flex-end;
 	margin-top: 16px;

@@ -60,6 +60,9 @@ export class CommentInput extends Disposable {
 					.on(() => this.onSubmit()));
 			});
 
+			div.div({ class: 'hint' }, div => {
+				div.text('mentions: +user@example.com');
+			});
 
 			div.div({ class: 'submit' }, div => {
 				this.submitButton = new Button(div);
