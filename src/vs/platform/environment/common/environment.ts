@@ -89,4 +89,26 @@ export interface IEnvironmentService {
 	sharedIPCHandle: string;
 
 	nodeCachedDataDir: string;
+
+	sourcegraphContext: JSContext;
+	eventLogDebug: boolean;
+	primaryEmail: string | null;
+}
+
+export interface JSContext {
+	emails: EmailAddrList;
+	trackingAppID: string;
+	onPrem: boolean;
+}
+
+export interface EmailAddrList {
+	EmailAddrs?: EmailAddr[];
+}
+
+export interface EmailAddr {
+	Email?: string;
+	Verified?: boolean;
+	Primary?: boolean;
+	Guessed?: boolean;
+	Blacklisted?: boolean;
 }

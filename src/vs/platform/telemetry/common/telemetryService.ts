@@ -31,17 +31,17 @@ export class TelemetryService implements ITelemetryService {
 
 	_serviceBrand: any;
 
-	private _appender: ITelemetryAppender;
-	private _commonProperties: TPromise<{ [name: string]: any; }>;
-	private _piiPaths: string[];
+	protected _appender: ITelemetryAppender;
+	protected _commonProperties: TPromise<{ [name: string]: any; }>;
+	protected _piiPaths: string[];
 	private _userOptIn: boolean;
 
 	private _disposables: IDisposable[] = [];
-	private _cleanupPatterns: [RegExp, string][] = [];
+	protected _cleanupPatterns: [RegExp, string][] = [];
 
 	constructor(
 		config: ITelemetryServiceConfig,
-		@optional(IConfigurationService) private _configurationService: IConfigurationService
+		@optional(IConfigurationService) protected _configurationService: IConfigurationService
 	) {
 		this._appender = config.appender;
 		this._commonProperties = config.commonProperties || TPromise.as({});
@@ -120,7 +120,7 @@ export class TelemetryService implements ITelemetryService {
 		});
 	}
 
-	private _cleanupInfo(stack: string): string {
+	protected _cleanupInfo(stack: string): string {
 
 		// sanitize with configured cleanup patterns
 		for (let tuple of this._cleanupPatterns) {
@@ -133,7 +133,7 @@ export class TelemetryService implements ITelemetryService {
 }
 
 
-const TELEMETRY_SECTION_ID = 'telemetry';
+export const TELEMETRY_SECTION_ID = 'telemetry';
 
 Registry.as<IConfigurationRegistry>(Extensions.Configuration).registerConfiguration({
 	'id': TELEMETRY_SECTION_ID,
@@ -143,7 +143,7 @@ Registry.as<IConfigurationRegistry>(Extensions.Configuration).registerConfigurat
 	'properties': {
 		'telemetry.enableTelemetry': {
 			'type': 'boolean',
-			'description': localize('telemetry.enableTelemetry', "Enable usage data and errors to be sent to Microsoft."),
+			'description': localize('telemetry.enableTelemetry', "Enable usage data and errors to be sent to Sourcegraph."),
 			'default': true
 		}
 	}

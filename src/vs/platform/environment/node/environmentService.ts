@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IEnvironmentService, ParsedArgs } from 'vs/platform/environment/common/environment';
+import { IEnvironmentService, ParsedArgs, JSContext } from 'vs/platform/environment/common/environment';
 import * as crypto from 'crypto';
 import * as paths from 'vs/base/node/paths';
 import * as os from 'os';
@@ -138,6 +138,21 @@ export class EnvironmentService implements IEnvironmentService {
 
 	@memoize
 	get nodeCachedDataDir(): string { return this.isBuilt ? path.join(this.userDataPath, 'CachedData', product.commit) : undefined; }
+
+	@memoize
+	get sourcegraphContext(): JSContext {
+		return this._args['sourcegraphContext'] || {};
+	}
+
+	@memoize
+	get eventLogDebug(): boolean { return process.env['LOG_DEBUG']; }
+
+	@memoize
+	get primaryEmail(): string | null {
+		return (this.sourcegraphContext.emails
+			&& this.sourcegraphContext.emails.EmailAddrs
+			&& this.sourcegraphContext.emails.EmailAddrs.filter(e => e.Primary).map(e => e.Email)[0]) || null;
+	}
 
 	constructor(private _args: ParsedArgs, private _execPath: string) { }
 }

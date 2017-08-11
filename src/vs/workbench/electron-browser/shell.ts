@@ -24,8 +24,8 @@ import { Workbench, IWorkbenchStartedInfo } from 'vs/workbench/electron-browser/
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { NullTelemetryService, configurationTelemetry, lifecycleTelemetry } from 'vs/platform/telemetry/common/telemetryUtils';
 import { loadExperiments } from 'vs/platform/telemetry/common/experiments';
-import { ITelemetryAppenderChannel, TelemetryAppenderClient } from 'vs/platform/telemetry/common/telemetryIpc';
-import { TelemetryService, ITelemetryServiceConfig } from 'vs/platform/telemetry/common/telemetryService';
+import { ITelemetryServiceConfig } from 'vs/platform/telemetry/common/telemetryService';
+import { SourcegraphTelemetryService } from 'vs/platform/telemetry/common/sourcegraphTelemetryService';
 import { IRemoteService } from 'vs/platform/remote/node/remote';
 import { RemoteService } from 'vs/platform/remote/node/remoteService';
 import { SearchProfileService } from "vs/workbench/services/search/node/searchProfileService";
@@ -100,6 +100,8 @@ import { TextMateService } from 'vs/workbench/services/textMate/electron-browser
 import { ITextMateService } from 'vs/workbench/services/textMate/electron-browser/textMateService';
 import { IBroadcastService, BroadcastService } from "vs/platform/broadcast/electron-browser/broadcastService";
 import { IFolderContainmentService, FolderContainmentService } from 'vs/platform/folder/common/folderContainment';
+import { SourcegraphEventLogger } from 'vs/platform/telemetry/common/sourcegraphEventLogger';
+import { WindowLevel } from 'vs/platform/telemetry/common/analyticsConstants';
 
 /**
  * Services that we require for the Shell
@@ -205,7 +207,6 @@ export class WorkbenchShell {
 	}
 
 	private onWorkbenchStarted(info: IWorkbenchStartedInfo): void {
-
 		// Telemetry: workspace info
 		const { filesToOpen, filesToCreate, filesToDiff } = this.configuration;
 		this.telemetryService.publicLog('workspaceLoad', {
@@ -275,18 +276,17 @@ export class WorkbenchShell {
 
 		// Telemetry
 		this.sendMachineIdToMain(this.storageService);
-		if (this.environmentService.isBuilt && !this.environmentService.isExtensionDevelopment && !!product.enableTelemetry) {
-			const channel = getDelayedChannel<ITelemetryAppenderChannel>(sharedProcess.then(c => c.getChannel('telemetryAppender')));
+		if (this.environmentService.eventLogDebug || (this.environmentService.isBuilt && !this.environmentService.isExtensionDevelopment && !!product.enableTelemetry)) {
 			const commit = product.commit;
 			const version = pkg.version;
 
 			const config: ITelemetryServiceConfig = {
-				appender: new TelemetryAppenderClient(channel),
+				appender: instantiationService.createInstance(SourcegraphEventLogger, WindowLevel.Workbench),
 				commonProperties: resolveWorkbenchCommonProperties(this.storageService, commit, version),
 				piiPaths: [this.environmentService.appRoot, this.environmentService.extensionsPath]
 			};
 
-			const telemetryService = instantiationService.createInstance(TelemetryService, config);
+			const telemetryService = instantiationService.createInstance(SourcegraphTelemetryService, config);
 			this.telemetryService = telemetryService;
 
 			const errorTelemetry = new ErrorTelemetry(telemetryService);
@@ -294,8 +294,8 @@ export class WorkbenchShell {
 
 			const listener = idleMonitor.onStatusChange(status =>
 				this.telemetryService.publicLog(status === UserStatus.Active
-					? TelemetryService.IDLE_STOP_EVENT_NAME
-					: TelemetryService.IDLE_START_EVENT_NAME
+					? SourcegraphTelemetryService.IDLE_STOP_EVENT_NAME
+					: SourcegraphTelemetryService.IDLE_START_EVENT_NAME
 				));
 
 			disposables.push(telemetryService, errorTelemetry, listener, idleMonitor);

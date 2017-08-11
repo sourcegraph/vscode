@@ -28,8 +28,8 @@ import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { combinedAppender, NullTelemetryService } from 'vs/platform/telemetry/common/telemetryUtils';
 import { resolveCommonProperties, machineIdStorageKey } from 'vs/platform/telemetry/node/commonProperties';
 import { TelemetryAppenderChannel } from 'vs/platform/telemetry/common/telemetryIpc';
-import { TelemetryService, ITelemetryServiceConfig } from 'vs/platform/telemetry/common/telemetryService';
-import { AppInsightsAppender } from 'vs/platform/telemetry/node/appInsightsAppender';
+import { ITelemetryServiceConfig } from 'vs/platform/telemetry/common/telemetryService';
+import { SourcegraphTelemetryService } from 'vs/platform/telemetry/common/sourcegraphTelemetryService';
 import { IChoiceService } from 'vs/platform/message/common/message';
 import { ChoiceChannelClient } from 'vs/platform/message/common/messageIpc';
 import { IWindowsService } from 'vs/platform/windows/common/windows';
@@ -37,6 +37,8 @@ import { WindowsChannelClient } from 'vs/platform/windows/common/windowsIpc';
 import { ipcRenderer } from 'electron';
 import { IDisposable, dispose } from 'vs/base/common/lifecycle';
 import { StorageService, inMemoryLocalStorageInstance } from 'vs/platform/storage/common/storageService';
+import { SourcegraphEventLogger } from 'vs/platform/telemetry/common/sourcegraphEventLogger';
+import { WindowLevel } from 'vs/platform/telemetry/common/analyticsConstants';
 
 interface ISharedProcessInitData {
 	sharedIPCHandle: string;
@@ -65,8 +67,6 @@ class ActiveWindowManager implements IDisposable {
 	}
 }
 
-const eventPrefix = 'monacoworkbench';
-
 function main(server: Server, initData: ISharedProcessInitData): void {
 	const services = new ServiceCollection();
 
@@ -87,23 +87,19 @@ function main(server: Server, initData: ISharedProcessInitData): void {
 	const instantiationService = new InstantiationService(services);
 
 	instantiationService.invokeFunction(accessor => {
-		const appenders: AppInsightsAppender[] = [];
-
-		if (product.aiConfig && product.aiConfig.asimovKey) {
-			appenders.push(new AppInsightsAppender(eventPrefix, null, product.aiConfig.asimovKey));
-		}
+		const appenders = [instantiationService.createInstance(SourcegraphEventLogger, WindowLevel.SharedProcess)];
 
 		// It is important to dispose the AI adapter properly because
 		// only then they flush remaining data.
 		process.once('exit', () => appenders.forEach(a => a.dispose()));
 
 		const appender = combinedAppender(...appenders);
-		server.registerChannel('telemetryAppender', new TelemetryAppenderChannel(appender));
+		server.registerChannel('sourcegraphTelemetryAppender', new TelemetryAppenderChannel(appender));
 
 		const services = new ServiceCollection();
 		const { appRoot, extensionsPath, extensionDevelopmentPath, isBuilt, extensionTestsPath } = accessor.get(IEnvironmentService);
 
-		if (isBuilt && !extensionDevelopmentPath && product.enableTelemetry) {
+		if (process.env['LOG_DEBUG'] || isBuilt && !extensionDevelopmentPath && product.enableTelemetry) {
 			const disableStorage = !!extensionTestsPath; // never keep any state when running extension tests!
 			const storage = disableStorage ? inMemoryLocalStorageInstance : window.localStorage;
 			const storageService = new StorageService(storage, storage);
@@ -118,7 +114,7 @@ function main(server: Server, initData: ISharedProcessInitData): void {
 				piiPaths: [appRoot, extensionsPath]
 			};
 
-			services.set(ITelemetryService, new SyncDescriptor(TelemetryService, config));
+			services.set(ITelemetryService, new SyncDescriptor(SourcegraphTelemetryService, config));
 		} else {
 			services.set(ITelemetryService, NullTelemetryService);
 		}

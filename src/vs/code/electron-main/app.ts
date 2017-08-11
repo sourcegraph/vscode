@@ -34,7 +34,7 @@ import { URLChannel } from 'vs/platform/url/common/urlIpc';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { NullTelemetryService } from 'vs/platform/telemetry/common/telemetryUtils';
 import { ITelemetryAppenderChannel, TelemetryAppenderClient } from 'vs/platform/telemetry/common/telemetryIpc';
-import { TelemetryService, ITelemetryServiceConfig } from 'vs/platform/telemetry/common/telemetryService';
+import { ITelemetryServiceConfig } from 'vs/platform/telemetry/common/telemetryService';
 import { ICredentialsService } from 'vs/platform/credentials/common/credentials';
 import { CredentialsService } from 'vs/platform/credentials/node/credentialsService';
 import { CredentialsChannel } from 'vs/platform/credentials/node/credentialsIpc';
@@ -54,6 +54,8 @@ import { KeyboardLayoutMonitor } from "vs/code/electron-main/keyboard";
 import URI from 'vs/base/common/uri';
 import { WorkspacesChannel } from "vs/platform/workspaces/common/workspacesIpc";
 import { IWorkspacesMainService } from "vs/platform/workspaces/common/workspaces";
+import { SourcegraphTelemetryService } from 'vs/platform/telemetry/common/sourcegraphTelemetryService';
+import { WindowLevel } from 'vs/platform/telemetry/common/analyticsConstants';
 
 export class CodeApplication {
 	private toDispose: IDisposable[];
@@ -76,7 +78,6 @@ export class CodeApplication {
 		@IHistoryMainService private historyService: IHistoryMainService
 	) {
 		this.toDispose = [mainIpcServer, configurationService];
-
 		this.registerListeners();
 	}
 
@@ -282,9 +283,9 @@ export class CodeApplication {
 		services.set(ICredentialsService, new SyncDescriptor(CredentialsService));
 
 		// Telemtry
-		if (this.environmentService.isBuilt && !this.environmentService.isExtensionDevelopment && !!product.enableTelemetry) {
-			const channel = getDelayedChannel<ITelemetryAppenderChannel>(this.sharedProcessClient.then(c => c.getChannel('telemetryAppender')));
-			const appender = new TelemetryAppenderClient(channel);
+		if (this.environmentService.eventLogDebug || (this.environmentService.isBuilt && !this.environmentService.isExtensionDevelopment && !!product.enableTelemetry)) {
+			const channel = getDelayedChannel<ITelemetryAppenderChannel>(this.sharedProcessClient.then(c => c.getChannel('sourcegraphTelemetryAppender')));
+			const appender = new TelemetryAppenderClient(channel, WindowLevel.Main);
 			const commonProperties = resolveCommonProperties(product.commit, pkg.version)
 				.then(result => Object.defineProperty(result, 'common.machineId', {
 					get: () => this.storageService.getItem(machineIdStorageKey),
@@ -292,7 +293,7 @@ export class CodeApplication {
 				}));
 			const piiPaths = [this.environmentService.appRoot, this.environmentService.extensionsPath];
 			const config: ITelemetryServiceConfig = { appender, commonProperties, piiPaths };
-			services.set(ITelemetryService, new SyncDescriptor(TelemetryService, config));
+			services.set(ITelemetryService, new SyncDescriptor(SourcegraphTelemetryService, config));
 		} else {
 			services.set(ITelemetryService, NullTelemetryService);
 		}

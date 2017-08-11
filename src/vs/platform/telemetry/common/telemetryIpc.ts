@@ -8,6 +8,7 @@
 import { TPromise } from 'vs/base/common/winjs.base';
 import { IChannel } from 'vs/base/parts/ipc/common/ipc';
 import { ITelemetryAppender } from 'vs/platform/telemetry/common/telemetryUtils';
+import { WindowLevel } from 'vs/platform/telemetry/common/analyticsConstants';
 
 export interface ITelemetryLog {
 	eventName: string;
@@ -31,10 +32,10 @@ export class TelemetryAppenderChannel implements ITelemetryAppenderChannel {
 
 export class TelemetryAppenderClient implements ITelemetryAppender {
 
-	constructor(private channel: ITelemetryAppenderChannel) { }
+	constructor(private channel: ITelemetryAppenderChannel, private windowLevel: WindowLevel = WindowLevel.Main) { }
 
 	log(eventName: string, data?: any): any {
-		return this.channel.call('log', { eventName, data });
+		return this.channel.call('log', { eventName, data: { ...data, loggerLevel: this.windowLevel } });
 	}
 
 	dispose(): any {
