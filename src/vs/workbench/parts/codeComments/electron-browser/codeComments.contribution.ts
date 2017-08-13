@@ -9,13 +9,14 @@ import { Registry } from 'vs/platform/registry/common/platform';
 import { localize } from 'vs/nls';
 import * as Constants from 'vs/workbench/parts/codeComments/common/constants';
 import { ViewletRegistry, Extensions as ViewletExtensions, ViewletDescriptor } from 'vs/workbench/browser/viewlet';
-import { IWorkbenchContributionsRegistry, Extensions as WorkbenchExtensions } from 'vs/workbench/common/contributions';
-import { CodeCommentsDecorationRenderer } from 'vs/workbench/parts/codeComments/browser/codeCommentsDecorationRenderer';
+import 'vs/workbench/parts/codeComments/browser/codeCommentsDecorationRenderer';
 import { registerSingleton } from 'vs/platform/instantiation/common/extensions';
 import { ICodeCommentsService } from 'vs/editor/common/services/codeCommentsService';
 import { CodeCommentsService } from 'vs/workbench/services/codeComments/electron-browser/codeCommentsService';
 import 'vs/workbench/parts/codeComments/electron-browser/createCodeCommentAction';
 import 'vs/workbench/parts/codeComments/electron-browser/codeCommentsViewlet';
+
+registerSingleton(ICodeCommentsService, CodeCommentsService);
 
 Registry.as<ViewletRegistry>(ViewletExtensions.Viewlets).registerViewlet(new ViewletDescriptor(
 	'vs/workbench/parts/codeComments/electron-browser/codeCommentsViewlet',
@@ -25,8 +26,3 @@ Registry.as<ViewletRegistry>(ViewletExtensions.Viewlets).registerViewlet(new Vie
 	'codeComments',
 	11 // after search viewlet
 ));
-
-registerSingleton(ICodeCommentsService, CodeCommentsService);
-
-Registry.as<IWorkbenchContributionsRegistry>(WorkbenchExtensions.Workbench)
-	.registerWorkbenchContribution(CodeCommentsDecorationRenderer);

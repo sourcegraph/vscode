@@ -6,7 +6,7 @@
 
 import { TPromise } from 'vs/base/common/winjs.base';
 import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
-import { Range } from 'vs/editor/common/core/range';
+import { Range, IRange } from 'vs/editor/common/core/range';
 import Event from 'vs/base/common/event';
 import URI from 'vs/base/common/uri';
 
@@ -57,7 +57,7 @@ export interface IThread {
 	id: number;
 	file: string;
 	revision: string;
-	range: Range;
+	range: IRange;
 	createdAt: Date;
 	comments: ReadonlyArray<Comment>;
 	mostRecentComment: Comment;
@@ -76,14 +76,14 @@ export class Thread implements IThread {
 		this.id = thread.id;
 		this.file = thread.file;
 		this.revision = thread.revision;
-		this.range = thread.range;
+		this.range = Range.lift(thread.range);
 		this.createdAt = thread.createdAt;
 		this.comments = thread.comments;
 		this.mostRecentComment = thread.mostRecentComment;
 	}
 
 	public static fromGraphQL(thread: GQL.IThread): Thread {
-		const comments = thread.comments.map(comment => new Comment(comment));
+		const comments = thread.comments.map(comment => Comment.fromGraphQL(comment));
 		const mostRecentComment = comments[comments.length - 1];
 		if (!mostRecentComment) {
 			throw new Error(`expected thread ${thread.id} to have at least one comment`);
@@ -105,7 +105,16 @@ export class Thread implements IThread {
 	}
 }
 
-export class Comment {
+export interface IComment {
+	id: number;
+	contents: string;
+	createdAt: Date;
+	updatedAt: Date;
+	authorName: string;
+	authorEmail: string;
+}
+
+export class Comment implements IComment {
 	public readonly id: number;
 	public readonly contents: string;
 	public readonly createdAt: Date;
@@ -113,12 +122,23 @@ export class Comment {
 	public readonly authorName: string;
 	public readonly authorEmail: string;
 
-	constructor(comment: GQL.IComment) {
+	constructor(comment: IComment) {
 		this.id = comment.id;
 		this.contents = comment.contents;
-		this.createdAt = new Date(comment.createdAt);
-		this.updatedAt = new Date(comment.updatedAt);
+		this.createdAt = comment.createdAt;
+		this.updatedAt = comment.updatedAt;
 		this.authorName = comment.authorName;
 		this.authorEmail = comment.authorEmail;
+	}
+
+	public static fromGraphQL(comment: GQL.IComment): Comment {
+		return new Comment({
+			id: comment.id,
+			contents: comment.contents,
+			createdAt: new Date(comment.createdAt),
+			updatedAt: new Date(comment.updatedAt),
+			authorName: comment.authorName,
+			authorEmail: comment.authorEmail,
+		});
 	}
 }

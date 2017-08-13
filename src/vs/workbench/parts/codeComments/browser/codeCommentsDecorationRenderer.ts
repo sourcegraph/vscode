@@ -5,14 +5,16 @@
 'use strict';
 
 import { ICodeEditorService } from 'vs/editor/common/services/codeEditorService';
-import { OverviewRulerLane, ICommonCodeEditor, IDecorationOptions } from 'vs/editor/common/editorCommon';
-import { IDisposable, Disposable } from 'vs/base/common/lifecycle';
-import { ICodeCommentsService } from 'vs/editor/common/services/codeCommentsService';
+import { OverviewRulerLane, IDecorationOptions, IEditorContribution } from 'vs/editor/common/editorCommon';
+import { Disposable } from 'vs/base/common/lifecycle';
+import { ICodeCommentsService, Thread, IThread } from 'vs/editor/common/services/codeCommentsService';
 import { ISCMService } from 'vs/workbench/services/scm/common/scm';
 import URI from 'vs/base/common/uri';
 import { isFileLikeResource } from 'vs/platform/files/common/files';
 import { buttonBackground } from 'vs/platform/theme/common/colorRegistry';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
+import { ICodeEditor } from 'vs/editor/browser/editorBrowser';
+import { editorContribution } from 'vs/editor/browser/editorBrowserExtensions';
 
 const HIGHLIGHT_DECORATION_KEY = 'codeCommentHighlight';
 const GUTTER_ICON_DECORATION_KEY = 'codeCommentGutterIcon';
@@ -22,43 +24,37 @@ const GUTTER_ICON_DECORATION_KEY = 'codeCommentGutterIcon';
  * with indications of comments. This may include highlighting ranges
  * as well as a comment icon in the left gutter or glyph margin.
  */
-export class CodeCommentsDecorationRenderer extends Disposable {
+@editorContribution
+export class CodeCommentsDecorationRenderer extends Disposable implements IEditorContribution {
 
-	private toDisposeOnEditorRemove = new Map<string, IDisposable>();
+	private threads: Thread[] = [];
 
 	constructor(
+		private editor: ICodeEditor,
 		@ICodeEditorService private codeEditorService: ICodeEditorService,
 		@ICodeCommentsService private codeCommentsService: ICodeCommentsService,
 		@ISCMService scmService: ISCMService,
 		@IThemeService themeService: IThemeService,
 	) {
 		super();
-		this._register(this.codeEditorService.onCodeEditorAdd(editor => {
-			this.toDisposeOnEditorRemove.set(editor.getId(), editor.onDidChangeModel(e => this.renderEditorDecorations(editor)));
-		}));
-		this._register(this.codeEditorService.onCodeEditorRemove(e => {
-			const sub = this.toDisposeOnEditorRemove.get(e.getId());
-			if (sub) {
-				this.toDisposeOnEditorRemove.delete(e.getId());
-				sub.dispose();
-			}
-		}));
 
-		scmService.onDidChangeProvider(e => this.renderDecorations());
-
-		const gutterIconPath = URI.parse(require.toUrl('./media/comment.svg')).fsPath;
 		const color = themeService.getTheme().getColor(buttonBackground).toString();
 		codeEditorService.registerDecorationType(HIGHLIGHT_DECORATION_KEY, {
 			backgroundColor: color,
 			overviewRulerLane: OverviewRulerLane.Full,
 			overviewRulerColor: color,
 		});
+
+		const gutterIconPath = URI.parse(require.toUrl('./media/comment.svg')).fsPath;
 		codeEditorService.registerDecorationType(GUTTER_ICON_DECORATION_KEY, {
 			gutterIconPath: gutterIconPath,
 			gutterIconSize: 'contain',
 		});
 
+		scmService.onDidChangeProvider(e => this.renderDecorations());
+		this._register(editor.onDidChangeModel(e => this.renderDecorations()));
 		this._register(codeCommentsService.onCommentsDidChange(() => this.renderDecorations()));
+		this.renderDecorations();
 	}
 
 	public getId(): string {
@@ -66,11 +62,7 @@ export class CodeCommentsDecorationRenderer extends Disposable {
 	}
 
 	private renderDecorations(): void {
-		this.codeEditorService.listCodeEditors().map(this.renderEditorDecorations, this);
-	}
-
-	private renderEditorDecorations(editor: ICommonCodeEditor) {
-		const model = editor.getModel();
+		const model = this.editor.getModel();
 		if (!model) {
 			return;
 		}
@@ -81,15 +73,37 @@ export class CodeCommentsDecorationRenderer extends Disposable {
 			return;
 		}
 		this.codeCommentsService.getThreads(model.uri, false).then(threads => {
-			const highlights: IDecorationOptions[] = threads.map(thread => ({ range: thread.range }));
-			editor.setDecorations(HIGHLIGHT_DECORATION_KEY, highlights);
-
-			const gutterIcons: IDecorationOptions[] = threads.map(thread => ({ range: thread.range.collapseToStart() }));
-			editor.setDecorations(GUTTER_ICON_DECORATION_KEY, gutterIcons);
+			this.renderThreads(threads);
 		}, err => {
 			// Ignore errors.
 			// This commonly happens if decorations are requested before a scm provider is registered.
 			// Decorations will be re-rendered when the scm provider becomes available.
 		});
 	}
+
+	private renderThreads(threads: Thread[]): void {
+		this.threads = threads;
+
+		const highlights: IDecorationOptions[] = threads.map(thread => ({ range: thread.range }));
+		this.editor.setDecorations(HIGHLIGHT_DECORATION_KEY, highlights);
+
+		const gutterIcons: IDecorationOptions[] = threads.map(thread => ({ range: thread.range.collapseToStart() }));
+		this.editor.setDecorations(GUTTER_ICON_DECORATION_KEY, gutterIcons);
+	}
+
+	public saveViewState?(): ViewState {
+		return {
+			threads: this.threads,
+		};
+	}
+
+	public restoreViewState?(state: ViewState): void {
+		if (state && state.threads) {
+			this.renderThreads(state.threads.map(thread => new Thread(thread)));
+		}
+	}
+}
+
+export interface ViewState {
+	threads?: IThread[];
 }
