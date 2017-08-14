@@ -162,16 +162,20 @@ export class RemoteSearchService extends SearchService implements ISearchService
 		const localFolderQueries = query.folderQueries.filter(fq => !isRemote(fq.folder));
 		const remoteFolderQueries = query.folderQueries.filter(fq => isRemote(fq.folder));
 
-		return PPromise.join({
-			local: this.localSearch({ ...query, folderQueries: localFolderQueries }),
-			remote: this.remoteSearch({ ...query, folderQueries: remoteFolderQueries }),
-		}).then(({ local, remote }) => {
-			return {
-				limitHit: local.limitHit || remote.limitHit,
-				results: local.results.concat(remote.results),
-				stats: mergeStats([local.stats, remote.stats]),
-				warning: local.warning || remote.warning,
-			};
+		// We need to forward the progress callbacks. PPromise.join does not,
+		// so we wrap a new PPromise around PPromise.join.
+		return new PPromise((complete, error, progress) => {
+			PPromise.join([
+				this.localSearch({ ...query, folderQueries: localFolderQueries }),
+				this.remoteSearch({ ...query, folderQueries: remoteFolderQueries }),
+			].map(p => p.then(null, null, progress))).then(([local, remote]) => {
+				return {
+					limitHit: local.limitHit || remote.limitHit,
+					results: local.results.concat(remote.results),
+					stats: mergeStats([local.stats, remote.stats]),
+					warning: local.warning || remote.warning,
+				};
+			}).then(complete, error);
 		});
 	}
 

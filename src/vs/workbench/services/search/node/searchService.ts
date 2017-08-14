@@ -108,11 +108,6 @@ export class SearchService implements ISearchService {
 	private getLocalResults(query: ISearchQuery): ResourceMap<IFileMatch> {
 		const localResults = new ResourceMap<IFileMatch>();
 
-		// PATCH(sourcegraph) We are readonly, so can skip this extra logic and just read the FS
-		if (true === true) {
-			return localResults;
-		}
-
 		if (query.type === QueryType.Text) {
 			let models = this.modelService.getModels();
 			models.forEach((model) => {
