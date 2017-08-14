@@ -74,6 +74,7 @@ suite('git', function () {
 			{ in: 'git://github.com/Microsoft/vscode.git', out: 'github.com/Microsoft/vscode' },
 			{ in: 'git@github.com:sourcegraph/sourcegraph.git', out: 'github.com/sourcegraph/sourcegraph' },
 			{ in: 'user@company.internal:foo/Bar.git', out: 'company.internal/foo/Bar' },
+			{ in: 'company.internal:foo/Bar.git', out: 'company.internal/foo/Bar' },
 			{ in: 'user@subdomain.company.internal:Bar.git', out: 'subdomain.company.internal/Bar' },
 			{ in: 'user@subdomain.company.internal:foo/Bar.git', out: 'subdomain.company.internal/foo/Bar' },
 			{ in: 'ssh://user@subdomain.company.com/Bar.git', out: 'subdomain.company.com/Bar' },

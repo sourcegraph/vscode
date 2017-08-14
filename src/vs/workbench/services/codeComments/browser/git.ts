@@ -113,7 +113,7 @@ export class Git {
 			.then(url => url.replace(/\.git$/, '').replace(/\/$/, ''))
 			.then(url => {
 				// Parse ssh procotol (e.g. user@company.com:foo/bar)
-				const sshMatch = url.match(/[^/@]+@([^:/]+):(.+)$/);
+				const sshMatch = url.match(/^(?:[^/@:]+@)?([^:/]+):([^/].*)$/);
 				if (sshMatch) {
 					return sshMatch[1] + '/' + sshMatch[2];
 				}
