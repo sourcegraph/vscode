@@ -22,6 +22,8 @@ export const PROFILE_PICKER_PREFIX = 'sp ';
 
 class ProfileEntry extends QuickOpenEntryGroup {
 
+	public icon: string = null;
+
 	constructor(
 		public label: string,
 		private description: string,
@@ -45,6 +47,10 @@ class ProfileEntry extends QuickOpenEntryGroup {
 
 	public getAriaLabel(): string {
 		return nls.localize('profileEntryAriaLabel', "{0}, search profile", this.getLabel());
+	}
+
+	public getIcon(): string {
+		return this.icon;
 	}
 
 	public run(mode: Mode, context: IEntryRunContext): boolean {
@@ -105,6 +111,7 @@ export class ProfilePickerHandler extends QuickOpenHandler {
 					.replace(/^.*:\/\//, '') // humans prefer reading paths not uris
 					.replace(/^github.com\//, '') // github.com is so common just leave it off
 					.replace(/\//g, '／'); // Use a wider slash character, looks nice
+				p.icon = 'octicon octicon-repo';
 			});
 
 			let workspaceActionEntries: ProfileEntry[] = [];
