@@ -569,6 +569,11 @@
           "from": "lodash.isobject@>=3.0.2 <4.0.0",
           "resolved": "https://registry.npmjs.org/lodash.isobject/-/lodash.isobject-3.0.2.tgz"
         },
+        "lodash.isstring": {
+          "version": "4.0.1",
+          "from": "lodash.isstring@>=4.0.1 <5.0.0",
+          "resolved": "https://registry.npmjs.org/lodash.isstring/-/lodash.isstring-4.0.1.tgz"
+        },
         "lodash.isundefined": {
           "version": "3.0.1",
           "from": "lodash.isundefined@>=3.0.1 <4.0.0",
