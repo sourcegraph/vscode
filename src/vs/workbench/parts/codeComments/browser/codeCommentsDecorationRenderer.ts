@@ -75,9 +75,8 @@ export class CodeCommentsDecorationRenderer extends Disposable implements IEdito
 		this.codeCommentsService.getThreads(model.uri, false).then(threads => {
 			this.renderThreads(threads);
 		}, err => {
-			// Ignore errors.
-			// This commonly happens if decorations are requested before a scm provider is registered.
-			// Decorations will be re-rendered when the scm provider becomes available.
+			// Clear all decorations if an error happens.
+			this.renderThreads([]);
 		});
 	}
 
