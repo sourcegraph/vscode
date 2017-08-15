@@ -356,6 +356,10 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 		this.renderDisposables.push(createThreadView.onHeightChange(() => this.updateScrollbar()));
 		this.renderDisposables.push(createThreadView.onCreateThread(thread => this.renderThreadView(file, thread)));
 	}
+
+	public viewThread(threadID: number, commentID: number): void {
+		console.log('open thread: ', threadID, commentID);
+	}
 }
 
 registerThemingParticipant((theme, collector) => {

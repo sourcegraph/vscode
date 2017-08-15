@@ -13,4 +13,9 @@ export interface ICodeCommentsViewlet extends IViewlet {
 	 * Renders a UI to create a new comment thread on the line or selection of the current editor.
 	 */
 	createThread(file: URI, range: Range): void;
+
+	/**
+	 * Renders a UI to display the specified thread and comment.
+	 */
+	viewThread(threadID: number, commentID?: number): void;
 }

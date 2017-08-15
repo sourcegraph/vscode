@@ -8,6 +8,7 @@
 import nls = require('vs/nls');
 import platform = require('vs/base/common/platform');
 import * as path from 'path';
+import * as querystring from 'querystring';
 import URI from 'vs/base/common/uri';
 import errors = require('vs/base/common/errors');
 import types = require('vs/base/common/types');
@@ -43,6 +44,10 @@ import { IExtensionService } from 'vs/platform/extensions/common/extensions';
 import { KeyboardMapperFactory } from 'vs/workbench/services/keybinding/electron-browser/keybindingService';
 import { Themable, EDITOR_DRAG_AND_DROP_BACKGROUND } from 'vs/workbench/common/theme';
 import { ISCMRevision, ISCMService, setSCMProviderRevision } from 'vs/workbench/services/scm/common/scm';
+// tslint:disable-line:import-patterns
+import { VIEWLET_ID as CODE_COMMENTS_VIEWLET_ID } from 'vs/workbench/parts/codeComments/common/constants';
+// tslint:disable-line:import-patterns
+import { ICodeCommentsViewlet } from 'vs/workbench/parts/codeComments/common/codeComments';
 
 import { ipcRenderer as ipc, webFrame } from 'electron';
 import { activeContrastBorder } from 'vs/platform/theme/common/colorRegistry';
@@ -59,6 +64,11 @@ const TextInputActions: IAction[] = [
 	new Separator(),
 	new Action('editor.action.selectAll', nls.localize('selectAll', "Select All"), null, true, () => document.execCommand('selectAll') && TPromise.as(true))
 ];
+
+class ViewThreadInput {
+	threadID: number;
+	commentID?: number;
+}
 
 export class ElectronWindow extends Themable {
 
@@ -375,6 +385,8 @@ export class ElectronWindow extends Themable {
 	}
 
 	private onOpenFiles(request: IOpenFileRequest): void {
+		let viewThreadInput: ViewThreadInput;
+
 		if (request.filesToOpen.length > 0) {
 			// Check to see if the URI for this resource has a mapping a local
 			// repo stored. If so, open that file locally.
@@ -382,12 +394,18 @@ export class ElectronWindow extends Themable {
 			for (let f of request.filesToOpen) {
 				const fileToOpen = f as IWindowConfiguration;
 				const folder = URI.parse(fileToOpen.folderPath).with({ query: '' }).toString();
-				const file = URI.parse(fileToOpen.filePath).with({ query: '' }).toString().replace(folder, '');
+				const fileURI = URI.parse(fileToOpen.filePath);
+				const file = fileURI.with({ query: '' }).toString().replace(folder, '');
 				const uri = folder.replace('repo://', '');
 				if (repoMappings[uri]) {
 					const fsPath = repoMappings[uri];
 					fileToOpen.filePath = `file://${path.join(fsPath, file)}`;
 					fileToOpen.folderPath = `file://${fsPath}`;
+					const q = querystring.parse(fileURI.query);
+					viewThreadInput = { threadID: parseInt(q['threadID']) };
+					if (q['commentID']) {
+						viewThreadInput.commentID = parseInt(q['commentID']);
+					}
 				}
 			}
 		}
@@ -408,7 +426,17 @@ export class ElectronWindow extends Themable {
 		}
 
 		if (inputs.length) {
-			this.openResources(inputs, diffMode).done(null, errors.onUnexpectedError);
+			this.openResources(inputs, diffMode)
+				.then(() => {
+					if (viewThreadInput) {
+						this.viewletService.openViewlet(CODE_COMMENTS_VIEWLET_ID, true)
+							.then(viewlet => viewlet as ICodeCommentsViewlet)
+							.then(viewlet => {
+								viewlet.viewThread(viewThreadInput.threadID, viewThreadInput.commentID);
+							});
+					}
+				})
+				.done(null, errors.onUnexpectedError);
 		}
 	}
 
