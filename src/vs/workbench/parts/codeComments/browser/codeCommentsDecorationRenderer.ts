@@ -13,8 +13,12 @@ import URI from 'vs/base/common/uri';
 import { isFileLikeResource } from 'vs/platform/files/common/files';
 import { buttonBackground } from 'vs/platform/theme/common/colorRegistry';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
-import { ICodeEditor } from 'vs/editor/browser/editorBrowser';
+import { ICodeEditor, MouseTargetType } from 'vs/editor/browser/editorBrowser';
 import { editorContribution } from 'vs/editor/browser/editorBrowserExtensions';
+import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
+import { ICodeCommentsViewlet } from 'vs/workbench/parts/codeComments/common/codeComments';
+import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
+import { VIEWLET_ID as CODE_COMMENTS_VIEWLET_ID } from 'vs/workbench/parts/codeComments/common/constants';
 
 const HIGHLIGHT_DECORATION_KEY = 'codeCommentHighlight';
 const GUTTER_ICON_DECORATION_KEY = 'codeCommentGutterIcon';
@@ -28,13 +32,16 @@ const GUTTER_ICON_DECORATION_KEY = 'codeCommentGutterIcon';
 export class CodeCommentsDecorationRenderer extends Disposable implements IEditorContribution {
 
 	private threads: Thread[] = [];
+	private gutterIconLines = new Map<number, Thread>();
 
 	constructor(
 		private editor: ICodeEditor,
-		@ICodeEditorService private codeEditorService: ICodeEditorService,
-		@ICodeCommentsService private codeCommentsService: ICodeCommentsService,
+		@ICodeEditorService codeEditorService: ICodeEditorService,
+		@IViewletService viewletService: IViewletService,
+		@IContextMenuService contextMenuService: IContextMenuService,
 		@ISCMService scmService: ISCMService,
 		@IThemeService themeService: IThemeService,
+		@ICodeCommentsService private codeCommentsService: ICodeCommentsService,
 	) {
 		super();
 
@@ -50,6 +57,19 @@ export class CodeCommentsDecorationRenderer extends Disposable implements IEdito
 			gutterIconPath: gutterIconPath,
 			gutterIconSize: 'contain',
 		});
+
+		this._register(editor.onMouseDown(e => {
+			// TODO: this doesn't handle the case of multiple threads on a single line.
+			// If so, we should either open a context menu to select which one (e.g. lightBulbWidget.ts -> quickFixWidget.ts),
+			// or filter the threads list down to the threads that are on this line.
+			const thread = this.gutterIconLines.get(e.target.position.lineNumber);
+			if (!thread || e.target.type !== MouseTargetType.GUTTER_GLYPH_MARGIN) {
+				return;
+			}
+			viewletService.openViewlet(CODE_COMMENTS_VIEWLET_ID, true)
+				.then(viewlet => viewlet as ICodeCommentsViewlet)
+				.then(viewlet => viewlet.viewThread(thread.id));
+		}));
 
 		scmService.onDidChangeProvider(e => this.renderDecorations());
 		this._register(editor.onDidChangeModel(e => this.renderDecorations()));
@@ -82,6 +102,10 @@ export class CodeCommentsDecorationRenderer extends Disposable implements IEdito
 
 	private renderThreads(threads: Thread[]): void {
 		this.threads = threads;
+		this.gutterIconLines = threads.reduce((lines, thread) => {
+			lines.set(thread.range.startLineNumber, thread);
+			return lines;
+		}, new Map<number, Thread>());
 
 		const highlights: IDecorationOptions[] = threads.map(thread => ({ range: thread.range }));
 		this.editor.setDecorations(HIGHLIGHT_DECORATION_KEY, highlights);
