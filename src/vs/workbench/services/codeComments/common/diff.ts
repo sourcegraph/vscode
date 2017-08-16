@@ -84,8 +84,13 @@ export class Diff {
 					beforeLine += 1;
 					afterLine += 1;
 					break;
+				case '\\':
+					// "\ No newline at end of file."
+					break;
 				default:
-					throw new Error('invalid diff line: ' + line);
+					const err: any = new Error(`invalid diff line: ${line}`);
+					err.diff = diff;
+					throw err;
 			}
 		}
 	}
