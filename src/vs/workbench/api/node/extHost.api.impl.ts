@@ -15,6 +15,7 @@ import pkg from 'vs/platform/node/package';
 import { ExtHostFileSystemEventService } from 'vs/workbench/api/node/extHostFileSystemEventService';
 import { ExtHostDocumentsAndEditors } from 'vs/workbench/api/node/extHostDocumentsAndEditors';
 import { ExtHostDocuments } from 'vs/workbench/api/node/extHostDocuments';
+import { ExtHostDocumentContentProvider } from 'vs/workbench/api/node/extHostDocumentContentProviders';
 import { ExtHostDocumentSaveParticipant } from 'vs/workbench/api/node/extHostDocumentSaveParticipant';
 import { ExtHostConfiguration } from 'vs/workbench/api/node/extHostConfiguration';
 import { ExtHostDiagnostics } from 'vs/workbench/api/node/extHostDiagnostics';
@@ -83,6 +84,7 @@ export function createApiFactory(
 	const extHostDebugService = col.define(ExtHostContext.ExtHostDebugService).set<ExtHostDebugService>(new ExtHostDebugService(threadService));
 	const extHostDocumentsAndEditors = col.define(ExtHostContext.ExtHostDocumentsAndEditors).set<ExtHostDocumentsAndEditors>(new ExtHostDocumentsAndEditors(threadService));
 	const extHostDocuments = col.define(ExtHostContext.ExtHostDocuments).set<ExtHostDocuments>(new ExtHostDocuments(threadService, extHostDocumentsAndEditors));
+	const extHostDocumentContentProviders = col.define(ExtHostContext.ExtHostDocumentContentProviders).set<ExtHostDocumentContentProvider>(new ExtHostDocumentContentProvider(threadService, extHostDocumentsAndEditors));
 	const extHostDocumentSaveParticipant = col.define(ExtHostContext.ExtHostDocumentSaveParticipant).set<ExtHostDocumentSaveParticipant>(new ExtHostDocumentSaveParticipant(extHostDocuments, threadService.get(MainContext.MainThreadWorkspace)));
 	const extHostEditors = col.define(ExtHostContext.ExtHostEditors).set<ExtHostEditors>(new ExtHostEditors(threadService, extHostDocumentsAndEditors));
 	const extHostCommands = col.define(ExtHostContext.ExtHostCommands).set<ExtHostCommands>(new ExtHostCommands(threadService, extHostHeapService));
@@ -429,9 +431,6 @@ export function createApiFactory(
 					});
 				});
 			},
-			registerTextDocumentContentProvider(scheme: string, provider: vscode.TextDocumentContentProvider) {
-				return extHostDocuments.registerTextDocumentContentProvider(scheme, provider);
-			},
 			onDidOpenTextDocument: (listener, thisArgs?, disposables?) => {
 				return extHostDocuments.onDidAddDocument(listener, thisArgs, disposables);
 			},
@@ -452,6 +451,9 @@ export function createApiFactory(
 			},
 			getConfiguration: (section?: string, resource?: vscode.Uri): vscode.WorkspaceConfiguration => {
 				return extHostConfiguration.getConfiguration(section, <URI>resource);
+			},
+			registerTextDocumentContentProvider(scheme: string, provider: vscode.TextDocumentContentProvider) {
+				return extHostDocumentContentProviders.registerTextDocumentContentProvider(scheme, provider);
 			},
 			registerTaskProvider: (type: string, provider: vscode.TaskProvider) => {
 				return extHostTask.registerTaskProvider(extension, provider);
@@ -535,7 +537,7 @@ export function createApiFactory(
 			CancellationTokenSource: CancellationTokenSource,
 			CodeLens: extHostTypes.CodeLens,
 			Color: extHostTypes.Color,
-			ColorInfo: extHostTypes.ColorInfo,
+			ColorRange: extHostTypes.ColorRange,
 			EndOfLine: extHostTypes.EndOfLine,
 			CompletionItem: extHostTypes.CompletionItem,
 			CompletionItemKind: extHostTypes.CompletionItemKind,
@@ -611,7 +613,7 @@ class Extension<T> implements vscode.Extension<T> {
 	}
 
 	get exports(): T {
-		return <T>this._extensionService.get(this.id);
+		return <T>this._extensionService.getExtensionExports(this.id);
 	}
 
 	activate(): Thenable<T> {

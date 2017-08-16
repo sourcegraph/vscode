@@ -50,6 +50,7 @@ import { ITreeItem } from 'vs/workbench/parts/views/common/views';
 import { ThemeColor } from 'vs/platform/theme/common/themeService';
 
 export interface IEnvironment {
+	isExtensionDevelopmentDebug: boolean;
 	enableProposedApiForAll: boolean;
 	enableProposedApiFor: string | string[];
 	appSettingsHome: string;
@@ -72,6 +73,20 @@ export interface IInitData {
 	extensions: IExtensionDescription[];
 	configuration: IConfigurationData<any>;
 	telemetryInfo: ITelemetryInfo;
+}
+
+export interface IExtHostContext {
+	/**
+	 * Returns a proxy to an object addressable/named in the extension host process.
+	 */
+	get<T>(identifier: ProxyIdentifier<T>): T;
+}
+
+export interface IMainContext {
+	/**
+	 * Returns a proxy to an object addressable/named in the main/renderer process.
+	 */
+	get<T>(identifier: ProxyIdentifier<T>): T;
 }
 
 export interface InstanceSetter<T> {
@@ -134,15 +149,17 @@ export abstract class MainThreadDiagnosticsShape {
 	$clear(owner: string): TPromise<any> { throw ni(); }
 }
 
+export abstract class MainThreadDocumentContentProvidersShape {
+	$registerTextContentProvider(handle: number, scheme: string): void { throw ni(); }
+	$unregisterTextContentProvider(handle: number): void { throw ni(); }
+	$onVirtualDocumentChange(uri: URI, value: ITextSource): void { throw ni(); }
+}
+
 export abstract class MainThreadDocumentsShape {
 	$tryCreateDocument(options?: { language?: string; content?: string; }): TPromise<any> { throw ni(); }
 	$tryOpenDocument(uri: URI): TPromise<any> { throw ni(); }
-	$registerTextContentProvider(handle: number, scheme: string): void { throw ni(); }
-	$onVirtualDocumentChange(uri: URI, value: ITextSource): void { throw ni(); }
-	$unregisterTextContentProvider(handle: number): void { throw ni(); }
 	$trySaveDocument(uri: URI): TPromise<boolean> { throw ni(); }
 }
-
 
 export interface ISelectionChangeEvent {
 	selections: Selection[];
@@ -241,7 +258,7 @@ export abstract class MainThreadLanguageFeaturesShape {
 	$registerSuggestSupport(handle: number, selector: vscode.DocumentSelector, triggerCharacters: string[]): TPromise<any> { throw ni(); }
 	$registerSignatureHelpProvider(handle: number, selector: vscode.DocumentSelector, triggerCharacter: string[]): TPromise<any> { throw ni(); }
 	$registerDocumentLinkProvider(handle: number, selector: vscode.DocumentSelector): TPromise<any> { throw ni(); }
-	$registerColorFormats(formats: IColorFormatMap): TPromise<any> { throw ni(); }
+	$registerColorFormats(formats: IRawColorFormatMap): TPromise<any> { throw ni(); }
 	$registerDocumentColorProvider(handle: number, selector: vscode.DocumentSelector): TPromise<any> { throw ni(); }
 	$setLanguageConfiguration(handle: number, languageId: string, configuration: vscode.LanguageConfiguration): TPromise<any> { throw ni(); }
 }
@@ -388,6 +405,10 @@ export abstract class ExtHostDiagnosticsShape {
 
 }
 
+export abstract class ExtHostDocumentContentProvidersShape {
+	$provideTextDocumentContent(handle: number, uri: URI): TPromise<string> { throw ni(); }
+}
+
 export interface IModelAddedData {
 	url: URI;
 	versionId: number;
@@ -397,7 +418,6 @@ export interface IModelAddedData {
 	isDirty: boolean;
 }
 export abstract class ExtHostDocumentsShape {
-	$provideTextDocumentContent(handle: number, uri: URI): TPromise<string> { throw ni(); }
 	$acceptModelModeChanged(strURL: string, oldModeId: string, newModeId: string): void { throw ni(); }
 	$acceptModelSaved(strURL: string): void { throw ni(); }
 	$acceptDirtyStateChanged(strURL: string, isDirty: boolean): void { throw ni(); }
@@ -449,7 +469,7 @@ export abstract class ExtHostWorkspaceShape {
 }
 
 export abstract class ExtHostExtensionServiceShape {
-	$activateExtension(extensionDescription: IExtensionDescription): TPromise<void> { throw ni(); }
+	$activateByEvent(activationEvent: string): TPromise<void> { throw ni(); }
 }
 
 export interface FileSystemEvents {
@@ -480,14 +500,12 @@ export abstract class ExtHostHeapServiceShape {
 	$onGarbageCollection(ids: number[]): void { throw ni(); }
 }
 export interface IRawColorInfo {
-	color: [number, number, number, number | undefined];
-	format: number;
-	availableFormats: number[];
+	color: [number, number, number, number];
+	availableFormats: (number | [number, number])[];
 	range: IRange;
 }
 
-export type IRawColorFormat = string | [string, string];
-export type IColorFormatMap = [number, IRawColorFormat][];
+export type IRawColorFormatMap = [number, string][];
 
 export abstract class ExtHostLanguageFeaturesShape {
 	$provideDocumentSymbols(handle: number, resource: URI): TPromise<modes.SymbolInformation[]> { throw ni(); }
@@ -554,6 +572,7 @@ export const MainContext = {
 	MainThreadDebugService: createMainId<MainThreadDebugServiceShape>('MainThreadDebugService', MainThreadDebugServiceShape),
 	MainThreadDiagnostics: createMainId<MainThreadDiagnosticsShape>('MainThreadDiagnostics', MainThreadDiagnosticsShape),
 	MainThreadDocuments: createMainId<MainThreadDocumentsShape>('MainThreadDocuments', MainThreadDocumentsShape),
+	MainThreadDocumentContentProviders: createMainId<MainThreadDocumentContentProvidersShape>('MainThreadDocumentContentProviders', MainThreadDocumentContentProvidersShape),
 	MainThreadEditors: createMainId<MainThreadEditorsShape>('MainThreadEditors', MainThreadEditorsShape),
 	MainThreadErrors: createMainId<MainThreadErrorsShape>('MainThreadErrors', MainThreadErrorsShape),
 	MainThreadTreeViews: createMainId<MainThreadTreeViewsShape>('MainThreadTreeViews', MainThreadTreeViewsShape),
@@ -581,6 +600,7 @@ export const ExtHostContext = {
 	ExtHostDebugService: createExtId<ExtHostDebugServiceShape>('ExtHostDebugService', ExtHostDebugServiceShape),
 	ExtHostDocumentsAndEditors: createExtId<ExtHostDocumentsAndEditorsShape>('ExtHostDocumentsAndEditors', ExtHostDocumentsAndEditorsShape),
 	ExtHostDocuments: createExtId<ExtHostDocumentsShape>('ExtHostDocuments', ExtHostDocumentsShape),
+	ExtHostDocumentContentProviders: createExtId<ExtHostDocumentContentProvidersShape>('ExtHostDocumentContentProviders', ExtHostDocumentContentProvidersShape),
 	ExtHostDocumentSaveParticipant: createExtId<ExtHostDocumentSaveParticipantShape>('ExtHostDocumentSaveParticipant', ExtHostDocumentSaveParticipantShape),
 	ExtHostEditors: createExtId<ExtHostEditorsShape>('ExtHostEditors', ExtHostEditorsShape),
 	ExtHostTreeViews: createExtId<ExtHostTreeViewsShape>('ExtHostTreeViews', ExtHostTreeViewsShape),

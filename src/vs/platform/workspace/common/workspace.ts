@@ -18,17 +18,17 @@ export interface IWorkspaceContextService {
 	_serviceBrand: any;
 
 	/**
-	 * Returns iff the application was opened with a workspace or not.
+	 * Returns if the application was opened with a workspace or not.
 	 */
 	hasWorkspace(): boolean;
 
 	/**
-	 * Returns iff the application was opened with a folder.
+	 * Returns if the application was opened with a folder.
 	 */
 	hasFolderWorkspace(): boolean;
 
 	/**
-	 * Returns iff the application was opened with a workspace that can have one or more folders.
+	 * Returns if the application was opened with a workspace that can have one or more folders.
 	 */
 	hasMultiFolderWorkspace(): boolean;
 
@@ -66,7 +66,7 @@ export interface IWorkspaceContextService {
 	getRoot(resource: URI): URI;
 
 	/**
-	 * Returns iff the provided resource is inside the workspace or not.
+	 * Returns if the provided resource is inside the workspace or not.
 	 */
 	isInsideWorkspace(resource: URI): boolean;
 

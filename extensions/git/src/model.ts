@@ -6,7 +6,7 @@
 'use strict';
 
 import { Uri, Command, EventEmitter, Event, SourceControlResourceState, SourceControlResourceDecorations, Disposable, ProgressLocation, window, workspace, WorkspaceEdit } from 'vscode';
-import { Git, Repository, Ref, Branch, Remote, Commit, GitErrorCodes } from './git';
+import { Git, Repository, Ref, Branch, Remote, Commit, GitErrorCodes, Stash } from './git';
 import { anyEvent, eventToPromise, filterEvent, EmptyDisposable, combinedDisposable, dispose } from './util';
 import { memoize, throttle, debounce } from './decorators';
 import * as path from 'path';
@@ -216,29 +216,30 @@ export enum Operation {
 	Merge = 1 << 17,
 	Ignore = 1 << 18,
 	Tag = 1 << 19,
-	ExecuteCommand = 1 << 20
+	Stash = 1 << 20,
+	ExecuteCommand = 1 << 21
 }
 
 // function getOperationName(operation: Operation): string {
-// 	switch (operation) {
-// 		case Operation.Status: return 'Status';
-// 		case Operation.Add: return 'Add';
-// 		case Operation.RevertFiles: return 'RevertFiles';
-// 		case Operation.Commit: return 'Commit';
-// 		case Operation.Clean: return 'Clean';
-// 		case Operation.Branch: return 'Branch';
-// 		case Operation.Checkout: return 'Checkout';
-// 		case Operation.Reset: return 'Reset';
-// 		case Operation.Fetch: return 'Fetch';
-// 		case Operation.Pull: return 'Pull';
-// 		case Operation.Push: return 'Push';
-// 		case Operation.Sync: return 'Sync';
-// 		case Operation.Init: return 'Init';
-// 		case Operation.Show: return 'Show';
-// 		case Operation.Stage: return 'Stage';
-// 		case Operation.GetCommitTemplate: return 'GetCommitTemplate';
-// 		default: return 'unknown';
-// 	}
+//	switch (operation) {
+//		case Operation.Status: return 'Status';
+//		case Operation.Add: return 'Add';
+//		case Operation.RevertFiles: return 'RevertFiles';
+//		case Operation.Commit: return 'Commit';
+//		case Operation.Clean: return 'Clean';
+//		case Operation.Branch: return 'Branch';
+//		case Operation.Checkout: return 'Checkout';
+//		case Operation.Reset: return 'Reset';
+//		case Operation.Fetch: return 'Fetch';
+//		case Operation.Pull: return 'Pull';
+//		case Operation.Push: return 'Push';
+//		case Operation.Sync: return 'Sync';
+//		case Operation.Init: return 'Init';
+//		case Operation.Show: return 'Show';
+//		case Operation.Stage: return 'Stage';
+//		case Operation.GetCommitTemplate: return 'GetCommitTemplate';
+//		default: return 'unknown';
+//	}
 // }
 
 function isReadOnly(operation: Operation): boolean {
@@ -553,6 +554,18 @@ export class Model implements Disposable {
 
 			return await this.repository.buffer(`${ref}:${relativePath}`, encoding);
 		});
+	}
+
+	async getStashes(): Promise<Stash[]> {
+		return await this.repository.getStashes();
+	}
+
+	async createStash(message?: string): Promise<void> {
+		return await this.run(Operation.Stash, () => this.repository.createStash(message));
+	}
+
+	async popStash(index?: number): Promise<void> {
+		return await this.run(Operation.Stash, () => this.repository.popStash(index));
 	}
 
 	async getCommitTemplate(): Promise<string> {

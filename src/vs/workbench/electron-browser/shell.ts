@@ -44,7 +44,6 @@ import { IConfigurationService } from 'vs/platform/configuration/common/configur
 import { RemoteSearchService } from 'vs/workbench/services/search/electron-browser/remoteSearchService';
 import { WorkspaceSearchService } from 'vs/platform/multiWorkspace/node/searchService';
 import { LifecycleService } from 'vs/workbench/services/lifecycle/electron-browser/lifecycleService';
-import { MainThreadService } from 'vs/workbench/services/thread/electron-browser/threadService';
 import { MarkerService } from 'vs/platform/markers/common/markerService';
 import { IModelService } from 'vs/editor/common/services/modelService';
 import { ModelServiceImpl } from 'vs/editor/common/services/modelServiceImpl';
@@ -54,7 +53,7 @@ import { IntegrityServiceImpl } from 'vs/platform/integrity/node/integrityServic
 import { IIntegrityService } from 'vs/platform/integrity/common/integrity';
 import { EditorWorkerServiceImpl } from 'vs/editor/common/services/editorWorkerServiceImpl';
 import { IEditorWorkerService } from 'vs/editor/common/services/editorWorkerService';
-import { MainProcessExtensionService } from 'vs/workbench/api/electron-browser/mainThreadExtensionService';
+import { ExtensionService } from "vs/workbench/services/extensions/electron-browser/extensionService";
 import { IStorageService } from 'vs/platform/storage/common/storage';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { ServiceCollection } from 'vs/platform/instantiation/common/serviceCollection';
@@ -83,7 +82,6 @@ import { connect as connectNet } from 'vs/base/parts/ipc/node/ipc.net';
 import { IExtensionManagementChannel, ExtensionManagementChannelClient } from 'vs/platform/extensionManagement/common/extensionManagementIpc';
 import { IExtensionManagementService, IExtensionEnablementService } from 'vs/platform/extensionManagement/common/extensionManagement';
 import { ExtensionEnablementService } from 'vs/platform/extensionManagement/common/extensionEnablementService';
-import { ExtensionHostProcessWorker } from 'vs/workbench/electron-browser/extensionHost';
 import { ITimerService } from 'vs/workbench/services/timer/common/timerService';
 import { remote, ipcRenderer as ipc } from 'electron';
 import { BareFontInfo } from 'vs/editor/common/config/fontInfo';
@@ -125,11 +123,10 @@ export class WorkbenchShell {
 	private messageService: MessageService;
 	private environmentService: IEnvironmentService;
 	private contextViewService: ContextViewService;
-	private threadService: MainThreadService;
 	private configurationService: IConfigurationService;
 	private contextService: IWorkspaceContextService;
 	private telemetryService: ITelemetryService;
-	private extensionService: MainProcessExtensionService;
+	private extensionService: ExtensionService;
 	private broadcastService: IBroadcastService;
 	private timerService: ITimerService;
 	private themeService: WorkbenchThemeService;
@@ -334,15 +331,11 @@ export class WorkbenchShell {
 		serviceCollection.set(IFolderContainmentService, folderContainmentService);
 		disposables.push(folderContainmentService);
 
-		const extensionHostProcessWorker = instantiationService.createInstance(ExtensionHostProcessWorker);
-		this.threadService = instantiationService.createInstance(MainThreadService, extensionHostProcessWorker.messagingProtocol);
-		serviceCollection.set(IThreadService, this.threadService);
+		this.extensionService = instantiationService.createInstance(ExtensionService);
+		serviceCollection.set(IExtensionService, this.extensionService);
+		serviceCollection.set(IThreadService, this.extensionService);
 
 		this.timerService.beforeExtensionLoad = Date.now();
-
-		this.extensionService = instantiationService.createInstance(MainProcessExtensionService);
-		serviceCollection.set(IExtensionService, this.extensionService);
-		extensionHostProcessWorker.start(this.extensionService);
 		this.extensionService.onReady().done(() => {
 			this.timerService.afterExtensionLoad = Date.now();
 		});
