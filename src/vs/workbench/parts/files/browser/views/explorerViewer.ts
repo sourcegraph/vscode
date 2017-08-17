@@ -395,8 +395,11 @@ export class FileRenderer implements IRenderer {
 				this.state.actionProvider.runAction(tree, stat, editableData.action, { value: inputBox.value });
 			}
 
+			const restoreFocus = document.activeElement === inputBox.inputElement; // https://github.com/Microsoft/vscode/issues/20269
 			setTimeout(() => {
-				tree.DOMFocus();
+				if (restoreFocus) {
+					tree.DOMFocus();
+				}
 				lifecycle.dispose(toDispose);
 				container.removeChild(label.element);
 			}, 0);
