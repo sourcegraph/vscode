@@ -9,7 +9,6 @@ import * as arrays from 'vs/base/common/arrays';
 import * as glob from 'vs/base/common/glob';
 import * as strings from 'vs/base/common/strings';
 import * as nls from 'vs/nls';
-import * as types from 'vs/base/common/types';
 import URI from 'vs/base/common/uri';
 import { PPromise } from 'vs/base/common/winjs.base';
 import { IFileMatch, ISearchComplete, ISearchProgressItem, ISearchQuery, ISearchService, QueryType, ISearchStats } from 'vs/platform/search/common/search';
@@ -132,12 +131,22 @@ export class RemoteSearchService extends SearchService implements ISearchService
 					warning: this.getWarning(model.response),
 				});
 			}, err => {
-				if (types.isString(err)) {
-					error({ message: err });
-				} else if (err instanceof Error) {
+				if (err instanceof ProgressEvent) {
+					// Treat XMLHTTPRequest errors (typically indicating network
+					// connectivity issues) as warnings. Otherwise if you have 1 remote
+					// root and some local roots, when you are offline the remote root
+					// search fails and prevents you from performing local searches.
+					complete({
+						results: [],
+						limitHit: false,
+						stats: {
+							fromCache: false,
+							resultCount: 0,
+						},
+						warning: nls.localize('searchRemoteError', "Error retrieving remote search results. Check network connection or remove remote roots."),
+					});
+				} else {
 					error(err);
-				} else if (err instanceof ProgressEvent) {
-					error({ message: nls.localize('searchRemoteError', "Error retrieving remote search results. Check network connection or remove remote roots.") });
 				}
 			});
 		}, () => {
@@ -186,8 +195,12 @@ export class RemoteSearchService extends SearchService implements ISearchService
 					warning: local.warning || remote.warning,
 				};
 			}).then(complete, ([localError, remoteError]) => {
-				// Only pass along one error, not an array (our callers don't know how to handle an array.)
-				if (localError) {
+				// Only pass along one error value, not an array (our callers don't know how to handle an array.)
+				if (localError && remoteError) {
+					const combinedError = new Error(nls.localize('searchLocalAndRemoteError', "Local and remote searches both failed: {0}, {1}", localError, remoteError));
+					combinedError['errors'] = [localError, remoteError]; // for ease of debugging
+					error(combinedError);
+				} else if (localError) {
 					error(localError);
 				} else if (remoteError) {
 					error(remoteError);
