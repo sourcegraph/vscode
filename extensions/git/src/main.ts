@@ -42,24 +42,25 @@ async function init(context: ExtensionContext, disposables: Disposable[]): Promi
 		return;
 	}
 
-	workspace.workspaceFolders.forEach(w => initWorkspaceFolder({
-		telemetryReporter, outputChannel, info, git, workspaceRootPath: w.uri.fsPath, disposables,
-	}));
+	workspace.workspaceFolders.forEach(w => {
+		initWorkspaceFolder({
+			telemetryReporter, outputChannel, info, git, workspaceRoot: w.uri, disposables,
+		});
+	});
 
 	await checkGitVersion(info);
 }
 
-function initWorkspaceFolder(state: { telemetryReporter: TelemetryReporter, outputChannel: OutputChannel, info: IGit, git: Git, workspaceRootPath: string, disposables: Disposable[] }) {
-	const { telemetryReporter, outputChannel, info, git, workspaceRootPath, disposables } = state;
+function initWorkspaceFolder(state: { telemetryReporter: TelemetryReporter, outputChannel: OutputChannel, info: IGit, git: Git, workspaceRoot: Uri, disposables: Disposable[] }) {
+	const { telemetryReporter, outputChannel, info, git, workspaceRoot, disposables } = state;
 
-	const workspaceRoot = Uri.parse(workspaceRootPath);
 	if (workspaceRoot.scheme && workspaceRoot.scheme !== 'file') {
 		// This git extension only works for local git repositories, not for remote git
 		// repositories. The 'repo' extension is used for remote repositories.
 		return;
 	}
 
-	const model = new Model(git, workspaceRootPath);
+	const model = new Model(git, workspaceRoot.fsPath);
 
 	outputChannel.appendLine(localize('using git', "Using git {0} from {1}", info.version, info.path));
 
@@ -67,12 +68,14 @@ function initWorkspaceFolder(state: { telemetryReporter: TelemetryReporter, outp
 	git.onOutput.addListener('log', onOutput);
 	disposables.push(toDisposable(() => git.onOutput.removeListener('log', onOutput)));
 
+	const commandCenter = new CommandCenter(git, model, outputChannel, telemetryReporter);
 	const statusBarCommands = new StatusBarCommands(model);
 	const provider = new GitSCMProvider(model, statusBarCommands);
 	const contentProvider = new GitContentProvider(model);
 	const autoFetcher = new AutoFetcher(model);
 
 	disposables.push(
+		commandCenter,
 		provider,
 		contentProvider,
 		autoFetcher,

@@ -62,7 +62,7 @@ export class GitSCMProvider implements CommandExecutor {
 		private statusBarCommands: StatusBarCommands
 	) {
 		this._sourceControl = scm.createSourceControl('git', {
-			label: 'Git',
+			label: `${model.workspaceRoot.fsPath} (Git)`,
 			rootFolder: model.workspaceRoot,
 		});
 		this.disposables.push(this._sourceControl);
@@ -87,6 +87,8 @@ export class GitSCMProvider implements CommandExecutor {
 
 		model.onDidChange(this.onDidModelChange, this, this.disposables);
 		this.updateCommitTemplate();
+
+		this._sourceControl.setRevisionCommand = { command: `git.checkout[${model.workspaceRoot.toString()}]`, title: 'Git Checkout' };
 	}
 
 	executeCommand(args: string[]): Promise<string> {
@@ -114,6 +116,7 @@ export class GitSCMProvider implements CommandExecutor {
 		this.indexGroup.resourceStates = this.model.indexGroup.resources;
 		this.workingTreeGroup.resourceStates = this.model.workingTreeGroup.resources;
 		this._sourceControl.count = this.count;
+		this._sourceControl.revision = this.model.HEAD ? { rawSpecifier: 'HEAD', specifier: this.model.HEAD.name, id: this.model.HEAD.commit } : undefined;
 		commands.executeCommand('setContext', 'gitState', this.stateContextKey);
 	}
 

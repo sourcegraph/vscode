@@ -160,12 +160,14 @@ export class FolderSCMRevisionLabelAction extends FolderSCMRevisionAction {
 		const GIT_OID_LENGTH = 40;
 		const GIT_OID_ABBREV_LENGTH = 6;
 
-		const isSHA = revision.specifier === revision.id && revision.id.length === GIT_OID_LENGTH;
+		const isSHA = (!revision.specifier || revision.specifier === revision.id) && revision.id.length === GIT_OID_LENGTH;
 		let label: string;
 		if (isSHA) {
 			label = revision.id.slice(0, GIT_OID_ABBREV_LENGTH);
-		} else {
+		} else if (revision.specifier) {
 			label = revision.specifier.replace(/^refs\/(heads|tags)\//, '');
+		} else {
+			label = '';
 		}
 		return label;
 	}

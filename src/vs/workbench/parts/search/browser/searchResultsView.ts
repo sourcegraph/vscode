@@ -78,8 +78,6 @@ export class SearchDataSource implements IDataSource {
 			value = this.includeFolderMatch ? element.parent() : element.parent().parent();
 		} else if (element instanceof FolderMatch) {
 			value = element.parent();
-		} else if (element instanceof FolderMatch) {
-			value = element.parent();
 		}
 
 		return TPromise.as(value);
@@ -145,7 +143,7 @@ export class SearchRenderer extends Disposable implements IRenderer {
 		private viewlet: SearchViewlet,
 		@IWorkspaceContextService private contextService: IWorkspaceContextService,
 		@IInstantiationService private instantiationService: IInstantiationService,
-		@IThemeService private themeService: IThemeService,
+		@IThemeService private themeService: IThemeService
 	) {
 		super();
 	}

@@ -48,15 +48,6 @@
 	display: inline-flex;
 }
 
-/* PATCH(sourcegraph): always hide replace; we don't use it */
-.search-viewlet .search-widget .replace-container {
-	display: none !important;
-}
-.search-viewlet .action-replace,
-.search-viewlet .action-replace-all {
-	display: none !important;
-}
-
 .search-viewlet .search-widget .replace-container.disabled {
 	display: none;
 }
@@ -290,14 +281,12 @@
 	margin-right: 12px;
 }
 
-/* PATCH(sourcegraph) We don't show actions on results, so do not hide
 .search-viewlet > .results > .monaco-tree .monaco-tree-row:hover .content .filematch .monaco-count-badge,
 .search-viewlet > .results > .monaco-tree .monaco-tree-row:hover .content .linematch .monaco-count-badge,
 .search-viewlet > .results > .monaco-tree.focused .monaco-tree-row.focused .content .filematch .monaco-count-badge,
 .search-viewlet > .results > .monaco-tree.focused .monaco-tree-row.focused .content .linematch .monaco-count-badge {
 		display: none;
 }
-*/
 
 .search-viewlet .focused .monaco-tree-row.selected:not(.highlighted) > .content.actions .action-remove,
 .vs-dark .monaco-workbench .search-viewlet .focused .monaco-tree-row.selected:not(.highlighted) > .content.actions .action-remove {

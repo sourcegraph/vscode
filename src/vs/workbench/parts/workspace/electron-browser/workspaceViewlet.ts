@@ -120,7 +120,7 @@ export class WorkspaceViewlet extends ComposedViewsViewlet implements IWorkspace
 			ctor: CurrentWorkspaceFoldersView,
 			when: ContextKeyExpr.and(ContextKeyExpr.has('workspaceViewletVisible'), ContextKeyExpr.not('searchFolders')),
 			order: 0,
-			size: 50,
+			size: 100,
 		};
 	}
 
@@ -132,7 +132,7 @@ export class WorkspaceViewlet extends ComposedViewsViewlet implements IWorkspace
 			ctor: OtherFoldersView,
 			when: ContextKeyExpr.and(ContextKeyExpr.has('workspaceViewletVisible'), ContextKeyExpr.not('searchFolders')),
 			order: 2,
-			size: 35,
+			size: 0,
 			canToggleVisibility: true
 		};
 	}
@@ -176,7 +176,7 @@ export class WorkspaceViewlet extends ComposedViewsViewlet implements IWorkspace
 		const header = append(this.root, $('.header'));
 
 		this.searchBox = append(header, $<HTMLInputElement>('input.search-box'));
-		this.searchBox.placeholder = localize('searchFolders', "Search for repositories and folders");
+		this.searchBox.placeholder = localize('searchFolders', "Search for remote repositories");
 		this.disposables.push(addStandardDisposableListener(this.searchBox, EventType.FOCUS, () => addClass(this.searchBox, 'synthetic-focus')));
 		this.disposables.push(addStandardDisposableListener(this.searchBox, EventType.BLUR, () => removeClass(this.searchBox, 'synthetic-focus')));
 

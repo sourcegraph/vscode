@@ -9,6 +9,9 @@ import * as vscode from 'vscode';
 import { GitRepository } from './git';
 import { isRepoResource, REPO_SCHEME, REPO_VERSION_SCHEME } from './repository';
 import { toRelativePath } from './util';
+import * as nls from 'vscode-nls';
+
+const localize = nls.loadMessageBundle();
 
 export const SWITCH_REVISION_COMMAND_ID = 'repo.action.switchRevision';
 
@@ -42,7 +45,7 @@ export class Workspace implements vscode.Disposable {
 
 		this.registerUnionFileSystem();
 
-		this.toDispose.push(vscode.commands.registerCommand(SWITCH_REVISION_COMMAND_ID, () => this.openRevisionPickerForActiveRepository()));
+		this.toDispose.push(vscode.commands.registerCommand(SWITCH_REVISION_COMMAND_ID, (resource: vscode.Uri, revision?: vscode.SCMRevision) => this.switchRevision(resource, revision)));
 
 		// Create status bar item for switching the revision for the repository that is
 		// relevant to the active editor's document.
@@ -174,14 +177,26 @@ export class Workspace implements vscode.Disposable {
 		}));
 	}
 
-	private openRevisionPickerForActiveRepository(): void {
-		const uri = vscode.window.activeTextEditor ? vscode.window.activeTextEditor.document.uri : undefined;
-		if (!uri) {
+	private switchRevision(resource?: vscode.Uri, revision?: vscode.SCMRevision): void {
+		if (!resource) {
+			resource = vscode.window.activeTextEditor ? vscode.window.activeTextEditor.document.uri : undefined;
+			if (!resource) {
+				vscode.window.showErrorMessage(localize('noActiveSourceControl', "Unable to switch revision because there is no active document under source control."));
+				return;
+			}
+		}
+
+		const repo = this.getRepository(resource);
+		if (!repo) {
+			vscode.window.showErrorMessage(localize('noActiveSourceControlRepo', "Unable to determine the repository for the source control at {0}.", resource.toString()));
+			return;
+		}
+		if (!revision) {
+			repo.openRevisionPicker();
 			return;
 		}
 
-		const repo = this.getRepository(uri)!;
-		return repo.openRevisionPicker();
+		repo.revision = revision;
 	}
 
 	dispose(): void {
