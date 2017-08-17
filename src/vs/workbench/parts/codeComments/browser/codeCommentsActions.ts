@@ -4,13 +4,33 @@
  *--------------------------------------------------------------------------------------------*/
 'use strict';
 
+import { localize } from 'vs/nls';
+import { CREATE_CODE_COMMENT_ACTION_LABEL, VIEWLET_ID } from 'vs/workbench/parts/codeComments/common/constants';
+import { ToggleViewletAction } from 'vs/workbench/browser/viewlet';
+import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
+import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { ICommonCodeEditor } from 'vs/editor/common/editorCommon';
 import { ServicesAccessor, editorAction, EditorAction } from 'vs/editor/common/editorCommonExtensions';
 import { Range } from 'vs/editor/common/core/range';
-import { CREATE_CODE_COMMENT_ACTION_LABEL, VIEWLET_ID } from 'vs/workbench/parts/codeComments/common/constants';
-import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
 import { ICodeCommentsViewlet } from 'vs/workbench/parts/codeComments/common/codeComments';
+
+/**
+ * Action to open the code comments viewlet.
+ */
+export class OpenCodeCommentsViewletAction extends ToggleViewletAction {
+	public static ID = VIEWLET_ID;
+	public static LABEL = localize('showCodeCommentsViewlet', "Show Code Comments");
+
+	constructor(
+		id: string,
+		label: string,
+		@IViewletService viewletService: IViewletService,
+		@IWorkbenchEditorService editorService: IWorkbenchEditorService
+	) {
+		super(id, label, VIEWLET_ID, viewletService, editorService);
+	}
+}
 
 /**
  * Editor action that opens the code comments viewlet
