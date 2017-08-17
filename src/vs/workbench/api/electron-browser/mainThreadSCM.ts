@@ -208,6 +208,13 @@ class MainThreadSCMProvider implements ISCMProvider {
 		return this.proxy.$executeCommand(this.handle, args);
 	};
 
+	toJSON(): any {
+		return {
+			$mid: 5,
+			handle: this.handle
+		};
+	}
+
 	dispose(): void {
 
 	}
@@ -231,18 +238,6 @@ export class MainThreadSCM implements MainThreadSCMShape {
 
 		this.scmService.onDidChangeProvider(this.onDidChangeProvider, this, this._disposables);
 		this.scmService.input.onDidChange(this._proxy.$onInputBoxValueChange, this._proxy, this._disposables);
-	}
-
-	dispose(): void {
-		Object.keys(this._sourceControls)
-			.forEach(id => this._sourceControls[id].dispose());
-		this._sourceControls = Object.create(null);
-
-		Object.keys(this._sourceControlDisposables)
-			.forEach(id => this._sourceControlDisposables[id].dispose());
-		this._sourceControlDisposables = Object.create(null);
-
-		this._disposables = dispose(this._disposables);
 	}
 
 	$registerSourceControl(handle: number, id: string, label: string, rootFolder: URI): void {
@@ -332,5 +327,17 @@ export class MainThreadSCM implements MainThreadSCMShape {
 	private onDidChangeProvider(provider: ISCMProvider): void {
 		const handle = Object.keys(this._sourceControls).filter(handle => this._sourceControls[handle] === provider)[0];
 		this._proxy.$onActiveSourceControlChange(handle && parseInt(handle));
+	}
+
+	dispose(): void {
+		Object.keys(this._sourceControls)
+			.forEach(id => this._sourceControls[id].dispose());
+		this._sourceControls = Object.create(null);
+
+		Object.keys(this._sourceControlDisposables)
+			.forEach(id => this._sourceControlDisposables[id].dispose());
+		this._sourceControlDisposables = Object.create(null);
+
+		this._disposables = dispose(this._disposables);
 	}
 }

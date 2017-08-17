@@ -56,7 +56,7 @@ export function done<T>(promise: Promise<T>): Promise<void> {
 	return promise.then<void>(() => void 0);
 }
 
-export function once<T>(event: Event<T>): Event<T> {
+export function onceEvent<T>(event: Event<T>): Event<T> {
 	return (listener, thisArgs = null, disposables?) => {
 		const result = event(e => {
 			result.dispose();
@@ -68,7 +68,19 @@ export function once<T>(event: Event<T>): Event<T> {
 }
 
 export function eventToPromise<T>(event: Event<T>): Promise<T> {
-	return new Promise<T>(c => once(event)(c));
+	return new Promise<T>(c => onceEvent(event)(c));
+}
+
+export function once(fn: (...args: any[]) => any): (...args: any[]) => any {
+	let didRun = false;
+
+	return (...args) => {
+		if (didRun) {
+			return;
+		}
+
+		return fn(...args);
+	};
 }
 
 // TODO@Joao: replace with Object.assign
@@ -162,4 +174,19 @@ export function uniqueFilter<T>(keyFn: (t: T) => string): (t: T) => boolean {
 		seen[key] = true;
 		return true;
 	};
+}
+
+export function find<T>(array: T[], fn: (t: T) => boolean): T | undefined {
+	let result: T | undefined = undefined;
+
+	array.some(e => {
+		if (fn(e)) {
+			result = e;
+			return true;
+		}
+
+		return false;
+	});
+
+	return result;
 }

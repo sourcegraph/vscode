@@ -11,7 +11,6 @@ import { memoize } from 'vs/base/common/decorators';
 import URI from 'vs/base/common/uri';
 import { TrieMap } from 'vs/base/common/map';
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
-import { IContextKeyService, IContextKey } from 'vs/platform/contextkey/common/contextkey';
 import { IStatusbarService, StatusbarAlignment as MainThreadStatusBarAlignment } from 'vs/platform/statusbar/common/statusbar';
 import { IStorageService, StorageScope } from 'vs/platform/storage/common/storage';
 import { ISCMService, ISCMProvider, ISCMInput, DefaultSCMProviderIdStorageKey } from './scm';
@@ -39,7 +38,6 @@ export class SCMService implements ISCMService {
 
 	private activeProviderDisposable: IDisposable = EmptyDisposable;
 	private statusBarDisposable: IDisposable = EmptyDisposable;
-	private activeProviderContextKey: IContextKey<string | undefined>;
 
 	private _activeProvider: ISCMProvider | undefined;
 
@@ -61,23 +59,20 @@ export class SCMService implements ISCMService {
 	private _providers: ISCMProvider[] = [];
 	get providers(): ISCMProvider[] { return [...this._providers]; }
 
+	private _onDidChangeProviders = new Emitter<void>();
+	get onDidChangeProviders(): Event<void> { return this._onDidChangeProviders.event; }
+
 	private _onDidChangeProvider = new Emitter<ISCMProvider>();
 	get onDidChangeProvider(): Event<ISCMProvider> { return this._onDidChangeProvider.event; }
-
-	private _onDidRegisterProvider = new Emitter<ISCMProvider>();
-	get onDidRegisterProvider(): Event<ISCMProvider> { return this._onDidRegisterProvider.event; }
 
 	@memoize
 	get input(): ISCMInput { return new SCMInput(); }
 
 	constructor(
 		@IWorkspaceContextService private contextService: IWorkspaceContextService,
-		@IContextKeyService contextKeyService: IContextKeyService,
 		@IStorageService private storageService: IStorageService,
 		@IStatusbarService private statusbarService: IStatusbarService
 	) {
-		this.activeProviderContextKey = contextKeyService.createKey<string | undefined>('scmProvider', void 0);
-
 		this.updateFolderProvidersMap();
 	}
 
@@ -94,9 +89,9 @@ export class SCMService implements ISCMService {
 
 		this._activeProvider = provider;
 
+		this.activeProviderDisposable = provider.onDidChange(() => this.onDidProviderChange(provider));
 		this.onDidProviderChange(provider);
 
-		this.activeProviderContextKey.set(provider ? provider.id : void 0);
 		this._onDidChangeProvider.fire(provider);
 	}
 
@@ -114,7 +109,7 @@ export class SCMService implements ISCMService {
 		}
 
 		const unregister = provider.onDidChange(() => this.onDidProviderChange(provider));
-		this._onDidRegisterProvider.fire(provider);
+		this._onDidChangeProviders.fire();
 
 		return toDisposable(() => {
 			unregister.dispose();

@@ -123,7 +123,9 @@ export interface ISCMService {
 
 	readonly _serviceBrand: any;
 	readonly onDidChangeProvider: Event<ISCMProvider>;
-	readonly onDidRegisterProvider: Event<ISCMProvider>;
+
+	// TODO@joao fix name
+	readonly onDidChangeProviders: Event<void>;
 	readonly providers: ISCMProvider[];
 	readonly input: ISCMInput;
 	activeProvider: ISCMProvider | undefined;
@@ -149,38 +151,6 @@ export interface ISCMService {
 	 * creation/registration.
 	 */
 	getProviderForResource(resource: URI): ISCMProvider | undefined;
-}
-
-/**
- * Listen for when a different SCM provider becomes active and when the active SCM
- * provider's state changes. This is a helper that wraps ISCMService's onDidChangeProvider
- * and the active ISCMProvider's onDidChange.
- */
-export function onDidChangeOrUpdateSCMProvider(service: ISCMService, listener: (provider: ISCMProvider) => void): IDisposable {
-	let activeProviderListener: IDisposable;
-	const onDidChangeProvider = (provider: ISCMProvider, updateImmediately: boolean): void => {
-		if (activeProviderListener) {
-			activeProviderListener.dispose();
-		}
-		activeProviderListener = provider.onDidChange(() => listener(provider));
-		if (updateImmediately) {
-			listener(provider);
-		}
-	};
-
-	const serviceListener = service.onDidChangeProvider(provider => onDidChangeProvider(provider, true));
-	if (service.activeProvider) {
-		onDidChangeProvider(service.activeProvider, false);
-	}
-
-	return {
-		dispose: (): void => {
-			if (activeProviderListener) {
-				activeProviderListener.dispose();
-			}
-			serviceListener.dispose();
-		},
-	};
 }
 
 /**

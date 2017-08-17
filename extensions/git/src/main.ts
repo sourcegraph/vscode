@@ -9,12 +9,11 @@ import * as nls from 'vscode-nls';
 const localize = nls.config(process.env.VSCODE_NLS_CONFIG)();
 import { ExtensionContext, workspace, window, Disposable, commands, Uri, OutputChannel } from 'vscode';
 import { findGit, Git, IGit } from './git';
+import { Repository } from './repository';
 import { Model } from './model';
-import { GitSCMProvider } from './scmProvider';
 import { CommandCenter } from './commands';
-import { StatusBarCommands } from './statusbar';
-import { GitContentProvider } from './contentProvider';
-import { AutoFetcher } from './autofetch';
+// import { GitContentProvider } from './contentProvider';
+// import { AutoFetcher } from './autofetch';
 import { Askpass } from './askpass';
 import { toDisposable } from './util';
 import TelemetryReporter from 'vscode-extension-telemetry';
@@ -29,38 +28,32 @@ async function init(context: ExtensionContext, disposables: Disposable[]): Promi
 
 	const config = workspace.getConfiguration('git');
 	const enabled = config.get<boolean>('enabled') === true;
-
 	const pathHint = workspace.getConfiguration('git').get<string>('path');
 	const info = await findGit(pathHint);
 	const askpass = new Askpass();
 	const env = await askpass.getEnv();
 	const git = new Git({ gitPath: info.path, version: info.version, env });
+	const model = new Model();
+	disposables.push(model);
 
-	if (!workspace.workspaceFolders || !enabled) {
-		const commandCenter = new CommandCenter(git, undefined, outputChannel, telemetryReporter);
+	if (!enabled) {
+		const commandCenter = new CommandCenter(git, model, outputChannel, telemetryReporter);
 		disposables.push(commandCenter);
 		return;
 	}
 
-	workspace.workspaceFolders.forEach(w => {
-		initWorkspaceFolder({
-			telemetryReporter, outputChannel, info, git, workspaceRoot: w.uri, disposables,
-		});
-	});
+	for (const folder of workspace.workspaceFolders || []) {
+		if (folder.uri.scheme && folder.uri.scheme !== 'file') {
+			// This git extension only works for local git repositories, not for remote git
+			// repositories. The 'repo' extension is used for remote repositories.
+			continue;
+		}
 
-	await checkGitVersion(info);
-}
+		const repositoryRoot = await git.getRepositoryRoot(folder.uri.fsPath);
+		const repository = new Repository(git.open(repositoryRoot));
 
-function initWorkspaceFolder(state: { telemetryReporter: TelemetryReporter, outputChannel: OutputChannel, info: IGit, git: Git, workspaceRoot: Uri, disposables: Disposable[] }) {
-	const { telemetryReporter, outputChannel, info, git, workspaceRoot, disposables } = state;
-
-	if (workspaceRoot.scheme && workspaceRoot.scheme !== 'file') {
-		// This git extension only works for local git repositories, not for remote git
-		// repositories. The 'repo' extension is used for remote repositories.
-		return;
+		model.register(repository);
 	}
-
-	const model = new Model(git, workspaceRoot.fsPath);
 
 	outputChannel.appendLine(localize('using git', "Using git {0} from {1}", info.version, info.path));
 
@@ -69,18 +62,17 @@ function initWorkspaceFolder(state: { telemetryReporter: TelemetryReporter, outp
 	disposables.push(toDisposable(() => git.onOutput.removeListener('log', onOutput)));
 
 	const commandCenter = new CommandCenter(git, model, outputChannel, telemetryReporter);
-	const statusBarCommands = new StatusBarCommands(model);
-	const provider = new GitSCMProvider(model, statusBarCommands);
-	const contentProvider = new GitContentProvider(model);
-	const autoFetcher = new AutoFetcher(model);
+	// const contentProvider = new GitContentProvider(repository);
+	// const autoFetcher = new AutoFetcher(repository);
 
 	disposables.push(
 		commandCenter,
-		provider,
-		contentProvider,
-		autoFetcher,
-		model
+		// contentProvider,
+		// autoFetcher,
+		// repository
 	);
+
+	await checkGitVersion(info);
 }
 
 export function activate(context: ExtensionContext): any {
