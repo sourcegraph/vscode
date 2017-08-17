@@ -59,7 +59,12 @@ export class ModesHoverController implements editorCommon.IEditorContribution {
 			this._toUnhook.push(this._editor.onMouseDown((e: IEditorMouseEvent) => this._onEditorMouseDown(e)));
 			this._toUnhook.push(this._editor.onMouseUp((e: IEditorMouseEvent) => this._onEditorMouseUp(e)));
 			this._toUnhook.push(this._editor.onMouseMove((e: IEditorMouseEvent) => this._onEditorMouseMove(e)));
-			this._toUnhook.push(this._editor.onMouseLeave((e: IEditorMouseEvent) => this._hideWidgets()));
+			this._toUnhook.push(this._editor.onMouseLeave((e: IEditorMouseEvent) => {
+				if (e.event.leftButton) {
+					return;
+				}
+				this._hideWidgets();
+			}));
 			this._toUnhook.push(this._editor.onKeyDown((e: IKeyboardEvent) => this._onKeyDown(e)));
 			this._toUnhook.push(this._editor.onDidChangeModel(() => this._hideWidgets()));
 			this._toUnhook.push(this._editor.onDidChangeModelDecorations(() => this._onModelDecorationsChanged()));
