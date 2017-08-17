@@ -195,8 +195,12 @@ export class RemoteSearchService extends SearchService implements ISearchService
 					warning: local.warning || remote.warning,
 				};
 			}).then(complete, ([localError, remoteError]) => {
-				// Only pass along one error, not an array (our callers don't know how to handle an array.)
-				if (localError) {
+				// Only pass along one error value, not an array (our callers don't know how to handle an array.)
+				if (localError && remoteError) {
+					const combinedError = new Error(nls.localize('searchLocalAndRemoteError', "Local and remote searches both failed: {0}, {1}", localError, remoteError));
+					combinedError['errors'] = [localError, remoteError]; // for ease of debugging
+					error(combinedError);
+				} else if (localError) {
 					error(localError);
 				} else if (remoteError) {
 					error(remoteError);
