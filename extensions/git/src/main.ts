@@ -7,7 +7,7 @@
 
 import * as nls from 'vscode-nls';
 const localize = nls.config(process.env.VSCODE_NLS_CONFIG)();
-import { ExtensionContext, workspace, window, Disposable, commands, Uri, OutputChannel } from 'vscode';
+import { ExtensionContext, workspace, window, Disposable, commands, Uri } from 'vscode';
 import { findGit, Git, IGit } from './git';
 import { Repository } from './repository';
 import { Model } from './model';

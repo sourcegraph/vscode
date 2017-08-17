@@ -375,7 +375,7 @@ export class Repository implements Disposable {
 		this.disposables.push(this._sourceControl);
 
 		this._sourceControl.setRevisionCommand = {
-			command: "git.checkout",
+			command: 'git.checkout',
 			title: localize('checkout', "Git Checkout"),
 			arguments: [Uri.file(repository.root)],
 		};
