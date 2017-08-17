@@ -44,7 +44,7 @@ class FakeSCMProvider implements ISCMProvider {
 class FakeSCMService implements ISCMService {
 	public _serviceBrand: any;
 	readonly onDidChangeProvider: any;
-	readonly onDidRegisterProvider: any;
+	readonly onDidChangeProviders: any;
 	readonly providers: any;
 	readonly input: any;
 	activeProvider: any;

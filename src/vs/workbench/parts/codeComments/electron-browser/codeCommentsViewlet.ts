@@ -135,7 +135,7 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 
 		this._register(this.codeCommentsService.onCommentsDidChange(this.onCommentsDidChange, this));
 		this._register(this.editorGroupService.onEditorsChanged(this.onEditorsChanged, this));
-		this._register(this.scmService.onDidRegisterProvider(this.onDidRegisterScmProvider, this));
+		this._register(this.scmService.onDidChangeProvider(this.onDidRegisterScmProvider, this));
 
 		this.onEditorsChanged();
 		return TPromise.as(null);

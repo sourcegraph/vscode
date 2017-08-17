@@ -8,6 +8,16 @@
 	-webkit-mask-size: 19px;
 }
 
+.monaco-workbench .viewlet.scm-viewlet .split-view-view .actions,
+.monaco-workbench .viewlet.scm-viewlet .collapsible.header .actions {
+	width: initial;
+	flex: 1;
+}
+
+.scm-viewlet .scm-status {
+	height: 100%;
+}
+
 .scm-viewlet .monaco-list-row {
 	padding: 0 12px 0 20px;
 	line-height: 22px;
