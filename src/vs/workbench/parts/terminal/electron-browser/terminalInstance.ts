@@ -527,6 +527,11 @@ export class TerminalInstance implements ITerminalInstance {
 	}
 
 	protected _getCwd(shell: IShellLaunchConfig, root: Uri): string {
+		// Non-file system roots are not valid cwds.
+		if (root.scheme !== 'file') {
+			root = undefined;
+		}
+
 		if (shell.cwd) {
 			return shell.cwd;
 		}
