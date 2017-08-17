@@ -771,7 +771,6 @@ export class ReferenceWidget extends PeekViewWidget {
 		this._disposeOnNewModel.push(this._model.onDidChangeReferences(reference => this._tree.refresh().then(() => this._tree.layout())));
 
 		// listen on selection and focus
-		// PATCH(sourcegraph): reverted as mentioned in https://github.com/Microsoft/vscode/issues/28789#issuecomment-308699329
 		this._disposeOnNewModel.push(this._tree.addListener(Controller.Events.FOCUSED, (element) => {
 			if (element instanceof OneReference) {
 				this._revealReference(element);
