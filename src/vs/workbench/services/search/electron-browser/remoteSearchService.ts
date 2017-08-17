@@ -9,7 +9,6 @@ import * as arrays from 'vs/base/common/arrays';
 import * as glob from 'vs/base/common/glob';
 import * as strings from 'vs/base/common/strings';
 import * as nls from 'vs/nls';
-import * as types from 'vs/base/common/types';
 import URI from 'vs/base/common/uri';
 import { PPromise } from 'vs/base/common/winjs.base';
 import { IFileMatch, ISearchComplete, ISearchProgressItem, ISearchQuery, ISearchService, QueryType, ISearchStats } from 'vs/platform/search/common/search';
@@ -132,11 +131,11 @@ export class RemoteSearchService extends SearchService implements ISearchService
 					warning: this.getWarning(model.response),
 				});
 			}, err => {
-				if (types.isString(err)) {
-					error({ message: err });
-				} else if (err instanceof Error) {
-					error(err);
-				} else if (err instanceof ProgressEvent) {
+				if (err instanceof ProgressEvent) {
+					// Treat XMLHTTPRequest errors (typically indicating network
+					// connectivity issues) as warnings. Otherwise if you have 1 remote
+					// root and some local roots, when you are offline the remote root
+					// search fails and prevents you from performing local searches.
 					complete({
 						results: [],
 						limitHit: false,
@@ -146,6 +145,8 @@ export class RemoteSearchService extends SearchService implements ISearchService
 						},
 						warning: nls.localize('searchRemoteError', "Error retrieving remote search results. Check network connection or remove remote roots."),
 					});
+				} else {
+					error(err);
 				}
 			});
 		}, () => {
