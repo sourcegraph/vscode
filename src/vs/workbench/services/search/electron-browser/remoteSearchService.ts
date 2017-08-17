@@ -177,16 +177,24 @@ export class RemoteSearchService extends SearchService implements ISearchService
 
 		// Split out local and remote resources
 		const isRemote = (uri: URI): boolean => uri.scheme === Schemas.repo || uri.scheme === Schemas.repoVersion;
-		const localFolderQueries = query.folderQueries.filter(fq => !isRemote(fq.folder));
-		const remoteFolderQueries = query.folderQueries.filter(fq => isRemote(fq.folder));
+		const localQuery: ISearchQuery = {
+			...query,
+			extraFileResources: query.extraFileResources && query.extraFileResources.filter(uri => !isRemote(uri)),
+			folderQueries: query.folderQueries.filter(fq => !isRemote(fq.folder)),
+		};
+		const remoteQuery: ISearchQuery = {
+			...query,
+			extraFileResources: query.extraFileResources && query.extraFileResources.filter(uri => isRemote(uri)),
+			folderQueries: query.folderQueries.filter(fq => isRemote(fq.folder)),
+		};
 
 		// We need to forward the progress callbacks. PPromise.join does not,
 		// so we wrap a new PPromise around PPromise.join.
 		let pp: PPromise<any, any>;
 		return new PPromise((complete, error, progress) => {
 			pp = PPromise.join([
-				this.localSearch({ ...query, folderQueries: localFolderQueries }),
-				this.remoteSearch({ ...query, folderQueries: remoteFolderQueries }),
+				this.localSearch(localQuery),
+				this.remoteSearch(remoteQuery),
 			].map(p => p.then(null, null, progress))).then(([local, remote]) => {
 				return {
 					limitHit: local.limitHit || remote.limitHit,
