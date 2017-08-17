@@ -6,8 +6,8 @@
 'use strict';
 
 import { Uri, Command, EventEmitter, Event, scm, commands, SourceControl, SourceControlResourceGroup, SourceControlResourceState, SourceControlResourceDecorations, Disposable, ProgressLocation, window, workspace, WorkspaceEdit } from 'vscode';
-import { Git, Repository as BaseRepository, Ref, Branch, Remote, Commit, GitErrorCodes, Stash } from './git';
-import { anyEvent, eventToPromise, filterEvent, EmptyDisposable, combinedDisposable, dispose, find } from './util';
+import { Repository as BaseRepository, Ref, Branch, Remote, Commit, GitErrorCodes, Stash } from './git';
+import { anyEvent, filterEvent, eventToPromise, dispose, find } from './util';
 import { memoize, throttle, debounce } from './decorators';
 import { toGitUri } from './uri';
 import * as path from 'path';
@@ -24,9 +24,8 @@ function getIconUri(iconName: string, theme: string): Uri {
 }
 
 export enum State {
-	Uninitialized,
 	Idle,
-	NotAGitRepository
+	Disposed
 }
 
 export enum Status {
@@ -325,7 +324,7 @@ export class Repository implements Disposable {
 	private _operations = new OperationsImpl();
 	get operations(): Operations { return this._operations; }
 
-	private _state = State.Uninitialized;
+	private _state = State.Idle;
 	get state(): State { return this._state; }
 	set state(state: State) {
 		this._state = state;
@@ -359,6 +358,10 @@ export class Repository implements Disposable {
 		const onWorkspaceChange = anyEvent(fsWatcher.onDidChange, fsWatcher.onDidCreate, fsWatcher.onDidDelete);
 		onWorkspaceChange(this.onFSChange, this, this.disposables);
 
+		const onGitChange = filterEvent(onWorkspaceChange, uri => /\/\.git\//.test(uri.path));
+		const onRelevantGitChange = filterEvent(onGitChange, uri => !/\/\.git\/index\.lock$/.test(uri.path));
+		onRelevantGitChange(this._onDidChangeRepository.fire, this._onDidChangeRepository, this.disposables);
+
 		const id = `git${Repository.handle++}`;
 		const label = `Git - ${path.basename(repository.root)}`;
 
@@ -371,7 +374,11 @@ export class Repository implements Disposable {
 		this._sourceControl.commandExecutor = this;
 		this.disposables.push(this._sourceControl);
 
-		this._sourceControl.setRevisionCommand = { command: `git.checkout[${repository.root}]`, title: 'Git Checkout' };
+		this._sourceControl.setRevisionCommand = {
+			command: "git.checkout",
+			title: localize('checkout', "Git Checkout"),
+			arguments: [Uri.file(repository.root)],
+		};
 
 		this._mergeGroup = this._sourceControl.createResourceGroup('merge', localize('merge changes', "Merge Changes"));
 		this._indexGroup = this._sourceControl.createResourceGroup('index', localize('staged changes', "Staged Changes"));
@@ -638,7 +645,7 @@ export class Repository implements Disposable {
 				return result;
 			} catch (err) {
 				if (err.gitErrorCode === GitErrorCodes.NotAGitRepository) {
-					this.state = State.NotAGitRepository;
+					this.state = State.Disposed;
 				}
 
 				throw err;
@@ -772,9 +779,8 @@ export class Repository implements Disposable {
 		let stateContextKey = '';
 
 		switch (this.state) {
-			case State.Uninitialized: stateContextKey = 'uninitialized'; break;
 			case State.Idle: stateContextKey = 'idle'; break;
-			case State.NotAGitRepository: stateContextKey = 'norepo'; break;
+			case State.Disposed: stateContextKey = 'norepo'; break;
 		}
 
 		commands.executeCommand('setContext', 'gitState', stateContextKey);

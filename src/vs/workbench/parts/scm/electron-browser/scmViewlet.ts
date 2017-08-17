@@ -434,6 +434,11 @@ export class SCMViewlet extends ComposedViewsViewlet {
 		// this.activeProvider = activeProvider;
 
 		const providers = this.scmService.providers;
+
+		if (providers.length === 0) {
+			return;
+		}
+
 		const ids = providers.map(provider => provider.id);
 		const views = providers.map(provider => new SourceControlViewDescriptor(provider));
 

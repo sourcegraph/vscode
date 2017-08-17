@@ -5,7 +5,7 @@
 
 'use strict';
 
-import { Uri, window, QuickPickItem, Disposable, SourceControl, SourceControlResourceGroup } from 'vscode';
+import { Uri, window, Event, EventEmitter, QuickPickItem, Disposable, SourceControl, SourceControlResourceGroup } from 'vscode';
 import { Repository, State } from './repository';
 import { memoize } from './decorators';
 import { toDisposable, filterEvent, once } from './util';
@@ -20,7 +20,15 @@ class RepositoryPick implements QuickPickItem {
 	constructor(protected repositoryRoot: string, public readonly repository: Repository) { }
 }
 
+export interface ModelChangeEvent {
+	repository: Repository;
+	uri: Uri;
+}
+
 export class Model {
+
+	private _onDidChangeRepository = new EventEmitter<ModelChangeEvent>();
+	readonly onDidChangeRepository: Event<ModelChangeEvent> = this._onDidChangeRepository.event;
 
 	private repositories: Map<string, Repository> = new Map<string, Repository>();
 
@@ -34,12 +42,14 @@ export class Model {
 
 		this.repositories.set(root, repository);
 
-		const onDidDisappearRepository = filterEvent(repository.onDidChangeState, state => state === State.NotAGitRepository);
-		const listener = onDidDisappearRepository(() => disposable.dispose());
+		const onDidDisappearRepository = filterEvent(repository.onDidChangeState, state => state === State.Disposed);
+		const disappearListener = onDidDisappearRepository(() => disposable.dispose());
+		const changeListener = repository.onDidChangeRepository(uri => this._onDidChangeRepository.fire({ repository, uri }));
 
 		const disposable = toDisposable(once(() => {
+			disappearListener.dispose();
+			changeListener.dispose();
 			this.repositories.delete(root);
-			listener.dispose();
 		}));
 
 		return disposable;
@@ -96,30 +106,6 @@ export class Model {
 
 		return undefined;
 	}
-
-	// private async assertIdleState(): Promise<void> {
-	//	if (this.state === State.Idle) {
-	//		return;
-	//	}
-
-	//	const disposables: Disposable[] = [];
-	//	const repositoryRoot = await this.git.getRepositoryRoot(this.workspaceRoot.fsPath);
-	//	this.repository = this.git.open(repositoryRoot);
-
-	//	const onGitChange = filterEvent(this.onWorkspaceChange, uri => /\/\.git\//.test(uri.path));
-	//	const onRelevantGitChange = filterEvent(onGitChange, uri => !/\/\.git\/index\.lock$/.test(uri.path));
-
-	//	onRelevantGitChange(this.onFSChange, this, disposables);
-	//	onRelevantGitChange(this._onDidChangeRepository.fire, this._onDidChangeRepository, disposables);
-
-	//	const onNonGitChange = filterEvent(this.onWorkspaceChange, uri => !/\/\.git\//.test(uri.path));
-	//	onNonGitChange(this.onFSChange, this, disposables);
-
-	//	this.repositoryDisposable = combinedDisposable(disposables);
-	//	this.isRepositoryHuge = false;
-	//	this.didWarnAboutLimit = false;
-	//	this.state = State.Idle;
-	// }
 
 	dispose(): void {
 		for (let [, repository] of this.repositories) {
