@@ -210,6 +210,9 @@ export class GitRepository implements Repository, vscode.Disposable {
 			if (!root || !root.repository) {
 				throw new Error(localize('repositoryNotFound', "Repository not found: {0}", this.label));
 			}
+			if (!root || !root.repository) {
+				throw new Error(localize('commitNotFound', "Repository commit not found: {0} at {1}", this.label, revision.specifier));
+			}
 			if (root.repository.commit.cloneInProgress) {
 				if (!messageShown) {
 					messageShown = true;
