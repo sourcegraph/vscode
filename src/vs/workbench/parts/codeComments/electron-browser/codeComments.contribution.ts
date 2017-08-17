@@ -13,7 +13,7 @@ import 'vs/workbench/parts/codeComments/browser/codeCommentsDecorationRenderer';
 import { registerSingleton } from 'vs/platform/instantiation/common/extensions';
 import { ICodeCommentsService } from 'vs/editor/common/services/codeCommentsService';
 import { CodeCommentsService } from 'vs/workbench/services/codeComments/electron-browser/codeCommentsService';
-import 'vs/workbench/parts/codeComments/electron-browser/createCodeCommentAction';
+import 'vs/workbench/parts/codeComments/browser/createCodeCommentAction';
 import 'vs/workbench/parts/codeComments/electron-browser/codeCommentsViewlet';
 
 registerSingleton(ICodeCommentsService, CodeCommentsService);

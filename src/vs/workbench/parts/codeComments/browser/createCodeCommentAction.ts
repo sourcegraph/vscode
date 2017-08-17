@@ -34,11 +34,11 @@ export class CreateCodeCommentAction extends EditorAction {
 		});
 	}
 
-	public async run(accessor: ServicesAccessor, editor: ICommonCodeEditor): TPromise<any> {
+	public run(accessor: ServicesAccessor, editor: ICommonCodeEditor): TPromise<any> {
 		const viewletService = accessor.get(IViewletService);
 		const file = editor.getModel().uri;
 		const range = this.getCommentRange(editor);
-		viewletService.openViewlet(VIEWLET_ID, true)
+		return viewletService.openViewlet(VIEWLET_ID, true)
 			.then(viewlet => viewlet as ICodeCommentsViewlet)
 			.then(viewlet => {
 				viewlet.createThread(file, range);
