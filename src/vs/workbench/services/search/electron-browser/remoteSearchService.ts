@@ -9,6 +9,7 @@ import * as arrays from 'vs/base/common/arrays';
 import * as glob from 'vs/base/common/glob';
 import * as strings from 'vs/base/common/strings';
 import * as nls from 'vs/nls';
+import * as types from 'vs/base/common/types';
 import URI from 'vs/base/common/uri';
 import { PPromise } from 'vs/base/common/winjs.base';
 import { IFileMatch, ISearchComplete, ISearchProgressItem, ISearchQuery, ISearchService, QueryType, ISearchStats } from 'vs/platform/search/common/search';
@@ -130,7 +131,15 @@ export class RemoteSearchService extends SearchService implements ISearchService
 					},
 					warning: this.getWarning(model.response),
 				});
-			}, err => error({ message: err }));
+			}, err => {
+				if (types.isString(err)) {
+					error({ message: err });
+				} else if (err instanceof Error) {
+					error(err);
+				} else if (err instanceof ProgressEvent) {
+					error({ message: nls.localize('searchRemoteError', "Error retrieving remote search results. Check network connection or remove remote roots.") });
+				}
+			});
 		}, () => {
 			model.dispose();
 		});
@@ -164,8 +173,9 @@ export class RemoteSearchService extends SearchService implements ISearchService
 
 		// We need to forward the progress callbacks. PPromise.join does not,
 		// so we wrap a new PPromise around PPromise.join.
+		let pp: PPromise<any, any>;
 		return new PPromise((complete, error, progress) => {
-			PPromise.join([
+			pp = PPromise.join([
 				this.localSearch({ ...query, folderQueries: localFolderQueries }),
 				this.remoteSearch({ ...query, folderQueries: remoteFolderQueries }),
 			].map(p => p.then(null, null, progress))).then(([local, remote]) => {
@@ -175,7 +185,16 @@ export class RemoteSearchService extends SearchService implements ISearchService
 					stats: mergeStats([local.stats, remote.stats]),
 					warning: local.warning || remote.warning,
 				};
-			}).then(complete, error);
+			}).then(complete, ([localError, remoteError]) => {
+				// Only pass along one error, not an array (our callers don't know how to handle an array.)
+				if (localError) {
+					error(localError);
+				} else if (remoteError) {
+					error(remoteError);
+				}
+			});
+		}, () => {
+			pp.cancel();
 		});
 	}
 
