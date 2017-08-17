@@ -7,7 +7,6 @@
 import { TPromise } from 'vs/base/common/winjs.base';
 import { IDisposable } from 'vs/base/common/lifecycle';
 import { Emitter } from 'vs/base/common/event';
-import { IThreadService } from 'vs/workbench/services/thread/common/threadService';
 import * as vscode from 'vscode';
 import { IReadOnlyModel, ISingleEditOperation } from 'vs/editor/common/editorCommon';
 import * as modes from 'vs/editor/common/modes';
@@ -16,15 +15,17 @@ import { always, wireCancellationToken } from 'vs/base/common/async';
 import { CancellationToken } from 'vs/base/common/cancellation';
 import { Position as EditorPosition } from 'vs/editor/common/core/position';
 import { Range as EditorRange } from 'vs/editor/common/core/range';
-import { ExtHostContext, MainThreadLanguageFeaturesShape, ExtHostLanguageFeaturesShape, IRawColorFormatMap } from '../node/extHost.protocol';
+import { ExtHostContext, MainThreadLanguageFeaturesShape, ExtHostLanguageFeaturesShape, IRawColorFormatMap, MainContext, IExtHostContext } from '../node/extHost.protocol';
 import { LanguageConfigurationRegistry } from 'vs/editor/common/modes/languageConfigurationRegistry';
 import { LanguageConfiguration } from 'vs/editor/common/modes/languageConfiguration';
 import { IHeapService } from './mainThreadHeapService';
 import { IModeService } from 'vs/editor/common/services/modeService';
 import { MainThreadHandlerRegistry } from 'vs/workbench/api/electron-browser/mainThreadHandlerRegistry';
 import { ColorFormatter, CombinedColorFormatter } from 'vs/editor/contrib/colorPicker/common/colorFormatter';
+import { extHostNamedCustomer } from "vs/workbench/api/electron-browser/extHostCustomers";
 
-export class MainThreadLanguageFeatures extends MainThreadLanguageFeaturesShape {
+@extHostNamedCustomer(MainContext.MainThreadLanguageFeatures)
+export class MainThreadLanguageFeatures implements MainThreadLanguageFeaturesShape {
 
 	private _proxy: ExtHostLanguageFeaturesShape;
 	private _heapService: IHeapService;
@@ -40,12 +41,11 @@ export class MainThreadLanguageFeatures extends MainThreadLanguageFeaturesShape 
 	private _callbackRegistrations = new MainThreadHandlerRegistry<(value: any) => void>();
 
 	constructor(
-		@IThreadService threadService: IThreadService,
+		extHostContext: IExtHostContext,
 		@IHeapService heapService: IHeapService,
 		@IModeService modeService: IModeService,
 	) {
-		super();
-		this._proxy = threadService.get(ExtHostContext.ExtHostLanguageFeatures);
+		this._proxy = extHostContext.get(ExtHostContext.ExtHostLanguageFeatures);
 		this._heapService = heapService;
 		this._modeService = modeService;
 		this._formatters = new Map<number, ColorFormatter>();

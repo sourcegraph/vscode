@@ -730,7 +730,7 @@ type Adapter = OutlineAdapter | CodeLensAdapter | DefinitionAdapter | HoverAdapt
 	| RangeFormattingAdapter | OnTypeFormattingAdapter | NavigateTypeAdapter | RenameAdapter
 	| SuggestAdapter | SignatureHelpAdapter | LinkProviderAdapter | ImplementationAdapter | TypeDefinitionAdapter | ColorProviderAdapter;
 
-export class ExtHostLanguageFeatures extends ExtHostLanguageFeaturesShape {
+export class ExtHostLanguageFeatures implements ExtHostLanguageFeaturesShape {
 
 	private static _handlePool: number = 0;
 
@@ -749,7 +749,6 @@ export class ExtHostLanguageFeatures extends ExtHostLanguageFeaturesShape {
 		heapMonitor: ExtHostHeapService,
 		diagnostics: ExtHostDiagnostics
 	) {
-		super();
 		this._proxy = mainContext.get(MainContext.MainThreadLanguageFeatures);
 		this._documents = documents;
 		this._commands = commands;
