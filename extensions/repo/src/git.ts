@@ -66,21 +66,10 @@ export class GitRepository implements Repository, vscode.Disposable {
 		this.sourceControl.commandExecutor = this;
 		this.toDispose.push(this.sourceControl);
 
-		// Register setRevisionCommand.
-		//
-		// TODO(sqs): rethink this setRevisionCommand API because it requires registering
-		// one command per source control, which is excessive.
-		const commandId = `repo.git.setRevision[${root.toString()}]`;
-		this.toDispose.push(vscode.commands.registerCommand(commandId, (revision?: vscode.SCMRevision): void => {
-			if (revision) {
-				this.revision = revision;
-			} else {
-				this.openRevisionPicker();
-			}
-		}));
 		this.sourceControl.setRevisionCommand = {
 			title: localize('repo.git.setRevision', "Set revision for {0}", this.label),
-			command: commandId,
+			command: SWITCH_REVISION_COMMAND_ID,
+			arguments: [root],
 		};
 
 		// Load last-viewed revision for repository.
