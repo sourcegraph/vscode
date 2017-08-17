@@ -137,7 +137,15 @@ export class RemoteSearchService extends SearchService implements ISearchService
 				} else if (err instanceof Error) {
 					error(err);
 				} else if (err instanceof ProgressEvent) {
-					error({ message: nls.localize('searchRemoteError', "Error retrieving remote search results. Check network connection or remove remote roots.") });
+					complete({
+						results: [],
+						limitHit: false,
+						stats: {
+							fromCache: false,
+							resultCount: 0,
+						},
+						warning: nls.localize('searchRemoteError', "Error retrieving remote search results. Check network connection or remove remote roots."),
+					});
 				}
 			});
 		}, () => {
