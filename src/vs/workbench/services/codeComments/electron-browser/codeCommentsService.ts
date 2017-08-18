@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 'use strict';
 
+import { localize } from 'vs/nls';
 import { ICodeCommentsService, Thread, CommentsDidChangeEvent } from 'vs/editor/common/services/codeCommentsService';
 import { Range } from 'vs/editor/common/core/range';
 import Event, { Emitter } from 'vs/base/common/event';
@@ -17,6 +18,7 @@ import { IRemoteService, requestGraphQL, requestGraphQLMutation } from 'vs/platf
 import { TPromise } from 'vs/base/common/winjs.base';
 import { uniqueFilter } from 'vs/base/common/arrays';
 import { values } from 'vs/base/common/map';
+import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 
 /**
  * A unique identifier for a file.
@@ -76,10 +78,11 @@ export class CodeCommentsService implements ICodeCommentsService {
 	private git: Git;
 
 	constructor(
-		@ISCMService private scmService: ISCMService,
+		@IInstantiationService instantiationService: IInstantiationService,
 		@IRemoteService private remoteService: IRemoteService,
+		@ISCMService private scmService: ISCMService,
 	) {
-		this.git = new Git(scmService);
+		this.git = instantiationService.createInstance(Git);
 	}
 
 	/**
@@ -93,7 +96,7 @@ export class CodeCommentsService implements ICodeCommentsService {
 			reverseDiff,
 			this.git.getUserName(file),
 			this.git.getUserEmail(file),
-			this.git.getRoot(file),
+			this.getRoot(file),
 			this.git.getRemoteRepo(file),
 			this.git.getAccessToken(file),
 		])
@@ -103,7 +106,7 @@ export class CodeCommentsService implements ICodeCommentsService {
 				// because nobody would be able to see it.
 				const adjustedRange = (new Diff(diff)).transformRange(range);
 				if (!adjustedRange) {
-					throw new Error('unable to comment on this line because it has not been pushed');
+					throw new Error(localize('notPushed', 'unable to comment on this line because it has not been pushed'));
 				}
 				const relativeFile = this.relativePath(URI.parse(root), file);
 				return requestGraphQLMutation<{ createThread: GQL.IThread }>(this.remoteService, `mutation {
@@ -229,7 +232,7 @@ export class CodeCommentsService implements ICodeCommentsService {
 			return TPromise.as(void 0);
 		}
 		return TPromise.join([
-			this.git.getRoot(file),
+			this.getRoot(file),
 			this.git.getRemoteRepo(file),
 		]).then(([root, repo]) => {
 			const relativeFile = this.relativePath(URI.parse(root), file);
@@ -336,6 +339,17 @@ export class CodeCommentsService implements ICodeCommentsService {
 				}, []);
 			})
 			.then(threads => threads.sort(mostRecentCommentTimeDescending));
+	}
+
+	public getRoot(context: URI): TPromise<string> {
+		const scmProvider = this.scmService.getProviderForResource(context);
+		if (!scmProvider) {
+			return TPromise.wrapError(new Error(`no scm provider in context ${context.toString()}`));
+		}
+		if (!scmProvider.rootFolder) {
+			return TPromise.wrapError(new Error(`scmProvider for context ${context.toString()} has no root folder`));
+		}
+		return TPromise.wrap(scmProvider.rootFolder.path);
 	}
 }
 

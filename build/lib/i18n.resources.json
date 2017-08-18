@@ -35,6 +35,10 @@
 			"project": "vscode-workbench"
 		},
 		{
+			"name": "vs/workbench/parts/codeComments",
+			"project": "vscode-workbench"
+		},
+		{
 			"name": "vs/workbench/parts/codeEditor",
 			"project": "vscode-workbench"
 		},
@@ -103,10 +107,6 @@
 			"project": "vscode-workbench"
 		},
 		{
-			"name": "vs/workbench/parts/codeComments",
-			"project": "vscode-workbench"
-		},
-		{
 			"name": "vs/workbench/parts/search",
 			"project": "vscode-workbench"
 		},
@@ -152,6 +152,10 @@
 		},
 		{
 			"name": "vs/workbench/parts/workspace",
+			"project": "vscode-workbench"
+		},
+		{
+			"name": "vs/workbench/services/codeComments",
 			"project": "vscode-workbench"
 		},
 		{

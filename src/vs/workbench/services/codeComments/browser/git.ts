@@ -4,9 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 'use strict';
 
+import { localize } from 'vs/nls';
 import { ISCMService } from 'vs/workbench/services/scm/common/scm';
 import URI from 'vs/base/common/uri';
 import { TPromise } from 'vs/base/common/winjs.base';
+import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
+import { IConfigurationEditingService, ConfigurationTarget } from 'vs/workbench/services/configuration/common/configurationEditing';
+import { IConfigurationRegistry, Extensions } from 'vs/platform/configuration/common/configurationRegistry';
+import { Registry } from 'vs/platform/registry/common/platform';
 
 /**
  * Interface to intract with Git in the current workspace.
@@ -14,7 +19,9 @@ import { TPromise } from 'vs/base/common/winjs.base';
 export class Git {
 
 	constructor(
-		private scmService: ISCMService,
+		@ISCMService private scmService: ISCMService,
+		@IConfigurationService protected configurationService: IConfigurationService,
+		@IConfigurationEditingService private configurationEditingService: IConfigurationEditingService,
 	) {
 	}
 
@@ -53,8 +60,8 @@ export class Git {
 	private getRemoteTrackingBranches(context: URI): TPromise<Set<string>> {
 		return this.spawnPromiseTrim(context, ['show-ref']).then(refs => {
 			return refs.split('\n').reduce((remoteRefs, line) => {
-				const [sha, ref] = line.split(' ', 2);
-				if (ref.indexOf('refs/remotes/') === 0) {
+				const [sha, ref] = line.split(' ', 3);
+				if (ref && ref.indexOf('refs/remotes/') === 0) {
 					remoteRefs.add(sha);
 				}
 				return remoteRefs;
@@ -62,20 +69,45 @@ export class Git {
 		});
 	}
 
+	/**
+	 * Returns the SHA of the current revision.
+	 */
 	public getRevisionSHA(context: URI): TPromise<string> {
 		return this.spawnPromiseTrim(context, ['rev-parse', 'HEAD']);
 	}
 
+	/**
+	 * Returns the user's configured display name.
+	 */
 	public getUserName(context: URI): TPromise<string> {
-		return this.spawnPromiseTrim(context, ['config', 'user.name']);
+		const config = this.configurationService.getConfiguration<IAuthConfiguration>();
+		if (config && config.auth && config.auth.displayName) {
+			return TPromise.wrap(config.auth.displayName);
+		}
+		return this.spawnPromiseTrim(context, ['config', 'user.name']).then(displayName => {
+			if (!displayName) {
+				throw new Error(localize('configureAuthDisplayName', 'Please configure auth.displayName and try again.'));
+			}
+			this.configurationEditingService.writeConfiguration(ConfigurationTarget.USER, { key: 'auth.displayName', value: displayName });
+			return displayName;
+		});
 	}
 
+	/**
+	 * Returns the user's configured email address.
+	 */
 	public getUserEmail(context: URI): TPromise<string> {
-		return this.spawnPromiseTrim(context, ['config', 'user.email']);
-	}
-
-	public getRoot(context: URI): TPromise<string> {
-		return this.spawnPromiseTrim(context, ['rev-parse', '--show-toplevel']);
+		const config = this.configurationService.getConfiguration<IAuthConfiguration>();
+		if (config && config.auth && config.auth.email) {
+			return TPromise.wrap(config.auth.email);
+		}
+		return this.spawnPromiseTrim(context, ['config', 'user.email']).then(email => {
+			if (!email) {
+				throw new Error(localize('configureAuthEmail', 'Please configure auth.email and try again.'));
+			}
+			this.configurationEditingService.writeConfiguration(ConfigurationTarget.USER, { key: 'auth.email', value: email });
+			return email;
+		});
 	}
 
 	/**
@@ -137,3 +169,30 @@ export class Git {
 		return scmProvider.executeCommand(params).then(result => result.trim());
 	}
 }
+
+interface IAuthConfiguration {
+	auth?: {
+		displayName?: string;
+		email?: string;
+	};
+}
+
+// Until we have real auth, just let the user configure their
+// display name and email (like Git).
+Registry.as<IConfigurationRegistry>(Extensions.Configuration)
+	.registerConfiguration({
+		id: 'auth',
+		title: localize('auth', "Auth"),
+		type: 'object',
+		properties: {
+			'auth.displayName': {
+				type: 'string',
+				description: localize('displayName', "Your name"),
+			},
+			'auth.email': {
+				type: 'string',
+				pattern: '^[^@]+@[^@]+\.[^@]+',
+				description: localize('email', "Your email address"),
+			},
+		}
+	});
