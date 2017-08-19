@@ -22,6 +22,10 @@
 	line-height: initial;
 }
 
+.hc-black .monaco-action-bar .action-item .action-label.folder-label:not(:empty) {
+	line-height: 100%; /* fix clipping when hc theme has extra borders */
+}
+
 .monaco-action-bar .action-item .action-label.clear-workspace-viewlet {
 	background: url('clear.svg') center center no-repeat;
 }
