@@ -206,8 +206,8 @@ export class GitRepository implements Repository, vscode.Disposable {
 				if (!messageShown) {
 					messageShown = true;
 					vscode.window.showInformationMessage(
-						localize('waitForClone', "Cloning {0}", this.label),
-						localize('dismiss', "Dismiss"),
+						localize('waitForClone', "Cloning repository {0}...", this.label),
+						{ title: localize('dismiss', "Dismiss"), isCloseAffordance: true },
 					);
 				}
 				if (retriesRemaining === 0) {
