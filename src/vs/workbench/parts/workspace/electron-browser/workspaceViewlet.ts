@@ -55,6 +55,9 @@ const SearchFoldersContext = new RawContextKey<boolean>('searchFolders', false);
 
 export class WorkspaceViewlet extends ComposedViewsViewlet implements IWorkspaceViewlet {
 
+	// Temporarily disable the "other folders" view.
+	private static SHOW_OTHER_FOLDERS_VIEW = false;
+
 	private onSearchChange: EventOf<string>;
 	private workspaceViewletVisibleContextKey: IContextKey<boolean>;
 	private searchFoldersContextKey: IContextKey<boolean>;
@@ -105,7 +108,9 @@ export class WorkspaceViewlet extends ComposedViewsViewlet implements IWorkspace
 			viewDescriptors.push(this.createEmptyViewDescriptor());
 		} else {
 			viewDescriptors.push(this.createCurrentWorkspaceFoldersListViewDescriptor());
-			viewDescriptors.push(this.createOtherFoldersListViewDescriptor());
+			if (WorkspaceViewlet.SHOW_OTHER_FOLDERS_VIEW) {
+				viewDescriptors.push(this.createOtherFoldersListViewDescriptor());
+			}
 			viewDescriptors.push(this.createSearchFoldersListViewDescriptor());
 		}
 
@@ -132,7 +137,7 @@ export class WorkspaceViewlet extends ComposedViewsViewlet implements IWorkspace
 			ctor: OtherFoldersView,
 			when: ContextKeyExpr.and(ContextKeyExpr.has('workspaceViewletVisible'), ContextKeyExpr.not('searchFolders')),
 			order: 2,
-			size: 0,
+			size: 10,
 			canToggleVisibility: true
 		};
 	}
