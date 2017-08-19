@@ -103,8 +103,15 @@ declare module 'vscode' {
 		readonly id?: string;
 	}
 
+	/**
+	 * Options for the command to execute.
+	 */
+	export interface CommandOptions {
+		stdin?: string;
+	}
+
 	export interface CommandExecutor {
-		executeCommand(args: string[]): Thenable<string>;
+		executeCommand(args: string[], options?: CommandOptions): Thenable<string>;
 	}
 
 	export interface SourceControl {

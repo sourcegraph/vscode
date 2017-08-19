@@ -13,8 +13,8 @@ import { shellFormat } from './util';
  */
 export function loggingCommandExecutor(label: string, commandExecutor: vscode.CommandExecutor): vscode.CommandExecutor {
 	return {
-		executeCommand: (args: string[]): Thenable<string> => {
-			return commandExecutor.executeCommand(args).then(
+		executeCommand: (args: string[], options?: vscode.CommandOptions): Thenable<string> => {
+			return commandExecutor.executeCommand(args, options).then(
 				output => {
 					logCommand(label, args, output);
 					return output;

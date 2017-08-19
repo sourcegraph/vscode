@@ -102,8 +102,17 @@ export class GitRepository implements Repository {
 					}
 				}
 			}
+
+			// Don't include full contents in cache key; the doc version suffices.
 			cacheKey = JSON.stringify((args as any[]).concat(doc.version));
-			runCommand = () => this.commandExecutor.executeCommand(args.concat('--', path));
+
+			const options: vscode.CommandOptions = {};
+			if (doc.isDirty) {
+				args.push('--contents', '-');
+				options.stdin = doc.getText();
+			}
+
+			runCommand = () => this.commandExecutor.executeCommand(args.concat('--', path), options);
 		}
 
 		const fileHunks = this.manager.performOperation<RawBlameHunk[]>(cacheKey, () => {

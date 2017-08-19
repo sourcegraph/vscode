@@ -36,7 +36,7 @@ import { IPickOpenEntry, IPickOptions } from 'vs/platform/quickOpen/common/quick
 import { SaveReason } from 'vs/workbench/services/textfile/common/textfiles';
 import { TextEditorCursorStyle } from 'vs/editor/common/config/editorOptions';
 import { EndOfLine, TextEditorLineNumbersStyle } from 'vs/workbench/api/node/extHostTypes';
-import { ISCMRevision } from 'vs/workbench/services/scm/common/scm';
+import { ISCMRevision, ICommandOptions } from 'vs/workbench/services/scm/common/scm';
 
 import { IFileStat, IResolveFileOptions } from 'vs/platform/files/common/files';
 
@@ -517,7 +517,7 @@ export interface ExtHostTerminalServiceShape {
 }
 
 export interface ExtHostSCMShape {
-	$executeCommand(sourceControlHandle: number, args: string[]): TPromise<string>;
+	$executeCommand(sourceControlHandle: number, args: string[], options: ICommandOptions | undefined): TPromise<string>;
 	$provideOriginalResource(sourceControlHandle: number, uri: URI): TPromise<URI>;
 	$onActiveSourceControlChange(sourceControlHandle: number): TPromise<void>;
 	$onInputBoxValueChange(value: string): TPromise<void>;
