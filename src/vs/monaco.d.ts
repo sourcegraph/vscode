@@ -4858,7 +4858,7 @@ declare module monaco.languages {
 
 	/**
 	 * A rule is either a regular expression and an action
-	 *		shorthands: [reg,act] == { regex: reg, action: act}
+	 * 		shorthands: [reg,act] == { regex: reg, action: act}
 	 *		and       : [reg,act,nxt] == { regex: reg, action: act{ next: nxt }}
 	 */
 	export interface IMonarchLanguageRule {
