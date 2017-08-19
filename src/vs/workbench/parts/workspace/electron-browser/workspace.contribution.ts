@@ -29,7 +29,7 @@ Registry.as<ViewletRegistry>(ViewletExtensions.Viewlets).registerViewlet(new Vie
 	VIEWLET_ID,
 	nls.localize('workspace', "Workspace"),
 	'workspace',
-	-1
+	80,
 ));
 
 const openViewletKb: IKeybindings = {
