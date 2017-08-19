@@ -64,22 +64,38 @@ export class GitRepository implements Repository {
 		});
 	}
 
-	public blame(revision: string, path: string, range?: vscode.Range, token?: vscode.CancellationToken): Thenable<BlameHunk[]> {
-		// We blame the whole file instead of using the `git blame -L123,456` flag to
-		// blame only a specific range because (1) it's faster if we compute it for the
-		// whole file in one operation because we usually need results for other lines and
-		// (2) our Git command whitelist doesn't easily support whitelisting -L because it
-		// has no long form with '='.
-		const key = JSON.stringify(['blame', revision, path]);
-		const fileHunks = this.manager.performOperation<RawBlameHunk[]>(key, () => {
-			return this.commandExecutor.executeCommand(['blame', '--root', '--incremental', revision, '--', path])
-				.then(raw => {
-					if (token && token.isCancellationRequested) {
-						return [];
-					}
+	public blame(revision: string | undefined, path: string, range?: vscode.Range, token?: vscode.CancellationToken): Thenable<BlameHunk[]> {
+		let cacheKey: string;
+		let runCommand: () => Thenable<string>;
+		if (revision) {
+			// For immutable documents, we blame the whole file instead of using the `git
+			// blame -L123,456` flag to blame only a specific range because (1) it's
+			// faster if we compute it for the whole file in one operation because we
+			// usually need results for other lines and (2) our Git command whitelist
+			// doesn't easily support whitelisting -L because it has no long form with
+			// '='.
+			cacheKey = JSON.stringify(['blame', revision, path]);
+			runCommand = () => this.commandExecutor.executeCommand(['blame', '--root', '--incremental', revision, '--', path]);
+		} else {
+			// For mutable documents, we only blame the lines in the given range, because
+			// we're unlikely to be able to cache blame data of the whole file for very
+			// long (it would be invalidated upon the next edit).
+			cacheKey = JSON.stringify(['blame', path, Math.random()]);
+			const args = ['blame', '--root', '--incremental'];
+			if (range) {
+				args.push('-L', `${range.start.line + 1},${range.end.line + 1}`);
+			}
+			runCommand = () => this.commandExecutor.executeCommand(args.concat('--', path));
+		}
 
-					return parseGitBlame(raw);
-				});
+		const fileHunks = this.manager.performOperation<RawBlameHunk[]>(cacheKey, () => {
+			return runCommand().then(raw => {
+				if (token && token.isCancellationRequested) {
+					return [];
+				}
+
+				return parseGitBlame(raw);
+			});
 		}, token);
 
 		// TODO(sqs): can speed this up by filtering before we transform RawBlameHunk ->

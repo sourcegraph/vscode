@@ -23,12 +23,13 @@ export interface Repository extends vscode.Disposable {
 	resolveCommit(revision: string, token?: vscode.CancellationToken): Thenable<Commit | undefined>;
 
 	/**
-	 * Blames a file or a range within a file.
+	 * Blames a file or a range within a file. If revision is undefined, then the file in
+	 * the repository's worktree is blamed.
 	 *
 	 * Use the resolveCommit method to look up information about commits that the result
 	 * refers to.
 	 */
-	blame(revision: string, path: string, range?: vscode.Range, token?: vscode.CancellationToken): Thenable<BlameHunk[]>;
+	blame(revision: string | undefined, path: string, range?: vscode.Range, token?: vscode.CancellationToken): Thenable<BlameHunk[]>;
 }
 
 /**

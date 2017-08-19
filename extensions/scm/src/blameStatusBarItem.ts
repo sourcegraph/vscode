@@ -70,9 +70,9 @@ function update(resource: vscode.Uri | undefined, selections?: vscode.Selection[
 		return;
 	}
 
-	const { repo, revision, path } = info;
+	const { repo, revision, immutable, path } = info;
 
-	repo.blame!(revision.id, path, selections[0])
+	repo.blame(immutable && revision ? revision.id : undefined, path, selections[0])
 		.then(hunks => {
 			if (hunks.length === 0) {
 				statusBarItem.hide();

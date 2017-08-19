@@ -15,7 +15,14 @@ export interface ResolvedSCMRevision extends vscode.SCMRevision {
 
 export interface IResourceInfo {
 	repo: Repository;
-	revision: ResolvedSCMRevision;
+	revision?: ResolvedSCMRevision;
+
+	/**
+	 * Whether the resource is immutable. For example, a file at a specific Git commit is
+	 * immutable, but a file in Git worktree is mutable.
+	 */
+	immutable: boolean;
+
 	path: string;
 }
 
@@ -44,6 +51,7 @@ export function getResourceInfo(resource: vscode.Uri): IResourceInfo | undefined
 	return {
 		repo,
 		revision: repo.sourceControl.revision as ResolvedSCMRevision,
+		immutable: repoExtension.isRepoResource(resource),
 		path,
 	};
 }

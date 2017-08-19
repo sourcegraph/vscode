@@ -199,8 +199,8 @@ class BlameFileDecorator extends Disposable {
 			return Promise.resolve(undefined);
 		}
 
-		const { repo, revision, path } = info;
-		return repo.blame(revision.id, path).then(hunks => {
+		const { repo, revision, immutable, path } = info;
+		return repo.blame(immutable && revision ? revision.id : undefined, path).then(hunks => {
 			return {
 				editor,
 				selections: editor.selections,

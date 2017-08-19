@@ -145,10 +145,10 @@ class BlameLineDecorator extends Disposable {
 			return Promise.resolve([]);
 		}
 
-		const { repo, revision, path } = info;
+		const { repo, revision, immutable, path } = info;
 
 		return Promise.all(editor.selections.map(selection => {
-			return repo.blame(revision.id, path, selection).then(hunks => {
+			return repo.blame(immutable && revision ? revision.id : undefined, path, selection).then(hunks => {
 				return hunks.map<Decoration>(hunk => {
 					// Clip hunk range so we only add the decoration after lines that are selected.
 					const clippedRange = hunk.range.intersection(selection);
