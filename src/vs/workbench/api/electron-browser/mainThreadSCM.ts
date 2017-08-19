@@ -10,7 +10,7 @@ import URI from 'vs/base/common/uri';
 import Event, { Emitter } from 'vs/base/common/event';
 import { assign } from 'vs/base/common/objects';
 import { IDisposable, dispose } from 'vs/base/common/lifecycle';
-import { ISCMService, ISCMProvider, ISCMResource, ISCMResourceGroup, ISCMResourceDecorations, ISCMRevision } from 'vs/workbench/services/scm/common/scm';
+import { ISCMService, ISCMProvider, ISCMResource, ISCMResourceGroup, ISCMResourceDecorations, ISCMRevision, ICommandOptions } from 'vs/workbench/services/scm/common/scm';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { ICommandService } from 'vs/platform/commands/common/commands';
 import { ExtHostContext, MainThreadSCMShape, ExtHostSCMShape, SCMProviderFeatures, SCMRawResource, SCMGroupFeatures, MainContext, IExtHostContext } from '../node/extHost.protocol';
@@ -204,8 +204,8 @@ class MainThreadSCMProvider implements ISCMProvider {
 		return this.proxy.$provideOriginalResource(this.handle, uri);
 	}
 
-	executeCommand(args: string[]): TPromise<string> {
-		return this.proxy.$executeCommand(this.handle, args);
+	executeCommand(args: string[], options?: ICommandOptions): TPromise<string> {
+		return this.proxy.$executeCommand(this.handle, args, options);
 	};
 
 	toJSON(): any {

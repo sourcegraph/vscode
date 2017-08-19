@@ -33,7 +33,7 @@ class FakeSCMProvider implements ISCMProvider {
 	getOriginalResource(uri: any): any { }
 	dispose() { }
 
-	executeCommand(args: string[]): TPromise<string> {
+	executeCommand(args: string[], options?: any): TPromise<string> {
 		return TPromise.as(this.executeCommandOutput);
 	}
 }

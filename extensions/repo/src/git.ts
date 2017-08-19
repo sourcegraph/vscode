@@ -272,7 +272,11 @@ export class GitRepository implements Repository, vscode.Disposable {
 		});
 	}
 
-	public executeCommand(args: string[]): Thenable<string> {
+	public executeCommand(args: string[], options?: vscode.CommandOptions): Thenable<string> {
+		if (options && Object.keys(options).length !== 0) {
+			throw new Error('CommandOptions not supported for remote Git repositories');
+		}
+
 		return requestGraphQL<any>(`
 			query gitCmdRaw($repo: String, $params: [String]) {
 				root {

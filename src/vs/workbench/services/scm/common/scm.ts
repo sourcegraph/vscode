@@ -89,6 +89,13 @@ export interface ISCMRevision {
 	readonly id?: string;
 }
 
+/**
+ * Options for the command to execute.
+ */
+export interface ICommandOptions {
+	stdin?: string;
+}
+
 export interface ISCMProvider extends IDisposable {
 	readonly label: string;
 	readonly id: string;
@@ -111,7 +118,7 @@ export interface ISCMProvider extends IDisposable {
 	 * For example:
 	 * executeCommand(['--version']) would execute `git --version` for a git scm provider.
 	 */
-	executeCommand(args: string[]): TPromise<string>;
+	executeCommand(args: string[], options?: ICommandOptions): TPromise<string>;
 }
 
 export interface ISCMInput {

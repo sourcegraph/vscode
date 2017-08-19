@@ -5,7 +5,7 @@
 
 'use strict';
 
-import { Uri, Command, EventEmitter, Event, scm, commands, SourceControl, SourceControlResourceGroup, SourceControlResourceState, SourceControlResourceDecorations, Disposable, ProgressLocation, window, workspace, WorkspaceEdit } from 'vscode';
+import { Uri, Command, CommandOptions, EventEmitter, Event, scm, commands, SourceControl, SourceControlResourceGroup, SourceControlResourceState, SourceControlResourceDecorations, Disposable, ProgressLocation, window, workspace, WorkspaceEdit } from 'vscode';
 import { Repository as BaseRepository, Ref, Branch, Remote, Commit, GitErrorCodes, Stash } from './git';
 import { anyEvent, filterEvent, eventToPromise, dispose, find } from './util';
 import { memoize, throttle, debounce } from './decorators';
@@ -422,9 +422,16 @@ export class Repository implements Disposable {
 	//	await this.status();
 	// }
 
-	async executeCommand(args: string[]): Promise<string> {
+	async executeCommand(args: string[], options?: CommandOptions): Promise<string> {
 		return await this.run(Operation.ExecuteCommand, () => {
-			return this.repository.run(args).then(result => {
+			let runOptions: any;
+			if (options) {
+				if (typeof options.stdin === 'string') {
+					runOptions = { input: options.stdin };
+				}
+			}
+
+			return this.repository.run(args, runOptions).then(result => {
 				if (result.exitCode !== 0) {
 					const msg = `'git ${args.join('')}' failed with exitCode=${result.exitCode} stderr: ${result.stderr}`;
 					return Promise.reject(Object.assign(new Error(msg), { args, result }));

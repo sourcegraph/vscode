@@ -10,6 +10,7 @@ import { parse as parseGitLog } from './gitLogParser';
 import { Repository, Commit, BlameHunk } from './repository';
 import { OperationManager } from './operationManager';
 import { loggingCommandExecutor } from './commandExecutor';
+import { getResourceInfo } from './repositoryMap';
 
 /**
  * A Git SCM repository.
@@ -64,22 +65,64 @@ export class GitRepository implements Repository {
 		});
 	}
 
-	public blame(revision: string, path: string, range?: vscode.Range, token?: vscode.CancellationToken): Thenable<BlameHunk[]> {
-		// We blame the whole file instead of using the `git blame -L123,456` flag to
-		// blame only a specific range because (1) it's faster if we compute it for the
-		// whole file in one operation because we usually need results for other lines and
-		// (2) our Git command whitelist doesn't easily support whitelisting -L because it
-		// has no long form with '='.
-		const key = JSON.stringify(['blame', revision, path]);
-		const fileHunks = this.manager.performOperation<RawBlameHunk[]>(key, () => {
-			return this.commandExecutor.executeCommand(['blame', '--root', '--incremental', revision, '--', path])
-				.then(raw => {
-					if (token && token.isCancellationRequested) {
-						return [];
-					}
+	public blame(doc: vscode.TextDocument, ranges?: vscode.Range[], token?: vscode.CancellationToken): Thenable<BlameHunk[]> {
+		const info = getResourceInfo(doc.uri);
+		if (!info) {
+			return Promise.resolve([]);
+		}
 
-					return parseGitBlame(raw);
-				});
+		const { revision, immutable, path } = info;
+
+		let cacheKey: string;
+		let runCommand: () => Thenable<string>;
+		if (immutable && revision) {
+			// For immutable documents, we blame the whole file instead of using the `git
+			// blame -L123,456` flag to blame only a specific range because (1) it's
+			// faster if we compute it for the whole file in one operation because we
+			// usually need results for other lines and (2) our Git command whitelist
+			// doesn't easily support whitelisting -L because it has no long form with
+			// '='.
+			cacheKey = JSON.stringify(['blame', revision, path]);
+			runCommand = () => this.commandExecutor.executeCommand(['blame', '--root', '--incremental', revision.id, '--', path]);
+		} else {
+			// For mutable documents, we only blame the lines in the given range, because
+			// we're unlikely to be able to cache blame data of the whole file for very
+			// long (it would be invalidated upon the next edit).
+			const args = ['blame', '--root', '--incremental'];
+			if (ranges) {
+				// If we have a multiline selection and the file is not massive, though,
+				// then blame the whole file, as that probably yields a higher cache hit
+				// rate overall. This is just a heuristic.
+				const totalRangeLines = ranges.reduce((rangeLines, range) => {
+					return rangeLines + (range.end.line - range.start.line + 1);
+				}, 0);
+				if (totalRangeLines === 1 || doc.lineCount > 1500) {
+					for (const range of ranges) {
+						args.push('-L', `${range.start.line + 1},${range.end.line + 1}`);
+					}
+				}
+			}
+
+			// Don't include full contents in cache key; the doc version suffices.
+			cacheKey = JSON.stringify((args as any[]).concat(doc.version));
+
+			const options: vscode.CommandOptions = {};
+			if (doc.isDirty) {
+				args.push('--contents', '-');
+				options.stdin = doc.getText();
+			}
+
+			runCommand = () => this.commandExecutor.executeCommand(args.concat('--', path), options);
+		}
+
+		const fileHunks = this.manager.performOperation<RawBlameHunk[]>(cacheKey, () => {
+			return runCommand().then(raw => {
+				if (token && token.isCancellationRequested) {
+					return [];
+				}
+
+				return parseGitBlame(raw);
+			});
 		}, token);
 
 		// TODO(sqs): can speed this up by filtering before we transform RawBlameHunk ->
@@ -99,9 +142,9 @@ export class GitRepository implements Repository {
 				),
 			}))
 				.filter(hunk => {
-					if (range) {
-						// Filter to only hunks that overlap the range.
-						return !!hunk.range.intersection(range);
+					if (ranges) {
+						// Filter to only hunks that overlap the ranges.
+						return ranges.some(range => !!hunk.range.intersection(range));
 					}
 					return true;
 				});

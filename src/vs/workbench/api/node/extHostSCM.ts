@@ -408,13 +408,13 @@ export class ExtHostSCM {
 		});
 	}
 
-	$executeCommand(sourceControlHandle: number, args: string[]): TPromise<string> {
+	$executeCommand(sourceControlHandle: number, args: string[], options?: vscode.CommandOptions): TPromise<string> {
 		const sourceControl = this._sourceControls.get(sourceControlHandle);
 		if (!sourceControl || !sourceControl.commandExecutor) {
 			return TPromise.wrapError(new Error('no source control or command executor'));
 		}
 		return asWinJsPromise(token => {
-			return sourceControl.commandExecutor.executeCommand(args);
+			return sourceControl.commandExecutor.executeCommand(args, options);
 		});
 	}
 
