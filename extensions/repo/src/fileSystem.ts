@@ -17,18 +17,35 @@ export class RepoFileSystem implements vscode.FileSystemProvider, vscode.Disposa
 	private _onDidChange = new vscode.EventEmitter<vscode.Uri>();
 	public get onDidChange(): vscode.Event<vscode.Uri> { return this._onDidChange.event; }
 
+	/**
+	 * The absolute (immutable) revision of this repository that this file system should
+	 * draw its contents from.
+	 */
+	private revision: string | undefined;
+
+	/**
+	 * A promise that is resolved when the revision property is set for the first time
+	 * (via setRevision).
+	 */
+	private _ready: Thenable<void> = new Promise(resolve => { this._readyResolve = resolve; });
+	private _readyResolve: (() => void) | undefined;
+
 	private toDispose: vscode.Disposable[] = [];
 
 	constructor(
 		private root: vscode.Uri,
 		private repo: string,
-		private revision: string,
 	) {
 	}
 
 	setRevision(revision: string): void {
 		if (revision !== this.revision) {
 			this.revision = revision;
+
+			if (this._readyResolve) {
+				this._readyResolve();
+				this._readyResolve = undefined;
+			}
 
 			// Trigger a refresh of all documents.
 			vscode.workspace.textDocuments.forEach(doc => {
@@ -41,10 +58,12 @@ export class RepoFileSystem implements vscode.FileSystemProvider, vscode.Disposa
 	}
 
 	resolveFile(resource: vscode.Uri, options?: vscode.ResolveFileOptions): Thenable<vscode.FileStat | null> {
-		return listAllFiles(this.repo, this.revision).then(files => {
-			const path = toRelativePath(this.root, resource);
-			return toFileStat(this.root, files, toICustomResolveFileOptions(this.root, path, options));
-		});
+		return this._ready.then(() =>
+			listAllFiles(this.repo, this.revision!).then(files => {
+				const path = toRelativePath(this.root, resource);
+				return toFileStat(this.root, files, toICustomResolveFileOptions(this.root, path, options));
+			})
+		);
 	}
 
 	resolveContents(resource: vscode.Uri): Thenable<string> {
@@ -52,7 +71,7 @@ export class RepoFileSystem implements vscode.FileSystemProvider, vscode.Disposa
 		if (!path) {
 			throw new Error(`repository ${this.root.toString()} does not contain resource ${resource.toString()}`);
 		}
-		return getFileContents(this.repo, this.revision, path);
+		return this._ready.then(() => getFileContents(this.repo, this.revision!, path));
 	}
 
 	writeContents(resource: vscode.Uri, value: string): void {
@@ -91,6 +110,9 @@ function listAllFiles(repo: string, revision: string): Thenable<string[]> {
 	).then(root => {
 		if (!root.repository) {
 			throw new Error(`repository not found: ${repo}`);
+		}
+		if (!root.repository!.commit.commit!) {
+			throw new Error(`commit not found: ${revision} in ${repo}`);
 		}
 		return root.repository!.commit.commit!.tree!.files.map((file: any) => file.name);
 	});
