@@ -8,11 +8,11 @@ import * as vscode from 'vscode';
 import { LRUMap } from 'lru_map';
 
 /**
-* Performs repository operations, ensuring (1) single-flighting: if an operation is in
-* progress and another request is received for the same operation, it receives the result
-* of the in-flight operation instead of performing a duplicative operation; and (2)
-* caching: if an operation is cacheable, subsequent requests return the cached data.
-*/
+ * Performs repository operations, ensuring (1) single-flighting: if an operation is in
+ * progress and another request is received for the same operation, it receives the result
+ * of the in-flight operation instead of performing a duplicative operation; and (2)
+ * caching: if an operation is cacheable, subsequent requests return the cached data.
+ */
 export class OperationManager {
 	static readonly CacheSize = 1000;
 
