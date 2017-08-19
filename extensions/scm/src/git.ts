@@ -88,13 +88,21 @@ export class GitRepository implements Repository {
 			// For mutable documents, we only blame the lines in the given range, because
 			// we're unlikely to be able to cache blame data of the whole file for very
 			// long (it would be invalidated upon the next edit).
-			cacheKey = JSON.stringify(['blame', path, doc.version]);
 			const args = ['blame', '--root', '--incremental'];
 			if (ranges) {
-				for (const range of ranges) {
-					args.push('-L', `${range.start.line + 1},${range.end.line + 1}`);
+				// If we have a multiline selection and the file is not massive, though,
+				// then blame the whole file, as that probably yields a higher cache hit
+				// rate overall. This is just a heuristic.
+				const totalRangeLines = ranges.reduce((rangeLines, range) => {
+					return rangeLines + (range.end.line - range.start.line + 1);
+				}, 0);
+				if (totalRangeLines === 1 || doc.lineCount > 1500) {
+					for (const range of ranges) {
+						args.push('-L', `${range.start.line + 1},${range.end.line + 1}`);
+					}
 				}
 			}
+			cacheKey = JSON.stringify((args as any[]).concat(doc.version));
 			runCommand = () => this.commandExecutor.executeCommand(args.concat('--', path));
 		}
 
