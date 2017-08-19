@@ -65,7 +65,7 @@ export class GitRepository implements Repository {
 		});
 	}
 
-	public blame(doc: vscode.TextDocument, range?: vscode.Range, token?: vscode.CancellationToken): Thenable<BlameHunk[]> {
+	public blame(doc: vscode.TextDocument, ranges?: vscode.Range[], token?: vscode.CancellationToken): Thenable<BlameHunk[]> {
 		const info = getResourceInfo(doc.uri);
 		if (!info) {
 			return Promise.resolve([]);
@@ -90,8 +90,10 @@ export class GitRepository implements Repository {
 			// long (it would be invalidated upon the next edit).
 			cacheKey = JSON.stringify(['blame', path, Math.random()]);
 			const args = ['blame', '--root', '--incremental'];
-			if (range) {
-				args.push('-L', `${range.start.line + 1},${range.end.line + 1}`);
+			if (ranges) {
+				for (const range of ranges) {
+					args.push('-L', `${range.start.line + 1},${range.end.line + 1}`);
+				}
 			}
 			runCommand = () => this.commandExecutor.executeCommand(args.concat('--', path));
 		}
@@ -123,9 +125,9 @@ export class GitRepository implements Repository {
 				),
 			}))
 				.filter(hunk => {
-					if (range) {
-						// Filter to only hunks that overlap the range.
-						return !!hunk.range.intersection(range);
+					if (ranges) {
+						// Filter to only hunks that overlap the ranges.
+						return ranges.some(range => !!hunk.range.intersection(range));
 					}
 					return true;
 				});

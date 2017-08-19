@@ -145,18 +145,17 @@ class BlameLineDecorator extends Disposable {
 			return Promise.resolve([]);
 		}
 
-		return Promise.all(editor.selections.map(selection => {
-			return info.repo.blame(editor.document, selection).then(hunks => {
-				return hunks.map<Decoration>(hunk => {
+		return info.repo.blame(editor.document, editor.selections).then(hunks => {
+			return hunks.map<(Decoration | undefined)[]>(hunk => {
+				return editor.selections.map(selection => {
 					// Clip hunk range so we only add the decoration after lines that are selected.
 					const clippedRange = hunk.range.intersection(selection);
-					if (!clippedRange) {
-						throw new Error();
-					}
-					return { editor, range: clippedRange, hunk };
+					return clippedRange ? { editor, range: clippedRange, hunk } : undefined;
 				});
 			});
-		})).then(flatten);
+		})
+			.then(flatten)
+			.then<Decoration[]>(decorations => decorations.filter<Decoration>(isDecoration));
 	}
 
 	private updateAndRender(token: vscode.CancellationToken): Thenable<void> {
@@ -196,4 +195,8 @@ class BlameLineDecorator extends Disposable {
 			} as vscode.DecorationOptions;
 		}));
 	}
+}
+
+function isDecoration(v: any): v is Decoration {
+	return !!v;
 }

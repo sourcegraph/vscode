@@ -23,12 +23,12 @@ export interface Repository extends vscode.Disposable {
 	resolveCommit(revision: string, token?: vscode.CancellationToken): Thenable<Commit | undefined>;
 
 	/**
-	 * Blames a document or a range within a document.
+	 * Blames a document or ranges within a document.
 	 *
 	 * Use the resolveCommit method to look up information about commits that the result
 	 * refers to.
 	 */
-	blame(doc: vscode.TextDocument, range?: vscode.Range, token?: vscode.CancellationToken): Thenable<BlameHunk[]>;
+	blame(doc: vscode.TextDocument, ranges?: vscode.Range[], token?: vscode.CancellationToken): Thenable<BlameHunk[]>;
 }
 
 /**

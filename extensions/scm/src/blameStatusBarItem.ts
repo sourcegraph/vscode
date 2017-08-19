@@ -70,7 +70,7 @@ function update(doc: vscode.TextDocument | undefined, selections?: vscode.Select
 		return;
 	}
 
-	info.repo.blame(doc, selections[0])
+	info.repo.blame(doc, selections)
 		.then(hunks => {
 			if (hunks.length === 0) {
 				statusBarItem.hide();
