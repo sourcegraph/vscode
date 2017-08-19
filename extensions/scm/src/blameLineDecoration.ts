@@ -74,6 +74,7 @@ class BlameLineDecorator extends Disposable {
 		this._register(vscode.workspace.onDidChangeConfiguration(() => this.onDidChangeConfiguration()));
 		this._register(vscode.window.onDidChangeVisibleTextEditors(editors => this.onDidChangeVisibleEditors(editors)));
 		this._register(vscode.window.onDidChangeTextEditorSelection(event => this.onDidChangeSelection(event)));
+		this._register(vscode.workspace.onDidChangeTextDocument(event => this.onDidChangeTextDocument(event)));
 	}
 
 	private onDidChangeConfiguration(): void {
@@ -105,11 +106,27 @@ class BlameLineDecorator extends Disposable {
 		// Remove visible decorations immediately if we can determine now that our new
 		// selection will result in them being hidden.
 		const visibleDecorations = this.visibleDecorations.filter(({ editor }) => editor === event.textEditor);
+		const selectionsExpandedToFullLines = event.selections.map(sel => {
+			return new vscode.Range(new vscode.Position(sel.start.line, 0), new vscode.Position(sel.end.line, Number.MAX_SAFE_INTEGER));
+		});
 		const keepDecorations = this.visibleDecorations.filter(d => {
-			return event.selections.some(sel => !!sel.intersection(d.range));
+			// Keep a decoration if it is on a selected line.
+			return selectionsExpandedToFullLines.some(sel => sel.contains(d.range));
 		});
 		if (visibleDecorations.length !== keepDecorations.length) {
 			this.setDecorations(event.textEditor, keepDecorations);
+		}
+
+		this.debouncedUpdate();
+	}
+
+	private onDidChangeTextDocument(event: vscode.TextDocumentChangeEvent): void {
+		if (!vscode.window.visibleTextEditors.some(editor => editor.document === event.document)) {
+			return;
+		}
+
+		if (this.operation && !this.operation.token.isCancellationRequested) {
+			this.operation.cancel();
 		}
 
 		this.debouncedUpdate();
