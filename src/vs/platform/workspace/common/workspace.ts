@@ -146,7 +146,7 @@ export class LegacyWorkspace implements ILegacyWorkspace {
 
 export class Workspace implements IWorkspace {
 
-	private _rootsMap: TrieMap<URI> = new TrieMap<URI>(TrieMap.PathSplitter);
+	private _rootsMap: TrieMap<URI> = new TrieMap<URI>();
 
 	constructor(
 		public readonly id: string,
@@ -191,7 +191,7 @@ export class Workspace implements IWorkspace {
 	}
 
 	private updateRootsMap(): void {
-		this._rootsMap = new TrieMap<URI>(TrieMap.PathSplitter);
+		this._rootsMap = new TrieMap<URI>();
 		for (const root of this.roots) {
 			this._rootsMap.insert(root.toString(), root);
 		}

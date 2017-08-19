@@ -14,7 +14,7 @@ import { $ } from 'vs/base/browser/builder';
 import { IActionItem } from 'vs/base/browser/ui/actionbar/actionbar';
 import { CollapsibleView, IViewletViewOptions, IViewOptions } from 'vs/workbench/parts/views/browser/views';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
-import { NewWorkspaceAction, SaveWorkspaceAsAction } from 'vs/workbench/browser/actions/workspaceActions';
+import { NewEmptyWorkspaceAction, SaveWorkspaceAsAction } from 'vs/workbench/browser/actions/workspaceActions';
 import { attachButtonStyler } from 'vs/platform/theme/common/styler';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
@@ -50,7 +50,7 @@ export class EmptyView extends CollapsibleView {
 
 		let section = $('div.section').appendTo(container);
 
-		const actionClass = this.contextService.hasWorkspace() ? SaveWorkspaceAsAction : NewWorkspaceAction;
+		const actionClass = this.contextService.hasWorkspace() ? SaveWorkspaceAsAction : NewEmptyWorkspaceAction;
 
 		this.openWorkspaceButton = new Button(section);
 		attachButtonStyler(this.openWorkspaceButton, this.themeService);

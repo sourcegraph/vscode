@@ -98,6 +98,7 @@ export abstract class BaseWorkspacesAction extends Action {
 		}
 
 		const res = this.windowService.showMessageBox(opts);
+
 		return !buttons[res].canceled;
 	}
 
@@ -117,41 +118,6 @@ export abstract class BaseWorkspacesAction extends Action {
 	}
 }
 
-export class NewWorkspaceFromExistingAction extends BaseWorkspacesAction {
-
-	static ID = 'workbench.action.newWorkspaceFromExisting';
-	static LABEL = nls.localize('newWorkspaceFormExisting', "New Workspace From Existing...");
-
-	constructor(
-		id: string,
-		label: string,
-		@IWindowService windowService: IWindowService,
-		@IWorkspaceContextService contextService: IWorkspaceContextService,
-		@IEnvironmentService environmentService: IEnvironmentService,
-		@IWorkspacesService protected workspacesService: IWorkspacesService,
-		@IWindowsService protected windowsService: IWindowsService,
-	) {
-		super(id, label, windowService, environmentService, contextService);
-	}
-
-	public run(): TPromise<any> {
-		if (this.contextService.hasWorkspace()) {
-			let folders = this.pickFolders(mnemonicLabel(nls.localize({ key: 'select', comment: ['&& denotes a mnemonic'] }, "&&Select")), nls.localize('selectWorkspace', "Select Folders for Workspace"));
-			if (folders && folders.length) {
-				if (this.handleNotInMultiFolderWorkspaceCase(nls.localize('addSupported', "To open multiple folders, window reload is required."))) {
-					return this.createWorkspace([this.contextService.getWorkspace().roots[0], ...folders.map(folder => URI.file(folder))]);
-				}
-			}
-		}
-		return TPromise.as(null);
-	}
-
-	private createWorkspace(folders: URI[]): TPromise<void> {
-		return this.workspacesService.createWorkspace(distinct(folders.map(folder => folder.toString(true /* encoding */))))
-			.then(({ configPath }) => this.windowsService.openWindow([configPath]));
-	}
-}
-
 export class AddRootFolderAction extends BaseWorkspacesAction {
 
 	static ID = 'workbench.action.addRootFolder';
@@ -168,16 +134,15 @@ export class AddRootFolderAction extends BaseWorkspacesAction {
 		@IViewletService private viewletService: IViewletService
 	) {
 		super(id, label, windowService, environmentService, contextService);
-		this.class = 'add-root-folder';
 	}
 
 	public run(): TPromise<any> {
 		if (!this.contextService.hasWorkspace()) {
-			return this.instantiationService.createInstance(NewWorkspaceAction, NewWorkspaceAction.ID, NewWorkspaceAction.LABEL).run();
+			return this.instantiationService.createInstance(NewWorkspaceAction, NewWorkspaceAction.ID, NewWorkspaceAction.LABEL, []).run();
 		}
 
 		if (this.contextService.hasFolderWorkspace()) {
-			return this.instantiationService.createInstance(NewWorkspaceFromExistingAction, NewWorkspaceFromExistingAction.ID, NewWorkspaceFromExistingAction.LABEL).run();
+			return this.instantiationService.createInstance(NewWorkspaceAction, NewWorkspaceAction.ID, NewWorkspaceAction.LABEL, this.contextService.getWorkspace().roots).run();
 		}
 
 		const folders = super.pickFolders(mnemonicLabel(nls.localize({ key: 'add', comment: ['&& denotes a mnemonic'] }, "&&Add")), nls.localize('addFolderToWorkspaceTitle', "Add Folder to Workspace"));
@@ -188,6 +153,43 @@ export class AddRootFolderAction extends BaseWorkspacesAction {
 		return this.workspaceEditingService.addRoots(folders.map(folder => URI.file(folder))).then(() => {
 			return this.viewletService.openViewlet(this.viewletService.getDefaultViewletId(), true);
 		});
+	}
+}
+
+class NewWorkspaceAction extends BaseWorkspacesAction {
+
+	static ID = 'workbench.action.newWorkspace';
+	static LABEL = nls.localize('newWorkspace', "New Workspace...");
+
+	constructor(
+		id: string,
+		label: string,
+		private presetRoots: URI[],
+		@IWindowService windowService: IWindowService,
+		@IWorkspaceContextService contextService: IWorkspaceContextService,
+		@IEnvironmentService environmentService: IEnvironmentService,
+		@IWorkspacesService protected workspacesService: IWorkspacesService,
+		@IWindowsService protected windowsService: IWindowsService,
+	) {
+		super(id, label, windowService, environmentService, contextService);
+		this.class = 'add-root-folder';
+	}
+
+	public run(): TPromise<any> {
+		const folders = this.pickFolders(mnemonicLabel(nls.localize({ key: 'select', comment: ['&& denotes a mnemonic'] }, "&&Select")), nls.localize('selectWorkspace', "Select Folders for Workspace"));
+		if (folders && folders.length) {
+			if (this.handleNotInMultiFolderWorkspaceCase(nls.localize('addSupported', "To open multiple folders, window reload is required."))) {
+				return this.createWorkspace([...this.presetRoots, ...folders.map(folder => URI.file(folder))]);
+			}
+		}
+
+		return TPromise.as(null);
+	}
+
+	private createWorkspace(folders: URI[]): TPromise<void> {
+		const workspaceFolders = distinct(folders.map(folder => folder.toString(true /* encoding */)));
+
+		return this.windowService.createAndOpenWorkspace(workspaceFolders);
 	}
 }
 
@@ -250,15 +252,11 @@ export class SaveWorkspaceAsAction extends BaseWorkspacesAction {
 
 	private saveFolderWorkspace(configPath: string): TPromise<void> {
 		if (this.handleNotInMultiFolderWorkspaceCase(nls.localize('saveNotSupported', "To save workspace, window reload is required."))) {
-			// Create workspace first
-			this.workspacesService.createWorkspace(this.contextService.getWorkspace().roots.map(root => root.toString(true /* skip encoding */)))
-				.then(workspaceIdentifier => {
-					// Save the workspace in new location
-					return this.workspacesService.saveWorkspace(workspaceIdentifier, configPath)
-						// Open the saved workspace
-						.then(({ configPath }) => this.windowsService.openWindow([configPath]));
-				});
+			const workspaceFolders = this.contextService.getWorkspace().roots.map(root => root.toString(true /* skip encoding */));
+
+			return this.windowService.createAndOpenWorkspace(workspaceFolders, configPath);
 		}
+
 		return TPromise.as(null);
 	}
 
@@ -293,7 +291,6 @@ export class OpenWorkspaceAction extends Action {
 		id: string,
 		label: string,
 		@IWindowService private windowService: IWindowService,
-		@IWorkspaceContextService private contextService: IWorkspaceContextService
 	) {
 		super(id, label);
 	}
@@ -303,7 +300,7 @@ export class OpenWorkspaceAction extends Action {
 	}
 }
 
-export class NewWorkspaceAction extends Action {
+export class NewEmptyWorkspaceAction extends Action {
 
 	static ID = 'workbench.action.newWorkspace';
 	static LABEL = nls.localize('newWorkspace', "New Workspace...");
@@ -318,7 +315,7 @@ export class NewWorkspaceAction extends Action {
 	}
 
 	public run(): TPromise<any> {
-		return this.windowService.newWorkspace();
+		return this.windowService.createAndOpenWorkspace([]);
 	}
 }
 
@@ -334,6 +331,7 @@ export class OpenWorkspaceConfigFileAction extends Action {
 		@IWorkbenchEditorService private editorService: IWorkbenchEditorService
 	) {
 		super(id, label);
+
 		this.enabled = this.workspaceContextService.hasMultiFolderWorkspace();
 	}
 

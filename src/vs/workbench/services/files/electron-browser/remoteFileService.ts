@@ -96,9 +96,11 @@ export class RemoteFileService extends FileService {
 		}
 
 		// Try to use remote file system from extension.
-		return this.extensionService.activateByEvent(`resource:${scheme}`).then(() => {
-			return this._provider.get(scheme) || null;
-		});
+		return this.extensionService.onReady().then(() =>
+			this.extensionService.activateByEvent(`resource:${scheme}`).then(() =>
+				this._provider.get(scheme) || null
+			)
+		);
 	}
 
 	// --- resolve file

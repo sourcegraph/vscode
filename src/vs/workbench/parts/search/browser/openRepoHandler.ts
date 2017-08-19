@@ -273,7 +273,7 @@ export class WorkspaceEntry extends QuickOpenEntry {
 			if (this.contextService.hasWorkspace()) {
 				rootExists = this.contextService.getWorkspace().roots.some(root => root.toString() === repoResource.toString());
 			}
-			let p = TPromise.as<void>(void 0);
+			let p = TPromise.as<void, any>(void 0);
 			if (!rootExists) {
 				p = this.workspaceEditingService.addRoots([repoResource]).then(() =>
 					// Wait for workspace to reload and detect its newly added root.
@@ -567,7 +567,7 @@ export abstract class AbstractOpenWorkspaceHandler extends QuickOpenHandler {
 	protected cacheState: CacheState;
 
 	private pendingSearch: TPromise<WorkspaceQuickOpenModel> | undefined;
-	private searchDelayer: ThrottledDelayer<QuickOpenModel>;
+	private searchDelayer: ThrottledDelayer<QuickOpenModel | void>;
 
 	constructor(
 		@IInstantiationService private instantiationService: IInstantiationService,
@@ -630,7 +630,7 @@ export abstract class AbstractOpenWorkspaceHandler extends QuickOpenHandler {
 		return pendingSearch;
 	}
 
-	private search(query: ISearchQuery): TPromise<WorkspaceQuickOpenModel> {
+	private search(query: ISearchQuery): TPromise<WorkspaceQuickOpenModel | void> {
 		return this.workspaceSearchService.search(query).then((complete) => {
 			this.pendingSearch = undefined;
 

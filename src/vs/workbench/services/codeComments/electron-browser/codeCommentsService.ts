@@ -91,7 +91,7 @@ export class CodeCommentsService implements ICodeCommentsService {
 	public createThread(file: URI, range: Range, contents: string): TPromise<Thread> {
 		const revision = this.git.getLastPushedRevision(file);
 		const reverseDiff = revision.then(rev => this.git.getDiff(file, rev, { reverse: true }));
-		return TPromise.join([
+		return TPromise.join<any>([
 			revision,
 			reverseDiff,
 			this.git.getUserName(file),
@@ -155,7 +155,7 @@ export class CodeCommentsService implements ICodeCommentsService {
 	 * See the documentation on ICommentService.
 	 */
 	public replyToThread(file: URI, thread: Thread, contents: string): TPromise<void> {
-		return TPromise.join([
+		return TPromise.join<any>([
 			this.git.getUserName(file),
 			this.git.getUserEmail(file),
 			this.git.getRemoteRepo(file),

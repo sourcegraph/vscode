@@ -138,7 +138,7 @@ export class ResourceLabel extends IconLabel {
 		}
 
 		// TODO(sqs): this is hacky, find a better way to implement this.
-		const isRepoRevisionPinned = resource.scheme === Schemas.repoVersion;
+		const isRepoRevisionPinned = resource && resource.scheme === Schemas.repoVersion;
 		if (isRepoRevisionPinned) {
 			let rev: string;
 			if (resource.query && resource.query.length === 40) {

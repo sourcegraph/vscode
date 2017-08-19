@@ -886,7 +886,7 @@ export class TestWindowService implements IWindowService {
 		return TPromise.as(void 0);
 	}
 
-	newWorkspace(): TPromise<void> {
+	createAndOpenWorkspace(folders?: string[], path?: string): TPromise<void> {
 		return TPromise.as(void 0);
 	}
 
@@ -1022,7 +1022,7 @@ export class TestWindowsService implements IWindowsService {
 		return TPromise.as(void 0);
 	}
 
-	newWorkspace(windowId: number): TPromise<void> {
+	createAndOpenWorkspace(windowId: number, folders?: string[], path?: string): TPromise<void> {
 		return TPromise.as(void 0);
 	}
 

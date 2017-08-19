@@ -79,7 +79,7 @@ export class ExtensionTipsService implements IExtensionTipsService {
 						});
 					}
 					return [];
-				}).then<string[]>(null, err => [])
+				}).then<string[], string[]>(null, err => [] as string[])
 			)
 		).then(flatten);
 	}

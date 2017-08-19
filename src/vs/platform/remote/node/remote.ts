@@ -71,7 +71,7 @@ function sendGraphQLRequest<T>(remoteService: IRemoteService, query: string, var
 		data: JSON.stringify({ query, variables }),
 	})
 		.then(resp => asJson<{ data: T, errors: { message: string }[] }>(resp))
-		.then(resp => {
+		.then<T>(resp => {
 			if (resp.errors && resp.errors.length > 0) {
 				const messages = resp.errors.map(e => e.message);
 				return TPromise.wrapError(new Error(messages.join('\n')));

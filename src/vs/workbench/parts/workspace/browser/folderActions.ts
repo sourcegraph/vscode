@@ -24,7 +24,7 @@ import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
 import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
 import { IWorkspaceEditingService } from 'vs/workbench/services/workspace/common/workspaceEditing';
-import { BaseWorkspacesAction, NewWorkspaceFromExistingAction } from 'vs/workbench/browser/actions/workspaceActions';
+import { BaseWorkspacesAction } from 'vs/workbench/browser/actions/workspaceActions';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { registerThemingParticipant, ITheme, ICssStyleCollector } from 'vs/platform/theme/common/themeService';
 import { buttonBackground, buttonForeground, buttonHoverBackground, contrastBorder, tagBackground, tagForeground, tagBorder, tagHoverBackground, tagHoverForeground, tagHoverBorder, registerColor } from 'vs/platform/theme/common/colorRegistry';
@@ -395,11 +395,11 @@ export class AddLocalWorkspaceFolderAction extends BaseWorkspacesAction {
 
 	public run(): TPromise<any> {
 		if (!this.contextService.hasWorkspace()) {
-			return this.windowService.newWorkspace();
+			return this.windowService.createAndOpenWorkspace([]);
 		}
 
 		if (this.contextService.hasFolderWorkspace()) {
-			return this.instantiationService.createInstance(NewWorkspaceFromExistingAction, NewWorkspaceFromExistingAction.ID, NewWorkspaceFromExistingAction.LABEL).run();
+			return this.windowService.createAndOpenWorkspace([this.contextService.getWorkspace().roots[0].toString()]);
 		}
 
 		const folders = super.pickFolders(localize({ key: 'add', comment: ['&& denotes a mnemonic'] }, "&&Add"), localize('addFolderToWorkspaceTitle', "Add Folder to Workspace"));
