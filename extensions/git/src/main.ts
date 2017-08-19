@@ -9,11 +9,9 @@ import * as nls from 'vscode-nls';
 const localize = nls.config(process.env.VSCODE_NLS_CONFIG)();
 import { ExtensionContext, workspace, window, Disposable, commands, Uri } from 'vscode';
 import { findGit, Git, IGit } from './git';
-import { Repository } from './repository';
 import { Model } from './model';
 import { CommandCenter } from './commands';
 import { GitContentProvider } from './contentProvider';
-// import { AutoFetcher } from './autofetch';
 import { Askpass } from './askpass';
 import { toDisposable } from './util';
 import TelemetryReporter from 'vscode-extension-telemetry';
@@ -33,7 +31,7 @@ async function init(context: ExtensionContext, disposables: Disposable[]): Promi
 	const askpass = new Askpass();
 	const env = await askpass.getEnv();
 	const git = new Git({ gitPath: info.path, version: info.version, env });
-	const model = new Model();
+	const model = new Model(git);
 	disposables.push(model);
 
 	if (!enabled) {
@@ -42,34 +40,15 @@ async function init(context: ExtensionContext, disposables: Disposable[]): Promi
 		return;
 	}
 
-	for (const folder of workspace.workspaceFolders || []) {
-		if (folder.uri.scheme && folder.uri.scheme !== 'file') {
-			// This git extension only works for local git repositories, not for remote git
-			// repositories. The 'repo' extension is used for remote repositories.
-			continue;
-		}
-
-		const repositoryRoot = await git.getRepositoryRoot(folder.uri.fsPath);
-		const repository = new Repository(git.open(repositoryRoot));
-
-		model.register(repository);
-	}
-
 	outputChannel.appendLine(localize('using git', "Using git {0} from {1}", info.version, info.path));
 
 	const onOutput = str => outputChannel.append(str);
 	git.onOutput.addListener('log', onOutput);
 	disposables.push(toDisposable(() => git.onOutput.removeListener('log', onOutput)));
 
-	const commandCenter = new CommandCenter(git, model, outputChannel, telemetryReporter);
-	const contentProvider = new GitContentProvider(model);
-	// const autoFetcher = new AutoFetcher(repository);
-
 	disposables.push(
-		commandCenter,
-		contentProvider,
-		// autoFetcher,
-		// repository
+		new CommandCenter(git, model, outputChannel, telemetryReporter),
+		new GitContentProvider(model),
 	);
 
 	await checkGitVersion(info);

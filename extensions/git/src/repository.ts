@@ -10,6 +10,7 @@ import { Repository as BaseRepository, Ref, Branch, Remote, Commit, GitErrorCode
 import { anyEvent, filterEvent, eventToPromise, dispose, find } from './util';
 import { memoize, throttle, debounce } from './decorators';
 import { toGitUri } from './uri';
+import { AutoFetcher } from './autofetch';
 import * as path from 'path';
 import * as nls from 'vscode-nls';
 import * as fs from 'fs';
@@ -270,8 +271,6 @@ export interface GitResourceGroup extends SourceControlResourceGroup {
 
 export class Repository implements Disposable {
 
-	private static handle = 0;
-
 	private _onDidChangeRepository = new EventEmitter<Uri>();
 	readonly onDidChangeRepository: Event<Uri> = this._onDidChangeRepository.event;
 
@@ -362,10 +361,9 @@ export class Repository implements Disposable {
 		const onRelevantGitChange = filterEvent(onGitChange, uri => !/\/\.git\/index\.lock$/.test(uri.path));
 		onRelevantGitChange(this._onDidChangeRepository.fire, this._onDidChangeRepository, this.disposables);
 
-		const id = `git${Repository.handle++}`;
 		const label = `Git - ${path.basename(repository.root)}`;
 
-		this._sourceControl = scm.createSourceControl(id, {
+		this._sourceControl = scm.createSourceControl('git', {
 			rootFolder: Uri.file(repository.root),
 			label,
 		});
@@ -390,6 +388,8 @@ export class Repository implements Disposable {
 		this.disposables.push(this.mergeGroup);
 		this.disposables.push(this.indexGroup);
 		this.disposables.push(this.workingTreeGroup);
+
+		this.disposables.push(new AutoFetcher(this));
 
 		this.updateCommitTemplate();
 		this.status();
