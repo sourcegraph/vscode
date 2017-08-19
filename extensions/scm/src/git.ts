@@ -88,7 +88,7 @@ export class GitRepository implements Repository {
 			// For mutable documents, we only blame the lines in the given range, because
 			// we're unlikely to be able to cache blame data of the whole file for very
 			// long (it would be invalidated upon the next edit).
-			cacheKey = JSON.stringify(['blame', path, Math.random()]);
+			cacheKey = JSON.stringify(['blame', path, doc.version]);
 			const args = ['blame', '--root', '--incremental'];
 			if (ranges) {
 				for (const range of ranges) {
