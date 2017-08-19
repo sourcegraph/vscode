@@ -93,7 +93,7 @@ class BlameFileDecorator extends Disposable {
 	constructor() {
 		super();
 
-		this.debouncedUpdateSelection = debounce(this.debouncedUpdateSelection, SELECTION_DEBOUNCE_WAIT_MSEC, { leading: true, trailing: true });
+		this.debouncedUpdate = debounce(this.debouncedUpdate, SELECTION_DEBOUNCE_WAIT_MSEC, { leading: true, trailing: true });
 
 		this.registerListeners();
 
@@ -109,6 +109,7 @@ class BlameFileDecorator extends Disposable {
 		this._register(vscode.workspace.onDidChangeConfiguration(() => this.onDidChangeConfiguration()));
 		this._register(vscode.window.onDidChangeVisibleTextEditors(editors => this.onDidChangeVisibleEditors(editors)));
 		this._register(vscode.window.onDidChangeTextEditorSelection(event => this.onDidChangeSelection(event)));
+		this._register(vscode.workspace.onDidChangeTextDocument(event => this.onDidChangeTextDocument(event)));
 	}
 
 	private onDidChangeConfiguration(): void {
@@ -123,14 +124,27 @@ class BlameFileDecorator extends Disposable {
 
 	private onDidChangeSelection(event: vscode.TextEditorSelectionChangeEvent): void {
 		if (this.shouldDecorate(event.textEditor) && this.decorationSelectionIsStale(event.textEditor)) {
-			this.debouncedUpdateSelection(event.textEditor);
+			this.debouncedUpdate(event.textEditor);
 		}
 	}
 
-	private debouncedUpdateSelection(editor: vscode.TextEditor): void {
+	private onDidChangeTextDocument(event: vscode.TextDocumentChangeEvent): void {
+		if (this.shouldDecorate(event.document)) {
+			const editor = vscode.window.visibleTextEditors.find(editor => editor.document === event.document && editor.viewColumn !== undefined);
+			if (editor) {
+				this.debouncedUpdate(editor, true);
+			}
+		}
+	}
+
+	private debouncedUpdate(editor: vscode.TextEditor, force?: boolean): void {
+		if (!this.shouldDecorate(editor)) {
+			return;
+		}
+
 		// Confirm again that the decoration is stale; it might have become fresh during
 		// our debounce delay.
-		if (!this.shouldDecorate(editor) || !this.decorationSelectionIsStale(editor)) {
+		if (!force && !this.decorationSelectionIsStale(editor)) {
 			return;
 		}
 
@@ -147,10 +161,19 @@ class BlameFileDecorator extends Disposable {
 	}
 
 	/**
-	 * Returns whether this editor should be decorated with file blame information.
+	 * Returns whether this editor or document should be decorated with file blame
+	 * information.
 	 */
-	private shouldDecorate(editor: vscode.TextEditor): boolean {
-		return vscode.window.visibleTextEditors.includes(editor) && editor.viewColumn !== undefined;
+	private shouldDecorate(editor: vscode.TextEditor): boolean;
+	private shouldDecorate(doc: vscode.TextDocument): boolean;
+	private shouldDecorate(arg: any): boolean {
+		if (arg.document) {
+			const editor = arg as vscode.TextEditor;
+			return vscode.window.visibleTextEditors.includes(editor) && editor.viewColumn !== undefined;
+		}
+
+		const doc = arg as vscode.TextDocument;
+		return vscode.window.visibleTextEditors.some(editor => editor.document === doc && editor.viewColumn !== undefined);
 	}
 
 	private onDidChangeVisibleEditors(editors: vscode.TextEditor[]): void {
