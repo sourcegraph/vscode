@@ -192,15 +192,12 @@ class BlameFileDecorator extends Disposable {
 			return Promise.resolve(undefined);
 		}
 
-		const resource = editor.document.uri;
-
-		const info = getResourceInfo(resource);
+		const info = getResourceInfo(editor.document.uri);
 		if (!info) {
 			return Promise.resolve(undefined);
 		}
 
-		const { repo, revision, immutable, path } = info;
-		return repo.blame(immutable && revision ? revision.id : undefined, path).then(hunks => {
+		return info.repo.blame(editor.document).then(hunks => {
 			return {
 				editor,
 				selections: editor.selections,

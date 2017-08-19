@@ -37,7 +37,7 @@ export function create(): vscode.Disposable {
 
 	vscode.window.onDidChangeActiveTextEditor(editor => {
 		if (editor && editor.viewColumn) {
-			debouncedUpdate(editor.document.uri, editor.selections);
+			debouncedUpdate(editor.document, editor.selections);
 		} else {
 			update(undefined);
 		}
@@ -45,7 +45,7 @@ export function create(): vscode.Disposable {
 
 	vscode.window.onDidChangeTextEditorSelection(e => {
 		if (e.textEditor && e.textEditor === vscode.window.activeTextEditor && e.textEditor.viewColumn) {
-			debouncedUpdate(e.textEditor.document.uri, e.selections);
+			debouncedUpdate(e.textEditor.document, e.selections);
 		}
 	}, null, disposables);
 
@@ -56,23 +56,21 @@ const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignmen
 
 const debouncedUpdate = debounce(update, SELECTION_DEBOUNCE_WAIT_MSEC, { leading: true, trailing: true });
 
-function update(resource: undefined): void;
-function update(resource: vscode.Uri, selections: vscode.Selection[]): void;
-function update(resource: vscode.Uri | undefined, selections?: vscode.Selection[]): void {
-	if (!resource || !selections) {
+function update(doc: undefined): void;
+function update(doc: vscode.TextDocument, selections: vscode.Selection[]): void;
+function update(doc: vscode.TextDocument | undefined, selections?: vscode.Selection[]): void {
+	if (!doc || !selections) {
 		statusBarItem.hide();
 		return;
 	}
 
-	const info = getResourceInfo(resource);
+	const info = getResourceInfo(doc.uri);
 	if (!info) {
 		statusBarItem.hide();
 		return;
 	}
 
-	const { repo, revision, immutable, path } = info;
-
-	repo.blame(immutable && revision ? revision.id : undefined, path, selections[0])
+	info.repo.blame(doc, selections[0])
 		.then(hunks => {
 			if (hunks.length === 0) {
 				statusBarItem.hide();

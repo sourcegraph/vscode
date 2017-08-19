@@ -10,6 +10,7 @@ import { parse as parseGitLog } from './gitLogParser';
 import { Repository, Commit, BlameHunk } from './repository';
 import { OperationManager } from './operationManager';
 import { loggingCommandExecutor } from './commandExecutor';
+import { getResourceInfo } from './repositoryMap';
 
 /**
  * A Git SCM repository.
@@ -64,10 +65,17 @@ export class GitRepository implements Repository {
 		});
 	}
 
-	public blame(revision: string | undefined, path: string, range?: vscode.Range, token?: vscode.CancellationToken): Thenable<BlameHunk[]> {
+	public blame(doc: vscode.TextDocument, range?: vscode.Range, token?: vscode.CancellationToken): Thenable<BlameHunk[]> {
+		const info = getResourceInfo(doc.uri);
+		if (!info) {
+			return Promise.resolve([]);
+		}
+
+		const { revision, immutable, path } = info;
+
 		let cacheKey: string;
 		let runCommand: () => Thenable<string>;
-		if (revision) {
+		if (immutable && revision) {
 			// For immutable documents, we blame the whole file instead of using the `git
 			// blame -L123,456` flag to blame only a specific range because (1) it's
 			// faster if we compute it for the whole file in one operation because we
@@ -75,7 +83,7 @@ export class GitRepository implements Repository {
 			// doesn't easily support whitelisting -L because it has no long form with
 			// '='.
 			cacheKey = JSON.stringify(['blame', revision, path]);
-			runCommand = () => this.commandExecutor.executeCommand(['blame', '--root', '--incremental', revision, '--', path]);
+			runCommand = () => this.commandExecutor.executeCommand(['blame', '--root', '--incremental', revision.id, '--', path]);
 		} else {
 			// For mutable documents, we only blame the lines in the given range, because
 			// we're unlikely to be able to cache blame data of the whole file for very
