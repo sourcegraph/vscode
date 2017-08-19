@@ -92,7 +92,7 @@ export abstract class FoldersListView extends CollapsibleView {
 		const onKeyDownForList = onKeyDown.filter(() => this.count() > 0);
 		onKeyDownForList.filter(e => e.keyCode === KeyCode.Enter && (e.ctrlKey || (isMacintosh && e.metaKey)))
 			.on(this.onModifierEnter, this, this.disposables);
-		onKeyDownForList.filter(e => e.keyCode === KeyCode.Delete)
+		onKeyDownForList.filter(e => e.keyCode === KeyCode.Delete || e.keyCode === KeyCode.Backspace)
 			.on(this.onDelete, this, this.disposables);
 
 		this.disposables.push(attachListStyler(this.list.widget, this.themeService));
