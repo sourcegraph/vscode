@@ -32,8 +32,8 @@ export function requestGraphQL<T>(query: string, variables: { [name: string]: an
 export function toRelativePath(folder: vscode.Uri, resource: vscode.Uri): string | undefined {
 	// Handle root with revision in querystring and resources with revision in
 	// querystring.
-	const folderString = folder.with({ query: '' }).toString();
-	const resourceString = resource.with({ query: '' }).toString();
+	const folderString = folder.with({ query: '' }).toString(true /* skipEncoding */);
+	const resourceString = resource.with({ query: '' }).toString(true /* skipEncoding */);
 
 	const baseMatches = resourceString === folderString || resourceString.startsWith(folderString + '/');
 	const queryMatches = (!folder.query && !resource.query) || (folder.query === resource.query);
