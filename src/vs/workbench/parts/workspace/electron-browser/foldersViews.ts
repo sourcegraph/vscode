@@ -22,7 +22,7 @@ import { PagedList } from 'vs/base/browser/ui/list/listPaging';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { Delegate, Renderer } from 'vs/workbench/parts/workspace/browser/foldersList';
 import { IFolder, IFolderCatalogService, WorkspaceFolderState } from 'vs/workbench/parts/workspace/common/workspace';
-import { IFolderAction, AddWorkspaceFolderAction, RemoveWorkspaceFolderAction, ExploreWorkspaceFolderAction, AddAndExploreWorkspaceFolderAction } from 'vs/workbench/parts/workspace/browser/folderActions';
+import { IFolderAction, AddWorkspaceFolderAction, RemoveWorkspaceFoldersAction, ExploreWorkspaceFolderAction, AddAndExploreWorkspaceFolderAction } from 'vs/workbench/parts/workspace/browser/folderActions';
 import { IListService } from 'vs/platform/list/browser/listService';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { attachListStyler, attachBadgeStyler } from 'vs/platform/theme/common/styler';
@@ -177,21 +177,14 @@ export abstract class FoldersListView extends CollapsibleView {
 		e.preventDefault();
 		e.stopPropagation();
 
-		const folders = this.list.getFocus().map(i => this.list.model.get(i));
+		const folders = this.list.widget.getSelection().map(i => this.list.model.get(i));
 		if (folders.length) {
 			this.list.focusNext();
 		}
-		const promises = folders.map(folder => {
-			if (folder.state === WorkspaceFolderState.Active) {
-				// Remove folder from current workspace.
-				const removeAction = this.instantiationService.createInstance(RemoveWorkspaceFolderAction);
-				removeAction.folder = folder;
-				return removeAction.run();
-			}
-			return void 0;
-		});
 
-		TPromise.join(promises).done(null, errors.onUnexpectedError);
+		const foldersToRemove = folders.filter(f => f.state === WorkspaceFolderState.Active);
+		const removeAction = this.instantiationService.createInstance(RemoveWorkspaceFoldersAction, foldersToRemove);
+		removeAction.run().done(null, errors.onUnexpectedError);
 	}
 
 	public onModifierEnter(e: StandardKeyboardEvent): void {

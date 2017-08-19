@@ -146,6 +146,30 @@ export class RemoveWorkspaceFolderAction extends Action {
 	}
 }
 
+/**
+ * Remove multiple workspace folders.
+ */
+export class RemoveWorkspaceFoldersAction extends Action {
+
+	constructor(
+		private foldersToRemove: IFolder[],
+		@IWorkspaceEditingService private workspaceEditingService: IWorkspaceEditingService,
+		@IConfigurationService private configurationService: IConfigurationService,
+		@IFolderCatalogService private catalogService: IFolderCatalogService,
+	) {
+		super('workspace.folder.removeMultiple');
+	}
+
+	run(): TPromise<any> {
+		const promise = this.workspaceEditingService.removeRoots(this.foldersToRemove.map(f => f.uri))
+			.then(() => this.configurationService.reloadConfiguration());
+		for (const folder of this.foldersToRemove) {
+			this.catalogService.monitorFolderOperation(folder, FolderOperation.Removing, promise);
+		}
+		return promise;
+	}
+}
+
 export class RemoveWorkspaceFolderExplorerAction extends Action {
 
 	private static LABEL = localize('removeFolderFromWorkspace', "Remove Folder from Workspace");
