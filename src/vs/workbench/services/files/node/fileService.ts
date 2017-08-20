@@ -205,10 +205,6 @@ export class FileService implements IFileService {
 		return this.resolveFile(resource).then(() => true, () => false);
 	}
 
-	public isWritable(resource: uri): TPromise<boolean> {
-		return TPromise.as(true); // assume all local file system resources are writable
-	}
-
 	public resolveContent(resource: uri, options?: IResolveContentOptions): TPromise<IContent> {
 		return this.doResolveContent(resource, options, (stat, enc) => this.resolveFileContent(stat, enc));
 	}

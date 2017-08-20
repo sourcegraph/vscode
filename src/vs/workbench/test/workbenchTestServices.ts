@@ -680,10 +680,6 @@ export class TestFileService implements IFileService {
 		return TPromise.as(null);
 	}
 
-	isWritable(resource: URI): TPromise<boolean> {
-		return TPromise.as(true);
-	}
-
 	resolveContent(resource: URI, options?: IResolveContentOptions): TPromise<IContent> {
 		return TPromise.as({
 			resource: resource,
