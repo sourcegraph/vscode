@@ -58,7 +58,8 @@ class BlameLineDecorator extends Disposable {
 
 	private operation: vscode.CancellationTokenSource | undefined;
 
-	private enabled: boolean;
+	private blameCursorEnabled: boolean;
+	private blameSelectionEnabled: boolean;
 	private blameFileEnabled: boolean;
 
 	constructor() {
@@ -79,12 +80,14 @@ class BlameLineDecorator extends Disposable {
 
 	private onDidChangeConfiguration(): void {
 		const config = vscode.workspace.getConfiguration('scm');
-		const enabled = !!config.get<boolean>('blame.lines');
+		const blameCursorEnabled = !!config.get<boolean>('blame.cursor');
+		const blameSelectionEnabled = !!config.get<boolean>('blame.selection');
 		const blameFileEnabled = !!config.get<boolean>('blame.file');
-		if (this.enabled === enabled && this.blameFileEnabled === blameFileEnabled) {
+		if (this.blameCursorEnabled === blameCursorEnabled && this.blameSelectionEnabled === blameSelectionEnabled && this.blameFileEnabled === blameFileEnabled) {
 			return;
 		}
-		this.enabled = enabled;
+		this.blameCursorEnabled = blameCursorEnabled;
+		this.blameSelectionEnabled = blameSelectionEnabled;
 		this.blameFileEnabled = blameFileEnabled;
 
 		this.debouncedUpdate();
@@ -133,7 +136,7 @@ class BlameLineDecorator extends Disposable {
 	}
 
 	private debouncedUpdate(): void {
-		if (!this.enabled) {
+		if (!this.blameCursorEnabled && !this.blameSelectionEnabled) {
 			for (const editor of vscode.window.visibleTextEditors) {
 				this.setDecorations(editor, []);
 			}
@@ -154,6 +157,9 @@ class BlameLineDecorator extends Disposable {
 		if (token && token.isCancellationRequested) {
 			return Promise.resolve([]);
 		}
+		if (!this.blameCursorEnabled && !this.blameSelectionEnabled) {
+			return Promise.resolve([]);
+		}
 
 		const resource = editor.document.uri;
 
@@ -162,9 +168,15 @@ class BlameLineDecorator extends Disposable {
 			return Promise.resolve([]);
 		}
 
-		return info.repo.blame(editor.document, editor.selections).then(hunks => {
+		let selections = editor.selections;
+		if (!this.blameCursorEnabled) {
+			// Only blame non-empty selections.
+			selections = selections.filter(sel => !sel.isEmpty);
+		}
+
+		return info.repo.blame(editor.document, selections).then(hunks => {
 			return hunks.map<(Decoration | undefined)[]>(hunk => {
-				return editor.selections.map(selection => {
+				return selections.map(selection => {
 					// Clip hunk range so we only add the decoration after lines that are selected.
 					const clippedRange = hunk.range.intersection(selection);
 					return clippedRange ? { editor, range: clippedRange, hunk } : undefined;

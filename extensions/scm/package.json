@@ -38,10 +38,15 @@
           "default": false,
           "description": "%scm.config.blame.file%"
         },
-        "scm.blame.lines": {
+        "scm.blame.cursor": {
+          "type": "boolean",
+          "default": false,
+          "description": "%scm.config.blame.cursor%"
+        },
+        "scm.blame.selection": {
           "type": "boolean",
           "default": true,
-          "description": "%scm.config.blame.lines%"
+          "description": "%scm.config.blame.selection%"
         }
       }
     }
