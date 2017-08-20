@@ -10,6 +10,7 @@ import platform = require('vs/base/common/platform');
 import * as path from 'path';
 import * as querystring from 'querystring';
 import URI from 'vs/base/common/uri';
+import { Schemas } from 'vs/base/common/network';
 import errors = require('vs/base/common/errors');
 import types = require('vs/base/common/types');
 import { TPromise } from 'vs/base/common/winjs.base';
@@ -467,7 +468,11 @@ export class ElectronWindow extends Themable {
 
 	private toInputs(paths: IPath[], isNew: boolean): IResourceInputType[] {
 		return paths.map(p => {
-			const resource = URI.parse(p.filePath);
+			let resource = URI.parse(p.filePath);
+			if (!resource.scheme) {
+				resource = resource.with({ scheme: Schemas.file });
+			}
+
 			let input: IResourceInput | IUntitledResourceInput;
 			if (isNew) {
 				input = { filePath: resource.fsPath, options: { pinned: true } } as IUntitledResourceInput;
