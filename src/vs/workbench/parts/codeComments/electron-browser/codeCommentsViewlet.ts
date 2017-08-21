@@ -364,14 +364,18 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 
 registerThemingParticipant((theme, collector) => {
 	const contentColor = theme.getColor(TAB_ACTIVE_FOREGROUND);
-	const headerColor = theme.getColor(TAB_INACTIVE_FOREGROUND);
-	const listHoverColor = theme.getColor(listHoverBackground);
 	if (contentColor) {
 		collector.addRule(`.codeComments .comment .content { color: ${contentColor}; }`);
 		collector.addRule(`.codeComments .thread .content { color: ${contentColor}; }`);
+	}
+	const headerColor = theme.getColor(TAB_INACTIVE_FOREGROUND);
+	if (headerColor) {
 		collector.addRule(`.codeComments .comment .leftRight { color: ${headerColor}; }`);
 		collector.addRule(`.codeComments .thread .leftRight { color: ${headerColor}; }`);
 		collector.addRule(`.codeComments .create .hint { color: ${headerColor}; }`);
+	}
+	const listHoverColor = theme.getColor(listHoverBackground);
+	if (listHoverColor) {
 		collector.addRule(`.codeComments .thread, .codeComments .comment, .codeComments .create { border-color: ${listHoverColor}; }`);
 		collector.addRule(`.codeComments .thread:hover { background-color: ${listHoverColor}; }`);
 	}

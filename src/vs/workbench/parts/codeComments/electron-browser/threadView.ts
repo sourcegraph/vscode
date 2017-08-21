@@ -20,6 +20,13 @@ import { MessageType } from 'vs/base/browser/ui/inputbox/inputBox';
 import Event, { Emitter } from 'vs/base/common/event';
 import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
 import { Action } from 'vs/base/common/actions';
+import { renderMarkdown } from 'vs/base/browser/htmlContentRenderer';
+import { onUnexpectedError } from 'vs/base/common/errors';
+import { IOpenerService } from 'vs/platform/opener/common/opener';
+import { IModeService } from 'vs/editor/common/services/modeService';
+import { tokenizeToString } from 'vs/editor/common/modes/textToHtmlTokenizer';
+import { editorActiveLinkForeground, editorBackground } from 'vs/platform/theme/common/colorRegistry';
+import { registerThemingParticipant } from 'vs/platform/theme/common/themeService';
 
 /**
  * Renders the list of comments in a single thread.
@@ -39,6 +46,8 @@ export class ThreadView extends Disposable {
 		@IProgressService private progressService: IProgressService,
 		@IInstantiationService private instantiationService: IInstantiationService,
 		@IContextMenuService private contextMenuService: IContextMenuService,
+		@IOpenerService private openerService: IOpenerService,
+		@IModeService private modeService: IModeService,
 	) {
 		super();
 		this._register(this.codeCommentsService.onCommentsDidChange(e => this.onCommentsDidChange(e)));
@@ -70,7 +79,21 @@ export class ThreadView extends Disposable {
 						});
 					});
 					div.div({ class: 'content' }, div => {
-						div.text(comment.contents);
+						const renderedContents = renderMarkdown(comment.contents, {
+							actionCallback: (content) => {
+								this.openerService.open(URI.parse(content)).then(void 0, onUnexpectedError);
+							},
+							codeBlockRenderer: (languageAlias, value): string | TPromise<string> => {
+								if (!languageAlias) {
+									return value;
+								}
+								const modeId = this.modeService.getModeIdForLanguageName(languageAlias);
+								return this.modeService.getOrCreateMode(modeId).then(_ => {
+									return tokenizeToString(value, modeId);
+								});
+							}
+						});
+						div.getHTMLElement().appendChild(renderedContents);
 						this._register(addDisposableListener(div.getHTMLElement(), 'contextmenu', (e: MouseEvent) => {
 							this.contextMenuService.showContextMenu({
 								getAnchor: () => e,
@@ -111,3 +134,16 @@ export class ThreadView extends Disposable {
 		super.dispose();
 	}
 }
+
+registerThemingParticipant((theme, collector) => {
+	const linkColor = theme.getColor(editorActiveLinkForeground);
+	if (linkColor) {
+		collector.addRule(`.codeComments .comment .content a { color: ${linkColor}; }`);
+		collector.addRule(`.codeComments .thread .content a { color: ${linkColor}; }`);
+	}
+	const editorBackgroundColor = theme.getColor(editorBackground);
+	if (editorBackgroundColor) {
+		collector.addRule(`.codeComments .comment .content .code { background-color: ${editorBackgroundColor}; }`);
+		collector.addRule(`.codeComments .thread .content .code { background-color: ${editorBackgroundColor}; }`);
+	}
+});

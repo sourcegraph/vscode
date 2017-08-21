@@ -65,6 +65,11 @@
 	margin-top: 8px;
 }
 
+.codeComments .comment .content .code,
+.codeComments .thread .content .code {
+	padding: 8px;
+}
+
 .codeComments .thread .content {
 	cursor: pointer;
 }
