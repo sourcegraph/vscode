@@ -40,7 +40,7 @@
     "node-pty": "0.6.9",
     "nsfw": "1.0.16",
     "semver": "4.3.6",
-    "telligent-tracker": "0.1.2",
+    "telligent-tracker": "0.1.3",
     "v8-profiler": "jrieken/v8-profiler#vscode",
     "vscode-debugprotocol": "1.22.0",
     "vscode-ripgrep": "0.0.25",

@@ -147,7 +147,8 @@ export class TelligentWrapper {
 				platform: TELLIGENT_PLATFORM,
 				encodeBase64: false,
 				env: env,
-				forceSecureTracker: true
+				forceSecureTracker: true,
+				trackUrls: false
 			});
 		} catch (err) {
 			this.telligent = null;
