@@ -120,7 +120,7 @@ export class TelligentWrapper {
 		// 	return;
 		// }
 
-		this.telligent('track', eventAction, eventProps, { native: nativeMetadata });
+		this.telligent('track', eventAction, eventProps, { native: cleanPropertyNames(nativeMetadata) });
 	}
 
 	/**
@@ -164,4 +164,16 @@ export class TelligentWrapper {
 		this.telligent('flushBuffer');
 		this.telligent = null;
 	}
+}
+
+/**
+ * Remove dots (".") from field names, as they are unsupported by some data warehouses. This is
+ * a problem in VSCode's commonProperties objects.
+ */
+function cleanPropertyNames(props: any): any {
+	let cleanProps = {};
+	Object.keys(props).forEach(key => {
+		cleanProps[key.replace(/\./g, '_')] = props[key];
+	});
+	return cleanProps;
 }
