@@ -16,9 +16,14 @@ import { startsWith } from 'vs/base/common/strings';
 import { isFileLikeResource } from 'vs/platform/files/common/files';
 import { IRemoteService, requestGraphQL, requestGraphQLMutation } from 'vs/platform/remote/node/remote';
 import { TPromise } from 'vs/base/common/winjs.base';
-import { uniqueFilter } from 'vs/base/common/arrays';
+import { first, uniqueFilter } from 'vs/base/common/arrays';
 import { values } from 'vs/base/common/map';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
+
+/**
+ * Don't fetch threads from network more often than this.
+ */
+const REFETCH_DELAY_MS = 5000;
 
 /**
  * A unique identifier for a file.
@@ -58,7 +63,7 @@ comments {
 }
 `;
 
-// TODO: sorting, validation (at least one comment per thread)
+// TODO: validation (at least one comment per thread)
 export class CodeCommentsService implements ICodeCommentsService {
 	public _serviceBrand: any;
 
@@ -70,10 +75,32 @@ export class CodeCommentsService implements ICodeCommentsService {
 	public onCommentsDidChange: Event<CommentsDidChangeEvent> = this.commentsDidChangeEmitter.event;
 
 	/**
-	 * Map of file -> thread id -> thread.
-	 * TODO: this cache needs to be invalidated when scm changes.
+	 * Map of file uri -> thread id -> thread (unadjusted range).
 	 */
-	private threadCache = new Map<URI, Map<number, Thread>>();
+	private threadCache = new Map<string, Map<number, Thread>>();
+
+	/**
+	 * Map of file uri -> threads with adjusted ranges.
+	 *
+	 * TODO: needs to be invalidated in certain edge conditions.
+	 */
+	private adjustedThreadCache = new Map<string, Thread[]>();
+
+	/**
+	 * Map of file uri -> promise that resolves after threads have been fetched from network.
+	 */
+	private fetchingThreads = new Map<string, TPromise<void>>();
+
+	/**
+	 * Map of file uri -> promise that resolves after thread ranges have been adjusted.
+	 */
+	private adjustingThreads = new Map<string, TPromise<Thread[]>>();
+
+	/**
+	 * Map of file uri -> promise that resolves after threads have been fetched
+	 * and ranges have been adjusted.
+	 */
+	private refreshingThreads = new Map<string, TPromise<void>>();
 
 	private git: Git;
 
@@ -96,11 +123,11 @@ export class CodeCommentsService implements ICodeCommentsService {
 			reverseDiff,
 			this.git.getUserName(file),
 			this.git.getUserEmail(file),
-			this.getRoot(file),
+			this.getPathRelativeToRepo(file),
 			this.git.getRemoteRepo(file),
 			this.git.getAccessToken(file),
 		])
-			.then(([revision, diff, authorName, authorEmail, root, repo, accessToken]) => {
+			.then(([revision, diff, authorName, authorEmail, relativeFile, repo, accessToken]) => {
 				// We adjust the range to be for the last pushed revision.
 				// If this line doesn't exist in the last pushed revision, then we shouldn't publish the comment
 				// because nobody would be able to see it.
@@ -108,7 +135,6 @@ export class CodeCommentsService implements ICodeCommentsService {
 				if (!adjustedRange) {
 					throw new Error(localize('notPushed', 'unable to comment on this line because it has not been pushed'));
 				}
-				const relativeFile = this.relativePath(URI.parse(root), file);
 				return requestGraphQLMutation<{ createThread: GQL.IThread }>(this.remoteService, `mutation {
 					createThread(
 						remoteURI: $remoteURI,
@@ -141,13 +167,15 @@ export class CodeCommentsService implements ICodeCommentsService {
 			})
 			.then(data => Thread.fromGraphQL(data.createThread))
 			.then(thread => {
-				let threads = this.threadCache.get(file);
+				let threads = this.threadCache.get(file.toString());
 				if (!threads) {
 					threads = new Map<number, Thread>();
-					this.threadCache.set(file, threads);
+					this.threadCache.set(file.toString(), threads);
 				}
 				threads.set(thread.id, thread);
-				return this.fireCommentsDidChangeEvent(file, thread);
+				return this.adjustCachedThreadRanges(file).then(adjustedThreads => {
+					return first(adjustedThreads, adjustedThread => adjustedThread.id === thread.id);
+				});
 			});
 	}
 
@@ -184,40 +212,14 @@ export class CodeCommentsService implements ICodeCommentsService {
 			})
 			.then(data => Thread.fromGraphQL(data.addCommentToThread))
 			.then(thread => {
-				let threads = this.threadCache.get(file);
+				let threads = this.threadCache.get(file.toString());
 				if (!threads) {
 					threads = new Map<number, Thread>();
-					this.threadCache.set(file, threads);
+					this.threadCache.set(file.toString(), threads);
 				}
 				threads.set(thread.id, thread);
-				this.fireCommentsDidChangeEvent(file, thread);
+				this.adjustCachedThreadRanges(file);
 			});
-	}
-
-	private fireCommentsDidChangeEvent(file: URI, thread: Thread): TPromise<Thread> {
-		return this.adjustThreadRanges(file, [thread]).then(adjustedThreads => {
-			this.commentsDidChangeEmitter.fire({ file, threads: [thread] });
-			return thread;
-		});
-	}
-
-	private endsWithSlash(s: string): string {
-		if (s.charAt(s.length - 1) === '/') {
-			return s;
-		}
-		return s + '/';
-	}
-
-	/**
-	 * Returns fileInRoot relative to root.
-	 * It throws an error if fileInRoot is not inside of root.
-	 */
-	private relativePath(root: URI, fileInRoot: URI): string {
-		const rootPrefix = this.endsWithSlash(root.path);
-		if (!startsWith(fileInRoot.path, rootPrefix)) {
-			throw new Error(`file ${fileInRoot.path} not in root ${rootPrefix}`);
-		}
-		return fileInRoot.path.substr(rootPrefix.length);
 	}
 
 	/**
@@ -232,10 +234,9 @@ export class CodeCommentsService implements ICodeCommentsService {
 			return TPromise.as(void 0);
 		}
 		return TPromise.join([
-			this.getRoot(file),
+			this.getPathRelativeToRepo(file),
 			this.git.getRemoteRepo(file),
-		]).then(([root, repo]) => {
-			const relativeFile = this.relativePath(URI.parse(root), file);
+		]).then(([relativeFile, repo]) => {
 			return { repo, file: relativeFile };
 		});
 	}
@@ -243,56 +244,116 @@ export class CodeCommentsService implements ICodeCommentsService {
 	/**
 	 * See documentation on ICodeCommentsService.
 	 */
-	public getThreads(file: URI, skipCache: boolean): TPromise<Thread[]> {
-		const cachedThreads = this.threadCache.get(file);
-		if (cachedThreads && !skipCache) {
-			return this.adjustThreadRanges(file, values(cachedThreads));
-		}
-
-		return this.getDocumentId(file)
-			.then(id => {
-				if (id === undefined) {
-					return TPromise.as<Thread[]>([]);
-				}
-				return this.fetchThreads(file, id);
-			}).then(threads => {
-				this.threadCache.set(file, toMap(threads, thread => thread.id));
-				return this.adjustThreadRanges(file, threads);
-			}).then(adjustedThreads => {
-				this.commentsDidChangeEmitter.fire({ file, threads: adjustedThreads });
-				return adjustedThreads;
-			});
+	public getThreads(file: URI): Thread[] {
+		return this.adjustedThreadCache.get(file.toString()) || [];
 	}
 
-	private fetchThreads(file: URI, id: DocumentId): TPromise<Thread[]> {
-		return this.git.getAccessToken(file)
-			.then(accessToken => {
-				return requestGraphQL<{ threads: GQL.IThread[] }>(this.remoteService, `query ThreadsForFile(
-			$repo: String!,
-			$accessToken: String!,
-			$file: String!,
-		) {
-			root {
-				threads(
-					remoteURI: $repo,
-					accessToken: $accessToken,
-					file: $file,
-				) {
-					${threadGraphql}
-				}
+	/**
+	 * See documentation on ICodeCommentsService.
+	 */
+	public getThread(file: URI, id: number): Thread | undefined {
+		return first(this.getThreads(file), thread => thread.id === id);
+	}
+
+	/**
+	 * See documentation on ICodeCommentsService.
+	 */
+	public refreshThreads(file: URI): TPromise<void> {
+		const refreshing = this.fetchThreads(file)
+			.then(() => this.adjustCachedThreadRanges(file))
+			.then(() => { });
+		this.refreshingThreads.set(file.toString(), refreshing);
+		return refreshing;
+	}
+
+	/**
+	 * See documentation on ICodeCommentsService.
+	 */
+	public refreshing(file: URI): TPromise<void> {
+		return this.refreshingThreads.get(file.toString()) || TPromise.wrap(undefined);
+	}
+
+	/**
+	 * Fetches threads from the network and saves them to the in-memory cache.
+	 */
+	private fetchThreads(file: URI): TPromise<void> {
+		const fetchId = file.toString();
+		const alreadyFetching = this.fetchingThreads.get(fetchId);
+		if (alreadyFetching) {
+			return alreadyFetching;
+		}
+
+		interface ThreadsResponse {
+			threads: GQL.IThread[];
+		}
+
+		const fetch = TPromise.join([
+			this.getDocumentId(file),
+			this.git.getAccessToken(file),
+		]).then<ThreadsResponse>(([documentId, accessToken]) => {
+			if (!documentId) {
+				return TPromise.wrap({ threads: [] });
 			}
-		}`, {
-						repo: id.repo,
-						file: id.file,
-						accessToken,
-					});
-			})
-			.then(data => data.threads.map(thread => Thread.fromGraphQL(thread)));
+			return requestGraphQL<ThreadsResponse>(this.remoteService, `query ThreadsForFile(
+				$repo: String!,
+				$accessToken: String!,
+				$file: String!,
+			) {
+				root {
+					threads(
+						remoteURI: $repo,
+						accessToken: $accessToken,
+						file: $file,
+					) {
+						${threadGraphql}
+					}
+				}
+			}`, {
+					...documentId,
+					accessToken,
+				});
+		})
+			.then(data => {
+				const cachedThreads = data.threads.reduce((threads, thread) => {
+					threads.set(thread.id, Thread.fromGraphQL(thread));
+					return threads;
+				}, new Map<number, Thread>());
+				this.threadCache.set(file.toString(), cachedThreads);
+			});
+		this.fetchingThreads.set(fetchId, fetch);
+		fetch.done(() => {
+			setTimeout(() => {
+				this.fetchingThreads.delete(fetchId);
+			}, REFETCH_DELAY_MS);
+		}, err => {
+			this.fetchingThreads.delete(fetchId);
+		});
+		return fetch;
+	}
+
+	private adjustCachedThreadRanges(file: URI): TPromise<Thread[]> {
+		const alreadyAdjusting = this.adjustingThreads.get(file.toString());
+		if (alreadyAdjusting) {
+			return alreadyAdjusting;
+		}
+
+		const threads = values(this.threadCache.get(file.toString()));
+		const adjusting = this.adjustThreadRanges(file, threads).then(adjustedThreads => {
+			this.adjustedThreadCache.set(file.toString(), adjustedThreads);
+			this.commentsDidChangeEmitter.fire({ file });
+			return adjustedThreads;
+		});
+		this.adjustingThreads.set(file.toString(), adjusting);
+		adjusting.done(() => {
+			this.adjustingThreads.delete(file.toString());
+		}, () => {
+			this.adjustingThreads.delete(file.toString());
+		});
+		return adjusting;
 	}
 
 	/**
 	 * Returns the subset of threads that are attached to the file at its current revision.
-	 * TODO: this should be cached in some way instead of being recomputed.
 	 */
 	private adjustThreadRanges(file: URI, threads: Thread[]): TPromise<Thread[]> {
 		interface RevDiff {
@@ -341,25 +402,29 @@ export class CodeCommentsService implements ICodeCommentsService {
 			.then(threads => threads.sort(mostRecentCommentTimeDescending));
 	}
 
-	public getRoot(context: URI): TPromise<string> {
-		const scmProvider = this.scmService.getProviderForResource(context);
+	private getPathRelativeToRepo(file: URI): TPromise<string> {
+		const scmProvider = this.scmService.getProviderForResource(file);
 		if (!scmProvider) {
-			return TPromise.wrapError(new Error(`no scm provider in context ${context.toString()}`));
+			return TPromise.wrapError(new Error(`no scm provider in context ${file.toString()}`));
 		}
 		if (!scmProvider.rootFolder) {
-			return TPromise.wrapError(new Error(`scmProvider for context ${context.toString()} has no root folder`));
+			return TPromise.wrapError(new Error(`scmProvider for context ${file.toString()} has no root folder`));
 		}
-		return TPromise.wrap(scmProvider.rootFolder.path);
+		const root = this.endsWithSlash(scmProvider.rootFolder.path);
+		if (!startsWith(file.path, root)) {
+			return TPromise.wrapError(new Error(`file ${file.path} not in root ${root}`));
+		}
+		return TPromise.wrap(file.path.substr(root.length));
+	}
+
+	private endsWithSlash(s: string): string {
+		if (s.charAt(s.length - 1) === '/') {
+			return s;
+		}
+		return s + '/';
 	}
 }
 
 function mostRecentCommentTimeDescending(left: Thread, right: Thread): number {
 	return right.mostRecentComment.createdAt.getTime() - left.mostRecentComment.createdAt.getTime();
-}
-
-function toMap<K, V>(array: V[], key: (value: V) => K): Map<K, V> {
-	return array.reduce((map, value) => {
-		map.set(key(value), value);
-		return map;
-	}, new Map<K, V>());
 }

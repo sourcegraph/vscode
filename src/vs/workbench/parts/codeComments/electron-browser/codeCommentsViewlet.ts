@@ -52,20 +52,6 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 	private list: HTMLElement;
 
 	/**
-	 * The URI of the current model being rendered.
-	 */
-	private renderedModelUri: URI | undefined;
-
-	/**
-	 * Indentified the current render iteration.
-	 * Rendering does async tasks, so if a task returns and the render
-	 * is doesn't match any more, then the task knows it should discard the result.
-	 *
-	 * Incrementing the render id cancels all previous renders.
-	 */
-	private renderId = 0;
-
-	/**
 	 * These are disposed on every render.
 	 */
 	private renderDisposables: IDisposable[] = [];
@@ -74,7 +60,6 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 	private scrollContainer: HTMLElement;
 	private title: string;
 	private actions: IAction[] = [];
-	private renderPromise: TPromise<void> | undefined;
 
 	/**
 	 * True if the threads list is rendered.
@@ -142,7 +127,7 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 	}
 
 	private onDidRegisterScmProvider(): void {
-		this.render(this.getActiveModelUri(), {});
+		this.render(this.getActiveModelUri(), { refreshData: true });
 	}
 
 	private onCommentsDidChange(e: CommentsDidChangeEvent) {
@@ -211,28 +196,19 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 			return;
 		}
 
-		// Increment the render id and then remember it.
-		const renderId = ++this.renderId;
-
 		this.recentThreadsView = true;
 		this.title = localize('recentComments', "Recent conversations: {0}", basename(modelUri.fsPath));
 		this.actions = [];
 		this.updateTitleArea();
 		this.renderDisposables = dispose(this.renderDisposables);
-		clearNode(this.list);
 
-		this.renderPromise = this.codeCommentsService.getThreads(modelUri, options.refreshData).then(threads => {
-			if (renderId !== this.renderId) {
-				// Another render has started so don't bother
-				return;
-			}
-			this.renderRecentThreadsView(modelUri, threads);
-			this.renderedModelUri = modelUri;
-		}, error => {
-			// Silently ignore errors if we weren't able to load comments for this file.
-			// console.log(error);
-		});
-		this.progressService.showWhile(this.renderPromise);
+		const threads = this.codeCommentsService.getThreads(modelUri);
+		this.renderRecentThreadsView(modelUri, threads);
+		if (options.refreshData) {
+			this.progressService.showWhile(this.codeCommentsService.refreshThreads(modelUri));
+		} else {
+			this.progressService.showWhile(this.codeCommentsService.refreshing(modelUri));
+		}
 	}
 
 	private renderCommentsNotAvailable(): void {
@@ -339,13 +315,6 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 			// User switched contexts before we could show this UI.
 			return;
 		}
-		// Invalidate previous renders.
-		this.renderId++;
-		if (this.renderPromise) {
-			// Cancel the promise to hide the progress bar.
-			this.renderPromise.cancel();
-		}
-
 		this.recentThreadsView = false;
 		this.renderDisposables = dispose(this.renderDisposables);
 

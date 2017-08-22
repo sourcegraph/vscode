@@ -35,10 +35,25 @@ export interface ICodeCommentsService {
 	/**
 	 * Returns all threads that are attached to the current revision of the file.
 	 * Threads are ordered by the timestamp of the most recent comment descending.
-	 *
-	 * TODO: separate api that fetches from network from api that returns cached state.
 	 */
-	getThreads(file: URI, skipCache: boolean): TPromise<Thread[]>;
+	getThreads(file: URI): Thread[];
+
+	/**
+	 * Returns the thread on the file with a matching id.
+	 */
+	getThread(file: URI, id: number): Thread | undefined;
+
+	/**
+	 * Refreshes threads from the network.
+	 * onCommentDidChange will fire after the threads load.
+	 */
+	refreshThreads(file: URI): TPromise<void>;
+
+	/**
+	 * Returns a promise that resolves when comments
+	 * are done refreshing on the file.
+	 */
+	refreshing(file: URI): TPromise<void>;
 }
 
 export interface CommentsDidChangeEvent {
@@ -46,11 +61,6 @@ export interface CommentsDidChangeEvent {
 	 * The file that comments changed on.
 	 */
 	file: URI;
-
-	/**
-	 * The threads that changed on the file.
-	 */
-	threads: Thread[];
 }
 
 export interface IThread {

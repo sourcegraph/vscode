@@ -72,7 +72,12 @@ export class CodeCommentsDecorationRenderer extends Disposable implements IEdito
 		}));
 
 		scmService.onDidChangeProvider(e => this.renderDecorations());
-		this._register(editor.onDidChangeModel(e => this.renderDecorations()));
+		this._register(editor.onDidChangeModel(e => {
+			this.renderDecorations();
+			if (e.newModelUrl) {
+				this.codeCommentsService.refreshThreads(e.newModelUrl);
+			}
+		}));
 		this._register(codeCommentsService.onCommentsDidChange(() => this.renderDecorations()));
 		this.renderDecorations();
 	}
@@ -92,12 +97,8 @@ export class CodeCommentsDecorationRenderer extends Disposable implements IEdito
 		if (!isFileLikeResource(model.uri)) {
 			return;
 		}
-		this.codeCommentsService.getThreads(model.uri, false).then(threads => {
-			this.renderThreads(threads);
-		}, err => {
-			// Clear all decorations if an error happens.
-			this.renderThreads([]);
-		});
+		const threads = this.codeCommentsService.getThreads(model.uri);
+		this.renderThreads(threads);
 	}
 
 	private renderThreads(threads: Thread[]): void {

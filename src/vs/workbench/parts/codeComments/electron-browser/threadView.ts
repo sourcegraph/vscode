@@ -55,12 +55,10 @@ export class ThreadView extends Disposable {
 	}
 
 	private onCommentsDidChange(e: CommentsDidChangeEvent): void {
-		for (let thread of e.threads) {
-			if (thread.id === this.thread.id) {
-				this.thread = thread;
-				this.render();
-				return;
-			}
+		const thread = this.codeCommentsService.getThread(this.modelUri, this.thread.id);
+		if (thread) {
+			this.thread = thread;
+			this.render();
 		}
 	}
 
