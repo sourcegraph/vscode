@@ -149,12 +149,12 @@
 			"name": "Unit Tests",
 			"protocol": "inspector",
 			"program": "${workspaceRoot}/node_modules/mocha/bin/_mocha",
-			"runtimeExecutable": "${workspaceRoot}/.build/electron/Code - OSS.app/Contents/MacOS/Electron",
+			"runtimeExecutable": "${workspaceRoot}/.build/electron/Sourcegraph - OSS.app/Contents/MacOS/Electron",
 			"windows": {
-				"runtimeExecutable": "${workspaceRoot}/.build/electron/Code - OSS.exe"
+				"runtimeExecutable": "${workspaceRoot}/.build/electron/Sourcegraph - OSS.exe"
 			},
 			"linux": {
-				"runtimeExecutable": "${workspaceRoot}/.build/electron/code-oss"
+				"runtimeExecutable": "${workspaceRoot}/.build/electron/src-oss"
 			},
 			"stopOnEntry": false,
 			"args": [
