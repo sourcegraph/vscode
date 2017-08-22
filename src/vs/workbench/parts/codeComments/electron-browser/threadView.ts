@@ -20,13 +20,11 @@ import { MessageType } from 'vs/base/browser/ui/inputbox/inputBox';
 import Event, { Emitter } from 'vs/base/common/event';
 import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
 import { Action } from 'vs/base/common/actions';
-import { renderMarkdown } from 'vs/base/browser/htmlContentRenderer';
-import { onUnexpectedError } from 'vs/base/common/errors';
 import { IOpenerService } from 'vs/platform/opener/common/opener';
 import { IModeService } from 'vs/editor/common/services/modeService';
-import { tokenizeToString } from 'vs/editor/common/modes/textToHtmlTokenizer';
 import { editorActiveLinkForeground, editorBackground } from 'vs/platform/theme/common/colorRegistry';
 import { registerThemingParticipant } from 'vs/platform/theme/common/themeService';
+import { renderComment } from 'vs/workbench/parts/codeComments/browser/renderComment';
 
 /**
  * Renders the list of comments in a single thread.
@@ -77,21 +75,8 @@ export class ThreadView extends Disposable {
 						});
 					});
 					div.div({ class: 'content' }, div => {
-						const renderedContents = renderMarkdown(comment.contents, {
-							actionCallback: (content) => {
-								this.openerService.open(URI.parse(content)).then(void 0, onUnexpectedError);
-							},
-							codeBlockRenderer: (languageAlias, value): string | TPromise<string> => {
-								if (!languageAlias) {
-									return value;
-								}
-								const modeId = this.modeService.getModeIdForLanguageName(languageAlias);
-								return this.modeService.getOrCreateMode(modeId).then(_ => {
-									return tokenizeToString(value, modeId);
-								});
-							}
-						});
-						div.getHTMLElement().appendChild(renderedContents);
+						const renderedComment = this.instantiationService.invokeFunction(renderComment, comment);
+						div.getHTMLElement().appendChild(renderedComment);
 						this._register(addDisposableListener(div.getHTMLElement(), 'contextmenu', (e: MouseEvent) => {
 							this.contextMenuService.showContextMenu({
 								getAnchor: () => e,

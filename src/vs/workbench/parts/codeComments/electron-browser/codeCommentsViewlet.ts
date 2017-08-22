@@ -33,6 +33,7 @@ import { CreateThreadView } from 'vs/workbench/parts/codeComments/browser/create
 import { ICodeCommentsViewlet } from 'vs/workbench/parts/codeComments/common/codeComments';
 import { TAB_ACTIVE_FOREGROUND, TAB_INACTIVE_FOREGROUND } from 'vs/workbench/common/theme';
 import { listHoverBackground } from 'vs/platform/theme/common/colorRegistry';
+import { renderComment } from 'vs/workbench/parts/codeComments/browser/renderComment';
 
 /**
  * Renders code comments in a viewlet.
@@ -259,7 +260,8 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 						});
 					});
 					div.div({ class: 'content' }, div => {
-						div.text(recentComment.contents);
+						const renderedComment = this.instantiationService.invokeFunction(renderComment, recentComment);
+						div.getHTMLElement().appendChild(renderedComment);
 					});
 				});
 			}
