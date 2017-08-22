@@ -40,10 +40,11 @@ export class Git {
 			const args: string[] = [];
 			remoteRevs.forEach(remoteRev => args.push('^' + remoteRev));
 			// This returns oldest revision that is reachable from HEAD but not from any of the revs in args.
-			return this.spawnPromiseTrim(context, ['rev-list', '--reverse', '--max-count', '1', 'HEAD'].concat(args));
-		}).then(oldestUnpushedRevision => {
-			// We want to return a rev that IS pushed so we get this revision's parent.
-			return this.spawnPromiseTrim(context, ['rev-parse', oldestUnpushedRevision + '~']);
+			return this.spawnPromiseTrim(context, ['rev-list', '--reverse', '--max-count', '1', 'HEAD'].concat(args))
+				.then(oldestUnpushedRevision => {
+					// We want to return a rev that IS pushed so we get this revision's parent.
+					return this.spawnPromiseTrim(context, ['rev-parse', oldestUnpushedRevision + '~']);
+				});
 		});
 	}
 
