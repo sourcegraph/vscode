@@ -31,10 +31,6 @@
 		"editorLineNumber.foreground": "#31445E",
 		"editorLink.activeForeground": "#329af0",
 		"editorSuggestWidget.background": "#31445E",
-		"editorSuggestWidget.border": "",
-		"editorSuggestWidget.foreground": "",
-		"editorSuggestWidget.highlightForeground": "",
-		"editorSuggestWidget.selectedBackground": "",
 		"editorWhitespace.foreground": "#233043",
 		"editorWidget.background": "#233043",
 		"focusBorder": "#1862ab",
@@ -99,8 +95,7 @@
 		"modal.buttonErrorBackground": "#FFAAAA",
 		"modal.buttonErrorForeground": "#000000",
 		"modal.inputBackground": "#FFFFFF",
-		"modal.inputForeground": "#000000",
-		"modal.inputBorder": ""
+		"modal.inputForeground": "#000000"
 	},
 	"tokenColors": [
 		{
