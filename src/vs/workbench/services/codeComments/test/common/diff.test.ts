@@ -36,7 +36,9 @@ class TestDiff {
 	}
 
 	private assertDiffTransformRange(label: string, diff: Diff, from: Range, to: Range) {
-		assert.deepEqual(diff.transformRange(from), to, label);
+		const actual = diff.transformRange(from);
+		const expectedActual = `diff.transformRange(${from})\nexpected: ${to}\nactual: ${actual}`;
+		assert.deepEqual(actual, to, label + expectedActual);
 	}
 }
 
@@ -268,8 +270,13 @@ suite('diff', () => {
 @@ -10 +9,0 @@ this is line 9
 -this is line 10
 `);
+			diff.assertTransformRange(new Range(8, 15, 9, 1), undefined, new Range(8, 15, 9, 1));
 			diff.assertTransformRange(new Range(9, 1, 9, 2), new Range(9, 1, 9, 2));
+			diff.assertTransformRange(new Range(9, 15, 10, 1), undefined, new Range(9, 15, 10, 1));
+			diff.assertTransformRange(new Range(9, 15, 10, 15), undefined, new Range(9, 15, 10, 1));
+			diff.assertTransformRange(new Range(9, 15, 11, 1), undefined, new Range(9, 15, 10, 1));
 			diff.assertTransformRange(new Range(10, 1, 10, 2), undefined);
+			diff.assertTransformRange(new Range(10, 1, 11, 1), undefined);
 			diff.assertTransformRange(new Range(11, 1, 11, 2), new Range(10, 1, 10, 2));
 
 			diff.assertTransformRange(new Range(9, 1, 11, 2), new Range(9, 1, 10, 2));

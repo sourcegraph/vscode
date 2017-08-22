@@ -121,7 +121,14 @@ export class Diff {
 		if (startLineOffset === 0 && endLineOffset === 0) {
 			return range;
 		}
-		return new Range(range.startLineNumber + startLineOffset, range.startColumn, range.endLineNumber + endLineOffset, range.endColumn);
+		return this.nonEmptyRange(new Range(range.startLineNumber + startLineOffset, range.startColumn, range.endLineNumber + endLineOffset, range.endColumn));
+	}
+
+	/**
+	 * Returns range if it isn't empty and undefined otherwise.
+	 */
+	private nonEmptyRange(range: Range): Range | undefined {
+		return range.isEmpty() ? undefined : range;
 	}
 
 	/**
@@ -147,12 +154,18 @@ export class Diff {
 				}
 			}
 			if (line === range.endLineNumber) {
-				endPosition = range.getEndPosition();
+				// Only update the end position if there is a meaningful column on the last line.
+				// Otherwise, we can just use the previous end position.
+				if (range.endColumn > 1) {
+					endPosition = range.getEndPosition();
+					effectiveEndLine = line;
+				}
 			} else if (this.unchangedIndex.has(line)) {
 				// The diff has this unchanged line in it so we can
 				// determine the end position based on the content.
 				const lineDiff = this.unchangedIndex.get(line);
 				endPosition = new Position(line, lineDiff.content.length + 1);
+				effectiveEndLine = line;
 			} else {
 				// Either we are in the middle of the range and this endPosition will get overwritten
 				// on the next loop iteration, or the diff doesn't contain any context around changes (i.e. -U0).
@@ -160,14 +173,18 @@ export class Diff {
 				// of the range is just the first character in the next line.
 				// The existance of this case is why we store effectiveEndLine separately.
 				endPosition = new Position(line + 1, 1);
+				effectiveEndLine = line;
 			}
-			effectiveEndLine = line;
 		}
 		if (!startPosition || !endPosition) {
 			return undefined;
 		}
+		const trimmedRange = this.nonEmptyRange(new Range(startPosition.lineNumber, startPosition.column, endPosition.lineNumber, endPosition.column));
+		if (!trimmedRange) {
+			return undefined;
+		}
 		return {
-			range: new Range(startPosition.lineNumber, startPosition.column, endPosition.lineNumber, endPosition.column),
+			range: trimmedRange,
 			effectiveEndLine,
 		};
 	}
@@ -182,7 +199,10 @@ export class Diff {
 		for (let line = range.startLineNumber; line <= range.endLineNumber; line++) {
 			const deletedLine = this.deletedIndex.get(line);
 			if (!deletedLine) {
-				throw new Error('findMovedRange expected all lines to be deleted');
+				if (line !== range.endLineNumber && line !== range.startLineNumber) {
+					throw new Error('findMovedRange expected all lines to be deleted');
+				}
+				continue;
 			}
 			let addedLine = this.addedIndexExact.get(deletedLine.content);
 			let columnDelta = 0;
@@ -227,7 +247,7 @@ export class Diff {
 		if (!startPosition || !endPosition) {
 			return undefined;
 		}
-		return new Range(startPosition.lineNumber, startPosition.column, endPosition.lineNumber, endPosition.column);
+		return this.nonEmptyRange(new Range(startPosition.lineNumber, startPosition.column, endPosition.lineNumber, endPosition.column));
 	}
 }
 
