@@ -5,7 +5,7 @@
 	"dataFolderName": ".sourcegraph-oss",
 	"win32MutexName": "sourcegraphoss",
 	"licenseName": "MIT",
-	"licenseUrl": "https://github.com/sourcegraph/vscode-private/blob/master/LICENSE.txt",
+	"licenseUrl": "https://github.com/sourcegraph/xsourcegraph/blob/master/LICENSE.txt",
 	"win32DirName": "Sourcegraph OSS",
 	"win32NameVersion": "Sourcegraph OSS",
 	"win32RegValueName": "SourcegraphOSS",
@@ -13,6 +13,6 @@
 	"win32AppUserModelId": "Sourcegraph.Sourcegraph",
 	"win32ShellNameShort": "S&ourcegraph - OSS",
 	"darwinBundleIdentifier": "com.sourcegraph.src.oss",
-	"reportIssueUrl": "https://github.com/sourcegraph/vscode-private/issues/new",
+	"reportIssueUrl": "https://github.com/sourcegraph/xsourcegraph/issues/new",
 	"urlProtocol": "src-oss"
 }

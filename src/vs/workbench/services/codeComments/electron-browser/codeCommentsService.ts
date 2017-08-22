@@ -225,7 +225,7 @@ export class CodeCommentsService implements ICodeCommentsService {
 	 * that don't support code comments.
 	 *
 	 * For example:
-	 * file:///Users/nick/dev/vscode-private/README.md -> github.com/sourcegraph/vscode-private/README.md
+	 * file:///Users/nick/dev/xsourcegraph/README.md -> github.com/sourcegraph/xsourcegraph/README.md
 	 */
 	private getDocumentId(file: URI): TPromise<DocumentId | undefined> {
 		if (!isFileLikeResource(file)) {

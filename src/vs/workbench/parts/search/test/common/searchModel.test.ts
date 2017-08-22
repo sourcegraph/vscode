@@ -135,7 +135,7 @@ suite('SearchModel', () => {
 		});
 	});
 
-	// TODO(sqs): skipped because it was strangely failing at https://travis-ci.com/sourcegraph/vscode-private/jobs/85562187
+	// TODO(sqs): skipped because it was strangely failing at https://travis-ci.com/sourcegraph/xsourcegraph/jobs/85562187
 	test.skip('Search Model: Search reports telemetry on search completed', function () {
 		let target = instantiationService.spy(ITelemetryService, 'publicLog');
 		let results = [aRawMatch('file://c:/1', aLineMatch('preview 1', 1, [[1, 3], [4, 7]])), aRawMatch('file://c:/2', aLineMatch('preview 2'))];
