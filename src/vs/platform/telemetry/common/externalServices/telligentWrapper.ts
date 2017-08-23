@@ -133,7 +133,7 @@ export class TelligentWrapper {
 			return;
 		}
 
-		let telligentUrl = 'sourcegraph-logging.telligentdata.com';
+		let telligentUrl = 'sourcegraph.com/.api/telemetry';
 
 		// TODO(Dan): What do these checks look like in the native app world? What URL do we use?
 		// for clients with on-prem deployments, we use a bi-logger
