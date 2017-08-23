@@ -7,7 +7,7 @@
 import { ICodeEditorService } from 'vs/editor/common/services/codeEditorService';
 import { IModel, OverviewRulerLane, IDecorationOptions, IEditorContribution } from 'vs/editor/common/editorCommon';
 import { IDisposable, Disposable, dispose } from 'vs/base/common/lifecycle';
-import { ICodeCommentsService, IFileCommentsModel, Thread } from 'vs/editor/common/services/codeCommentsService';
+import { ICodeCommentsService, Thread } from 'vs/editor/common/services/codeCommentsService';
 import { ISCMService } from 'vs/workbench/services/scm/common/scm';
 import URI from 'vs/base/common/uri';
 import { isFileLikeResource } from 'vs/platform/files/common/files';
