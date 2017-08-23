@@ -13,6 +13,7 @@ import { tokenizeToString } from 'vs/editor/common/modes/textToHtmlTokenizer';
 import { ServicesAccessor } from 'vs/platform/instantiation/common/instantiation';
 import { IOpenerService } from 'vs/platform/opener/common/opener';
 import { IModeService } from 'vs/editor/common/services/modeService';
+import { MarkdownString } from 'vs/base/common/htmlContent';
 
 /**
  * Returns the rendered version of a comment.
@@ -20,7 +21,7 @@ import { IModeService } from 'vs/editor/common/services/modeService';
 export function renderComment(accessor: ServicesAccessor, comment: Comment): Node {
 	const openerService = accessor.get(IOpenerService);
 	const modeService = accessor.get(IModeService);
-	return renderMarkdown(comment.contents, {
+	return renderMarkdown(new MarkdownString(comment.contents), {
 		actionCallback: (content) => {
 			openerService.open(URI.parse(content)).then(void 0, onUnexpectedError);
 		},

@@ -34,7 +34,7 @@ import { Registry } from 'vs/platform/registry/common/platform';
 import { ExtensionsRegistry, ExtensionMessageCollector } from 'vs/platform/extensions/common/extensionsRegistry';
 import { IConfigurationNode, IConfigurationRegistry, Extensions, editorConfigurationSchemaId, IDefaultConfigurationExtension, validateProperty, ConfigurationScope, schemaId } from 'vs/platform/configuration/common/configurationRegistry';
 import { createHash } from 'crypto';
-import { getWorkspaceLabel, IWorkspacesService } from "vs/platform/workspaces/common/workspaces";
+import { getWorkspaceLabel, IWorkspacesService } from 'vs/platform/workspaces/common/workspaces';
 
 interface IStat {
 	resource: URI;
@@ -558,14 +558,14 @@ export class WorkspaceServiceImpl extends WorkspaceService {
 	}
 
 	private onFoldersChanged(): void {
-		let configurationChanged = false;
+		let configurationChangedOnRemoval = false;
 
 		// Remove the configurations of deleted folders
 		for (const key of this.cachedFolderConfigs.keys()) {
 			if (!this.workspace.roots.filter(folder => folder.toString() === key.toString())[0]) {
 				this.cachedFolderConfigs.delete(key);
 				if (this._configuration.deleteFolderConfiguration(key)) {
-					configurationChanged = true;
+					configurationChangedOnRemoval = true;
 				}
 			}
 		}
@@ -575,8 +575,11 @@ export class WorkspaceServiceImpl extends WorkspaceService {
 		if (toInitialize.length) {
 			this.initCachesForFolders(toInitialize);
 			this.updateConfiguration(toInitialize)
-				.then(changed => configurationChanged || changed)
+				.then(changed => configurationChangedOnRemoval || changed)
 				.then(changed => changed ? this.triggerConfigurationChange() : void 0);
+		} else if (configurationChangedOnRemoval) {
+			this.updateWorkspaceConfiguration(false);
+			this.triggerConfigurationChange();
 		}
 	}
 
@@ -844,8 +847,9 @@ export class Configuration<T> extends BaseConfiguration<T> {
 	updateBaseConfiguration(baseConfiguration: BaseConfiguration<T>): boolean {
 		const current = new Configuration(this._baseConfiguration, this._workspaceConfiguration, this.folders, this._workspace);
 
-		this._defaults = baseConfiguration.defaults;
-		this._user = baseConfiguration.user;
+		this._baseConfiguration = baseConfiguration;
+		this._defaults = this._baseConfiguration.defaults;
+		this._user = this._baseConfiguration.user;
 		this.merge();
 
 		return !this.equals(current);
@@ -875,8 +879,10 @@ export class Configuration<T> extends BaseConfiguration<T> {
 			return false;
 		}
 
+		const changed = this.folders.get(folder).keys.length > 0;
 		this.folders.delete(folder);
-		return this._foldersConsolidatedConfigurations.delete(folder);
+		this._foldersConsolidatedConfigurations.delete(folder);
+		return changed;
 	}
 
 	getFolderConfigurationModel(folder: URI): FolderConfigurationModel<T> {

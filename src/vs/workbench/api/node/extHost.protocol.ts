@@ -48,8 +48,8 @@ import { ISelection, Selection } from 'vs/editor/common/core/selection';
 
 import { ITreeItem } from 'vs/workbench/parts/views/common/views';
 import { ThemeColor } from 'vs/platform/theme/common/themeService';
-import { IDisposable } from "vs/base/common/lifecycle";
-import { SerializedError } from "vs/base/common/errors";
+import { IDisposable } from 'vs/base/common/lifecycle';
+import { SerializedError } from 'vs/base/common/errors';
 
 export interface IEnvironment {
 	isExtensionDevelopmentDebug: boolean;
@@ -113,6 +113,18 @@ export interface MainThreadConfigurationShape extends IDisposable {
 export interface MainThreadDiagnosticsShape extends IDisposable {
 	$changeMany(owner: string, entries: [URI, IMarkerData[]][]): TPromise<any>;
 	$clear(owner: string): TPromise<any>;
+}
+
+export interface MainThreadDialogOptions {
+	uri?: URI;
+	openLabel?: string;
+	openFiles?: boolean;
+	openFolders?: boolean;
+	openMany?: boolean;
+}
+
+export interface MainThreadDiaglogsShape extends IDisposable {
+	$showOpenDialog(options: MainThreadDialogOptions): TPromise<string[]>;
 }
 
 export interface MainThreadDocumentContentProvidersShape extends IDisposable {
@@ -234,7 +246,7 @@ export interface MainThreadLanguagesShape extends IDisposable {
 }
 
 export interface MainThreadMessageOptions {
-	extensionId?: string;
+	extension?: IExtensionDescription;
 	modal?: boolean;
 }
 
@@ -287,7 +299,6 @@ export interface MainThreadStorageShape extends IDisposable {
 
 export interface MainThreadTelemetryShape extends IDisposable {
 	$publicLog(eventName: string, data?: any): void;
-	$getTelemetryInfo(): TPromise<ITelemetryInfo>;
 }
 
 export interface MainThreadWorkspaceShape extends IDisposable {
@@ -547,6 +558,7 @@ export const MainContext = {
 	MainThreadConfiguration: createMainId<MainThreadConfigurationShape>('MainThreadConfiguration'),
 	MainThreadDebugService: createMainId<MainThreadDebugServiceShape>('MainThreadDebugService'),
 	MainThreadDiagnostics: createMainId<MainThreadDiagnosticsShape>('MainThreadDiagnostics'),
+	MainThreadDialogs: createMainId<MainThreadDiaglogsShape>('MainThreadDiaglogs'),
 	MainThreadDocuments: createMainId<MainThreadDocumentsShape>('MainThreadDocuments'),
 	MainThreadDocumentContentProviders: createMainId<MainThreadDocumentContentProvidersShape>('MainThreadDocumentContentProviders'),
 	MainThreadEditors: createMainId<MainThreadEditorsShape>('MainThreadEditors'),

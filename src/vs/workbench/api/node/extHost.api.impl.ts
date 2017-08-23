@@ -43,7 +43,6 @@ import EditorCommon = require('vs/editor/common/editorCommon');
 import { IExtensionDescription } from 'vs/platform/extensions/common/extensions';
 import { ExtHostExtensionService } from 'vs/workbench/api/node/extHostExtensionService';
 import { TPromise } from 'vs/base/common/winjs.base';
-import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { CancellationTokenSource } from 'vs/base/common/cancellation';
 import * as vscode from 'vscode';
 import * as paths from 'vs/base/common/paths';
@@ -51,8 +50,9 @@ import { MainContext, ExtHostContext, IInitData } from './extHost.protocol';
 import * as languageConfiguration from 'vs/editor/common/modes/languageConfiguration';
 import { TextEditorCursorStyle } from 'vs/editor/common/config/editorOptions';
 import * as types from 'vs/base/common/types';
-import { ExtHostThreadService } from "vs/workbench/services/thread/node/extHostThreadService";
-import { ProxyIdentifier } from "vs/workbench/services/thread/common/threadService";
+import { ExtHostThreadService } from 'vs/workbench/services/thread/node/extHostThreadService';
+import { ProxyIdentifier } from 'vs/workbench/services/thread/common/threadService';
+import { ExtHostDialogs } from 'vs/workbench/api/node/extHostDialogs';
 
 export interface IExtensionApiFactory {
 	(extension: IExtensionDescription): typeof vscode;
@@ -74,13 +74,14 @@ function proposedApiFunction<T>(extension: IExtensionDescription, fn: T): T {
 export function createApiFactory(
 	initData: IInitData,
 	threadService: ExtHostThreadService,
-	extensionService: ExtHostExtensionService,
-	telemetryService: ITelemetryService
+	extensionService: ExtHostExtensionService
 ): IExtensionApiFactory {
+
+	const mainThreadTelemetry = threadService.get(MainContext.MainThreadTelemetry);
 
 	// Addressable instances
 	const extHostHeapService = threadService.set(ExtHostContext.ExtHostHeapService, new ExtHostHeapService());
-	const extHostDocumentsAndEditors = threadService.set(ExtHostContext.ExtHostDocumentsAndEditors, new ExtHostDocumentsAndEditors(threadService));
+	const extHostDocumentsAndEditors = threadService.set(ExtHostContext.ExtHostDocumentsAndEditors, new ExtHostDocumentsAndEditors(threadService, extensionService));
 	const extHostDocuments = threadService.set(ExtHostContext.ExtHostDocuments, new ExtHostDocuments(threadService, extHostDocumentsAndEditors));
 	const extHostDocumentContentProviders = threadService.set(ExtHostContext.ExtHostDocumentContentProviders, new ExtHostDocumentContentProvider(threadService, extHostDocumentsAndEditors));
 	const extHostDocumentSaveParticipant = threadService.set(ExtHostContext.ExtHostDocumentSaveParticipant, new ExtHostDocumentSaveParticipant(extHostDocuments, threadService.get(MainContext.MainThreadWorkspace)));
@@ -106,6 +107,7 @@ export function createApiFactory(
 
 	// Other instances
 	const extHostMessageService = new ExtHostMessageService(threadService);
+	const extHostDialogs = new ExtHostDialogs(threadService);
 	const extHostStatusBar = new ExtHostStatusBar(threadService);
 	const extHostProgress = new ExtHostProgress(threadService.get(MainContext.MainThreadProgress));
 	const extHostOutputService = new ExtHostOutputService(threadService);
@@ -139,7 +141,7 @@ export function createApiFactory(
 					return undefined;
 				}
 				this._seen.add(apiName);
-				return telemetryService.publicLog('apiUsage', {
+				return mainThreadTelemetry.$publicLog('apiUsage', {
 					name: apiName,
 					extension: extension.id
 				});
@@ -241,7 +243,7 @@ export function createApiFactory(
 				return languageFeatures.registerTypeDefinitionProvider(selector, provider);
 			},
 			registerHoverProvider(selector: vscode.DocumentSelector, provider: vscode.HoverProvider): vscode.Disposable {
-				return languageFeatures.registerHoverProvider(selector, provider);
+				return languageFeatures.registerHoverProvider(selector, provider, extension.id);
 			},
 			registerDocumentHighlightProvider(selector: vscode.DocumentSelector, provider: vscode.DocumentHighlightProvider): vscode.Disposable {
 				return languageFeatures.registerDocumentHighlightProvider(selector, provider);
@@ -326,13 +328,13 @@ export function createApiFactory(
 				return extHostTerminalService.onDidCloseTerminal(listener, thisArg, disposables);
 			},
 			showInformationMessage(message, first, ...rest) {
-				return extHostMessageService.showMessage(extension.id, Severity.Info, message, first, rest);
+				return extHostMessageService.showMessage(extension, Severity.Info, message, first, rest);
 			},
 			showWarningMessage(message, first, ...rest) {
-				return extHostMessageService.showMessage(extension.id, Severity.Warning, message, first, rest);
+				return extHostMessageService.showMessage(extension, Severity.Warning, message, first, rest);
 			},
 			showErrorMessage(message, first, ...rest) {
-				return extHostMessageService.showMessage(extension.id, Severity.Error, message, first, rest);
+				return extHostMessageService.showMessage(extension, Severity.Error, message, first, rest);
 			},
 			showQuickPick(items: any, options: vscode.QuickPickOptions, token?: vscode.CancellationToken) {
 				return extHostQuickOpen.showQuickPick(items, options, token);
@@ -367,8 +369,11 @@ export function createApiFactory(
 			},
 			// proposed API
 			sampleFunction: proposedApiFunction(extension, () => {
-				return extHostMessageService.showMessage(extension.id, Severity.Info, 'Hello Proposed Api!', {}, []);
+				return extHostMessageService.showMessage(extension, Severity.Info, 'Hello Proposed Api!', {}, []);
 			}),
+			showOpenDialog: proposedApiFunction(extension, options => {
+				return extHostDialogs.showOpenDialog(options);
+			})
 		};
 
 		// namespace: workspace
@@ -474,10 +479,10 @@ export function createApiFactory(
 				return extHostSCM.inputBox;
 			},
 			createSourceControl(id: string, arg: any) {
-				telemetryService.publicLog('registerSCMProvider', {
+				mainThreadTelemetry.$publicLog('registerSCMProvider', {
 					extensionId: extension.id,
 					providerId: id,
-					providerLabel: types.isString(arg) ? arg : undefined,
+					providerLabel: types.isString(arg) ? arg : arg.label,
 				});
 
 				return extHostSCM.createSourceControl(id, arg);

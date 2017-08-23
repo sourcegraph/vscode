@@ -8,9 +8,9 @@ const localize = nls.loadMessageBundle();
 import * as path from 'path';
 import * as fs from 'fs';
 
-import { workspace, window } from "vscode";
+import { workspace, window } from 'vscode';
 
-import { TypeScriptServiceConfiguration } from "./configuration";
+import { TypeScriptServiceConfiguration } from './configuration';
 import API from './api';
 
 

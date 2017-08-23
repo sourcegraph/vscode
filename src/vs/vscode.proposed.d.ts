@@ -7,6 +7,18 @@
 
 declare module 'vscode' {
 
+	export interface OpenDialogOptions {
+		uri?: Uri;
+		openFiles?: boolean;
+		openFolders?: boolean;
+		openMany?: boolean;
+	}
+
+	export namespace window {
+
+		export function showOpenDialog(options: OpenDialogOptions): Thenable<Uri[]>;
+	}
+
 	export interface ResolveFileOptions {
 		resolveTo?: Uri[];
 		resolveSingleChildDescendants?: boolean;
@@ -39,7 +51,7 @@ declare module 'vscode' {
 		 */
 		resolveFile(resource: Uri, options?: ResolveFileOptions): Thenable<FileStat | null>;
 
-		resolveContents(resource: Uri): string | Thenable<string>;
+		resolveContent(resource: Uri): string | Thenable<string>;
 		writeContents(resource: Uri, contents: string): void | Thenable<void>;
 	}
 

@@ -77,6 +77,10 @@ export class CodeCommentsDecorationRenderer extends Disposable implements IEdito
 		});
 
 		this._register(editor.onMouseDown(e => {
+			if (!e.target.position) {
+				return;
+			}
+
 			// TODO(nick): this doesn't handle the case of multiple threads on a single line.
 			// If so, we should either open a context menu to select which one (e.g. lightBulbWidget.ts -> quickFixWidget.ts),
 			// or filter the threads list down to the threads that are on this line.
