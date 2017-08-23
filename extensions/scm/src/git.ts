@@ -104,7 +104,7 @@ export class GitRepository implements Repository {
 			}
 
 			// Don't include full contents in cache key; the doc version suffices.
-			cacheKey = JSON.stringify((args as any[]).concat(doc.version));
+			cacheKey = JSON.stringify((args as any[]).concat(doc.version, path));
 
 			const options: vscode.CommandOptions = {};
 			if (doc.isDirty) {

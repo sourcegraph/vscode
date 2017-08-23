@@ -112,7 +112,7 @@ class BlameLineDecorator extends Disposable {
 		const selectionsExpandedToFullLines = event.selections.map(sel => {
 			return new vscode.Range(new vscode.Position(sel.start.line, 0), new vscode.Position(sel.end.line, Number.MAX_SAFE_INTEGER));
 		});
-		const keepDecorations = this.visibleDecorations.filter(d => {
+		const keepDecorations = visibleDecorations.filter(d => {
 			// Keep a decoration if it is on a selected line.
 			return selectionsExpandedToFullLines.some(sel => sel.contains(d.range));
 		});
