@@ -27,8 +27,12 @@ export class RepoFileSystem implements vscode.FileSystemProvider, vscode.Disposa
 	 * A promise that is resolved when the revision property is set for the first time
 	 * (via setRevision).
 	 */
-	private _ready: Thenable<void> = new Promise(resolve => { this._readyResolve = resolve; });
+	private _ready: Thenable<void> = new Promise((resolve, reject) => {
+		this._readyResolve = resolve;
+		this._readyReject = reject;
+	});
 	private _readyResolve: (() => void) | undefined;
+	private _readyReject: ((err: any) => void) | undefined;
 
 	private toDispose: vscode.Disposable[] = [];
 
@@ -42,9 +46,12 @@ export class RepoFileSystem implements vscode.FileSystemProvider, vscode.Disposa
 		if (revision !== this.revision) {
 			this.revision = revision;
 
-			if (this._readyResolve) {
+			if (this._readyResolve && this._readyReject) {
 				this._readyResolve();
 				this._readyResolve = undefined;
+				this._readyReject = undefined;
+			} else {
+				this._ready = Promise.resolve();
 			}
 
 			// Trigger a refresh of all documents.
@@ -54,6 +61,17 @@ export class RepoFileSystem implements vscode.FileSystemProvider, vscode.Disposa
 					this._onDidChange.fire(doc.uri);
 				}
 			});
+		}
+	}
+
+	setRevisionError(err: any): void {
+		this.revision = undefined;
+		if (this._readyReject) {
+			this._readyReject(err);
+			this._readyResolve = undefined;
+			this._readyReject = undefined;
+		} else {
+			this._ready = Promise.reject(err);
 		}
 	}
 

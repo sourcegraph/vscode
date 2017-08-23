@@ -133,6 +133,8 @@ export class GitRepository implements Repository, vscode.Disposable {
 			const data: ISerializedRepositoryState = { lastRawRevisionSpecifier: revision.rawSpecifier };
 			this.workspaceState.update(`repostate:${this.root.toString()}`, data);
 		}, err => {
+			this.sourceControl.revision = undefined;
+			this.toRevision.forEach(revisioned => revisioned.setRevisionError(err));
 			this.resolveRevisionError = err;
 		})
 			.then(() => this._onDidChangeStatus.fire());

@@ -69,4 +69,10 @@ export interface Revisioned {
 	 * Git commit SHA-1).
 	 */
 	setRevision(revision: string): void;
+
+	/**
+	 * Sets an error that occurred while resolving the revision. It also clears the
+	 * revision previously set by setRevision (if any).
+	 */
+	setRevisionError(err: any): void;
 }
