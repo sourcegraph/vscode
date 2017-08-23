@@ -28,6 +28,7 @@ import { Schemas } from 'vs/base/common/network';
 import { createRemoteFileSearchEngineClass } from 'vs/workbench/services/search/electron-browser/remoteFileSearch';
 import { IRawSearch, IFolderSearch } from 'vs/workbench/services/search/node/search';
 import { SearchService as RawSearchService } from 'vs/workbench/services/search/node/rawSearchService';
+import { ProgressEventError } from 'vs/platform/remote/node/remoteService';
 
 export class RemoteSearchService extends SearchService implements ISearchService {
 	_serviceBrand: any;
@@ -131,7 +132,7 @@ export class RemoteSearchService extends SearchService implements ISearchService
 					warning: this.getWarning(model.response),
 				});
 			}, err => {
-				if (err instanceof ProgressEvent) {
+				if (err instanceof ProgressEventError) {
 					// Treat XMLHTTPRequest errors (typically indicating network
 					// connectivity issues) as warnings. Otherwise if you have 1 remote
 					// root and some local roots, when you are offline the remote root

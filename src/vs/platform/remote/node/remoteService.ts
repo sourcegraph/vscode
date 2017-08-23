@@ -5,6 +5,7 @@
 
 'use strict';
 
+import { localize } from 'vs/nls';
 import URI from 'vs/base/common/uri';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { Disposable } from 'vs/base/common/lifecycle';
@@ -58,6 +59,18 @@ export class RemoteService extends Disposable implements IRemoteService {
 			}
 			options.headers['Authorization'] = `session ${this.cookie}`;
 		}
-		return this.requestService.request(options);
+		return this.requestService.request(options).then(undefined, err => {
+			if (err instanceof ProgressEvent) {
+				// Convert ProgressEvent to an actual error with a useful error message.
+				throw new ProgressEventError(err);
+			}
+			throw err;
+		});
+	}
+}
+
+export class ProgressEventError extends Error {
+	constructor(public readonly progressEvent: ProgressEvent) {
+		super(localize('progressEventErrorMessage', "Network request failed."));
 	}
 }
