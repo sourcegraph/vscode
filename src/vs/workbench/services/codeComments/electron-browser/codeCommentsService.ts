@@ -5,7 +5,7 @@
 'use strict';
 
 import { localize } from 'vs/nls';
-import { ICodeCommentsService, Thread, CommentsDidChangeEvent } from 'vs/editor/common/services/codeCommentsService';
+import { ICodeCommentsService, IFileCommentsModel, Thread, CommentsDidChangeEvent } from 'vs/editor/common/services/codeCommentsService';
 import { Range } from 'vs/editor/common/core/range';
 import Event, { Emitter } from 'vs/base/common/event';
 import { Diff } from 'vs/workbench/services/codeComments/common/diff';
@@ -63,14 +63,42 @@ comments {
 }
 `;
 
+/**
+ * Models the state of comments on a file.
+ */
+export class FileCommentsModel implements IFileCommentsModel {
+
+	private _selectedThread: Thread | undefined;
+	private selectedThreadDidChangeEmitter = new Emitter<void>();
+
+	/**
+	 * See documentation on ICodeCommentsModel.
+	 */
+	public onSelectedThreadDidChange: Event<void> = this.selectedThreadDidChangeEmitter.event;
+
+	public set selectedThread(thread: Thread | undefined) {
+		this._selectedThread = thread;
+		this.selectedThreadDidChangeEmitter.fire();
+	}
+
+	public get selectedThread(): Thread | undefined {
+		return this._selectedThread;
+	}
+}
+
 // TODO: validation (at least one comment per thread)
 export class CodeCommentsService implements ICodeCommentsService {
 	public _serviceBrand: any;
 
+	/**
+	 * Map of file uri -> model.
+	 */
+	private models = new Map<string, IFileCommentsModel>();
+
 	private commentsDidChangeEmitter = new Emitter<CommentsDidChangeEvent>();
 
 	/**
-	 * Event that is fired when comments change for a file.
+	 * See documentation on ICodeCommentsService.
 	 */
 	public onCommentsDidChange: Event<CommentsDidChangeEvent> = this.commentsDidChangeEmitter.event;
 
@@ -110,6 +138,18 @@ export class CodeCommentsService implements ICodeCommentsService {
 		@ISCMService private scmService: ISCMService,
 	) {
 		this.git = instantiationService.createInstance(Git);
+	}
+
+	/**
+	 * See documentation on ICodeCommentsService.
+	 */
+	public getModel(file: URI): IFileCommentsModel {
+		let model = this.models.get(file.toString());
+		if (!model) {
+			model = new FileCommentsModel();
+			this.models.set(file.toString(), model);
+		}
+		return model;
 	}
 
 	/**

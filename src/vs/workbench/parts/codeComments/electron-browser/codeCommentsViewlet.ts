@@ -69,7 +69,8 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 	private recentThreadsView = true;
 
 	private showRecentThreadsAction = new Action('workbench.codeCodeComments.action.showRecentThreads', 'Show recent threads', 'recentThreads', true, () => {
-		this.render(this.getActiveModelUri(), {});
+		const modelUri = this.getActiveModelUri();
+		this.codeCommentsService.getModel(modelUri).selectedThread = undefined;
 		return TPromise.as(null);
 	});
 
@@ -151,7 +152,13 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 				this.render(this.getModelUri(editor), { refreshData: true });
 			}
 		}));
-		this.render(this.getModelUri(editor), { refreshData: true });
+		const modelUri = this.getModelUri(editor);
+		if (modelUri) {
+			this.activeEditorListeners.push(this.codeCommentsService.getModel(modelUri).onSelectedThreadDidChange(() => {
+				this.render(this.getModelUri(editor), {});
+			}));
+		}
+		this.render(modelUri, { refreshData: true });
 	}
 
 	private getActiveCodeEditor(): ICommonCodeEditor | undefined {
@@ -196,19 +203,11 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 			this.renderCommentsNotAvailable();
 			return;
 		}
-
-		this.recentThreadsView = true;
-		this.title = localize('recentComments', "Recent conversations: {0}", basename(modelUri.fsPath));
-		this.actions = [];
-		this.updateTitleArea();
-		this.renderDisposables = dispose(this.renderDisposables);
-
-		const threads = this.codeCommentsService.getThreads(modelUri);
-		this.renderRecentThreadsView(modelUri, threads);
-		if (options.refreshData) {
-			this.progressService.showWhile(this.codeCommentsService.refreshThreads(modelUri));
+		const selectedThread = this.codeCommentsService.getModel(modelUri).selectedThread;
+		if (selectedThread) {
+			this.renderThreadView(modelUri, selectedThread);
 		} else {
-			this.progressService.showWhile(this.codeCommentsService.refreshing(modelUri));
+			this.renderRecentThreadsView(modelUri, options);
 		}
 	}
 
@@ -226,7 +225,20 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 	/**
 	 * Renders threads for whole file ordered by most recent comment timestamp descending.
 	 */
-	private renderRecentThreadsView(modelUri: URI, threads: Thread[]): void {
+	private renderRecentThreadsView(modelUri: URI, options: { refreshData?: boolean }): void {
+		this.recentThreadsView = true;
+		this.title = localize('recentComments', "Recent conversations: {0}", basename(modelUri.fsPath));
+		this.actions = [];
+		this.updateTitleArea();
+		this.renderDisposables = dispose(this.renderDisposables);
+
+		const threads = this.codeCommentsService.getThreads(modelUri);
+		if (options.refreshData) {
+			this.progressService.showWhile(this.codeCommentsService.refreshThreads(modelUri));
+		} else {
+			this.progressService.showWhile(this.codeCommentsService.refreshing(modelUri));
+		}
+
 		clearNode(this.list);
 		$(this.list).div({ class: 'threads' }, div => {
 			if (threads.length === 0) {
@@ -249,7 +261,9 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 			for (const thread of threads) {
 				const recentComment = thread.mostRecentComment;
 				div.div({ class: 'thread' }, div => {
-					div.on('click', () => this.renderThreadView(modelUri, thread));
+					div.on('click', () => {
+						this.codeCommentsService.getModel(modelUri).selectedThread = thread;
+					});
 					div.div({ class: 'leftRight' }, div => {
 						div.div({ class: 'left', title: recentComment.authorEmail }, div => {
 							div.text(recentComment.authorName);
@@ -325,11 +339,13 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 		const createThreadView = this.instantiationService.createInstance(CreateThreadView, this.list, file, range);
 		this.renderDisposables.push(createThreadView);
 		this.renderDisposables.push(createThreadView.onHeightChange(() => this.updateScrollbar()));
-		this.renderDisposables.push(createThreadView.onCreateThread(thread => this.renderThreadView(file, thread)));
 	}
 
 	public viewThread(threadID: number, commentID: number): void {
-		console.log('open thread: ', threadID, commentID);
+		const modelUri = this.getActiveModelUri();
+		const selectedThread = this.codeCommentsService.getThread(modelUri, threadID);
+		this.codeCommentsService.getModel(modelUri).selectedThread = selectedThread;
+		// TODO: scroll to and/or highlight comment?
 	}
 }
 

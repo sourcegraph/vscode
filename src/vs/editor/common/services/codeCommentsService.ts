@@ -14,13 +14,31 @@ export const ID = 'codeCommentsService';
 
 export const ICodeCommentsService = createDecorator<ICodeCommentsService>(ID);
 
+export interface IFileCommentsModel {
+	/**
+	 * The comment thread that the user has selected to look at.
+	 */
+	selectedThread: Thread | undefined;
+
+	/**
+	 * Event that is fired when selectedThread changes.
+	 */
+	readonly onSelectedThreadDidChange: Event<void>;
+}
+
 export interface ICodeCommentsService {
 	_serviceBrand: any;
 
 	/**
-	 * An event that is fired when comments change.
+	 * Event that is fired when comments change.
 	 */
 	readonly onCommentsDidChange: Event<CommentsDidChangeEvent>;
+
+	/**
+	 * Returns the code comments model for a file.
+	 * TODO: might want to move most of the other methods and properties onto the model.
+	 */
+	getModel(file: URI): IFileCommentsModel;
 
 	/**
 	 * Creates a new thread and comment on the file at the given range.
