@@ -51,3 +51,7 @@ script:
 
 after_success:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then node_modules/.bin/coveralls < .build/coverage/lcov.info; fi
+
+branches:
+  only:
+  - master
