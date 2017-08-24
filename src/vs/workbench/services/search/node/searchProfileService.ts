@@ -3,16 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Disposable } from "vs/base/common/lifecycle";
-import { ISearchProfileService, ISearchProfile, ISearchConfiguration, SearchProfileSource } from "vs/platform/search/common/search";
-import { IConfigurationService } from "vs/platform/configuration/common/configuration";
-import Event, { Emitter } from "vs/base/common/event";
-import { localize } from "vs/nls";
-import * as arrays from "vs/base/common/arrays";
-import * as strings from "vs/base/common/strings";
+import { Disposable } from 'vs/base/common/lifecycle';
+import { ISearchProfileService, ISearchProfile, ISearchConfiguration, SearchProfileSource } from 'vs/platform/search/common/search';
+import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
+import Event, { Emitter } from 'vs/base/common/event';
+import { localize } from 'vs/nls';
+import * as arrays from 'vs/base/common/arrays';
+import * as strings from 'vs/base/common/strings';
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
 import { IRemoteService, requestGraphQL } from 'vs/platform/remote/node/remote';
-import { onUnexpectedError } from "vs/base/common/errors";
+import { onUnexpectedError } from 'vs/base/common/errors';
 
 
 /**

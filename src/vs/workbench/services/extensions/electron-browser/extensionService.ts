@@ -11,7 +11,7 @@ import { TPromise } from 'vs/base/common/winjs.base';
 import pkg from 'vs/platform/node/package';
 import * as path from 'path';
 import URI from 'vs/base/common/uri';
-import { ExtensionDescriptionRegistry } from "vs/workbench/services/extensions/node/extensionDescriptionRegistry";
+import { ExtensionDescriptionRegistry } from 'vs/workbench/services/extensions/node/extensionDescriptionRegistry';
 import { IMessage, IExtensionDescription, IExtensionsStatus, IExtensionService, ExtensionPointContribution } from 'vs/platform/extensions/common/extensions';
 import { IExtensionEnablementService } from 'vs/platform/extensionManagement/common/extensionManagement';
 import { areSameExtensions, getGloballyDisabledExtensions } from 'vs/platform/extensionManagement/common/extensionManagementUtil';
@@ -19,19 +19,19 @@ import { ExtensionsRegistry, ExtensionPoint, IExtensionPointUser, ExtensionMessa
 import { ExtensionScanner, ILog } from 'vs/workbench/services/extensions/electron-browser/extensionPoints';
 import { IMessageService } from 'vs/platform/message/common/message';
 import { ProxyIdentifier } from 'vs/workbench/services/thread/common/threadService';
-import { ExtHostContext, ExtHostExtensionServiceShape, IExtHostContext, MainContext } from "vs/workbench/api/node/extHost.protocol";
+import { ExtHostContext, ExtHostExtensionServiceShape, IExtHostContext, MainContext } from 'vs/workbench/api/node/extHost.protocol';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 import { IStorageService } from 'vs/platform/storage/common/storage';
-import { IInstantiationService } from "vs/platform/instantiation/common/instantiation";
-import { ExtensionHostProcessWorker } from "vs/workbench/services/extensions/electron-browser/extensionHost";
-import { MainThreadService } from "vs/workbench/services/thread/electron-browser/threadService";
-import { Barrier } from "vs/workbench/services/extensions/node/barrier";
-import { IMessagePassingProtocol } from "vs/base/parts/ipc/common/ipc";
-import { ExtHostCustomersRegistry } from "vs/workbench/api/electron-browser/extHostCustomers";
-import { IWindowService } from "vs/platform/windows/common/windows";
-import { Action } from "vs/base/common/actions";
-import { IDisposable } from "vs/base/common/lifecycle";
+import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
+import { ExtensionHostProcessWorker } from 'vs/workbench/services/extensions/electron-browser/extensionHost';
+import { MainThreadService } from 'vs/workbench/services/thread/electron-browser/threadService';
+import { Barrier } from 'vs/workbench/services/extensions/node/barrier';
+import { IMessagePassingProtocol } from 'vs/base/parts/ipc/common/ipc';
+import { ExtHostCustomersRegistry } from 'vs/workbench/api/electron-browser/extHostCustomers';
+import { IWindowService } from 'vs/platform/windows/common/windows';
+import { Action } from 'vs/base/common/actions';
+import { IDisposable } from 'vs/base/common/lifecycle';
 
 const SystemExtensionsRoot = path.normalize(path.join(URI.parse(require.toUrl('')).fsPath, '..', 'extensions'));
 
@@ -96,6 +96,11 @@ export class ExtensionService implements IExtensionService {
 
 		this._startExtensionHostProcess([]);
 		this._scanAndHandleExtensions();
+	}
+
+	public restartExtensionHost(): void {
+		this._stopExtensionHostProcess();
+		this._startExtensionHostProcess(Object.keys(this._allRequestedActivateEvents));
 	}
 
 	private _stopExtensionHostProcess(): void {
@@ -198,7 +203,7 @@ export class ExtensionService implements IExtensionService {
 	// ---- begin IExtensionService
 
 	public activateByEvent(activationEvent: string): TPromise<void> {
-		if (this._barrier.isOpen) {
+		if (this._barrier.isOpen()) {
 			// Extensions have been scanned and interpreted
 
 			if (!this._registry.containsActivationEvent(activationEvent)) {

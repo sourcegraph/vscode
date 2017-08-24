@@ -26,6 +26,7 @@ import { MessageController } from './messageController';
 import * as corePosition from 'vs/editor/common/core/position';
 import { EditorContextKeys } from 'vs/editor/common/editorContextKeys';
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
+import { IProgressService } from 'vs/platform/progress/common/progress';
 
 export class DefinitionActionConfig {
 
@@ -51,12 +52,13 @@ export class DefinitionAction extends EditorAction {
 	public run(accessor: ServicesAccessor, editor: editorCommon.ICommonCodeEditor): TPromise<void> {
 		const messageService = accessor.get(IMessageService);
 		const editorService = accessor.get(IEditorService);
+		const progressService = accessor.get(IProgressService);
 		const currentWorkspacePath = accessor.get(IWorkspaceContextService).getWorkspace().roots[0].path;
 
 		const model = editor.getModel();
 		const pos = editor.getPosition();
 
-		return this._getDeclarationsAtPosition(model, pos).then(references => {
+		const definitionPromise = this._getDeclarationsAtPosition(model, pos).then(references => {
 
 			if (model.isDisposed() || editor.getModel() !== model) {
 				// new model, no more model
@@ -106,6 +108,9 @@ export class DefinitionAction extends EditorAction {
 			// report an error
 			messageService.show(Severity.Error, err);
 		});
+
+		progressService.showWhile(definitionPromise, 250);
+		return definitionPromise;
 	}
 
 	protected _getDeclarationsAtPosition(model: editorCommon.IModel, position: corePosition.Position): TPromise<Location[]> {
@@ -365,4 +370,3 @@ export class PeekTypeDefinitionAction extends TypeDefinitionAction {
 		});
 	}
 }
-

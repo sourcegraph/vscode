@@ -313,7 +313,7 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 
 	private updateScrollbar(): void {
 		const scrollContainer = this.scrollbar.getDomNode();
-		this.scrollbar.updateState({
+		this.scrollbar.setScrollDimensions({
 			width: scrollContainer.clientWidth,
 			scrollWidth: this.list.clientWidth,
 

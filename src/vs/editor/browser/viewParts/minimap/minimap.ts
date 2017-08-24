@@ -20,7 +20,7 @@ import { FastDomNode, createFastDomNode } from 'vs/base/browser/fastDomNode';
 import { IDisposable } from 'vs/base/common/lifecycle';
 import { RenderedLinesCollection, ILine } from 'vs/editor/browser/view/viewLayer';
 import { Range } from 'vs/editor/common/core/range';
-import { RGBA8 } from "vs/editor/common/core/rgba";
+import { RGBA8 } from 'vs/editor/common/core/rgba';
 import * as viewEvents from 'vs/editor/common/view/viewEvents';
 import { GlobalMouseMoveMonitor, IStandardMouseMoveEventData, standardMouseMoveMerger } from 'vs/base/browser/globalMouseMoveMonitor';
 import * as platform from 'vs/base/common/platform';
@@ -528,14 +528,14 @@ export class Minimap extends ViewPart {
 
 						if (platform.isWindows && mouseOrthogonalDelta > MOUSE_DRAG_RESET_DISTANCE) {
 							// The mouse has wondered away from the scrollbar => reset dragging
-							this._context.viewLayout.setScrollPosition({
+							this._context.viewLayout.setScrollPositionNow({
 								scrollTop: initialSliderState.scrollTop
 							});
 							return;
 						}
 
 						const mouseDelta = mouseMoveData.posy - initialMousePosition;
-						this._context.viewLayout.setScrollPosition({
+						this._context.viewLayout.setScrollPositionNow({
 							scrollTop: initialSliderState.getDesiredScrollTopFromDelta(mouseDelta)
 						});
 					},

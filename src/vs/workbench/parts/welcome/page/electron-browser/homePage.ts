@@ -20,14 +20,14 @@ import { IBackupFileService } from 'vs/workbench/services/backup/common/backup';
 import { used } from 'vs/workbench/parts/welcome/page/electron-browser/sourcegraph_home_page';
 import { ILifecycleService, StartupKind } from 'vs/platform/lifecycle/common/lifecycle';
 import { IDisposable, dispose } from 'vs/base/common/lifecycle';
-import { StandardKeyboardEvent } from "vs/base/browser/keyboardEvent";
-import { KeyCode } from "vs/base/common/keyCodes";
-import { IViewletService } from "vs/workbench/services/viewlet/browser/viewlet";
+import { StandardKeyboardEvent } from 'vs/base/browser/keyboardEvent';
+import { KeyCode } from 'vs/base/common/keyCodes';
+import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
 import { VIEWLET_ID as SEARCH_VIEWLET_ID } from 'vs/workbench/parts/search/common/constants';
-import { SourcegraphSearchViewlet } from "vs/workbench/parts/search/browser/sourcegraphSearchViewlet";
-import { EditorInput, IEditorInputFactory } from "vs/workbench/common/editor";
-import { ICommandService } from "vs/platform/commands/common/commands";
-import { Action } from "vs/base/common/actions";
+import { SourcegraphSearchViewlet } from 'vs/workbench/parts/search/browser/sourcegraphSearchViewlet';
+import { EditorInput, IEditorInputFactory } from 'vs/workbench/common/editor';
+import { ICommandService } from 'vs/platform/commands/common/commands';
+import { Action } from 'vs/base/common/actions';
 
 used();
 

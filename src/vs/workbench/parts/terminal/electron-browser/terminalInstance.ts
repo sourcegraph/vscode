@@ -163,7 +163,9 @@ export class TerminalInstance implements ITerminalInstance {
 		if (platform.isWindows) {
 			this._processReady.then(() => {
 				if (!this._isDisposed) {
-					this._windowsShellHelper = new WindowsShellHelper(this._processId, this._shellLaunchConfig.executable, this, this._xterm);
+					import('vs/workbench/parts/terminal/electron-browser/windowsShellHelper').then((module) => {
+						this._windowsShellHelper = new module.WindowsShellHelper(this._processId, this._shellLaunchConfig.executable, this, this._xterm);
+					});
 				}
 			});
 		}
@@ -280,7 +282,7 @@ export class TerminalInstance implements ITerminalInstance {
 		dom.addClass(this._wrapperElement, 'terminal-wrapper');
 		this._xtermElement = document.createElement('div');
 
-		this._xterm.open(this._xtermElement, false);
+		this._xterm.open(this._xtermElement);
 		this._xterm.attachCustomKeyEventHandler((event: KeyboardEvent) => {
 			// Disable all input if the terminal is exiting
 			if (this._isExiting) {

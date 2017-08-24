@@ -32,7 +32,7 @@ import { IWorkspaceEditingService } from 'vs/workbench/services/workspace/common
 import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
 import { ExplorerViewlet } from 'vs/workbench/parts/files/browser/explorerViewlet';
 import { VIEWLET_ID as EXPLORER_VIEWLET_ID } from 'vs/workbench/parts/files/common/files';
-import { IWorkspacesService } from "vs/platform/workspaces/common/workspaces";
+import { IWorkspacesService } from 'vs/platform/workspaces/common/workspaces';
 
 /**
 * The quick open model representing workspace results from a single handler.

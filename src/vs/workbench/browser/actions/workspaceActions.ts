@@ -15,15 +15,15 @@ import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace
 import { IWorkspaceEditingService } from 'vs/workbench/services/workspace/common/workspaceEditing';
 import URI from 'vs/base/common/uri';
 import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
-import { IInstantiationService } from "vs/platform/instantiation/common/instantiation";
-import { IWorkspacesService, WORKSPACE_FILTER } from "vs/platform/workspaces/common/workspaces";
-import { IMessageService, Severity } from "vs/platform/message/common/message";
-import { IEnvironmentService } from "vs/platform/environment/common/environment";
-import { isLinux } from "vs/base/common/platform";
-import { dirname } from "vs/base/common/paths";
-import { mnemonicLabel } from "vs/base/common/labels";
-import { isParent } from "vs/platform/files/common/files";
-import { IWorkbenchEditorService } from "vs/workbench/services/editor/common/editorService";
+import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
+import { IWorkspacesService, WORKSPACE_FILTER } from 'vs/platform/workspaces/common/workspaces';
+import { IMessageService, Severity } from 'vs/platform/message/common/message';
+import { IEnvironmentService } from 'vs/platform/environment/common/environment';
+import { isLinux } from 'vs/base/common/platform';
+import { dirname } from 'vs/base/common/paths';
+import { mnemonicLabel } from 'vs/base/common/labels';
+import { isParent } from 'vs/platform/files/common/files';
+import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
 
 export class OpenFolderAction extends Action {
 
@@ -71,35 +71,6 @@ export abstract class BaseWorkspacesAction extends Action {
 		protected contextService: IWorkspaceContextService
 	) {
 		super(id, label);
-	}
-
-	protected handleNotInMultiFolderWorkspaceCase(message: string): boolean {
-		const newWorkspace = { label: mnemonicLabel(nls.localize({ key: 'reload', comment: ['&& denotes a mnemonic'] }, "&&Reload")), canceled: false };
-		const cancel = { label: nls.localize('cancel', "Cancel"), canceled: true };
-
-		const buttons: { label: string; canceled: boolean; }[] = [];
-		if (isLinux) {
-			buttons.push(cancel, newWorkspace);
-		} else {
-			buttons.push(newWorkspace, cancel);
-		}
-
-		const opts: Electron.ShowMessageBoxOptions = {
-			title: this.environmentService.appNameLong,
-			message,
-			noLink: true,
-			type: 'question',
-			buttons: buttons.map(button => button.label),
-			cancelId: buttons.indexOf(cancel)
-		};
-
-		if (isLinux) {
-			opts.defaultId = 1;
-		}
-
-		const res = this.windowService.showMessageBox(opts);
-
-		return !buttons[res].canceled;
 	}
 
 	protected pickFolders(buttonLabel: string, title: string): string[] {
@@ -178,16 +149,14 @@ class NewWorkspaceAction extends BaseWorkspacesAction {
 	public run(): TPromise<any> {
 		const folders = this.pickFolders(mnemonicLabel(nls.localize({ key: 'select', comment: ['&& denotes a mnemonic'] }, "&&Select")), nls.localize('selectWorkspace', "Select Folders for Workspace"));
 		if (folders && folders.length) {
-			if (this.handleNotInMultiFolderWorkspaceCase(nls.localize('addSupported', "To open multiple folders, window reload is required."))) {
-				return this.createWorkspace([...this.presetRoots, ...folders.map(folder => URI.file(folder))]);
-			}
+			return this.createWorkspace([...this.presetRoots, ...folders.map(folder => URI.file(folder))]);
 		}
 
 		return TPromise.as(null);
 	}
 
 	private createWorkspace(folders: URI[]): TPromise<void> {
-		const workspaceFolders = distinct(folders.map(folder => folder.toString(true /* encoding */)));
+		const workspaceFolders = distinct(folders.map(folder => folder.toString(true /* skip encoding to preserve drive letters readable */)));
 
 		return this.windowService.createAndOpenWorkspace(workspaceFolders);
 	}
@@ -251,13 +220,9 @@ export class SaveWorkspaceAsAction extends BaseWorkspacesAction {
 	}
 
 	private saveFolderWorkspace(configPath: string): TPromise<void> {
-		if (this.handleNotInMultiFolderWorkspaceCase(nls.localize('saveNotSupported', "To save workspace, window reload is required."))) {
-			const workspaceFolders = this.contextService.getWorkspace().roots.map(root => root.toString(true /* skip encoding */));
+		const workspaceFolders = this.contextService.getWorkspace().roots.map(root => root.toString(true /* skip encoding */));
 
-			return this.windowService.createAndOpenWorkspace(workspaceFolders, configPath);
-		}
-
-		return TPromise.as(null);
+		return this.windowService.createAndOpenWorkspace(workspaceFolders, configPath);
 	}
 
 	private getNewWorkspaceConfigPath(): string {

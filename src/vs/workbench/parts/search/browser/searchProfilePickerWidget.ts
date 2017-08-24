@@ -12,13 +12,13 @@ import { localize } from 'vs/nls';
 import { registerThemingParticipant } from 'vs/platform/theme/common/themeService';
 import { Widget } from 'vs/base/browser/ui/widget';
 import { inputBackground, inputForeground } from 'vs/platform/theme/common/colorRegistry';
-import { SelectBox } from "vs/base/browser/ui/selectBox/selectBox";
-import { ISearchProfile, ISearchProfileService } from "vs/platform/search/common/search";
-import * as arrays from "vs/base/common/arrays";
+import { SelectBox } from 'vs/base/browser/ui/selectBox/selectBox';
+import { ISearchProfile, ISearchProfileService } from 'vs/platform/search/common/search';
+import * as arrays from 'vs/base/common/arrays';
 import * as errors from 'vs/base/common/errors';
-import { IPreferencesService } from "vs/workbench/parts/preferences/common/preferences";
-import { PreferencesEditor } from "vs/workbench/parts/preferences/browser/preferencesEditor";
-import { ITelemetryService } from "vs/platform/telemetry/common/telemetry";
+import { IPreferencesService } from 'vs/workbench/parts/preferences/common/preferences';
+import { PreferencesEditor } from 'vs/workbench/parts/preferences/browser/preferencesEditor';
+import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 
 export class SearchProfilePickerWidget extends Widget {
 

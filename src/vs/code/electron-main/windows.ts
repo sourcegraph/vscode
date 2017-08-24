@@ -7,7 +7,7 @@
 
 import * as path from 'path';
 import * as fs from 'original-fs';
-import { localize } from "vs/nls";
+import { localize } from 'vs/nls';
 import * as arrays from 'vs/base/common/arrays';
 import { assign, mixin, equals } from 'vs/base/common/objects';
 import { IBackupMainService } from 'vs/platform/backup/common/backup';
@@ -25,15 +25,15 @@ import CommonEvent, { Emitter } from 'vs/base/common/event';
 import product from 'vs/platform/node/product';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { isEqual } from 'vs/base/common/paths';
-import { IWindowsMainService, IOpenConfiguration, IWindowsCountChangedEvent } from "vs/platform/windows/electron-main/windows";
-import { IHistoryMainService } from "vs/platform/history/common/history";
+import { IWindowsMainService, IOpenConfiguration, IWindowsCountChangedEvent } from 'vs/platform/windows/electron-main/windows';
+import { IHistoryMainService } from 'vs/platform/history/common/history';
 import { IProcessEnvironment, isLinux, isMacintosh, isWindows } from 'vs/base/common/platform';
-import { TPromise } from "vs/base/common/winjs.base";
+import { TPromise } from 'vs/base/common/winjs.base';
 import { parseFragment } from 'vs/base/common/urlRoutes';
-import { IWorkspacesMainService, IWorkspaceIdentifier, ISingleFolderWorkspaceIdentifier, IWorkspaceSavedEvent, WORKSPACE_FILTER, isSingleFolderWorkspaceIdentifier } from "vs/platform/workspaces/common/workspaces";
-import { IInstantiationService } from "vs/platform/instantiation/common/instantiation";
-import { mnemonicLabel } from "vs/base/common/labels";
-import URI from "vs/base/common/uri";
+import { IWorkspacesMainService, IWorkspaceIdentifier, ISingleFolderWorkspaceIdentifier, IWorkspaceSavedEvent, WORKSPACE_FILTER, isSingleFolderWorkspaceIdentifier } from 'vs/platform/workspaces/common/workspaces';
+import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
+import { mnemonicLabel } from 'vs/base/common/labels';
+import URI from 'vs/base/common/uri';
 import { findContainingFolder } from 'vs/platform/folder/common/folderContainment';
 
 enum WindowError {
@@ -1219,7 +1219,7 @@ export class WindowsManager implements IWindowsMainService {
 				window.focus();
 
 				// Only open workspace when the window has not vetoed this
-				return this.lifecycleService.unload(window, UnloadReason.RELOAD).done(veto => {
+				return this.lifecycleService.unload(window, UnloadReason.RELOAD, workspace).done(veto => {
 					if (!veto) {
 
 						// Register window for backups and migrate current backups over
@@ -1647,8 +1647,8 @@ class FileDialog {
 		}
 
 		// Show Dialog
-		const focussedWindow = this.windowsMainService.getWindowById(options.windowId) || this.windowsMainService.getFocusedWindow();
-		dialog.showOpenDialog(focussedWindow && focussedWindow.win, options.dialogOptions, paths => {
+		const focusedWindow = this.windowsMainService.getWindowById(options.windowId) || this.windowsMainService.getFocusedWindow();
+		dialog.showOpenDialog(focusedWindow && focusedWindow.win, options.dialogOptions, paths => {
 			if (paths && paths.length > 0) {
 
 				// Remember path in storage for next time

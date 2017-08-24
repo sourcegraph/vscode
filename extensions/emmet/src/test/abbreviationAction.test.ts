@@ -21,6 +21,25 @@ const cssContents = `
 }
 `;
 
+const scssContents = `
+.boo {
+	margin: 10px;
+	p10
+	.hoo {
+		p20
+	}
+}
+@include b(alert) {
+
+	margin: 10px;
+	p30
+
+	@include b(alert) {
+		p40
+	}
+}
+`
+
 const bemFilterExample = 'ul.search-form._wide>li.-querystring+li.-btn_large|bem';
 const expectedBemFilterOutput = `<ul class="search-form search-form_wide">
 		<li class="search-form__querystring"></li>
@@ -169,10 +188,10 @@ suite('Tests for Expand Abbreviations (HTML)', () => {
 		});
 	});
 
-	// TODO(sqs): skipped
-	test.skip('Expand using bem filter', () => {
-		return testHtmlExpandAbbreviation(new Selection(16, 55, 16, 55), bemFilterExample, expectedBemFilterOutput);
-	});
+	// TODO@Ramya test failing on our build machines on macOS
+	// test('Expand using bem filter', () => {
+	//	return testHtmlExpandAbbreviation(new Selection(16, 55, 16, 55), bemFilterExample, expectedBemFilterOutput);
+	// });
 
 });
 
@@ -187,7 +206,21 @@ suite('Tests for Expand Abbreviations (CSS)', () => {
 				return Promise.resolve();
 			});
 		});
+	});
 
+	test('Expand abbreviation (SCSS)', () => {
+		return withRandomFileEditor(scssContents, 'scss', (editor, doc) => {
+			editor.selections = [
+				new Selection(3, 4, 3, 4),
+				new Selection(5, 5, 5, 5),
+				new Selection(11, 4, 11, 4),
+				new Selection(14, 5, 14, 5)
+			];
+			return expandEmmetAbbreviation(null).then(() => {
+				assert.equal(editor.document.getText(), scssContents.replace(/p(\d\d)/g, 'padding: $1px;'));
+				return Promise.resolve();
+			});
+		});
 	});
 });
 

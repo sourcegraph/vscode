@@ -7,11 +7,11 @@
 import URI from 'vs/base/common/uri';
 import { FileService } from 'vs/workbench/services/files/electron-browser/fileService';
 import { IContent, IStreamContent, IFileStat, IResolveContentOptions, IResolveFileOptions, IResolveFileResult, IUpdateContentOptions, FileChangesEvent, FileChangeType, IImportResult } from 'vs/platform/files/common/files';
-import { TPromise } from "vs/base/common/winjs.base";
-import Event from "vs/base/common/event";
-import { EventEmitter } from "events";
-import { basename } from "path";
-import { IDisposable } from "vs/base/common/lifecycle";
+import { TPromise } from 'vs/base/common/winjs.base';
+import Event from 'vs/base/common/event';
+import { EventEmitter } from 'events';
+import { basename } from 'path';
+import { IDisposable } from 'vs/base/common/lifecycle';
 import { IExtensionService } from 'vs/platform/extensions/common/extensions';
 import { Schemas } from 'vs/base/common/network';
 
@@ -168,16 +168,6 @@ export class RemoteFileService extends FileService {
 			}
 
 			return super.resolveStreamContent(resource, options);
-		});
-	}
-
-	resolveContents(resources: URI[]): TPromise<IContent[]> {
-		return TPromise.join(resources.map(resource => this.getProvider(resource.scheme))).then(providers => {
-			if (providers.some(provider => !!provider)) {
-				return TPromise.join(resources.map(resource => this.resolveContent(resource)));
-			}
-
-			return super.resolveContents(resources);
 		});
 	}
 
