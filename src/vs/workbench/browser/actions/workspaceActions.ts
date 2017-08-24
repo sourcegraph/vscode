@@ -24,6 +24,8 @@ import { dirname } from 'vs/base/common/paths';
 import { mnemonicLabel } from 'vs/base/common/labels';
 import { isParent } from 'vs/platform/files/common/files';
 import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
+import { IStorageService, StorageScope } from 'vs/platform/storage/common/storage';
+import { IQuickOpenService } from 'vs/platform/quickOpen/common/quickOpen';
 
 export class OpenFolderAction extends Action {
 
@@ -125,6 +127,45 @@ export class AddRootFolderAction extends BaseWorkspacesAction {
 		return this.workspaceEditingService.addRoots(folders.map(folder => URI.file(folder))).then(() => {
 			return this.viewletService.openViewlet(this.viewletService.getDefaultViewletId(), true);
 		});
+	}
+}
+
+export class AddRootFolderResourceAction extends Action {
+
+	public static ID = 'workbench.action.addRootFolderResource';
+	public static LABEL = nls.localize('openResource', "Add Folder to Workspace by URI");
+
+	private static LAST_VALUE_STORAGE_KEY = 'addRootFolderResource.last';
+
+	constructor(
+		id: string,
+		label: string,
+		@IQuickOpenService private quickOpenService: IQuickOpenService,
+		@IStorageService private storageService: IStorageService,
+		@IWorkspaceEditingService private workspaceEditingService: IWorkspaceEditingService,
+		@IViewletService private viewletService: IViewletService
+	) {
+		super(id, label);
+	}
+
+	public run(): TPromise<any> {
+		const lastValue = this.storageService.get(AddRootFolderResourceAction.LAST_VALUE_STORAGE_KEY, StorageScope.GLOBAL);
+
+		return this.quickOpenService.input({
+			prompt: nls.localize('openResourcePrompt', "Enter Folder URI"),
+			value: lastValue,
+		})
+			.then(value => {
+				if (!value) {
+					return undefined;
+				}
+
+				this.storageService.store(AddRootFolderResourceAction.LAST_VALUE_STORAGE_KEY, value, StorageScope.GLOBAL);
+
+				return this.workspaceEditingService.addRoots([URI.parse(value)]).then(() => {
+					return this.viewletService.openViewlet(this.viewletService.getDefaultViewletId(), true);
+				});
+			});
 	}
 }
 
