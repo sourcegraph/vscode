@@ -14,7 +14,6 @@ import { ICommonCodeEditor } from 'vs/editor/common/editorCommon';
 import { ServicesAccessor, editorAction, EditorAction } from 'vs/editor/common/editorCommonExtensions';
 import { Range } from 'vs/editor/common/core/range';
 import { ICodeCommentsViewlet } from 'vs/workbench/parts/codeComments/common/codeComments';
-import { ICodeCommentsService } from 'vs/editor/common/services/codeCommentsService';
 import { IMessageService } from 'vs/platform/message/common/message';
 import Severity from 'vs/base/common/severity';
 
