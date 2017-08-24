@@ -9,6 +9,7 @@ import * as vscode from 'vscode';
 import { GitRepository } from './git';
 import { isRepoResource, REPO_SCHEME, REPO_VERSION_SCHEME } from './repository';
 import { toRelativePath } from './util';
+import { gitExtension } from './main';
 import * as nls from 'vscode-nls';
 
 const localize = nls.loadMessageBundle();
@@ -44,6 +45,7 @@ export class Workspace implements vscode.Disposable {
 		this.toDispose.push(vscode.workspace.onDidChangeWorkspaceFolders(e => this.onDidChangeWorkspaceFolders(e)));
 
 		this.registerUnionFileSystem();
+		this.registerResourceResolver();
 
 		this.toDispose.push(vscode.commands.registerCommand(SWITCH_REVISION_COMMAND_ID, (resource: vscode.Uri, revision?: vscode.SCMRevision) => this.switchRevision(resource, revision)));
 
@@ -175,6 +177,17 @@ export class Workspace implements vscode.Disposable {
 				return this.getRepository(uri)!.fileSystem.resolveContent(uri);
 			},
 		}));
+	}
+
+	private registerResourceResolver(): void {
+		const provider: vscode.ResourceResolutionProvider = {
+			resolveResource: async (resource: vscode.Uri): Promise<vscode.Uri> => {
+				const path = await gitExtension.git.clone(resource.with({ scheme: 'git' }).toString(), '/tmp');
+				return vscode.Uri.file(path);
+			},
+		};
+
+		this.toDispose.push(vscode.workspace.registerResourceResolutionProvider('git+exp', provider));
 	}
 
 	private switchRevision(resource?: vscode.Uri, revision?: vscode.SCMRevision): void {

@@ -55,6 +55,22 @@ declare module 'vscode' {
 		writeContents(resource: Uri, contents: string): void | Thenable<void>;
 	}
 
+	/**
+	 * Provides a method to resolve resources for a particular scheme (e.g. 'git+exp').
+	 */
+	export interface ResourceResolutionProvider {
+		/**
+		 * Resolves a (possibly abstract) resource URI to a concrete resource URI (typically file:).
+		 *
+		 * For example, a resource resolution provider might be registered that resolves URIs with scheme 'git'.
+		 * The user could then open a URI such as git://example.com/my/repo.git. The provider decides how to
+		 * resolve this URI. One possible provider implementation could clone that repository to a temporary
+		 * directory and return the directory's file URI, to allow the user to open and edit a repository's
+		 * files without needing to manually clone it.
+		 */
+		resolveResource(resource: Uri): Thenable<Uri>;
+	}
+
 	export namespace workspace {
 		/**
 		 * Finds the preferred parent folder for the resource. Unlike getRoot, it may
@@ -70,6 +86,11 @@ declare module 'vscode' {
 		export function findContainingFolder(resource: Uri): Uri | undefined;
 
 		export function registerFileSystemProvider(scheme: string, provider: FileSystemProvider): Disposable;
+
+		/**
+		 * Registers a IResourceResolutionProvider for the given scheme (e.g. 'git+ssh').
+		 */
+		export function registerResourceResolutionProvider(scheme: string, provider: ResourceResolutionProvider): Disposable;
 	}
 
 	export namespace window {

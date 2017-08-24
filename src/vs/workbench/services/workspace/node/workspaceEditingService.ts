@@ -14,6 +14,7 @@ import { IWindowsService } from 'vs/platform/windows/common/windows';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 import { IJSONEditingService } from 'vs/workbench/services/configuration/common/jsonEditing';
 import { IWorkspacesService } from 'vs/platform/workspaces/common/workspaces';
+import { IResourceResolverService } from 'vs/platform/resourceResolver/common/resourceResolver';
 
 export class WorkspaceEditingService implements IWorkspaceEditingService {
 
@@ -24,6 +25,7 @@ export class WorkspaceEditingService implements IWorkspaceEditingService {
 		@IWorkspaceContextService private contextService: IWorkspaceContextService,
 		@IEnvironmentService private environmentService: IEnvironmentService,
 		@IWindowsService private windowsService: IWindowsService,
+		@IResourceResolverService private resourceResolverService: IResourceResolverService,
 		@IWorkspacesService private workspacesService: IWorkspacesService
 	) {
 	}
@@ -33,9 +35,11 @@ export class WorkspaceEditingService implements IWorkspaceEditingService {
 			return TPromise.as(void 0); // we need a workspace to begin with
 		}
 
-		const roots = this.contextService.getWorkspace().roots;
+		return TPromise.join(rootsToAdd.map(root => this.resourceResolverService.resolveResource(root))).then(rootsToAdd => {
+			const roots = this.contextService.getWorkspace().roots;
 
-		return this.doSetRoots([...roots, ...rootsToAdd]);
+			return this.doSetRoots([...roots, ...rootsToAdd]);
+		});
 	}
 
 	public removeRoots(rootsToRemove: URI[]): TPromise<void> {

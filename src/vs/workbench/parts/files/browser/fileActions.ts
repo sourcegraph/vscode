@@ -53,6 +53,8 @@ import { IModelService } from 'vs/editor/common/services/modelService';
 import { IModeService } from 'vs/editor/common/services/modeService';
 import * as arrays from 'vs/base/common/arrays';
 import { IMode } from 'vs/editor/common/modes';
+import { IStorageService, StorageScope } from 'vs/platform/storage/common/storage';
+import { IOpenerService } from 'vs/platform/opener/common/opener';
 
 export interface IEditableData {
 	action: IAction;
@@ -2152,6 +2154,46 @@ export class ShowAllPathsAction extends Action {
 		});
 		console.groupEnd();
 		return TPromise.as(true);
+	}
+}
+
+/**
+ * For developer convenience. Shows a quickopen input field and opens the resource with
+ * the URI from user input.
+ */
+export class OpenResourceAction extends Action {
+
+	public static ID = 'workbench.action.files.openResource';
+	public static LABEL = nls.localize('openResource', "Open Resource URI");
+
+	private static LAST_VALUE_STORAGE_KEY = 'openResource.last';
+
+	constructor(
+		id: string,
+		label: string,
+		@IQuickOpenService private quickOpenService: IQuickOpenService,
+		@IStorageService private storageService: IStorageService,
+		@IOpenerService private openerService: IOpenerService,
+	) {
+		super(id, label);
+	}
+
+	public run(): TPromise<any> {
+		const lastValue = this.storageService.get(OpenResourceAction.LAST_VALUE_STORAGE_KEY, StorageScope.GLOBAL);
+
+		return this.quickOpenService.input({
+			prompt: nls.localize('openResourcePrompt', "Enter Resource URI"),
+			value: lastValue,
+		})
+			.then(value => {
+				if (!value) {
+					return undefined;
+				}
+
+				this.storageService.store(OpenResourceAction.LAST_VALUE_STORAGE_KEY, value, StorageScope.GLOBAL);
+
+				return this.openerService.open(URI.parse(value));
+			});
 	}
 }
 

@@ -308,6 +308,7 @@ export interface MainThreadWorkspaceShape extends IDisposable {
 	$applyWorkspaceEdit(edits: IResourceEdit[]): TPromise<boolean>;
 	$registerFileSystemProvider(handle: number, authority: string): void;
 	$onFileSystemChange(handle: number, resource: URI): void;
+	$registerResourceResolutionProvider(handle: number, scheme: string): void;
 }
 
 export interface MainThreadTaskShape extends IDisposable {
@@ -451,6 +452,7 @@ export interface ExtHostWorkspaceShape {
 	$resolveFileStat(handle: number, resource: URI, options: IResolveFileOptions): TPromise<IFileStat | null>;
 	$resolveFile(handle: number, resource: URI): TPromise<string>;
 	$storeFile(handle: number, resource: URI, content: string): TPromise<any>;
+	$resolveResource(handle: number, resource: URI): TPromise<URI>;
 }
 
 export interface ExtHostExtensionServiceShape {

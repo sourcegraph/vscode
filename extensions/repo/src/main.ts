@@ -9,8 +9,17 @@ import { Workspace } from './workspace';
 import { IRepoExtension, IRepository } from './api';
 import { toRelativePath } from './util';
 import { isRepoResource } from './repository';
+import { IGitExtension } from '../../git/src/api';
 
-export function activate(context: vscode.ExtensionContext): IRepoExtension {
+/**
+ * The 'git' extension's public API, guaranteed to be set before we call into other file's
+ * functions in our activate function.
+ */
+export let gitExtension: IGitExtension;
+
+export async function activate(context: vscode.ExtensionContext): Promise<IRepoExtension> {
+	gitExtension = await vscode.extensions.getExtension('vscode.git')!.activate();
+
 	const workspace = new Workspace(context.workspaceState);
 	context.subscriptions.push(workspace);
 

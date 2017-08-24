@@ -37,6 +37,7 @@ import { FontInfo, BareFontInfo } from 'vs/editor/common/config/fontInfo';
 import * as editorOptions from 'vs/editor/common/config/editorOptions';
 import { CursorChangeReason } from 'vs/editor/common/controller/cursorEvents';
 import { IMessageService } from 'vs/platform/message/common/message';
+import { IResourceResolverService } from 'vs/platform/resourceResolver/common/resourceResolver';
 
 /**
  * @internal
@@ -62,7 +63,7 @@ function withAllStandaloneServices<T extends editorCommon.IEditor>(domElement: H
 	}
 
 	if (!services.has(IOpenerService)) {
-		services.set(IOpenerService, new OpenerService(services.get(IEditorService), services.get(ICommandService)));
+		services.set(IOpenerService, new OpenerService(services.get(IEditorService), services.get(ICommandService), services.get(IResourceResolverService)));
 	}
 
 	let result = callback(services);

@@ -14,9 +14,10 @@ import { CommandCenter } from './commands';
 import { GitContentProvider } from './contentProvider';
 import { Askpass } from './askpass';
 import { toDisposable } from './util';
+import { IGitExtension } from './api';
 import TelemetryReporter from 'vscode-extension-telemetry';
 
-async function init(context: ExtensionContext, disposables: Disposable[]): Promise<void> {
+async function init(context: ExtensionContext, disposables: Disposable[]): Promise<IGitExtension> {
 	const { name, version, aiKey } = require(context.asAbsolutePath('./package.json')) as { name: string, version: string, aiKey: string };
 	const telemetryReporter: TelemetryReporter = new TelemetryReporter(name, version, aiKey);
 	disposables.push(telemetryReporter);
@@ -42,7 +43,7 @@ async function init(context: ExtensionContext, disposables: Disposable[]): Promi
 	if (!enabled) {
 		const commandCenter = new CommandCenter(git, model, outputChannel, telemetryReporter);
 		disposables.push(commandCenter);
-		return;
+		return { git };
 	}
 
 	outputChannel.appendLine(localize('using git', "Using git {0} from {1}", info.version, info.path));
@@ -57,9 +58,11 @@ async function init(context: ExtensionContext, disposables: Disposable[]): Promi
 	);
 
 	await checkGitVersion(info);
+
+	return { git };
 }
 
-export function activate(context: ExtensionContext): any {
+export function activate(context: ExtensionContext): Promise<IGitExtension | void> {
 	const disposables: Disposable[] = [];
 	context.subscriptions.push(new Disposable(() => Disposable.from(...disposables).dispose()));
 
@@ -69,7 +72,7 @@ export function activate(context: ExtensionContext): any {
 		init(context, disposables).catch(err => console.error(err));
 	});
 
-	init(context, disposables)
+	return init(context, disposables)
 		.catch(err => console.error(err));
 }
 

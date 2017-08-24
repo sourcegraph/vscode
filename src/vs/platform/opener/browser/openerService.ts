@@ -15,6 +15,7 @@ import { IOpenerService } from 'vs/platform/opener/common/opener';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { optional } from 'vs/platform/instantiation/common/instantiation';
 import { NullTelemetryService } from 'vs/platform/telemetry/common/telemetryUtils';
+import { IResourceResolverService } from 'vs/platform/resourceResolver/common/resourceResolver';
 
 export class OpenerService implements IOpenerService {
 
@@ -23,6 +24,7 @@ export class OpenerService implements IOpenerService {
 	constructor(
 		@IEditorService private _editorService: IEditorService,
 		@ICommandService private _commandService: ICommandService,
+		@IResourceResolverService private _resourceResolverService: IResourceResolverService,
 		@optional(ITelemetryService) private _telemetryService: ITelemetryService = NullTelemetryService
 	) {
 		//
@@ -75,7 +77,8 @@ export class OpenerService implements IOpenerService {
 			} else if (resource.scheme === Schemas.file) {
 				resource = URI.file(normalize(resource.fsPath)); // workaround for non-normalized paths (https://github.com/Microsoft/vscode/issues/12954)
 			}
-			promise = this._editorService.openEditor({ resource, options: { selection, } }, options && options.openToSide);
+			promise = this._resourceResolverService.resolveResource(resource)
+				.then(resource => this._editorService.openEditor({ resource, options: { selection } }, options && options.openToSide));
 		}
 
 		return TPromise.as(promise);

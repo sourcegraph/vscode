@@ -10,6 +10,7 @@ import { TPromise } from 'vs/base/common/winjs.base';
 import { IEditorService, IResourceInput } from 'vs/platform/editor/common/editor';
 import { ICommandService, NullCommandService, CommandsRegistry } from 'vs/platform/commands/common/commands';
 import { OpenerService } from 'vs/platform/opener/browser/openerService';
+import { NullResourceResolverService } from 'vs/platform/resourceResolver/common/resourceResolver';
 
 suite('OpenerService', function () {
 
@@ -39,14 +40,14 @@ suite('OpenerService', function () {
 	});
 
 	test('delegate to editorService, scheme:///fff', function () {
-		const openerService = new OpenerService(editorService, NullCommandService);
+		const openerService = new OpenerService(editorService, NullCommandService, NullResourceResolverService);
 		openerService.open(URI.parse('another:///somepath'));
 		assert.equal(lastInput.options.selection, undefined);
 	});
 
 	test('delegate to editorService, scheme:///fff#L123', function () {
 
-		const openerService = new OpenerService(editorService, NullCommandService);
+		const openerService = new OpenerService(editorService, NullCommandService, NullResourceResolverService);
 
 		openerService.open(URI.parse('file:///somepath#L23'));
 		assert.equal(lastInput.options.selection.startLineNumber, 23);
@@ -69,7 +70,7 @@ suite('OpenerService', function () {
 
 	test('delegate to editorService, scheme:///fff#123,123', function () {
 
-		const openerService = new OpenerService(editorService, NullCommandService);
+		const openerService = new OpenerService(editorService, NullCommandService, NullResourceResolverService);
 
 		openerService.open(URI.parse('file:///somepath#23'));
 		assert.equal(lastInput.options.selection.startLineNumber, 23);
@@ -88,7 +89,7 @@ suite('OpenerService', function () {
 
 	test('delegate to commandsService, command:someid', function () {
 
-		const openerService = new OpenerService(editorService, commandService);
+		const openerService = new OpenerService(editorService, commandService, NullResourceResolverService);
 
 		// unknown command
 		openerService.open(URI.parse('command:foobar'));
