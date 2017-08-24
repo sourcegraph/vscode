@@ -43,7 +43,7 @@ export class TelligentWrapper {
 			env = DEFAULT_ENV;
 		} else {
 			// TODO(Dan): update this once available
-			appId = 'SourcegraphWeb'; //this.environmentService.sourcegraphContext.trackingAppID;
+			appId = 'SourcegraphEditor'; //this.environmentService.sourcegraphContext.trackingAppID;
 			env = PROD_ENV;
 		}
 
