@@ -341,7 +341,6 @@ export class WorkbenchShell {
 
 		const resourceResolverService = instantiationService.createInstance(ResourceResolverService);
 		serviceCollection.set(IResourceResolverService, resourceResolverService);
-		disposables.push(resourceResolverService);
 
 		const folderContainmentService = instantiationService.createInstance(FolderContainmentService);
 		serviceCollection.set(IFolderContainmentService, folderContainmentService);

@@ -2157,6 +2157,10 @@ export class ShowAllPathsAction extends Action {
 	}
 }
 
+/**
+ * For developer convenience. Shows a quickopen input field and opens the resource with
+ * the URI from user input.
+ */
 export class OpenResourceAction extends Action {
 
 	public static ID = 'workbench.action.files.openResource';

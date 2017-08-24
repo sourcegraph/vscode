@@ -10,11 +10,20 @@ import { IDisposable } from 'vs/base/common/lifecycle';
 import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
 
 /**
- * Resolves (possibly abstract) resource URIs to concrete resource URIs (typically file:).
+ * Provides a method to resolve resources for a particular scheme (e.g. 'git+exp').
  */
 export interface IResourceResolutionProvider {
 	/**
-	 * Resolves a (possibly abstract) resource URI to a concrete resource URI (typically file:).
+	 * Resolves a (possibly abstract) resource URI to a concrete resource URI (typically file:). If a
+	 * provider is unable to resolve the resource, it can pass through the original input URI (which
+	 * will most likely result in an error from workbench because workbench will be unable to handle
+	 * the custom scheme URI) or throw an error.
+	 *
+	 * For example, a resource resolution provider might be registered that resolves URIs with scheme 'git'.
+	 * The user could then open a URI such as git://example.com/my/repo.git. The provider decides how to
+	 * resolve this URI. One possible provider implementation could clone that repository to a temporary
+	 * directory and return the directory's file URI, to allow the user to open and edit a repository's
+	 * files without needing to manually clone it.
 	 */
 	resolveResource(resource: URI): TPromise<URI>;
 }
@@ -22,27 +31,17 @@ export interface IResourceResolutionProvider {
 export const IResourceResolverService = createDecorator<IResourceResolverService>('resourceResolverService');
 
 /**
- * Manages the resolution of (possibly abstract) resource URIs to concrete resource URIs (typically
- * file:).
- *
- * For example, a resource resolution provider might be registered that resolves URIs with scheme 'git'.
- * The user could then open a URI such as git://example.com/my/repo.git. The provider decides how to
- * resolve this URI. One possible provider implementation could clone that repository to a temporary
- * directory and return the directory's file URI, to allow the user to open and edit a repository's
- * files without needing to manually clone it.
+ * Manages a registry of IResourceResolutionProviders.
  */
 export interface IResourceResolverService {
 	_serviceBrand: any;
 
 	/**
-	 * Registers a provider that resolves (possibly abstract) resource URIs to concrete resource
-	 * URIs (typically file:).
+	 * Registers a IResourceResolutionProvider for the given scheme (e.g. 'git+ssh').
 	 */
 	registerResourceResolutionProvider(scheme: string, provider: IResourceResolutionProvider): IDisposable;
 
 	/**
-	 * Resolves a (possibly abstract) resource URI to a concrete resource URI (typically file:).
-	 *
 	 * If a resource resolver (resource resolution provider) is registered for the resource's scheme,
 	 * it is used to resolve the resource. Resources with no registered providers for their scheme
 	 * resolve to themselves.

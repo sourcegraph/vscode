@@ -6,61 +6,35 @@
 
 import { TPromise } from 'vs/base/common/winjs.base';
 import URI from 'vs/base/common/uri';
-import { first } from 'vs/base/common/async';
 import { IDisposable, toDisposable } from 'vs/base/common/lifecycle';
 import { IResourceResolutionProvider, IResourceResolverService } from 'vs/platform/resourceResolver/common/resourceResolver';
 
-export class ResourceResolverService implements IResourceResolverService, IDisposable {
+export class ResourceResolverService implements IResourceResolverService {
 
 	_serviceBrand: any;
 
-	private providers: { [scheme: string]: IResourceResolutionProvider[] } = Object.create(null);
-
-	constructor() { }
+	private providers = new Map<string, IResourceResolutionProvider>();
 
 	public registerResourceResolutionProvider(scheme: string, provider: IResourceResolutionProvider): IDisposable {
-		const registry = this.providers;
-		const providers = registry[scheme] || (registry[scheme] = []);
+		if (this.providers.has(scheme)) {
+			throw new Error(`provider already exists for scheme '${scheme}'`);
+		}
 
-		providers.unshift(provider);
+		this.providers.set(scheme, provider);
 
 		return toDisposable(() => {
-			const array = registry[scheme];
-
-			if (!array) {
-				return;
-			}
-
-			const index = array.indexOf(provider);
-
-			if (index === -1) {
-				return;
-			}
-
-			array.splice(index, 1);
-
-			if (array.length === 0) {
-				delete registry[scheme];
+			if (this.providers.get(scheme) === provider) {
+				this.providers.delete(scheme);
 			}
 		});
 	}
 
 	public resolveResource(resource: URI): TPromise<URI> {
-		const providers = this.providers[resource.scheme] || [];
-		const resolvedResources = providers.map(p => () => p.resolveResource(resource));
-
-		if (resolvedResources.length === 0) {
-			return TPromise.as(resource);
+		const provider = this.providers.get(resource.scheme);
+		if (provider) {
+			return provider.resolveResource(resource);
 		}
 
-		return first(resolvedResources).then(resolvedResource => {
-			if (!resolvedResource) {
-				return TPromise.wrapError<URI>(new Error(`resource resolution failed (for scheme '${resource.scheme}')`));
-			}
-
-			return resolvedResource;
-		});
+		return TPromise.as(resource);
 	}
-
-	public dispose(): void { }
 }

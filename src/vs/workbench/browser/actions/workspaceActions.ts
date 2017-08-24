@@ -130,6 +130,10 @@ export class AddRootFolderAction extends BaseWorkspacesAction {
 	}
 }
 
+/**
+ * For developer convenience. Shows a quickopen input field and adds the root folder
+ * with the URI from user input.
+ */
 export class AddRootFolderResourceAction extends Action {
 
 	public static ID = 'workbench.action.addRootFolderResource';
