@@ -55,6 +55,16 @@ declare module 'vscode' {
 		writeContents(resource: Uri, contents: string): void | Thenable<void>;
 	}
 
+	/**
+	 * Resolves (possibly abstract) resource URIs to concrete resource URIs (typically file:).
+	 */
+	export interface ResourceResolutionProvider {
+		/**
+		 * Resolves a (possibly abstract) resource URI to a concrete resource URI (typically file:).
+		 */
+		resolveResource(resource: Uri): Thenable<Uri>;
+	}
+
 	export namespace workspace {
 		/**
 		 * Finds the preferred parent folder for the resource. Unlike getRoot, it may
@@ -70,6 +80,8 @@ declare module 'vscode' {
 		export function findContainingFolder(resource: Uri): Uri | undefined;
 
 		export function registerFileSystemProvider(scheme: string, provider: FileSystemProvider): Disposable;
+
+		export function registerResourceResolutionProvider(scheme: string, provider: ResourceResolutionProvider): Disposable;
 	}
 
 	export namespace window {

@@ -101,6 +101,8 @@ import { StorageService } from 'vs/platform/storage/common/storageService';
 import { migrateStorageToMultiRootWorkspace } from 'vs/platform/storage/common/migration';
 import { once } from 'vs/base/common/event';
 import { IFolderContainmentService, FolderContainmentService } from 'vs/platform/folder/common/folderContainment';
+import { IResourceResolverService } from 'vs/platform/resourceResolver/common/resourceResolver';
+import { ResourceResolverService } from 'vs/workbench/services/resourceResolver/common/resourceResolverService';
 import { SourcegraphEventLogger } from 'vs/platform/telemetry/common/sourcegraphEventLogger';
 import { WindowLevel } from 'vs/platform/telemetry/common/analyticsConstants';
 
@@ -336,6 +338,10 @@ export class WorkbenchShell {
 		const extensionEnablementService = instantiationService.createInstance(ExtensionEnablementService);
 		serviceCollection.set(IExtensionEnablementService, extensionEnablementService);
 		disposables.push(extensionEnablementService);
+
+		const resourceResolverService = instantiationService.createInstance(ResourceResolverService);
+		serviceCollection.set(IResourceResolverService, resourceResolverService);
+		disposables.push(resourceResolverService);
 
 		const folderContainmentService = instantiationService.createInstance(FolderContainmentService);
 		serviceCollection.set(IFolderContainmentService, folderContainmentService);

@@ -241,6 +241,25 @@ export class ExtHostWorkspace implements ExtHostWorkspaceShape {
 		return asWinJsPromise(token => provider.writeContents(resource, content));
 	}
 
+	// resource resolver
+
+	private readonly _resourceResolutionProvider = new Map<number, vscode.ResourceResolutionProvider>();
+
+	public registerResourceResolutionProvider(scheme: string, provider: vscode.ResourceResolutionProvider): vscode.Disposable {
+
+		const handle = this._resourceResolutionProvider.size;
+		this._resourceResolutionProvider.set(handle, provider);
+		this._proxy.$registerResourceResolutionProvider(handle, scheme);
+		return new Disposable(() => {
+			this._provider.delete(handle);
+		});
+	}
+
+	$resolveResource(handle: number, resource: URI): TPromise<URI> {
+		const provider = this._resourceResolutionProvider.get(handle);
+		return asWinJsPromise(token => provider.resolveResource(resource) as TPromise<URI>);
+	}
+
 	// --- EXPERIMENT: folder containment
 
 	// TODO(sqs): make asynchronous

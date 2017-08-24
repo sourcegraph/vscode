@@ -468,6 +468,9 @@ export function createApiFactory(
 			registerFileSystemProvider: proposedApiFunction(extension, (scheme, provider) => {
 				return extHostWorkspace.registerFileSystemProvider(scheme, provider);
 			}),
+			registerResourceResolutionProvider: proposedApiFunction(extension, (scheme, provider) => {
+				return extHostWorkspace.registerResourceResolutionProvider(scheme, provider);
+			}),
 			findContainingFolder: proposedApiFunction(extension, (resource) => {
 				return extHostWorkspace.findContainingFolder(resource);
 			}),

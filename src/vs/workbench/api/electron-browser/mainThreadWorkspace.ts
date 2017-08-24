@@ -20,6 +20,7 @@ import { IDisposable, dispose } from 'vs/base/common/lifecycle';
 import { RemoteFileService, IRemoteFileSystemProvider } from 'vs/workbench/services/files/electron-browser/remoteFileService';
 import { Emitter } from 'vs/base/common/event';
 import { extHostNamedCustomer } from 'vs/workbench/api/electron-browser/extHostCustomers';
+import { IResourceResolutionProvider, IResourceResolverService } from 'vs/platform/resourceResolver/common/resourceResolver';
 
 @extHostNamedCustomer(MainContext.MainThreadWorkspace)
 export class MainThreadWorkspace implements MainThreadWorkspaceShape {
@@ -35,6 +36,7 @@ export class MainThreadWorkspace implements MainThreadWorkspaceShape {
 		@ITextFileService private readonly _textFileService: ITextFileService,
 		@IWorkbenchEditorService private readonly _editorService: IWorkbenchEditorService,
 		@ITextModelService private readonly _textModelResolverService: ITextModelService,
+		@IResourceResolverService private readonly _resourceResolverService: IResourceResolverService,
 		@IFileService private readonly _fileService: IFileService
 	) {
 		this._proxy = extHostContext.get(ExtHostContext.ExtHostWorkspace);
@@ -151,5 +153,19 @@ export class MainThreadWorkspace implements MainThreadWorkspaceShape {
 		const [, emitter] = this._provider.get(handle);
 		emitter.fire(resource);
 	};
+
+	// resource resolver
+
+	private _resourceResolutionProviders = new Map<number, IResourceResolutionProvider>();
+
+	$registerResourceResolutionProvider(handle: number, scheme: string): void {
+		const provider = {
+			resolveResource: resource => {
+				return this._proxy.$resolveResource(handle, resource);
+			},
+		};
+		this._resourceResolutionProviders.set(handle, provider);
+		this._toDispose.push(this._resourceResolverService.registerResourceResolutionProvider(scheme, provider));
+	}
 }
 
