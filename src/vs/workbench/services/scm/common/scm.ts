@@ -19,7 +19,6 @@ export interface IBaselineResourceProvider {
 }
 
 export const ISCMService = createDecorator<ISCMService>('scm');
-export const DefaultSCMProviderIdStorageKey = 'settings.workspace.scm.defaultProviderId';
 
 export interface ISCMResourceDecorations {
 	icon?: URI;
@@ -99,6 +98,7 @@ export interface ICommandOptions {
 export interface ISCMProvider extends IDisposable {
 	readonly label: string;
 	readonly id: string;
+	readonly contextValue: string;
 	readonly rootFolder: URI;
 	readonly resources: ISCMResourceGroup[];
 	readonly onDidChange: Event<void>;
@@ -126,18 +126,23 @@ export interface ISCMInput {
 	readonly onDidChange: Event<string>;
 }
 
+export interface ISCMRepository extends IDisposable {
+	readonly onDidFocus: Event<void>;
+	readonly provider: ISCMProvider;
+	readonly input: ISCMInput;
+	focus(): void;
+}
+
 export interface ISCMService {
 
 	readonly _serviceBrand: any;
-	readonly onDidChangeProvider: Event<ISCMProvider>;
+	readonly onDidAddRepository: Event<ISCMRepository>;
+	readonly onDidRemoveRepository: Event<ISCMRepository>;
+	readonly onDidChangeRepository: Event<ISCMRepository>;
 
-	// TODO@joao fix name
-	readonly onDidChangeProviders: Event<void>;
-	readonly providers: ISCMProvider[];
-	readonly input: ISCMInput;
-	activeProvider: ISCMProvider | undefined;
+	readonly repositories: ISCMRepository[];
 
-	registerSCMProvider(provider: ISCMProvider): IDisposable;
+	registerSCMProvider(provider: ISCMProvider): ISCMRepository;
 
 	// NOTE(sqs): Re: getProviderForResource API: I don't know the vscode team will
 	// implement multi-root support for SCM providers, but this is my best attempt at the

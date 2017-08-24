@@ -14,6 +14,7 @@ import { Git } from 'vs/workbench/services/codeComments/browser/git';
 class FakeSCMProvider implements ISCMProvider {
 	readonly label: any;
 	readonly id = 'git';
+	readonly contextValue: any;
 	readonly rootFolder: any;
 	readonly resources: any;
 	readonly onDidChange: any;
@@ -43,11 +44,10 @@ class FakeSCMProvider implements ISCMProvider {
  */
 class FakeSCMService implements ISCMService {
 	public _serviceBrand: any;
-	readonly onDidChangeProvider: any;
-	readonly onDidChangeProviders: any;
-	readonly providers: any;
-	readonly input: any;
-	activeProvider: any;
+	readonly onDidAddRepository: any;
+	readonly onDidRemoveRepository: any;
+	readonly onDidChangeRepository: any;
+	readonly repositories: any[];
 
 	public readonly fakeProvider = new FakeSCMProvider();
 

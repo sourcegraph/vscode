@@ -100,7 +100,9 @@ export class CodeCommentsDecorationRenderer extends Disposable implements IEdito
 		// it may not have been ready yet on previous renders and the
 		// scm data is necessary for rendering code comments correctly.
 		// TODO(nick): it would be nice if ICodeCommentsService abstracted this away.
-		scmService.onDidChangeProvider(e => this.renderCurrentModelDecorations());
+		scmService.onDidAddRepository(e => this.renderCurrentModelDecorations());
+		scmService.onDidRemoveRepository(e => this.renderCurrentModelDecorations());
+		scmService.onDidChangeRepository(e => this.renderCurrentModelDecorations());
 
 		// Render decorations any time comments change (e.g. one was created, data was fetched from network).
 		this._register(codeCommentsService.onCommentsDidChange(() => this.renderCurrentModelDecorations()));
