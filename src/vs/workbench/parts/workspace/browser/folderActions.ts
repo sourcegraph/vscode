@@ -29,7 +29,7 @@ import { IConfigurationService } from 'vs/platform/configuration/common/configur
 import { registerThemingParticipant, ITheme, ICssStyleCollector } from 'vs/platform/theme/common/themeService';
 import { buttonBackground, buttonForeground, buttonHoverBackground, contrastBorder, tagBackground, tagForeground, tagBorder, tagHoverBackground, tagHoverForeground, tagHoverBorder, registerColor } from 'vs/platform/theme/common/colorRegistry';
 import { FolderSCMSwitchRevisionAction } from './scmFolderActions';
-import { IEnvironmentService } from "vs/platform/environment/common/environment";
+import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 import { IWindowService } from 'vs/platform/windows/common/windows';
 
 export class AddWorkspaceFolderAction extends Action {

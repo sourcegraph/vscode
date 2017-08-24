@@ -9,9 +9,9 @@ import { IWorkbenchContributionsRegistry, Extensions as WorkbenchExtensions } fr
 import { Registry } from 'vs/platform/registry/common/platform';
 import { IConfigurationRegistry, Extensions as ConfigurationExtensions } from 'vs/platform/configuration/common/configurationRegistry';
 import { IEditorRegistry, Extensions as EditorExtensions } from 'vs/workbench/common/editor';
-import { HomePageContribution, HomeInputFactory, HomePageAction } from "vs/workbench/parts/welcome/page/electron-browser/homePage";
-import { IWorkbenchActionRegistry, Extensions as ActionExtensions } from "vs/workbench/common/actionRegistry";
-import { SyncActionDescriptor } from "vs/platform/actions/common/actions";
+import { HomePageContribution, HomeInputFactory, HomePageAction } from 'vs/workbench/parts/welcome/page/electron-browser/homePage';
+import { IWorkbenchActionRegistry, Extensions as ActionExtensions } from 'vs/workbench/common/actionRegistry';
+import { SyncActionDescriptor } from 'vs/platform/actions/common/actions';
 
 Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration)
 	.registerConfiguration({

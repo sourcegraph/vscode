@@ -13,9 +13,9 @@ import { Mode, IEntryRunContext, IAutoFocus, IQuickNavigateConfiguration, IModel
 import { QuickOpenModel, QuickOpenEntryGroup, QuickOpenEntry } from 'vs/base/parts/quickopen/browser/quickOpenModel';
 import { QuickOpenHandler } from 'vs/workbench/browser/quickopen';
 import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
-import { ISearchProfileService } from "vs/platform/search/common/search";
+import { ISearchProfileService } from 'vs/platform/search/common/search';
 import { VIEWLET_ID as SEARCH_VIEWLET_ID } from 'vs/workbench/parts/search/common/constants';
-import { SourcegraphSearchViewlet } from "vs/workbench/parts/search/browser/sourcegraphSearchViewlet";
+import { SourcegraphSearchViewlet } from 'vs/workbench/parts/search/browser/sourcegraphSearchViewlet';
 
 
 export const PROFILE_PICKER_PREFIX = 'sp ';
