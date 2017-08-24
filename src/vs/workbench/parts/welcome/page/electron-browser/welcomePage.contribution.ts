@@ -7,11 +7,11 @@
 import { localize } from 'vs/nls';
 import { IWorkbenchContributionsRegistry, Extensions as WorkbenchExtensions } from 'vs/workbench/common/contributions';
 import { Registry } from 'vs/platform/registry/common/platform';
-import { IConfigurationRegistry, Extensions as ConfigurationExtensions } from 'vs/platform/configuration/common/configurationRegistry';
-import { IEditorRegistry, Extensions as EditorExtensions } from 'vs/workbench/common/editor';
-import { HomePageContribution, HomeInputFactory, HomePageAction } from 'vs/workbench/parts/welcome/page/electron-browser/homePage';
+import { WelcomePageContribution, WelcomePageAction, WelcomeInputFactory } from 'vs/workbench/parts/welcome/page/electron-browser/welcomePage';
 import { IWorkbenchActionRegistry, Extensions as ActionExtensions } from 'vs/workbench/common/actionRegistry';
 import { SyncActionDescriptor } from 'vs/platform/actions/common/actions';
+import { IConfigurationRegistry, Extensions as ConfigurationExtensions } from 'vs/platform/configuration/common/configurationRegistry';
+import { IEditorRegistry, Extensions as EditorExtensions } from 'vs/workbench/common/editor';
 
 Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration)
 	.registerConfiguration({
@@ -34,9 +34,9 @@ Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration)
 	});
 
 Registry.as<IWorkbenchContributionsRegistry>(WorkbenchExtensions.Workbench)
-	.registerWorkbenchContribution(HomePageContribution);
+	.registerWorkbenchContribution(WelcomePageContribution);
 
 Registry.as<IWorkbenchActionRegistry>(ActionExtensions.WorkbenchActions)
-	.registerWorkbenchAction(new SyncActionDescriptor(HomePageAction, HomePageAction.ID, HomePageAction.LABEL), 'Home: Search', localize('home', "Home"));
+	.registerWorkbenchAction(new SyncActionDescriptor(WelcomePageAction, WelcomePageAction.ID, WelcomePageAction.LABEL), 'Help: Welcome', localize('help', "Help"));
 
-Registry.as<IEditorRegistry>(EditorExtensions.Editors).registerEditorInputFactory(HomeInputFactory.ID, HomeInputFactory);
+Registry.as<IEditorRegistry>(EditorExtensions.Editors).registerEditorInputFactory(WelcomeInputFactory.ID, WelcomeInputFactory);
