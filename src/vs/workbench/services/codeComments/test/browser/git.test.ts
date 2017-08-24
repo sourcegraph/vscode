@@ -13,8 +13,8 @@ import { Git } from 'vs/workbench/services/codeComments/browser/git';
  */
 class FakeSCMProvider implements ISCMProvider {
 	readonly label: any;
-	readonly id = 'git';
-	readonly contextValue: any;
+	readonly id: any;
+	readonly contextValue = 'git';
 	readonly rootFolder: any;
 	readonly resources: any;
 	readonly onDidChange: any;
