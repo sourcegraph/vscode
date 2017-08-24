@@ -5420,6 +5420,11 @@ declare module 'vscode' {
 		readonly label: string;
 
 		/**
+		 * The [input box](#SourceControlInputBox) for this source control.
+		 */
+		readonly inputBox: SourceControlInputBox;
+
+		/**
 		 * The UI-visible count of [resource states](#SourceControlResourceState) of
 		 * this source control.
 		 *
@@ -5470,7 +5475,10 @@ declare module 'vscode' {
 	export namespace scm {
 
 		/**
-		 * The [input box](#SourceControlInputBox) in the Source Control viewlet.
+		 * The [input box](#SourceControlInputBox) for the last source control
+		 * created by the extension.
+		 *
+		 * @deprecated Use [SourceControl.inputBox](#SourceControl.inputBox) instead
 		 */
 		export const inputBox: SourceControlInputBox;
 

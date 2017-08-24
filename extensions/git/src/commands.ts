@@ -5,7 +5,7 @@
 
 'use strict';
 
-import { Uri, commands, scm, Disposable, window, workspace, QuickPickItem, OutputChannel, Range, WorkspaceEdit, Position, LineChange, SourceControlResourceState, TextDocumentShowOptions, ViewColumn, ProgressLocation } from 'vscode';
+import { Uri, commands, Disposable, window, workspace, QuickPickItem, OutputChannel, Range, WorkspaceEdit, Position, LineChange, SourceControlResourceState, TextDocumentShowOptions, ViewColumn, ProgressLocation } from 'vscode';
 import { Ref, RefType, Git, GitErrorCodes, Branch } from './git';
 import { Repository, Resource, Status, CommitOptions, ResourceGroupType } from './repository';
 import { Model } from './model';
@@ -311,8 +311,23 @@ export class CommandCenter {
 
 	@command('git.init')
 	async init(): Promise<void> {
-		// TODO@joao
-		// await model.init();
+		const value = workspace.workspaceFolders && workspace.workspaceFolders.length > 0
+			? workspace.workspaceFolders[0].uri.fsPath
+			: os.homedir();
+
+		const path = await window.showInputBox({
+			placeHolder: localize('path to init', "Folder path"),
+			prompt: localize('provide path', "Please provide a folder path to initialize a Git repository"),
+			value,
+			ignoreFocusOut: true
+		});
+
+		if (!path) {
+			return;
+		}
+
+		await this.git.init(path);
+		await this.model.tryOpenRepository(path);
 	}
 
 	@command('git.openFile')
@@ -765,7 +780,6 @@ export class CommandCenter {
 		const message = await getCommitMessage();
 
 		if (!message) {
-			// TODO@joao: show modal dialog to confirm empty message commit
 			return false;
 		}
 
@@ -775,7 +789,7 @@ export class CommandCenter {
 	}
 
 	private async commitWithAnyInput(repository: Repository, opts?: CommitOptions): Promise<void> {
-		const message = scm.inputBox.value;
+		const message = repository.inputBox.value;
 		const getCommitMessage = async () => {
 			if (message) {
 				return message;
@@ -791,7 +805,7 @@ export class CommandCenter {
 		const didCommit = await this.smartCommit(repository, getCommitMessage, opts);
 
 		if (message && didCommit) {
-			scm.inputBox.value = await repository.getCommitTemplate();
+			repository.inputBox.value = await repository.getCommitTemplate();
 		}
 	}
 
@@ -802,14 +816,14 @@ export class CommandCenter {
 
 	@command('git.commitWithInput', { repository: true })
 	async commitWithInput(repository: Repository): Promise<void> {
-		if (!scm.inputBox.value) {
+		if (!repository.inputBox.value) {
 			return;
 		}
 
-		const didCommit = await this.smartCommit(repository, async () => scm.inputBox.value);
+		const didCommit = await this.smartCommit(repository, async () => repository.inputBox.value);
 
 		if (didCommit) {
-			scm.inputBox.value = await repository.getCommitTemplate();
+			repository.inputBox.value = await repository.getCommitTemplate();
 		}
 	}
 
@@ -853,7 +867,7 @@ export class CommandCenter {
 
 		const commit = await repository.getCommit('HEAD');
 		await repository.reset('HEAD~');
-		scm.inputBox.value = commit.message;
+		repository.inputBox.value = commit.message;
 	}
 
 	@command('git.checkout', { repository: true })
@@ -1241,7 +1255,15 @@ export class CommandCenter {
 			} else {
 				// try to guess the repository based on the first argument
 				const repository = this.model.getRepository(args[0]);
-				const repositoryPromise = repository ? Promise.resolve(repository) : this.model.pickRepository();
+				let repositoryPromise: Promise<Repository | undefined>;
+
+				if (repository) {
+					repositoryPromise = Promise.resolve(repository);
+				} else if (this.model.repositories.length === 1) {
+					repositoryPromise = Promise.resolve(this.model.repositories[0]);
+				} else {
+					repositoryPromise = this.model.pickRepository();
+				}
 
 				result = repositoryPromise.then(repository => {
 					if (!repository) {
@@ -1300,7 +1322,6 @@ export class CommandCenter {
 		return result;
 	}
 
-	// TODO@Joao: possibly remove? do we really need to return resources?
 	private getSCMResource(uri?: Uri): Resource | undefined {
 		uri = uri ? uri : window.activeTextEditor && window.activeTextEditor.document.uri;
 
@@ -1335,7 +1356,6 @@ export class CommandCenter {
 		const groups = resources.reduce((result, resource) => {
 			const repository = this.model.getRepository(resource);
 
-			// TODO@Joao: what should happen?
 			if (!repository) {
 				console.warn('Could not find git repository for ', resource);
 				return result;

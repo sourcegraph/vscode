@@ -9,6 +9,7 @@ import { TPromise } from 'vs/base/common/winjs.base';
 import Event, { Emitter } from 'vs/base/common/event';
 import { asWinJsPromise } from 'vs/base/common/async';
 import { TrieMap } from 'vs/base/common/map';
+import { IExtensionDescription } from 'vs/platform/extensions/common/extensions';
 import { ExtHostCommands, CommandsConverter } from 'vs/workbench/api/node/extHostCommands';
 import { MainContext, MainThreadSCMShape, SCMRawResource, IMainContext } from './extHost.protocol';
 import * as vscode from 'vscode';
@@ -34,7 +35,7 @@ export class ExtHostSCMInputBox {
 	}
 
 	set value(value: string) {
-		this._proxy.$setInputBoxValue(value);
+		this._proxy.$setInputBoxValue(this._sourceControlHandle, value);
 		this.updateValue(value);
 	}
 
@@ -44,22 +45,12 @@ export class ExtHostSCMInputBox {
 		return this._onDidChange.event;
 	}
 
-	private _onDidAccept = new Emitter<string>();
-
-	get onDidAccept(): Event<string> {
-		return this._onDidAccept.event;
-	}
-
-	constructor(private _proxy: MainThreadSCMShape) {
+	constructor(private _proxy: MainThreadSCMShape, private _sourceControlHandle: number) {
 		// noop
 	}
 
 	$onInputBoxValueChange(value: string): void {
 		this.updateValue(value);
-	}
-
-	$onInputBoxAcceptChanges(): void {
-		this._onDidAccept.fire(this._value);
 	}
 
 	private updateValue(value: string): void {
@@ -173,6 +164,9 @@ class ExtHostSourceControl implements vscode.SourceControl {
 		return this._label;
 	}
 
+	private _inputBox: ExtHostSCMInputBox;
+	get inputBox(): ExtHostSCMInputBox { return this._inputBox; }
+
 	public commandExecutor?: vscode.CommandExecutor;
 
 	private _count: number | undefined = undefined;
@@ -274,6 +268,7 @@ class ExtHostSourceControl implements vscode.SourceControl {
 		private _label: string,
 		private _rootFolder: URI,
 	) {
+		this._inputBox = new ExtHostSCMInputBox(this._proxy, this._handle);
 		this._proxy.$registerSourceControl(this._handle, _id, _label, _rootFolder);
 	}
 
@@ -305,15 +300,10 @@ export class ExtHostSCM {
 
 	private _proxy: MainThreadSCMShape;
 	private _sourceControls: Map<ProviderHandle, ExtHostSourceControl> = new Map<ProviderHandle, ExtHostSourceControl>();
+	private _sourceControlsByExtension: Map<string, ExtHostSourceControl[]> = new Map<string, ExtHostSourceControl[]>();
 
 	private _onDidChangeActiveProvider = new Emitter<vscode.SourceControl>();
 	get onDidChangeActiveProvider(): Event<vscode.SourceControl> { return this._onDidChangeActiveProvider.event; }
-
-	private _activeProvider: vscode.SourceControl | undefined;
-	get activeProvider(): vscode.SourceControl | undefined { return this._activeProvider; }
-
-	private _inputBox: ExtHostSCMInputBox;
-	get inputBox(): ExtHostSCMInputBox { return this._inputBox; }
 
 	/**
 	 * All associations between a root folder and the source control that provides SCM
@@ -333,7 +323,6 @@ export class ExtHostSCM {
 		private _commands: ExtHostCommands
 	) {
 		this._proxy = mainContext.get(MainContext.MainThreadSCM);
-		this._inputBox = new ExtHostSCMInputBox(this._proxy);
 
 		this.updateFolderSourceControlsMap();
 
@@ -376,13 +365,12 @@ export class ExtHostSCM {
 		});
 	}
 
-	createSourceControl(id: string, label: string): vscode.SourceControl;
-	createSourceControl(id: string, options: vscode.SourceControlOptions): vscode.SourceControl;
-	createSourceControl(id: string, arg: string | vscode.SourceControlOptions): vscode.SourceControl {
+	createSourceControl(extension: IExtensionDescription, id: string, label: string): vscode.SourceControl;
+	createSourceControl(extension: IExtensionDescription, id: string, options: vscode.SourceControlOptions): vscode.SourceControl;
+	createSourceControl(extension: IExtensionDescription, id: string, arg: string | vscode.SourceControlOptions): vscode.SourceControl {
 		if (types.isString(arg)) {
 			arg = { label: arg };
 		}
-
 		const handle = ExtHostSCM._handlePool++;
 		const sourceControl = new ExtHostSourceControl(this, this._proxy, this._commands.converter, id, arg.label, arg.rootFolder as URI);
 		this._sourceControls.set(handle, sourceControl);
@@ -392,7 +380,20 @@ export class ExtHostSCM {
 			this.updateFolderSourceControlsMap();
 		}
 
+		const sourceControls = this._sourceControlsByExtension.get(extension.id) || [];
+		sourceControls.push(sourceControl);
+		this._sourceControlsByExtension.set(extension.id, sourceControls);
+
 		return sourceControl;
+	}
+
+	// Deprecated
+	getLastInputBox(extension: IExtensionDescription): ExtHostSCMInputBox {
+		const sourceControls = this._sourceControlsByExtension.get(extension.id);
+		const sourceControl = sourceControls && sourceControls[sourceControls.length - 1];
+		const inputBox = sourceControl && sourceControl.inputBox;
+
+		return inputBox;
 	}
 
 	$provideOriginalResource(sourceControlHandle: number, uri: URI): TPromise<URI> {
@@ -408,6 +409,17 @@ export class ExtHostSCM {
 		});
 	}
 
+	$onInputBoxValueChange(sourceControlHandle: number, value: string): TPromise<void> {
+		const sourceControl = this._sourceControls.get(sourceControlHandle);
+
+		if (!sourceControl || !sourceControl.quickDiffProvider) {
+			return TPromise.as(null);
+		}
+
+		sourceControl.inputBox.$onInputBoxValueChange(value);
+		return TPromise.as(null);
+	}
+
 	$executeCommand(sourceControlHandle: number, args: string[], options?: vscode.CommandOptions): TPromise<string> {
 		const sourceControl = this._sourceControls.get(sourceControlHandle);
 		if (!sourceControl || !sourceControl.commandExecutor) {
@@ -416,21 +428,6 @@ export class ExtHostSCM {
 		return asWinJsPromise(token => {
 			return sourceControl.commandExecutor.executeCommand(args, options);
 		});
-	}
-
-	$onActiveSourceControlChange(handle: number): TPromise<void> {
-		this._activeProvider = this._sourceControls.get(handle);
-		return TPromise.as(null);
-	}
-
-	$onInputBoxValueChange(value: string): TPromise<void> {
-		this._inputBox.$onInputBoxValueChange(value);
-		return TPromise.as(null);
-	}
-
-	$onInputBoxAcceptChanges(): TPromise<void> {
-		this._inputBox.$onInputBoxAcceptChanges();
-		return TPromise.as(null);
 	}
 
 	getSourceControlForResource(resource: vscode.Uri): vscode.SourceControl | undefined {

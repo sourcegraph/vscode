@@ -9,19 +9,18 @@ import 'vs/css!./media/scmViewlet';
 import { localize } from 'vs/nls';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { chain } from 'vs/base/common/event';
-import { memoize } from 'vs/base/common/decorators';
 import { onUnexpectedError } from 'vs/base/common/errors';
-import { IDisposable, dispose, empty as EmptyDisposable, toDisposable } from 'vs/base/common/lifecycle';
+import { IDisposable, dispose } from 'vs/base/common/lifecycle';
 import { Builder } from 'vs/base/browser/builder';
 import { ComposedViewsViewlet, CollapsibleView, IViewletViewOptions, IView, IViewOptions } from 'vs/workbench/parts/views/browser/views';
-import { append, $, toggleClass } from 'vs/base/browser/dom';
+import { append, $, toggleClass, trackFocus } from 'vs/base/browser/dom';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { List } from 'vs/base/browser/ui/list/listWidget';
 import { IDelegate, IRenderer, IListContextMenuEvent } from 'vs/base/browser/ui/list/list';
 import { VIEWLET_ID } from 'vs/workbench/parts/scm/common/scm';
 import { FileLabel } from 'vs/workbench/browser/labels';
 import { CountBadge } from 'vs/base/browser/ui/countBadge/countBadge';
-import { ISCMService, ISCMProvider, ISCMResourceGroup, ISCMResource } from 'vs/workbench/services/scm/common/scm';
+import { ISCMService, ISCMRepository, ISCMResourceGroup, ISCMResource } from 'vs/workbench/services/scm/common/scm';
 import { IEditorGroupService } from 'vs/workbench/services/group/common/groupService';
 import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
@@ -35,11 +34,11 @@ import { MenuItemAction } from 'vs/platform/actions/common/actions';
 import { IAction, Action, IActionItem, ActionRunner } from 'vs/base/common/actions';
 import { MenuItemActionItem } from 'vs/platform/actions/browser/menuItemActionItem';
 import { SCMMenus } from './scmMenus';
-import { ActionBar, IActionItemProvider } from 'vs/base/browser/ui/actionbar/actionbar';
+import { ActionBar, IActionItemProvider, Separator } from 'vs/base/browser/ui/actionbar/actionbar';
 import { IThemeService, LIGHT } from 'vs/platform/theme/common/themeService';
 import { comparePaths } from 'vs/base/common/comparers';
 import { isSCMResource } from './scmUtil';
-import { attachListStyler, attachBadgeStyler } from 'vs/platform/theme/common/styler';
+import { attachListStyler, attachBadgeStyler, attachInputBoxStyler } from 'vs/platform/theme/common/styler';
 import Severity from 'vs/base/common/severity';
 import { IExtensionService } from 'vs/platform/extensions/common/extensions';
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
@@ -48,6 +47,11 @@ import { ViewLocation, ViewsRegistry, IViewDescriptor } from 'vs/workbench/parts
 import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
 import { ViewSizing } from 'vs/base/browser/ui/splitview/splitview';
 import { IExtensionsViewlet, VIEWLET_ID as EXTENSIONS_VIEWLET_ID } from 'vs/workbench/parts/extensions/common/extensions';
+import { InputBox } from 'vs/base/browser/ui/inputbox/inputBox';
+import * as platform from 'vs/base/common/platform';
+import { domEvent } from 'vs/base/browser/event';
+import { StandardKeyboardEvent } from 'vs/base/browser/keyboardEvent';
+import { KeyMod, KeyCode } from 'vs/base/common/keyCodes';
 
 // TODO@Joao
 // Need to subclass MenuItemActionItem in order to respect
@@ -68,10 +72,10 @@ function identityProvider(r: ISCMResourceGroup | ISCMResource): string {
 	if (isSCMResource(r)) {
 		const group = r.resourceGroup;
 		const provider = group.provider;
-		return `${provider.id}/${group.id}/${r.sourceUri.toString()}`;
+		return `${provider.contextValue}/${group.id}/${r.sourceUri.toString()}`;
 	} else {
 		const provider = r.provider;
-		return `${provider.id}/${r.id}`;
+		return `${provider.contextValue}/${r.id}`;
 	}
 }
 
@@ -134,6 +138,7 @@ interface ResourceTemplate {
 	fileLabel: FileLabel;
 	decorationIcon: HTMLElement;
 	actionBar: ActionBar;
+	dispose: () => void;
 }
 
 class MultipleSelectionActionRunner extends ActionRunner {
@@ -183,7 +188,12 @@ class ResourceRenderer implements IRenderer<ISCMResource, ResourceTemplate> {
 
 		const decorationIcon = append(element, $('.decoration-icon'));
 
-		return { element, name, fileLabel, decorationIcon, actionBar };
+		return {
+			element, name, fileLabel, decorationIcon, actionBar, dispose: () => {
+				actionBar.dispose();
+				fileLabel.dispose();
+			}
+		};
 	}
 
 	renderElement(resource: ISCMResource, index: number, template: ResourceTemplate): void {
@@ -206,7 +216,7 @@ class ResourceRenderer implements IRenderer<ISCMResource, ResourceTemplate> {
 	}
 
 	disposeTemplate(template: ResourceTemplate): void {
-		// noop
+		template.dispose();
 	}
 }
 
@@ -225,31 +235,32 @@ function resourceSorter(a: ISCMResource, b: ISCMResource): number {
 
 class SourceControlViewDescriptor implements IViewDescriptor {
 
-	get provider(): ISCMProvider { return this._provider; }
-	// TODO@joao change this so we dont need IDS
-	get id(): string { return this._provider.label; }
-	get name(): string { return this._provider.label; }
+	get repository(): ISCMRepository { return this._repository; }
+	get id(): string { return this._repository.provider.id; }
+	get name(): string { return this._repository.provider.label; }
 	get ctor(): any { return null; }
 	get location(): ViewLocation { return ViewLocation.SCM; }
 
-	constructor(private _provider: ISCMProvider) {
-
-	}
+	constructor(private _repository: ISCMRepository) { }
 }
 
 class SourceControlView extends CollapsibleView {
 
+	private cachedHeight: number | undefined;
+	private inputBoxContainer: HTMLElement;
+	private inputBox: InputBox;
 	private listContainer: HTMLElement;
 	private list: List<ISCMResourceGroup | ISCMResource>;
 	private menus: SCMMenus;
 	private disposables: IDisposable[] = [];
 
 	constructor(
-		private provider: ISCMProvider,
+		private repository: ISCMRepository,
 		options: IViewletViewOptions,
 		@IKeybindingService protected keybindingService: IKeybindingService,
 		@IThemeService protected themeService: IThemeService,
 		@IContextMenuService protected contextMenuService: IContextMenuService,
+		@IContextViewService protected contextViewService: IContextViewService,
 		@IListService protected listService: IListService,
 		@ICommandService protected commandService: ICommandService,
 		@IMessageService protected messageService: IMessageService,
@@ -259,7 +270,7 @@ class SourceControlView extends CollapsibleView {
 	) {
 		super({ ...(options as IViewOptions), sizing: ViewSizing.Flexible }, keybindingService, contextMenuService);
 
-		this.menus = instantiationService.createInstance(SCMMenus, provider);
+		this.menus = instantiationService.createInstance(SCMMenus, repository.provider);
 		this.menus.onDidChangeTitle(this.updateActions, this, this.disposables);
 	}
 
@@ -271,6 +282,38 @@ class SourceControlView extends CollapsibleView {
 	}
 
 	renderBody(container: HTMLElement): void {
+		const focusTracker = trackFocus(container);
+		this.disposables.push(focusTracker.addFocusListener(() => this.repository.focus()));
+		this.disposables.push(focusTracker);
+
+		// Input
+		this.inputBoxContainer = append(container, $('.scm-editor'));
+
+		this.inputBox = new InputBox(this.inputBoxContainer, this.contextViewService, {
+			placeholder: localize('commitMessage', "Message (press {0} to commit)", platform.isMacintosh ? 'Cmd+Enter' : 'Ctrl+Enter'),
+			flexibleHeight: true
+		});
+		this.disposables.push(attachInputBoxStyler(this.inputBox, this.themeService));
+		this.disposables.push(this.inputBox);
+
+		this.inputBox.value = this.repository.input.value;
+		this.inputBox.onDidChange(value => this.repository.input.value = value, null, this.disposables);
+		this.repository.input.onDidChange(value => this.inputBox.value = value, null, this.disposables);
+		this.disposables.push(this.inputBox.onDidHeightChange(() => this.layoutBody()));
+
+		chain(domEvent(this.inputBox.inputElement, 'keydown'))
+			.map(e => new StandardKeyboardEvent(e))
+			.filter(e => e.equals(KeyMod.CtrlCmd | KeyCode.Enter) || e.equals(KeyMod.CtrlCmd | KeyCode.KEY_S))
+			.on(this.onDidAcceptInput, this, this.disposables);
+
+		if (this.repository.provider.onDidChangeCommitTemplate) {
+			this.repository.provider.onDidChangeCommitTemplate(this.updateInputBox, this, this.disposables);
+		}
+
+		this.updateInputBox();
+
+		// List
+
 		this.listContainer = append(container, $('.scm-status.show-file-icons'));
 		const delegate = new Delegate();
 
@@ -302,12 +345,29 @@ class SourceControlView extends CollapsibleView {
 		this.list.onContextMenu(this.onListContextMenu, this, this.disposables);
 		this.disposables.push(this.list);
 
-		this.provider.onDidChange(this.updateList, this, this.disposables);
+		this.repository.provider.onDidChange(this.updateList, this, this.disposables);
 		this.updateList();
 	}
 
-	layoutBody(size: number): void {
-		this.list.layout(size);
+	layoutBody(height: number = this.cachedHeight): void {
+		if (!height === undefined) {
+			return;
+		}
+
+		this.list.layout(height);
+		this.cachedHeight = height;
+		this.inputBox.layout();
+
+		const editorHeight = this.inputBox.height;
+		const listHeight = height - (editorHeight + 12 /* margin */);
+		this.listContainer.style.height = `${listHeight}px`;
+		this.list.layout(listHeight);
+
+		toggleClass(this.inputBoxContainer, 'scroll', editorHeight >= 134);
+	}
+
+	focusBody(): void {
+		this.inputBox.focus();
 	}
 
 	getActions(): IAction[] {
@@ -327,11 +387,11 @@ class SourceControlView extends CollapsibleView {
 	}
 
 	getActionsContext(): any {
-		return this.provider;
+		return this.repository.provider;
 	}
 
 	private updateList(): void {
-		const elements = this.provider.resources
+		const elements = this.repository.provider.resources
 			.reduce<(ISCMResourceGroup | ISCMResource)[]>((r, g) => [...r, g, ...g.resources.sort(resourceSorter)], []);
 
 		this.list.splice(0, this.list.length, elements);
@@ -375,6 +435,26 @@ class SourceControlView extends CollapsibleView {
 			.filter(r => isSCMResource(r)) as ISCMResource[];
 	}
 
+	private updateInputBox(): void {
+		if (typeof this.repository.provider.commitTemplate === 'undefined') {
+			return;
+		}
+
+		this.inputBox.value = this.repository.provider.commitTemplate;
+	}
+
+	private onDidAcceptInput(): void {
+		if (!this.repository.provider.acceptInputCommand) {
+			return;
+		}
+
+		const id = this.repository.provider.acceptInputCommand.id;
+		const args = this.repository.provider.acceptInputCommand.arguments;
+
+		this.commandService.executeCommand(id, ...args)
+			.done(undefined, onUnexpectedError);
+	}
+
 	dispose(): void {
 		this.disposables = dispose(this.disposables);
 		super.dispose();
@@ -398,11 +478,6 @@ class InstallAdditionalSCMProvidersAction extends Action {
 
 export class SCMViewlet extends ComposedViewsViewlet {
 
-	// private activeProvider: ISCMProvider | undefined;
-	// private cachedDimension: Dimension;
-	// private inputBoxContainer: HTMLElement;
-	// private inputBox: InputBox;
-	private providerChangeDisposable: IDisposable = EmptyDisposable;
 	private disposables: IDisposable[] = [];
 
 	constructor(
@@ -423,52 +498,19 @@ export class SCMViewlet extends ComposedViewsViewlet {
 		@IStorageService storageService: IStorageService,
 		@IExtensionService extensionService: IExtensionService
 	) {
-		super(VIEWLET_ID, ViewLocation.SCM, `${VIEWLET_ID}.state`, false,
+		super(VIEWLET_ID, ViewLocation.SCM, `${VIEWLET_ID}.state`, true,
 			telemetryService, storageService, instantiationService, themeService, contextService, contextKeyService, contextMenuService, extensionService);
 	}
 
-	private onDidProvidersChange(): void {
-		this.providerChangeDisposable.dispose();
-		// this.activeProvider = activeProvider;
+	private onDidAddRepository(repository: ISCMRepository): void {
+		const view = new SourceControlViewDescriptor(repository);
+		ViewsRegistry.registerViews([view]);
+		this.updateTitleArea();
+	}
 
-		const providers = this.scmService.providers;
-
-		if (providers.length === 0) {
-			return;
-		}
-
-		// TODO@joao change this so we dont need ids
-		const ids = providers.map(provider => provider.label);
-		const views = providers.map(provider => new SourceControlViewDescriptor(provider));
-
-		// console.log(provider.label);
-
-		ViewsRegistry.registerViews(views);
-		this.providerChangeDisposable = toDisposable(() => ViewsRegistry.deregisterViews(ids, ViewLocation.SCM));
-
-		// if (activeProvider) {
-		// 	const disposables = [];
-
-		// 	// if (activeProvider.onDidChangeCommitTemplate) {
-		// 	// 	disposables.push(activeProvider.onDidChangeCommitTemplate(this.updateInputBox, this));
-		// 	// }
-
-		// 	const id = activeProvider.id;
-		// 	ViewsRegistry.registerViews([new SourceControlViewDescriptor(activeProvider)]);
-
-		// 	disposables.push({
-		// 		dispose: () => {
-		// 			ViewsRegistry.deregisterViews([id], ViewLocation.SCM);
-		// 		}
-		// 	});
-
-		// 	this.providerChangeDisposable = combinedDisposable(disposables);
-		// } else {
-		// 	this.providerChangeDisposable = EmptyDisposable;
-		// }
-
-		// this.updateInputBox();
-		// this.updateTitleArea();
+	private onDidRemoveRepository(repository: ISCMRepository): void {
+		ViewsRegistry.deregisterViews([repository.provider.id], ViewLocation.SCM);
+		this.updateTitleArea();
 	}
 
 	async create(parent: Builder): TPromise<void> {
@@ -476,85 +518,18 @@ export class SCMViewlet extends ComposedViewsViewlet {
 
 		parent.addClass('scm-viewlet');
 
-		// const root = parent.getHTMLElement();
-		// this.inputBoxContainer = append(root, $('.scm-editor'));
-
-		// this.inputBox = new InputBox(this.inputBoxContainer, this.contextViewService, {
-		// 	placeholder: localize('commitMessage', "Message (press {0} to commit)", platform.isMacintosh ? 'Cmd+Enter' : 'Ctrl+Enter'),
-		// 	flexibleHeight: true
-		// });
-		// this.disposables.push(attachInputBoxStyler(this.inputBox, this.themeService));
-		// this.disposables.push(this.inputBox);
-
-		// this.inputBox.value = this.scmService.input.value;
-		// this.inputBox.onDidChange(value => this.scmService.input.value = value, null, this.disposables);
-		// this.scmService.input.onDidChange(value => this.inputBox.value = value, null, this.disposables);
-		// this.disposables.push(this.inputBox.onDidHeightChange(() => this.layout()));
-
-		// chain(domEvent(this.inputBox.inputElement, 'keydown'))
-		// 	.map(e => new StandardKeyboardEvent(e))
-		// 	.filter(e => e.equals(KeyMod.CtrlCmd | KeyCode.Enter) || e.equals(KeyMod.CtrlCmd | KeyCode.KEY_S))
-		// 	.on(this.onDidAcceptInput, this, this.disposables);
-
-
-		this.onDidProvidersChange();
-		this.scmService.onDidChangeProviders(this.onDidProvidersChange, this, this.disposables);
-		// this.themeService.onThemeChange(this.update, this, this.disposables);
-
-		// return TPromise.as(null);
+		this.scmService.onDidAddRepository(this.onDidAddRepository, this, this.disposables);
+		this.scmService.onDidRemoveRepository(this.onDidRemoveRepository, this, this.disposables);
+		this.scmService.repositories.forEach(p => this.onDidAddRepository(p));
 	}
 
 	protected createView(viewDescriptor: IViewDescriptor, options: IViewletViewOptions): IView {
 		if (viewDescriptor instanceof SourceControlViewDescriptor) {
-			return this.instantiationService.createInstance(SourceControlView, viewDescriptor.provider, options);
+			return this.instantiationService.createInstance(SourceControlView, viewDescriptor.repository, options);
 		}
 
 		return this.instantiationService.createInstance(viewDescriptor.ctor, options);
 	}
-
-	// private onDidAcceptInput(): void {
-	// 	if (!this.activeProvider) {
-	// 		return;
-	// 	}
-
-	// 	if (!this.activeProvider.acceptInputCommand) {
-	// 		return;
-	// 	}
-
-	// 	const id = this.activeProvider.acceptInputCommand.id;
-	// 	const args = this.activeProvider.acceptInputCommand.arguments;
-
-	// 	this.commandService.executeCommand(id, ...args)
-	// 		.done(undefined, onUnexpectedError);
-	// }
-
-	// private updateInputBox(): void {
-	// 	if (!this.activeProvider) {
-	// 		return;
-	// 	}
-
-	// 	if (typeof this.activeProvider.commitTemplate === 'undefined') {
-	// 		return;
-	// 	}
-
-	// 	this.inputBox.value = this.activeProvider.commitTemplate;
-	// }
-
-	// layout(dimension: Dimension = this.cachedDimension): void {
-	// 	if (!dimension) {
-	// 		return;
-	// 	}
-
-	// 	this.cachedDimension = dimension;
-	// 	this.inputBox.layout();
-
-	// 	const editorHeight = this.inputBox.height;
-	// 	const listHeight = dimension.height - (editorHeight + 12 /* margin */);
-	// 	this.listContainer.style.height = `${listHeight}px`;
-	// 	this.list.layout(listHeight);
-
-	// 	toggleClass(this.inputBoxContainer, 'scroll', editorHeight >= 134);
-	// }
 
 	getOptimalWidth(): number {
 		return 400;
@@ -562,25 +537,41 @@ export class SCMViewlet extends ComposedViewsViewlet {
 
 	focus(): void {
 		super.focus();
-		// this.inputBox.focus();
 	}
 
 	getTitle(): string {
 		const title = localize('source control', "Source Control");
-		// const providerLabel = this.scmService.activeProvider && this.scmService.activeProvider.label;
+		const views = ViewsRegistry.getViews(ViewLocation.SCM);
 
-		// if (providerLabel) {
-		// 	return localize('viewletTitle', "{0}: {1}", title, providerLabel);
-		// } else {
-		return title;
-		// }
+		if (views.length === 1) {
+			const view = views[0];
+			return localize('viewletTitle', "{0}: {1}", title, view.name);
+		} else {
+			return title;
+		}
 	}
 
-	@memoize
+	getActions(): IAction[] {
+		if (this.showHeaderInTitleArea() && this.views.length === 1) {
+			return this.views[0].getActions();
+		}
+
+		return [];
+	}
+
 	getSecondaryActions(): IAction[] {
-		return [
-			this.instantiationService.createInstance(InstallAdditionalSCMProvidersAction)
-		];
+		let result: IAction[] = [];
+
+		if (this.showHeaderInTitleArea() && this.views.length === 1) {
+			result = [
+				...this.views[0].getSecondaryActions(),
+				new Separator()
+			];
+		}
+
+		result.push(this.instantiationService.createInstance(InstallAdditionalSCMProvidersAction));
+
+		return result;
 	}
 
 	getActionItem(action: IAction): IActionItem {

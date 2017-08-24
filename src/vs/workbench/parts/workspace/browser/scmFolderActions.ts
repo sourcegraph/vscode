@@ -45,7 +45,7 @@ export abstract class FolderSCMRevisionAction extends Action {
 		this.resolvedClass = this.class;
 		this.resolvingClass = `${this.class} resolving`;
 
-		this.disposables.push(this.scmService.onDidChangeProvider(() => {
+		this.disposables.push(this.scmService.onDidChangeRepository(() => {
 			this.updateSCMProvider();
 			this.update();
 		}));

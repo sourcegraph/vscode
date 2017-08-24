@@ -41,7 +41,6 @@ import { Position, IResourceInput, IUntitledResourceInput, IEditor } from 'vs/pl
 import { IExtensionService } from 'vs/platform/extensions/common/extensions';
 import { KeyboardMapperFactory } from 'vs/workbench/services/keybinding/electron-browser/keybindingService';
 import { Themable } from 'vs/workbench/common/theme';
-import { ISCMRevision, ISCMService, setSCMProviderRevision } from 'vs/workbench/services/scm/common/scm';
 // tslint:disable-line:import-patterns
 import { VIEWLET_ID as CODE_COMMENTS_VIEWLET_ID } from 'vs/workbench/parts/codeComments/common/constants';
 // tslint:disable-line:import-patterns
@@ -87,7 +86,6 @@ export class ElectronWindow extends Themable {
 		@IKeybindingService private keybindingService: IKeybindingService,
 		@IEnvironmentService private environmentService: IEnvironmentService,
 		@ITelemetryService private telemetryService: ITelemetryService,
-		@ISCMService private scmService: ISCMService
 	) {
 		super(themeService);
 
@@ -121,12 +119,6 @@ export class ElectronWindow extends Themable {
 	}
 
 	private setup(): void {
-
-		ipc.on('vscode:scm:setRevision', (event, revision: ISCMRevision) => {
-			const scmProvider = this.scmService.activeProvider;
-			setSCMProviderRevision(this.commandService, scmProvider, revision)
-				.done(null, err => this.messageService.show(Severity.Error, err));
-		});
 
 		// Support runAction event
 		ipc.on('vscode:runAction', (event, actionId: string) => {

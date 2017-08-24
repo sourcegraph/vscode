@@ -7,7 +7,7 @@
 
 import { workspace, WorkspaceFoldersChangeEvent, Uri, window, Event, EventEmitter, QuickPickItem, Disposable, SourceControl, SourceControlResourceGroup, TextEditor } from 'vscode';
 import { Repository } from './repository';
-import { memoize } from './decorators';
+import { memoize, sequentialize } from './decorators';
 import { dispose } from './util';
 import { Git, GitErrorCodes } from './git';
 import * as path from 'path';
@@ -31,6 +31,12 @@ interface OpenRepository extends Disposable {
 }
 
 export class Model {
+
+	private _onDidOpenRepository = new EventEmitter<Repository>();
+	readonly onDidOpenRepository: Event<Repository> = this._onDidOpenRepository.event;
+
+	private _onDidCloseRepository = new EventEmitter<Repository>();
+	readonly onDidCloseRepository: Event<Repository> = this._onDidCloseRepository.event;
 
 	private _onDidChangeRepository = new EventEmitter<ModelChangeEvent>();
 	readonly onDidChangeRepository: Event<ModelChangeEvent> = this._onDidChangeRepository.event;
@@ -62,9 +68,7 @@ export class Model {
 			.map(folder => this.getOpenRepository(folder.uri))
 			.filter(r => !!r && !activeRepositories.has(r.repository)) as OpenRepository[];
 
-		console.log('lets dispose', openRepositoriesToDispose);
-
-		possibleRepositoryFolders.forEach(p => this.findRepository(p.uri.fsPath));
+		possibleRepositoryFolders.forEach(p => this.tryOpenRepository(p.uri.fsPath));
 		openRepositoriesToDispose.forEach(r => r.dispose());
 	}
 
@@ -86,7 +90,7 @@ export class Model {
 				return;
 			}
 
-			this.findRepository(path.dirname(uri.fsPath));
+			this.tryOpenRepository(path.dirname(uri.fsPath));
 		});
 	}
 
@@ -96,9 +100,16 @@ export class Model {
 		return !uri.scheme || uri.scheme === 'file';
 	}
 
-	private async findRepository(dirPath: string): Promise<void> {
+	@sequentialize
+	async tryOpenRepository(path: string): Promise<void> {
+		const repository = this.getRepository(path);
+
+		if (repository) {
+			return;
+		}
+
 		try {
-			const repositoryRoot = await this.git.getRepositoryRoot(dirPath);
+			const repositoryRoot = await this.git.getRepositoryRoot(path);
 			const repository = new Repository(this.git.open(repositoryRoot));
 
 			this.open(repository);
@@ -120,10 +131,12 @@ export class Model {
 			changeListener.dispose();
 			repository.dispose();
 			this.openRepositories = this.openRepositories.filter(e => e !== openRepository);
+			this._onDidCloseRepository.fire(repository);
 		};
 
 		const openRepository = { repository, dispose };
 		this.openRepositories.push(openRepository);
+		this._onDidOpenRepository.fire(repository);
 	}
 
 	async pickRepository(): Promise<Repository | undefined> {
@@ -140,6 +153,7 @@ export class Model {
 
 	getRepository(sourceControl: SourceControl): Repository | undefined;
 	getRepository(resourceGroup: SourceControlResourceGroup): Repository | undefined;
+	getRepository(path: string): Repository | undefined;
 	getRepository(resource: Uri): Repository | undefined;
 	getRepository(hint: any): Repository | undefined {
 		const liveRepository = this.getOpenRepository(hint);
@@ -148,10 +162,15 @@ export class Model {
 
 	private getOpenRepository(sourceControl: SourceControl): OpenRepository | undefined;
 	private getOpenRepository(resourceGroup: SourceControlResourceGroup): OpenRepository | undefined;
+	private getOpenRepository(path: string): OpenRepository | undefined;
 	private getOpenRepository(resource: Uri): OpenRepository | undefined;
 	private getOpenRepository(hint: any): OpenRepository | undefined {
 		if (!hint) {
 			return undefined;
+		}
+
+		if (typeof hint === 'string') {
+			hint = Uri.file(hint);
 		}
 
 		if (hint instanceof Uri) {
@@ -160,7 +179,7 @@ export class Model {
 			for (const liveRepository of this.openRepositories) {
 				const relativePath = path.relative(liveRepository.repository.root, resourcePath);
 
-				if (!/^\./.test(relativePath)) {
+				if (!/^\.\./.test(relativePath)) {
 					return liveRepository;
 				}
 			}

@@ -5,7 +5,7 @@
 
 'use strict';
 
-import { Uri, Command, CommandOptions, EventEmitter, Event, scm, commands, SourceControl, SourceControlResourceGroup, SourceControlResourceState, SourceControlResourceDecorations, Disposable, ProgressLocation, window, workspace, WorkspaceEdit } from 'vscode';
+import { Uri, Command, CommandOptions, EventEmitter, Event, scm, SourceControl, SourceControlInputBox, SourceControlResourceGroup, SourceControlResourceState, SourceControlResourceDecorations, Disposable, ProgressLocation, window, workspace, WorkspaceEdit } from 'vscode';
 import { Repository as BaseRepository, Ref, Branch, Remote, Commit, GitErrorCodes, Stash } from './git';
 import { anyEvent, filterEvent, eventToPromise, dispose, find } from './util';
 import { memoize, throttle, debounce } from './decorators';
@@ -14,6 +14,7 @@ import { AutoFetcher } from './autofetch';
 import * as path from 'path';
 import * as nls from 'vscode-nls';
 import * as fs from 'fs';
+import { StatusBarCommands } from './statusbar';
 
 const timeout = (millis: number) => new Promise(c => setTimeout(c, millis));
 
@@ -126,6 +127,28 @@ export class Resource implements SourceControlResourceState {
 		}
 	}
 
+	private get tooltip(): string {
+		switch (this.type) {
+			case Status.INDEX_MODIFIED: return localize('index modified', "Index Modified");
+			case Status.MODIFIED: return localize('modified', "Modified");
+			case Status.INDEX_ADDED: return localize('index added', "Index Added");
+			case Status.INDEX_DELETED: return localize('index deleted', "Index Deleted");
+			case Status.DELETED: return localize('deleted', "Deleted");
+			case Status.INDEX_RENAMED: return localize('index renamed', "Index Renamed");
+			case Status.INDEX_COPIED: return localize('index copied', "Index Copied");
+			case Status.UNTRACKED: return localize('untracked', "Untracked");
+			case Status.IGNORED: return localize('ignored', "Ignored");
+			case Status.BOTH_DELETED: return localize('both deleted', "Both Deleted");
+			case Status.ADDED_BY_US: return localize('added by us', "Added By Us");
+			case Status.DELETED_BY_THEM: return localize('deleted by them', "Deleted By Them");
+			case Status.ADDED_BY_THEM: return localize('added by them', "Added By Them");
+			case Status.DELETED_BY_US: return localize('deleted by us', "Deleted By Us");
+			case Status.BOTH_ADDED: return localize('both added', "Both Added");
+			case Status.BOTH_MODIFIED: return localize('both modified', "Both Modified");
+			default: return '';
+		}
+	}
+
 	private get strikeThrough(): boolean {
 		switch (this.type) {
 			case Status.DELETED:
@@ -150,10 +173,11 @@ export class Resource implements SourceControlResourceState {
 	get decorations(): SourceControlResourceDecorations {
 		const light = { iconPath: this.getIconPath('light') };
 		const dark = { iconPath: this.getIconPath('dark') };
+		const tooltip = this.tooltip;
 		const strikeThrough = this.strikeThrough;
 		const faded = this.faded;
 
-		return { strikeThrough, faded, light, dark };
+		return { strikeThrough, faded, tooltip, light, dark };
 	}
 
 	constructor(
@@ -177,16 +201,15 @@ export enum Operation {
 	Pull = 1 << 9,
 	Push = 1 << 10,
 	Sync = 1 << 11,
-	Init = 1 << 12,
-	Show = 1 << 13,
-	Stage = 1 << 14,
-	GetCommitTemplate = 1 << 15,
-	DeleteBranch = 1 << 16,
-	Merge = 1 << 17,
-	Ignore = 1 << 18,
-	Tag = 1 << 19,
-	Stash = 1 << 20,
-	ExecuteCommand = 1 << 21,
+	Show = 1 << 12,
+	Stage = 1 << 13,
+	GetCommitTemplate = 1 << 14,
+	DeleteBranch = 1 << 15,
+	Merge = 1 << 16,
+	Ignore = 1 << 17,
+	Tag = 1 << 18,
+	Stash = 1 << 19,
+	ExecuteCommand = 1 << 20,
 }
 
 // function getOperationName(operation: Operation): string {
@@ -277,10 +300,8 @@ export class Repository implements Disposable {
 	private _onDidChangeState = new EventEmitter<State>();
 	readonly onDidChangeState: Event<State> = this._onDidChangeState.event;
 
-	@memoize
-	get onDidChange(): Event<void> {
-		return anyEvent<any>(this.onDidChangeState);
-	}
+	private _onDidChangeStatus = new EventEmitter<void>();
+	readonly onDidChangeStatus: Event<void> = this._onDidChangeStatus.event;
 
 	private _onRunOperation = new EventEmitter<Operation>();
 	readonly onRunOperation: Event<Operation> = this._onRunOperation.event;
@@ -295,6 +316,8 @@ export class Repository implements Disposable {
 
 	private _sourceControl: SourceControl;
 	get sourceControl(): SourceControl { return this._sourceControl; }
+
+	get inputBox(): SourceControlInputBox { return this._sourceControl.inputBox; }
 
 	private _mergeGroup: SourceControlResourceGroup;
 	get mergeGroup(): GitResourceGroup { return this._mergeGroup as GitResourceGroup; }
@@ -337,7 +360,6 @@ export class Repository implements Disposable {
 		this.workingTreeGroup.resourceStates = [];
 		this._sourceControl.count = 0;
 		this._sourceControl.revision = { rawSpecifier: 'HEAD' };
-		commands.executeCommand('setContext', 'gitState', '');
 	}
 
 	get root(): string {
@@ -367,7 +389,7 @@ export class Repository implements Disposable {
 			rootFolder: Uri.file(repository.root),
 			label,
 		});
-		this._sourceControl.acceptInputCommand = { command: 'git.commitWithInput', title: localize('commit', "Commit") };
+		this._sourceControl.acceptInputCommand = { command: 'git.commitWithInput', title: localize('commit', "Commit"), arguments: [this._sourceControl] };
 		this._sourceControl.quickDiffProvider = this;
 		this._sourceControl.commandExecutor = this;
 		this.disposables.push(this._sourceControl);
@@ -391,11 +413,15 @@ export class Repository implements Disposable {
 
 		this.disposables.push(new AutoFetcher(this));
 
+		const statusBar = new StatusBarCommands(this);
+		this.disposables.push(statusBar);
+		statusBar.onDidChange(() => this._sourceControl.statusBarCommands = statusBar.commands, null, this.disposables);
+		this._sourceControl.statusBarCommands = statusBar.commands;
+
 		this.updateCommitTemplate();
 		this.status();
 	}
 
-	// TODO@Joao reorganize this
 	provideOriginalResource(uri: Uri): Uri | undefined {
 		if (uri.scheme !== 'file') {
 			return;
@@ -790,7 +816,7 @@ export class Repository implements Disposable {
 			case State.Disposed: stateContextKey = 'norepo'; break;
 		}
 
-		commands.executeCommand('setContext', 'gitState', stateContextKey);
+		this._onDidChangeStatus.fire();
 	}
 
 	private onFSChange(uri: Uri): void {
