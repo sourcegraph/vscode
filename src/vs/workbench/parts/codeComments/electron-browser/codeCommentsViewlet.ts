@@ -212,11 +212,16 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 	}
 
 	private renderCommentsNotAvailable(): void {
+		this.recentThreadsView = false;
+		this.title = localize('comment', "Code Comments");
+		this.actions = [];
+		this.updateTitleArea();
+		this.renderDisposables = dispose(this.renderDisposables);
 		clearNode(this.list);
 		$(this.list).div({ class: 'threads' }, div => {
 			div.div({ class: 'empty' }, div => {
 				div.div({}, div => {
-					div.text(localize('commentsNotAvailable', "Comments are not available on this file."));
+					div.text(localize('openFileToSeeComments', "Open a file to see comments."));
 				});
 			});
 		});
