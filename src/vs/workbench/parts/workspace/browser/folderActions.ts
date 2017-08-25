@@ -31,6 +31,7 @@ import { buttonBackground, buttonForeground, buttonHoverBackground, contrastBord
 import { FolderSCMSwitchRevisionAction } from './scmFolderActions';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 import { IWindowService } from 'vs/platform/windows/common/windows';
+import { mnemonicLabel } from 'vs/base/common/labels';
 
 export class AddWorkspaceFolderAction extends Action {
 
@@ -426,7 +427,7 @@ export class AddLocalWorkspaceFolderAction extends BaseWorkspacesAction {
 			return this.windowService.createAndOpenWorkspace([this.contextService.getWorkspace().roots[0].toString()]);
 		}
 
-		const folders = super.pickFolders(localize({ key: 'add', comment: ['&& denotes a mnemonic'] }, "&&Add"), localize('addFolderToWorkspaceTitle', "Add Folder to Workspace"));
+		const folders = super.pickFolders(mnemonicLabel(localize({ key: 'add', comment: ['&& denotes a mnemonic'] }, "&&Add")), localize('addFolderToWorkspaceTitle', "Add Folder to Workspace"));
 		if (!folders || !folders.length) {
 			return TPromise.as(null);
 		}
