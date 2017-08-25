@@ -82,10 +82,6 @@ export class SCMService implements ISCMService {
 			throw new Error(`SCM Provider ${provider.id} already exists.`);
 		}
 
-		if (provider.rootFolder) {
-			this.updateFolderProvidersMap();
-		}
-
 		this._providerIds.add(provider.id);
 
 		const disposable = toDisposable(() => {
@@ -98,11 +94,16 @@ export class SCMService implements ISCMService {
 			this._providerIds.delete(provider.id);
 			this._repositories.splice(index, 1);
 			this._onDidRemoveProvider.fire(repository);
+			this.updateFolderProvidersMap();
 		});
 
 		const repository = new SCMRepository(provider, disposable);
 		this._repositories.push(repository);
 		this._onDidAddProvider.fire(repository);
+
+		if (provider.rootFolder) {
+			this.updateFolderProvidersMap();
+		}
 
 		return repository;
 	}
