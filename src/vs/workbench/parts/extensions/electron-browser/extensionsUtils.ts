@@ -230,7 +230,7 @@ export class TSLintAlternateRequired implements IWorkbenchContribution {
 				if (!isCompatInstalled) {
 					telemetryService.publicLog('tslintAlternateRequired');
 					messageService.show(Severity.Info, {
-						message: localize('tslintAlternateRequired', "The installed TSLint extension does not yet support multi-root workspaces."),
+						message: localize('tslintAlternateRequired', "The TSLint extension is incompatible with this workspace."),
 						actions: [
 							new Action('install', localize('install', "Install multiroot-aware TSLint (recommended)"), null, true, () => {
 								telemetryService.publicLog('tslintAlternateInstall', {
