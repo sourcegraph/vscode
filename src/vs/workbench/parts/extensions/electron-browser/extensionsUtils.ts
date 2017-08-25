@@ -271,7 +271,7 @@ export class TSLintAlternateRequired implements IWorkbenchContribution {
 			.then(result => {
 				const [extension] = result.firstPage;
 				if (!extension) {
-					return TPromise.wrapError(new Error(localize(`Extension '{0}' not found.`, TSLintAlternateRequired.COMPATIBLE_EXTENSION_ID)));
+					return TPromise.wrapError(new Error(localize('notFound', `Extension '{0}' not found.`, TSLintAlternateRequired.COMPATIBLE_EXTENSION_ID)));
 				}
 				return this.extensionManagementService.installFromGallery(extension, false).then(() => {
 					this.viewletService.openViewlet(EXTENSIONS_VIEWLET_ID, true)
