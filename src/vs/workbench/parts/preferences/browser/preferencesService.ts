@@ -176,7 +176,11 @@ export class PreferencesService extends Disposable implements IPreferencesServic
 		}
 
 		if (this.contextService.hasMultiFolderWorkspace()) {
-			return this.createEditableSettingsEditorModel(ConfigurationTarget.FOLDER, uri);
+			const isFolderSettings = this.contextService.getWorkspace().roots.some(root =>
+				this.getEditableSettingsURI(ConfigurationTarget.FOLDER, root).fsPath === uri.fsPath);
+			if (isFolderSettings) {
+				return this.createEditableSettingsEditorModel(ConfigurationTarget.FOLDER, uri);
+			}
 		}
 
 		return TPromise.wrap<IPreferencesEditorModel<any>>(null);
