@@ -119,20 +119,12 @@ function createAndInitializeWorkspaceService(configuration: IWindowConfiguration
 			workspaceService = new EmptyWorkspaceServiceImpl(environmentService);
 		}
 
-		return workspaceService.initialize().then(() => workspaceService, error => {
-			console.error('Failed to initialize workspace:', error);
-			return new EmptyWorkspaceServiceImpl(environmentService);
-		});
+		return workspaceService.initialize().then(() => workspaceService, error => new EmptyWorkspaceServiceImpl(environmentService));
 	});
 }
 
 function validateWorkspacePath(configuration: IWindowConfiguration): TPromise<void> {
 	if (!configuration.folderPath) {
-		return TPromise.as(null);
-	}
-	// repo:// URIs are always considered valid, they cannot be realpath'd
-	const folderPath = uri.parse(configuration.folderPath);
-	if (folderPath.scheme) {
 		return TPromise.as(null);
 	}
 

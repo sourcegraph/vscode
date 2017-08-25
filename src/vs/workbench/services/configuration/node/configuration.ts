@@ -13,7 +13,6 @@ import { equals } from 'vs/base/common/arrays';
 import * as objects from 'vs/base/common/objects';
 import * as errors from 'vs/base/common/errors';
 import * as collections from 'vs/base/common/collections';
-import { Schemas } from 'vs/base/common/network';
 import { Disposable, toDisposable, IDisposable, dispose } from 'vs/base/common/lifecycle';
 import { RunOnceScheduler } from 'vs/base/common/async';
 import { readFile, stat } from 'vs/base/node/pfs';
@@ -496,18 +495,6 @@ export class WorkspaceServiceImpl extends WorkspaceService {
 	}
 
 	private initializeSingleFolderWorkspace(): TPromise<void> {
-		if (this.folderPath.scheme === Schemas.repo) {
-			// Don't stat folderPath because it is a repo:// URI. Use a random ID instead
-			// of ctime and don't pass ctime to LegacyWorkspace.
-			//
-			// TODO figure out whether we can avoid this by always using
-			// initializeMultiFolderWorkspace()
-			const id = String(Math.floor(Math.random() * 100000)) + Date.now();
-			this.workspace = new Workspace(id, paths.basename(this.folderPath.fsPath), [this.folderPath], null);
-			this.legacyWorkspace = new LegacyWorkspace(this.folderPath);
-			return TPromise.as(null);
-		}
-
 		return stat(this.folderPath.fsPath)
 			.then(workspaceStat => {
 				const ctime = isLinux ? workspaceStat.ino : workspaceStat.birthtime.getTime(); // On Linux, birthtime is ctime, so we cannot use it! We use the ino instead!
