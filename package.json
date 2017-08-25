@@ -1,7 +1,7 @@
 {
   "name": "src-oss-dev",
   "version": "1.16.0",
-  "electronVersion": "1.7.5",
+  "electronVersion": "1.7.3",
   "distro": "HEAD",
   "author": {
     "name": "Microsoft Corporation"
@@ -128,7 +128,7 @@
     "url": "https://github.com/Microsoft/vscode/issues"
   },
   "optionalDependencies": {
-    "windows-process-tree": "0.1.2",
+    "windows-process-tree": "0.1.3",
     "windows-foreground-love": "0.1.0",
     "windows-mutex": "^0.2.0",
     "fsevents": "0.3.8"

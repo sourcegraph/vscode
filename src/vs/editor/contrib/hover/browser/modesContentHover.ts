@@ -20,7 +20,7 @@ import { ICodeEditor } from 'vs/editor/browser/editorBrowser';
 import { getHover } from '../common/hover';
 import { HoverOperation, IHoverComputer } from './hoverOperation';
 import { SourcegraphHoverWidget } from './sourcegraphHoverWidget';
-import { IMarkdownString, MarkdownString, markedStringsEquals } from 'vs/base/common/htmlContent';
+import { IMarkdownString, MarkdownString, isEmptyMarkdownString, markedStringsEquals } from 'vs/base/common/htmlContent';
 import { ModelDecorationOptions } from 'vs/editor/common/model/textModelWithDecorations';
 import { ColorPickerModel } from 'vs/editor/contrib/colorPicker/browser/colorPickerModel';
 import { ColorPickerWidget } from 'vs/editor/contrib/colorPicker/browser/colorPickerWidget';
@@ -85,10 +85,6 @@ class ModesContentComputer implements IHoverComputer<HoverPart[]> {
 			return [];
 		}
 
-		const hasHoverContent = (contents: IMarkdownString | IMarkdownString[]) => {
-			return contents && (!Array.isArray(contents) || (<IMarkdownString[]>contents).length > 0);
-		};
-
 		const colorDetector = ColorDetector.get(this._editor);
 		const maxColumn = this._editor.getModel().getLineMaxColumn(lineNumber);
 		const lineDecorations = this._editor.getLineDecorations(lineNumber);
@@ -111,7 +107,7 @@ class ModesContentComputer implements IHoverComputer<HoverPart[]> {
 				const { color, formatters } = colorRange;
 				return new ColorHover(d.range, color, formatters);
 			} else {
-				if (!hasHoverContent(d.options.hoverMessage)) {
+				if (isEmptyMarkdownString(d.options.hoverMessage)) {
 					return null;
 				}
 
@@ -327,7 +323,7 @@ export class ModesContentHoverWidget extends SourcegraphHoverWidget {
 
 			if (!(msg instanceof ColorHover)) {
 				msg.contents
-					.filter(contents => !!contents)
+					.filter(contents => !isEmptyMarkdownString(contents))
 					.forEach(contents => {
 						const renderedContents = renderMarkdown(contents, {
 							actionCallback: (content) => {

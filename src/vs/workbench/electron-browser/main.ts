@@ -112,15 +112,12 @@ function openWorkbench(configuration: IWindowConfiguration): TPromise<void> {
 
 function createAndInitializeWorkspaceService(configuration: IWindowConfiguration, environmentService: EnvironmentService, workspacesService: IWorkspacesService): TPromise<WorkspaceService> {
 	return validateWorkspacePath(configuration).then(() => {
-		const workspaceConfigPath = configuration.workspace ? uri.file(configuration.workspace.configPath) : null;
-		let folderPath: uri | null = null;
-		if (configuration.folderPath) {
-			folderPath = uri.parse(configuration.folderPath);
-			if (!folderPath.scheme) {
-				folderPath = uri.file(configuration.folderPath);
-			}
+		let workspaceService: WorkspaceServiceImpl | EmptyWorkspaceServiceImpl;
+		if (configuration.workspace || configuration.folderPath) {
+			workspaceService = new WorkspaceServiceImpl(configuration.workspace || configuration.folderPath, environmentService, workspacesService);
+		} else {
+			workspaceService = new EmptyWorkspaceServiceImpl(environmentService);
 		}
-		const workspaceService = (workspaceConfigPath || configuration.folderPath) ? new WorkspaceServiceImpl(workspaceConfigPath, folderPath, environmentService, workspacesService) : new EmptyWorkspaceServiceImpl(environmentService);
 
 		return workspaceService.initialize().then(() => workspaceService, error => {
 			console.error('Failed to initialize workspace:', error);

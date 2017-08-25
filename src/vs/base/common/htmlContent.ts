@@ -10,42 +10,57 @@ import { marked } from 'vs/base/common/marked/marked';
 
 export interface IMarkdownString {
 	value: string;
-	enableCommands?: true;
+	trusted?: true;
 }
 
 export class MarkdownString implements IMarkdownString {
 
-	static isMarkdownString(thing: any): thing is IMarkdownString {
-		if (thing instanceof MarkdownString) {
-			return true;
-		} else if (typeof thing === 'object') {
-			return typeof (<IMarkdownString>thing).value === 'string'
-				&& (typeof (<IMarkdownString>thing).enableCommands === 'boolean' || (<IMarkdownString>thing).enableCommands === void 0);
-		}
-		return false;
-	}
-
 	value: string;
-	enableCommands?: true;
+	trusted?: true;
 
 	constructor(value: string = '') {
 		this.value = value;
 	}
 
-	appendText(value: string): this {
+	appendText(value: string): MarkdownString {
 		// escape markdown syntax tokens: http://daringfireball.net/projects/markdown/syntax#backslash
 		this.value += value.replace(/[\\`*_{}[\]()#+\-.!]/g, '\\$&');
 		return this;
 	}
 
-	appendCodeblock(langId: string, code: string): this {
-		this.value += '```';
+	appendMarkdown(value: string): MarkdownString {
+		this.value += value;
+		return this;
+	}
+
+	appendCodeblock(langId: string, code: string): MarkdownString {
+		this.value += '\n```';
 		this.value += langId;
 		this.value += '\n';
 		this.value += code;
-		this.value += '```\n';
+		this.value += '\n```\n';
 		return this;
 	}
+}
+
+export function isEmptyMarkdownString(oneOrMany: IMarkdownString | IMarkdownString[]): boolean {
+	if (isMarkdownString(oneOrMany)) {
+		return !oneOrMany.value;
+	} else if (Array.isArray(oneOrMany)) {
+		return oneOrMany.every(isEmptyMarkdownString);
+	} else {
+		return true;
+	}
+}
+
+export function isMarkdownString(thing: any): thing is IMarkdownString {
+	if (thing instanceof MarkdownString) {
+		return true;
+	} else if (typeof thing === 'object') {
+		return typeof (<IMarkdownString>thing).value === 'string'
+			&& (typeof (<IMarkdownString>thing).trusted === 'boolean' || (<IMarkdownString>thing).trusted === void 0);
+	}
+	return false;
 }
 
 export function markedStringsEquals(a: IMarkdownString | IMarkdownString[], b: IMarkdownString | IMarkdownString[]): boolean {
@@ -55,7 +70,7 @@ export function markedStringsEquals(a: IMarkdownString | IMarkdownString[], b: I
 		return false;
 	} else if (Array.isArray(a) && Array.isArray(b)) {
 		return equals(a, b, markdownStringEqual);
-	} else if (MarkdownString.isMarkdownString(a) && MarkdownString.isMarkdownString(b)) {
+	} else if (isMarkdownString(a) && isMarkdownString(b)) {
 		return markdownStringEqual(a, b);
 	} else {
 		return false;
@@ -68,7 +83,7 @@ function markdownStringEqual(a: IMarkdownString, b: IMarkdownString): boolean {
 	} else if (!a || !b) {
 		return false;
 	} else {
-		return a.value === b.value && a.enableCommands === b.enableCommands;
+		return a.value === b.value && a.trusted === b.trusted;
 	}
 }
 
