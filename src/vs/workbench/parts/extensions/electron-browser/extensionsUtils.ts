@@ -202,14 +202,14 @@ export class TSLintAlternateRequired implements IWorkbenchContribution {
 
 	constructor(
 		@IStorageService storageService: IStorageService,
-		@IMessageService messageService: IMessageService,
+		@IMessageService private messageService: IMessageService,
 		@IExtensionService extensionService: IExtensionService,
 		@IExtensionEnablementService extensionEnablementService: IExtensionEnablementService,
-		@IExtensionManagementService extensionManagementService: IExtensionManagementService,
-		@IExtensionGalleryService extensionGalleryService: IExtensionGalleryService,
-		@ITelemetryService telemetryService: ITelemetryService,
-		@IViewletService viewletService: IViewletService,
-		@IWindowService windowService: IWindowService,
+		@IExtensionManagementService private extensionManagementService: IExtensionManagementService,
+		@IExtensionGalleryService private extensionGalleryService: IExtensionGalleryService,
+		@ITelemetryService private telemetryService: ITelemetryService,
+		@IViewletService private viewletService: IViewletService,
+		@IWindowService private windowService: IWindowService,
 	) {
 		extensionService.onReady()
 			.then(() => extensionManagementService.getInstalled(LocalExtensionType.User))
@@ -236,43 +236,7 @@ export class TSLintAlternateRequired implements IWorkbenchContribution {
 								telemetryService.publicLog('tslintAlternateInstall', {
 									outcome: 'install',
 								});
-
-								return extensionGalleryService.query({ names: [TSLintAlternateRequired.COMPATIBLE_EXTENSION_ID] })
-									.then<IPager<IGalleryExtension>>(null, err => {
-										if (err.responseText) {
-											try {
-												const response = JSON.parse(err.responseText);
-												return TPromise.wrapError(response.message);
-											} catch (e) {
-												// noop
-											}
-										}
-
-										return TPromise.wrapError(err);
-									})
-									.then(result => {
-										const [extension] = result.firstPage;
-										if (!extension) {
-											return TPromise.wrapError(new Error(localize(`Extension '{0}' not found.`, TSLintAlternateRequired.COMPATIBLE_EXTENSION_ID)));
-										}
-										return extensionManagementService.installFromGallery(extension, false).then(() => {
-											viewletService.openViewlet(EXTENSIONS_VIEWLET_ID, true)
-												.then(viewlet => viewlet as IExtensionsViewlet)
-												.done(viewlet => {
-													viewlet.search('name:tslint');
-													viewlet.focus();
-
-													messageService.show(Severity.Info, {
-														message: localize('reloadAfterInstall', "Reload to activate the multiroot-aware TSLint extension."),
-														actions: [
-															new Action('reload', localize('reload', "Reload"), null, true, () => {
-																return windowService.reloadWindow();
-															}),
-														],
-													});
-												});
-										});
-									});
+								return this.installAlternateExtension();
 							}),
 							new Action('later', localize('later', "Later"), null, true, () => {
 								telemetryService.publicLog('tslintAlternateInstall', {
@@ -288,5 +252,44 @@ export class TSLintAlternateRequired implements IWorkbenchContribution {
 
 	getId(): string {
 		return 'vs.extensions.tslintAlternateRequired';
+	}
+
+	private installAlternateExtension(): TPromise<void> {
+		return this.extensionGalleryService.query({ names: [TSLintAlternateRequired.COMPATIBLE_EXTENSION_ID] })
+			.then<IPager<IGalleryExtension>>(null, err => {
+				if (err.responseText) {
+					try {
+						const response = JSON.parse(err.responseText);
+						return TPromise.wrapError(response.message);
+					} catch (e) {
+						// noop
+					}
+				}
+
+				return TPromise.wrapError(err);
+			})
+			.then(result => {
+				const [extension] = result.firstPage;
+				if (!extension) {
+					return TPromise.wrapError(new Error(localize(`Extension '{0}' not found.`, TSLintAlternateRequired.COMPATIBLE_EXTENSION_ID)));
+				}
+				return this.extensionManagementService.installFromGallery(extension, false).then(() => {
+					this.viewletService.openViewlet(EXTENSIONS_VIEWLET_ID, true)
+						.then(viewlet => viewlet as IExtensionsViewlet)
+						.done(viewlet => {
+							viewlet.search('name:tslint');
+							viewlet.focus();
+
+							this.messageService.show(Severity.Info, {
+								message: localize('reloadAfterInstall', "Reload to activate the multiroot-aware TSLint extension."),
+								actions: [
+									new Action('reload', localize('reload', "Reload"), null, true, () => {
+										return this.windowService.reloadWindow();
+									}),
+								],
+							});
+						});
+				});
+			});
 	}
 }
