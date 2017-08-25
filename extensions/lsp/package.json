@@ -18,26 +18,13 @@
   "contributes": {
     "configuration": {
       "type": "object",
-      "title": "Language support",
+      "title": "Remote repository language features",
       "order": 20,
       "properties": {
         "lsp.trace": {
           "type": "boolean",
           "default": false,
           "description": "Print trace logs of all LSP communication with the language server"
-        },
-        "lsp.previewLanguages": {
-          "type": "boolean",
-          "default": false,
-          "description": "Enable usage of language servers that are still in preview (alpha/beta quality)"
-        },
-        "lsp.hideLanguageSupportWarnings": {
-          "type": "array",
-          "default": [],
-          "items": {
-            "type": "string"
-          },
-          "description": "Don't warn about incomplete language support for these languages"
         }
       }
     }

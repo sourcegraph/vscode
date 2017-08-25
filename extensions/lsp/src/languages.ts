@@ -228,29 +228,10 @@ function createLanguage(language: Language, contribution: ILanguageExtensionPoin
 	};
 }
 
-let loggedPreview = new Set<string>();
-
 /**
  * Reports whether LSP should be enabled for the current user for a
  * file in the given language.
  */
 export function isEnabled(lang: Language): boolean {
-	if (!lang) { return false; }
-	switch (lang.releaseStatus) {
-		case ReleaseStatus.General:
-			return true;
-		case ReleaseStatus.Preview:
-			const enabled = isPreviewLanguagesEnabled();
-			if (!enabled && !loggedPreview.has(lang.contribution.id)) {
-				console.log('Language ' + lang.name + ' is in preview. Configure lsp.previewLanguages to true to enable language support.');
-				loggedPreview.add(lang.contribution.id);
-			}
-			return enabled;
-		default:
-			return false;
-	}
-}
-
-export function isPreviewLanguagesEnabled(): boolean {
-	return vscode.workspace.getConfiguration('lsp').get<boolean>('previewLanguages');
+	return !!lang;
 }

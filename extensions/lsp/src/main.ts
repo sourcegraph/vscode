@@ -6,7 +6,6 @@
 
 import * as vscode from 'vscode';
 import { activateLSP } from './client';
-import { activateLanguageSupportParts } from './languageSupportParts';
 import { IRepoExtension } from '../../repo/src/api';
 import { Workspace, IWorkspace } from './workspace';
 
@@ -29,6 +28,5 @@ export function activate(context: vscode.ExtensionContext): void {
 		lspWorkspace = new Workspace();
 
 		context.subscriptions.push(activateLSP());
-		context.subscriptions.push(activateLanguageSupportParts());
 	});
 }
