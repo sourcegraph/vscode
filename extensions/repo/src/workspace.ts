@@ -186,7 +186,7 @@ export class Workspace implements vscode.Disposable {
 	private registerResourceResolver(): void {
 		const provider: vscode.ResourceResolutionProvider = {
 			resolveResource: async (resource: vscode.Uri): Promise<vscode.Uri> => {
-				const path = await gitExtension.git.clone(resource.with({ scheme: 'git' }).toString(), '/tmp');
+				const path = await gitExtension.git.clone(resource.with({ scheme: 'https' }).toString(), '/tmp');
 				return vscode.Uri.file(path);
 			},
 		};

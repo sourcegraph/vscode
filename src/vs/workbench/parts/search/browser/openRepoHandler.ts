@@ -194,12 +194,7 @@ export class WorkspaceEntry extends QuickOpenEntry {
 		@IWindowsService private windowsService: IWindowsService
 	) {
 		super();
-
-		if (match.uri.authority === 'github.com') {
-			this.label = match.uri.path.slice(1);
-		} else {
-			this.label = match.uri.authority + match.uri.path;
-		}
+		this.label = match.displayName;
 	}
 
 	/**

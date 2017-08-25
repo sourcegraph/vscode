@@ -29,10 +29,19 @@ export class ResourceResolverService implements IResourceResolverService {
 		});
 	}
 
-	public resolveResource(resource: URI): TPromise<URI> {
+	public resolveResource(resource: URI, recursionLimit: number = 5): TPromise<URI> {
+		if (recursionLimit === 0) {
+			throw new Error('recursion limit reached');
+		}
+
 		const provider = this.providers.get(resource.scheme);
 		if (provider) {
-			return provider.resolveResource(resource);
+			return provider.resolveResource(resource).then(resolvedResource => {
+				if (resource.toString() !== resolvedResource.toString()) {
+					return this.resolveResource(resolvedResource, recursionLimit--);
+				}
+				return resolvedResource;
+			});
 		}
 
 		return TPromise.as(resource);

@@ -1,0 +1,43 @@
+{
+  "name": "service-github",
+  "displayName": "GitHub integration",
+  "description": "Provides access to GitHub repositories",
+  "categories": [
+    "Other"
+  ],
+  "main": "./out/main",
+  "version": "0.0.1",
+  "publisher": "sourcegraph",
+  "engines": {
+    "vscode": "*"
+  },
+  "activationEvents": [
+    "*"
+  ],
+  "enableProposedApi": true,
+  "contributes": {
+    "configuration": {
+      "type": "object",
+      "title": "GitHub",
+      "properties": {
+        "github.token": {
+          "type": "string",
+          "description": "GitHub.com personal access token. Create at https://github.com/settings/tokens. Must have 'repo' scope."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "gulp compile-extension:service-github",
+    "watch": "gulp watch-extension:service-github"
+  },
+  "dependencies": {
+    "isomorphic-fetch": "^2.2.1",
+    "vscode-nls": "^2.0.2"
+  },
+  "devDependencies": {
+    "@types/mocha": "^2.2.38",
+    "@types/node": "^7.0.12",
+    "vscode": "1.0.1"
+  }
+}

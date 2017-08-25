@@ -193,7 +193,15 @@ export class FolderCatalogService implements IFolderCatalogService {
 
 	public search(query: string): TPromise<IPagedModel<IFolder>> {
 		return this.folderSearchService.search(query).then(results => {
-			return new PagedModel(results.map(match => new Folder(this, this.stateProvider, match.resource /* TODO(sqs) , match */)));
+			return new PagedModel(results.map(result => {
+				const match: ICatalogFolder = {
+					displayName: result.path,
+					name: result.name,
+					isPrivate: result.icon === 'lock',
+					fork: result.icon === 'repo-forked',
+				} as any;
+				return new Folder(this, this.stateProvider, result.resource, match);
+			}));
 		});
 	}
 
