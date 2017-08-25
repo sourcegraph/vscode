@@ -16,6 +16,7 @@ import { parseArgs } from 'vs/platform/environment/node/argv';
 import { WorkspacesMainService } from 'vs/platform/workspaces/electron-main/workspacesMainService';
 import { IStoredWorkspace, WORKSPACE_EXTENSION, IWorkspaceSavedEvent, IWorkspaceIdentifier } from 'vs/platform/workspaces/common/workspaces';
 import { LogMainService } from 'vs/platform/log/common/log';
+import * as json from 'vs/base/common/json';
 
 suite('WorkspacesMainService', () => {
 	const parentDir = path.join(os.tmpdir(), 'vsctests', 'service');
@@ -63,7 +64,7 @@ suite('WorkspacesMainService', () => {
 			assert.ok(fs.existsSync(workspace.configPath));
 			assert.ok(service.isUntitledWorkspace(workspace));
 
-			const ws = JSON.parse(fs.readFileSync(workspace.configPath).toString()) as IStoredWorkspace;
+			const ws = json.parse(fs.readFileSync(workspace.configPath).toString()) as IStoredWorkspace;
 			assert.equal(ws.id, workspace.id);
 			assert.equal(ws.folders.length, 0);
 
@@ -77,7 +78,7 @@ suite('WorkspacesMainService', () => {
 			assert.ok(fs.existsSync(workspace.configPath));
 			assert.ok(service.isUntitledWorkspace(workspace));
 
-			const ws = JSON.parse(fs.readFileSync(workspace.configPath).toString()) as IStoredWorkspace;
+			const ws = json.parse(fs.readFileSync(workspace.configPath).toString()) as IStoredWorkspace;
 			assert.equal(ws.id, workspace.id);
 			assert.equal(ws.folders.length, 2);
 			assert.equal(ws.folders[0], process.cwd());
@@ -127,7 +128,7 @@ suite('WorkspacesMainService', () => {
 
 				assert.equal(service.deleteWorkspaceCall, workspace);
 
-				const ws = JSON.parse(fs.readFileSync(savedWorkspace.configPath).toString()) as IStoredWorkspace;
+				const ws = json.parse(fs.readFileSync(savedWorkspace.configPath).toString()) as IStoredWorkspace;
 				assert.equal(ws.id, workspace.id);
 				assert.equal(ws.folders.length, 2);
 				assert.equal(ws.folders[0], process.cwd());
@@ -158,7 +159,7 @@ suite('WorkspacesMainService', () => {
 					assert.equal(newSavedWorkspace.id, workspace.id);
 					assert.equal(newSavedWorkspace.configPath, newWorkspaceConfigPath);
 
-					const ws = JSON.parse(fs.readFileSync(newSavedWorkspace.configPath).toString()) as IStoredWorkspace;
+					const ws = json.parse(fs.readFileSync(newSavedWorkspace.configPath).toString()) as IStoredWorkspace;
 					assert.equal(ws.id, workspace.id);
 					assert.equal(ws.folders.length, 2);
 					assert.equal(ws.folders[0], process.cwd());

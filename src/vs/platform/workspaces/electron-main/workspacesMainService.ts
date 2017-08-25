@@ -19,6 +19,8 @@ import Event, { Emitter } from 'vs/base/common/event';
 import { ILogService } from 'vs/platform/log/common/log';
 import { isEqual } from 'vs/base/common/paths';
 import { coalesce } from 'vs/base/common/arrays';
+import { localize } from 'vs/nls';
+import * as json from 'vs/base/common/json';
 
 export class WorkspacesMainService implements IWorkspacesMainService {
 
@@ -58,7 +60,7 @@ export class WorkspacesMainService implements IWorkspacesMainService {
 			folders: [],
 		};
 
-		writeFileSync(workspaceConfigPath, JSON.stringify(storedWorkspace, null, '\t'));
+		writeFileSync(workspaceConfigPath, stringifyWorkspace(storedWorkspace));
 		return {
 			id: workspaceId,
 			configPath: workspaceConfigPath
@@ -72,7 +74,7 @@ export class WorkspacesMainService implements IWorkspacesMainService {
 		}
 
 		try {
-			const workspace = JSON.parse(readFileSync(path, 'utf8')) as IStoredWorkspace;
+			const workspace = json.parse(readFileSync(path, 'utf8')) as IStoredWorkspace;
 			if (typeof workspace.id !== 'string' || !Array.isArray(workspace.folders) || workspace.folders.length === 0) {
 				this.logService.log(`${path} looks like an invalid workspace file.`);
 
@@ -102,7 +104,7 @@ export class WorkspacesMainService implements IWorkspacesMainService {
 				folders
 			};
 
-			return writeFile(workspaceConfigPath, JSON.stringify(storedWorkspace, null, '\t')).then(() => ({
+			return writeFile(workspaceConfigPath, stringifyWorkspace(storedWorkspace)).then(() => ({
 				id: workspaceId,
 				configPath: workspaceConfigPath
 			}));
@@ -180,4 +182,12 @@ export class WorkspacesMainService implements IWorkspacesMainService {
 
 		return untitledWorkspaces;
 	}
+}
+
+function stringifyWorkspace(storedWorkspace: IStoredWorkspace): string {
+	const header = localize('srcWorkspaceHeader', `This is a Sourcegraph workspace that defines a set of related repositories
+and associated configuration.
+
+To open it, you must first download Sourcegraph at https://about.sourcegraph.com/beta/201708.`).split('\n').map(s => '// ' + s + '\n').join('');
+	return header + JSON.stringify(storedWorkspace, null, '\t');
 }
