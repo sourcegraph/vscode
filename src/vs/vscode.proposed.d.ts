@@ -71,6 +71,46 @@ declare module 'vscode' {
 		resolveResource(resource: Uri): Thenable<Uri>;
 	}
 
+	/**
+	 * Provides a method to search for folders (typically repositories).
+	 */
+	export interface FolderSearchProvider {
+		/**
+		 * Searches for folders, typically repositories on a remote code host.
+		 */
+		search(query: string, token: CancellationToken): Thenable<FolderResult[]>;
+	}
+
+	/**
+	 * A folder search result from a FolderSearchProvider, typically representing a repository on
+	 * a remote code host.
+	 */
+	export interface FolderResult {
+		/**
+		 * The unique identifier for this folder (typically repository).
+		 */
+		resource: Uri;
+
+		/**
+		 * A slash-separated path that names the folder. It should only contain the
+		 * relevant path components. For example, a GitHub repository at
+		 * https://github.com/foo/bar has path "github.com/foo/bar".
+		 */
+		path: string;
+
+		/**
+		 * The name of the folder, typically consisting of the last path component in
+		 * the folder's path.
+		 */
+		name: string;
+
+		/**
+		 * The icon to show for the result. Any icon in the [octicon](https://octicons.github.com)
+		 * icon set can be used (e.g., `repo`, `lock`, `repo-forked`, etc.).
+		 */
+		icon?: string;
+	}
+
 	export namespace workspace {
 		/**
 		 * Finds the preferred parent folder for the resource. Unlike getRoot, it may
@@ -91,6 +131,11 @@ declare module 'vscode' {
 		 * Registers a IResourceResolutionProvider for the given scheme (e.g. 'git+ssh').
 		 */
 		export function registerResourceResolutionProvider(scheme: string, provider: ResourceResolutionProvider): Disposable;
+
+		/**
+		 * Registers an IFolderSearchProvider that searches for folders (typically repositories).
+		 */
+		export function registerFolderSearchProvider(id: string, provider: FolderSearchProvider): Disposable;
 	}
 
 	export namespace window {

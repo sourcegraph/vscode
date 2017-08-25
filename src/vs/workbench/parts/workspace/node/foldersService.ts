@@ -19,10 +19,11 @@ import URI from 'vs/base/common/uri';
 import { IFolder, WorkspaceFolderState, FolderOperation, IFolderCatalogService } from 'vs/workbench/parts/workspace/common/workspace';
 import { ICatalogFolder } from 'vs/platform/workspace/common/folder';
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
-import { IWorkspaceSearchService, IWorkspaceMatch } from 'vs/platform/multiWorkspace/common/search';
+import { IWorkspaceSearchService } from 'vs/platform/multiWorkspace/common/search';
 import { IEditorGroupService } from 'vs/workbench/services/group/common/groupService';
 import { toResource } from 'vs/workbench/common/editor';
 import { IFolderContainmentService } from 'vs/platform/folder/common/folderContainment';
+import { IFolderSearchService } from 'vs/platform/folders/common/folderSearch';
 
 interface IWorkspaceFolderStateProvider {
 	(folder: Folder): WorkspaceFolderState;
@@ -156,6 +157,7 @@ export class FolderCatalogService implements IFolderCatalogService {
 		@IWorkspaceSearchService private workspaceSearchService: IWorkspaceSearchService,
 		@IEditorGroupService private editorGroupService: IEditorGroupService,
 		@IFolderContainmentService private folderContainmentService: IFolderContainmentService,
+		@IFolderSearchService private folderSearchService: IFolderSearchService,
 	) {
 		this.stateProvider = folder => this.getFolderState(folder);
 
@@ -190,26 +192,9 @@ export class FolderCatalogService implements IFolderCatalogService {
 	}
 
 	public search(query: string): TPromise<IPagedModel<IFolder>> {
-		return this.workspaceSearchService.search({
-			cacheKey: Math.random().toString(), // TODO(sqs): allow caching for longer
-			pattern: query,
-			fast: true,
-		}).then(complete => {
-			return new PagedModel(complete.results.map(match => new Folder(this, this.stateProvider, match.resource, this.toCatalogFolder(match))));
+		return this.folderSearchService.search(query).then(results => {
+			return new PagedModel(results.map(match => new Folder(this, this.stateProvider, match.resource /* TODO(sqs) , match */)));
 		});
-	}
-
-	private toCatalogFolder(match: IWorkspaceMatch): ICatalogFolder {
-		return {
-			uri: match.resource,
-			name: match.resource.authority + match.resource.path,
-			displayName: match.resource.path.slice(1), // omit leading '/'
-			description: match.description,
-			starsCount: match.starsCount,
-			forksCount: match.forksCount,
-			language: match.language,
-			updatedAt: match.pushedAt ? new Date(match.pushedAt) : undefined,
-		};
 	}
 
 	private populateCatalogInfo(folders: Folder[]): TPromise<IFolder[]> {
@@ -218,7 +203,7 @@ export class FolderCatalogService implements IFolderCatalogService {
 			return this.workspaceSearchService.getWorkspace(folder.uri)
 				.then(match => {
 					if (!folder.catalog && match) {
-						folder.catalog = this.toCatalogFolder(match);
+						folder.catalog = match;
 					}
 					return folder;
 				});

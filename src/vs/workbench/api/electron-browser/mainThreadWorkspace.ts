@@ -21,6 +21,7 @@ import { RemoteFileService, IRemoteFileSystemProvider } from 'vs/workbench/servi
 import { Emitter } from 'vs/base/common/event';
 import { extHostNamedCustomer } from 'vs/workbench/api/electron-browser/extHostCustomers';
 import { IResourceResolutionProvider, IResourceResolverService } from 'vs/platform/resourceResolver/common/resourceResolver';
+import { IFolderSearchProvider, IFolderSearchService } from 'vs/platform/folders/common/folderSearch';
 
 @extHostNamedCustomer(MainContext.MainThreadWorkspace)
 export class MainThreadWorkspace implements MainThreadWorkspaceShape {
@@ -37,6 +38,7 @@ export class MainThreadWorkspace implements MainThreadWorkspaceShape {
 		@IWorkbenchEditorService private readonly _editorService: IWorkbenchEditorService,
 		@ITextModelService private readonly _textModelResolverService: ITextModelService,
 		@IResourceResolverService private readonly _resourceResolverService: IResourceResolverService,
+		@IFolderSearchService private readonly _folderSearchService: IFolderSearchService,
 		@IFileService private readonly _fileService: IFileService
 	) {
 		this._proxy = extHostContext.get(ExtHostContext.ExtHostWorkspace);
@@ -166,6 +168,20 @@ export class MainThreadWorkspace implements MainThreadWorkspaceShape {
 		};
 		this._resourceResolutionProviders.set(handle, provider);
 		this._toDispose.push(this._resourceResolverService.registerResourceResolutionProvider(scheme, provider));
+	}
+
+	// folder search
+
+	private _folderSearchProviders = new Map<number, IFolderSearchProvider>();
+
+	$registerFolderSearchProvider(handle: number, id: string): void {
+		const provider = {
+			search: query => {
+				return this._proxy.$searchFolders(handle, query);
+			},
+		};
+		this._folderSearchProviders.set(handle, provider);
+		this._toDispose.push(this._folderSearchService.registerFolderSearchProvider(id, provider));
 	}
 }
 

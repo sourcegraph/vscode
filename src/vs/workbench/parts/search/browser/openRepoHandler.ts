@@ -33,6 +33,8 @@ import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
 import { ExplorerViewlet } from 'vs/workbench/parts/files/browser/explorerViewlet';
 import { VIEWLET_ID as EXPLORER_VIEWLET_ID } from 'vs/workbench/parts/files/common/files';
 import { IWorkspacesService } from 'vs/platform/workspaces/common/workspaces';
+import { IResourceResolverService } from 'vs/platform/resourceResolver/common/resourceResolver';
+import { IFolderSearchService } from 'vs/platform/folders/common/folderSearch';
 
 /**
 * The quick open model representing workspace results from a single handler.
@@ -188,14 +190,15 @@ export class WorkspaceEntry extends QuickOpenEntry {
 		@IWorkspaceEditingService private workspaceEditingService: IWorkspaceEditingService,
 		@IWorkspacesService private workspacesService: IWorkspacesService,
 		@IViewletService private viewletService: IViewletService,
+		@IResourceResolverService private resourceResolverService: IResourceResolverService,
 		@IWindowsService private windowsService: IWindowsService
 	) {
 		super();
 
-		if (match.resource.authority === 'github.com') {
-			this.label = match.resource.path.slice(1);
+		if (match.uri.authority === 'github.com') {
+			this.label = match.uri.path.slice(1);
 		} else {
-			this.label = match.resource.authority + match.resource.path;
+			this.label = match.uri.authority + match.uri.path;
 		}
 	}
 
@@ -232,7 +235,7 @@ export class WorkspaceEntry extends QuickOpenEntry {
 	}
 
 	public getResource(): URI {
-		return this.match.resource;
+		return this.match.uri;
 	}
 
 	public isFile(): boolean {
@@ -241,7 +244,7 @@ export class WorkspaceEntry extends QuickOpenEntry {
 
 	public getInput(): IResourceInput | EditorInput {
 		const input: IResourceInput = {
-			resource: this.match.resource,
+			resource: this.match.uri,
 			options: {
 				pinned: !this.configurationService.getConfiguration<IWorkbenchEditorConfiguration>().workbench.editor.enablePreviewFromQuickOpen
 			}
@@ -257,49 +260,53 @@ export class WorkspaceEntry extends QuickOpenEntry {
 			mode = Mode.OPEN_IN_BACKGROUND;
 		}
 
-		const repoResource = this.match.resource;
 		const hideWidget = (mode === Mode.OPEN);
 
 		if (mode === Mode.OPEN) {
 			if (!this.contextService.hasWorkspace() || this.contextService.hasFolderWorkspace()) {
 				// Upgrade workspace to multi-root workspace.
-				this.workspacesService.createWorkspace([repoResource.toString()])
-					.then(({ configPath }) => this.windowsService.openWindow([configPath]));
+				this.resourceResolverService.resolveResource(this.match.uri)
+					.then(resolvedResource => this.workspacesService.createWorkspace([resolvedResource.toString()]))
+					.then(({ configPath }) => this.windowsService.openWindow([configPath]))
+					.done(null, errors.onUnexpectedError);
 				return true;
 			}
 
-			// Add repo as another root folder in the workspace.
-			let rootExists = false;
-			if (this.contextService.hasWorkspace()) {
-				rootExists = this.contextService.getWorkspace().roots.some(root => root.toString() === repoResource.toString());
-			}
-			let p = TPromise.as<void, any>(void 0);
-			if (!rootExists) {
-				p = this.workspaceEditingService.addRoots([repoResource]).then(() =>
-					// Wait for workspace to reload and detect its newly added root.
-					this.configurationService.reloadConfiguration()
-				);
-			}
+			this.resourceResolverService.resolveResource(this.match.uri).then(resolvedResource => {
+				// Add repo as another root folder in the workspace.
+				let rootExists = false;
+				if (this.contextService.hasWorkspace()) {
+					rootExists = this.contextService.getWorkspace().roots.some(root => root.toString() === resolvedResource.toString());
+				}
+				let p = TPromise.as<void, any>(void 0);
+				if (!rootExists) {
+					p = this.workspaceEditingService.addRoots([resolvedResource]).then(() =>
+						// Wait for workspace to reload and detect its newly added root.
+						this.configurationService.reloadConfiguration()
+					);
+				}
 
-			// Highlight the root folder in explorer.
-			p.then(() =>
-				this.viewletService.openViewlet(EXPLORER_VIEWLET_ID, true).then((viewlet: ExplorerViewlet) => {
-					const explorerView = viewlet.getExplorerView();
-					if (explorerView) {
-						// TODO(sqs): a full refresh waits too long; there is a visual lag
-						// between the new root folder appearing in the explorer and it
-						// being selected.
-						return explorerView.refresh().then(() => {
-							explorerView.expand();
-							explorerView.select(repoResource, true);
-						});
-					}
-					return void 0;
-				})
-			).done(null, errors.onUnexpectedError);
+				// Highlight the root folder in explorer.
+				p.then(() =>
+					this.viewletService.openViewlet(EXPLORER_VIEWLET_ID, true).then((viewlet: ExplorerViewlet) => {
+						const explorerView = viewlet.getExplorerView();
+						if (explorerView) {
+							// TODO(sqs): a full refresh waits too long; there is a visual lag
+							// between the new root folder appearing in the explorer and it
+							// being selected.
+							return explorerView.refresh().then(() => {
+								explorerView.expand();
+								explorerView.select(resolvedResource, true);
+							});
+						}
+						return void 0;
+					})
+				).done(null, errors.onUnexpectedError);
+			});
 		} else if (mode === Mode.OPEN_IN_BACKGROUND) {
 			// Opens a window for this workspace.
-			this.windowsService.openWindow([repoResource.toString()])
+			this.resourceResolverService.resolveResource(this.match.uri)
+				.then(resolvedResource => this.windowsService.openWindow([resolvedResource.toString()]))
 				.done(null, errors.onUnexpectedError);
 		}
 
@@ -575,6 +582,7 @@ export abstract class AbstractOpenWorkspaceHandler extends QuickOpenHandler {
 		@IWorkspaceContextService private contextService: IWorkspaceContextService,
 		@IWorkspaceSearchService protected workspaceSearchService: IWorkspaceSearchService,
 		@IMessageService private messageService: IMessageService,
+		@IFolderSearchService private folderSearchService: IFolderSearchService,
 	) {
 		super();
 
@@ -631,18 +639,19 @@ export abstract class AbstractOpenWorkspaceHandler extends QuickOpenHandler {
 	}
 
 	private search(query: ISearchQuery): TPromise<WorkspaceQuickOpenModel | void> {
-		return this.workspaceSearchService.search(query).then((complete) => {
+		return this.folderSearchService.search(query.pattern).then(folders => {
 			this.pendingSearch = undefined;
 
-			const results = complete.results.map(m => {
-				const entry = this.instantiationService.createInstance(WorkspaceEntry, m);
+			const results = folders.map(folder => {
+				const match: IWorkspaceMatch = { uri: folder.resource, name: folder.name, displayName: folder.path } as any;
+				const entry = this.instantiationService.createInstance(WorkspaceEntry, match);
 				if (!this.options.skipHighlighting) {
 					setHighlights(entry, query.pattern);
 				}
 				return entry;
 			}) as WorkspaceEntryOrGroup[];
 
-			return new WorkspaceQuickOpenModel(results, this, this.getGroupLabel(), complete.stats);
+			return new WorkspaceQuickOpenModel(results, this, this.getGroupLabel(), {} as any /* TODO(sqs) */);
 		}, err => {
 			this.pendingSearch = undefined;
 			this.messageService.show(Severity.Error, err);

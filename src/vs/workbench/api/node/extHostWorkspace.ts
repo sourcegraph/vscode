@@ -21,6 +21,7 @@ import { asWinJsPromise } from 'vs/base/common/async';
 import { Disposable } from 'vs/workbench/api/node/extHostTypes';
 import { TrieMap } from 'vs/base/common/map';
 import { IFileStat, IResolveFileOptions } from 'vs/platform/files/common/files';
+import { IFolderResult } from 'vs/platform/folders/common/folderSearch';
 import { findContainingFolder } from 'vs/platform/folder/common/folderContainment';
 
 class Workspace2 extends Workspace {
@@ -251,13 +252,32 @@ export class ExtHostWorkspace implements ExtHostWorkspaceShape {
 		this._resourceResolutionProvider.set(handle, provider);
 		this._proxy.$registerResourceResolutionProvider(handle, scheme);
 		return new Disposable(() => {
-			this._provider.delete(handle);
+			this._resourceResolutionProvider.delete(handle);
 		});
 	}
 
 	$resolveResource(handle: number, resource: URI): TPromise<URI> {
 		const provider = this._resourceResolutionProvider.get(handle);
 		return asWinJsPromise(token => provider.resolveResource(resource) as TPromise<URI>);
+	}
+
+	// folder search
+
+	private readonly _folderSearchProvider = new Map<number, vscode.FolderSearchProvider>();
+
+	public registerFolderSearchProvider(id: string, provider: vscode.FolderSearchProvider): vscode.Disposable {
+
+		const handle = this._folderSearchProvider.size;
+		this._folderSearchProvider.set(handle, provider);
+		this._proxy.$registerFolderSearchProvider(handle, id);
+		return new Disposable(() => {
+			this._folderSearchProvider.delete(handle);
+		});
+	}
+
+	$searchFolders(handle: number, query: string): TPromise<IFolderResult[]> {
+		const provider = this._folderSearchProvider.get(handle);
+		return asWinJsPromise(token => provider.search(query, token) as TPromise<IFolderResult[]>);
 	}
 
 	// --- EXPERIMENT: folder containment

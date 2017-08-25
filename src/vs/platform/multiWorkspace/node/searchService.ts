@@ -97,7 +97,7 @@ export class WorkspaceSearchService implements IWorkspaceSearchService {
 				if (patternLower) {
 					filter = results => {
 						return results.filter(m => {
-							return scorer.matches(m.resource.path.slice(1) /* rm leading slash */, patternLower);
+							return scorer.matches(m.uri.path.slice(1) /* rm leading slash */, patternLower);
 						});
 					};
 				}
@@ -155,7 +155,11 @@ export class WorkspaceSearchService implements IWorkspaceSearchService {
 
 	private toWorkspaceMatch(repo: { uri: string, description: string, private: boolean, fork: boolean, starsCount?: number, forksCount?: number, language?: string, pushedAt: string }, query?: ISearchQuery): WorkspaceMatch {
 		return new WorkspaceMatch(
-			URI.parse(`repo://${repo.uri}`),
+			URI.parse(`git+exp://${repo.uri}`),
+			repo.uri.split('/').reverse()[0],
+			repo.uri.replace(/^github\.com\//, ''),
+			undefined,
+			URI.parse(`https://${repo.uri}.git`), // TODO(sqs): github-specific
 			repo.description,
 			repo.private,
 			query && query.affiliated ? Affiliation.Member : Affiliation.None,
@@ -163,7 +167,7 @@ export class WorkspaceSearchService implements IWorkspaceSearchService {
 			repo.starsCount,
 			repo.forksCount,
 			repo.language,
-			repo.pushedAt ? Date.parse(repo.pushedAt) : undefined,
+			repo.pushedAt ? new Date(Date.parse(repo.pushedAt)) : undefined,
 		);
 	}
 

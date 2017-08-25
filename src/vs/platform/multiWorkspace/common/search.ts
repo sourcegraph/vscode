@@ -8,6 +8,7 @@
 import { TPromise } from 'vs/base/common/winjs.base';
 import uri from 'vs/base/common/uri';
 import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
+import { ICatalogFolder } from 'vs/platform/workspace/common/folder';
 
 export const IWorkspaceSearchService = createDecorator<IWorkspaceSearchService>('multiWorkspaceSearch');
 
@@ -91,66 +92,22 @@ export enum Affiliation {
 /**
  * A workspace (typically a repository) that matched a search query.
  */
-export interface IWorkspaceMatch {
-	/**
-	 * The URI of the workspace's root.
-	 */
-	resource: uri;
-
-	/**
-	 * The user-provided description of the workspace (e.g., the
-	 * GitHub repository description).
-	 */
-	description?: string;
-
-	/**
-	 * Whether this workspace represents a repository that is private,
-	 * as defined by the repository's host.
-	 */
-	isPrivate?: boolean;
-
+export interface IWorkspaceMatch extends ICatalogFolder {
 	/**
 	 * The current user's affiliation to this workspace, if any.
 	 */
 	affiliation?: Affiliation;
-
-	/**
-	 * Whether this workspace represents a repository that is a fork
-	 * of some other repository, as reported by the repository's host.
-	 */
-	fork?: boolean;
-
-	/**
-	 * The number of users who have starred this workspace.
-	 */
-	starsCount?: number;
-
-	/**
-	 * The number of forks of this repository that exist.
-	 */
-	forksCount?: number;
-
-	/**
-	 * The primary programming language of the code in this workspace.
-	 */
-	language?: string;
-
-	/**
-	 * The date when this repository was last git-pushed to.
-	 */
-	pushedAt?: number;
-
-	/**
-	 * Whether this workspace is in the "recently opened folders" list.
-	 */
-	recentlyOpened?: boolean;
 
 	toJSON(): any;
 }
 
 export class WorkspaceMatch implements IWorkspaceMatch {
 	constructor(
-		public resource: uri,
+		public uri: uri,
+		public name: string,
+		public displayName: string,
+		public iconUrl: string | undefined,
+		public cloneUrl: uri | undefined,
 		public description: string | undefined,
 		public isPrivate: boolean | undefined,
 		public affiliation: Affiliation | undefined,
@@ -158,15 +115,18 @@ export class WorkspaceMatch implements IWorkspaceMatch {
 		public starsCount: number | undefined,
 		public forksCount: number | undefined,
 		public language: string | undefined,
-		public pushedAt: number | undefined,
-		public recentlyOpened?: boolean | undefined,
+		public updatedAt: Date | undefined,
 	) {
 		// empty
 	}
 
 	static fromJSON(data: any): WorkspaceMatch {
 		return new WorkspaceMatch(
-			uri.parse(data.resource),
+			uri.parse(data.uri),
+			data.name,
+			data.displayName,
+			data.iconUrl,
+			data.cloneUrl ? uri.parse(data.cloneUrl) : undefined,
 			data.description,
 			data.isPrivate,
 			data.affiliation,
@@ -174,14 +134,17 @@ export class WorkspaceMatch implements IWorkspaceMatch {
 			data.starsCount,
 			data.forksCount,
 			data.language,
-			data.pushedAt,
-			data.recentlyOpened,
+			data.updatedAt,
 		);
 	}
 
 	public toJSON(): any {
 		return {
-			resource: this.resource.toString(),
+			uri: this.uri.toString(),
+			name: this.name,
+			displayName: this.displayName,
+			iconUrl: this.iconUrl,
+			cloneUrl: this.cloneUrl.toString(),
 			description: this.description,
 			isPrivate: this.isPrivate,
 			affiliation: this.affiliation,
@@ -189,8 +152,7 @@ export class WorkspaceMatch implements IWorkspaceMatch {
 			starsCount: this.starsCount,
 			forksCount: this.forksCount,
 			language: this.language,
-			pushedAt: this.pushedAt,
-			recentlyOpened: this.recentlyOpened,
+			updatedAt: this.updatedAt,
 		};
 	}
 }
