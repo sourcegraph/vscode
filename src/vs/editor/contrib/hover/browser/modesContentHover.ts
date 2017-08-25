@@ -19,19 +19,15 @@ import { tokenizeToString } from 'vs/editor/common/modes/textToHtmlTokenizer';
 import { ICodeEditor } from 'vs/editor/browser/editorBrowser';
 import { getHover } from '../common/hover';
 import { HoverOperation, IHoverComputer } from './hoverOperation';
-import { SourcegraphHoverWidget } from './sourcegraphHoverWidget';
-import { IMarkdownString, MarkdownString, isEmptyMarkdownString, markedStringsEquals } from 'vs/base/common/htmlContent';
+import { ContentHoverWidget } from './hoverWidgets';
+import { IMarkdownString, MarkdownString, isEmptyMarkdownString } from 'vs/base/common/htmlContent';
 import { ModelDecorationOptions } from 'vs/editor/common/model/textModelWithDecorations';
 import { ColorPickerModel } from 'vs/editor/contrib/colorPicker/browser/colorPickerModel';
 import { ColorPickerWidget } from 'vs/editor/contrib/colorPicker/browser/colorPickerWidget';
 import { ColorDetector } from 'vs/editor/contrib/colorPicker/browser/colorDetector';
 import { Color, RGBA } from 'vs/base/common/color';
-import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
-import { IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
 import { IDisposable, empty as EmptyDisposable, dispose, combinedDisposable } from 'vs/base/common/lifecycle';
 const $ = dom.$;
-
-const loadingMessage = new MarkdownString().appendText(nls.localize('modesContentHover.loading', "Loading..."));
 
 class ColorHover {
 
@@ -155,12 +151,12 @@ class ModesContentComputer implements IHoverComputer<HoverPart[]> {
 	private _getLoadingMessage(): HoverPart {
 		return {
 			range: this._range,
-			contents: [loadingMessage]
+			contents: [new MarkdownString().appendText(nls.localize('modesContentHover.loading', "Loading..."))]
 		};
 	}
 }
 
-export class ModesContentHoverWidget extends SourcegraphHoverWidget {
+export class ModesContentHoverWidget extends ContentHoverWidget {
 
 	static ID = 'editor.contrib.modesContentHoverWidget';
 
@@ -178,8 +174,8 @@ export class ModesContentHoverWidget extends SourcegraphHoverWidget {
 	private renderDisposable: IDisposable = EmptyDisposable;
 	private toDispose: IDisposable[];
 
-	constructor(private telemetryService: ITelemetryService, editor: ICodeEditor, openerService: IOpenerService, modeService: IModeService, private contextKeyService: IContextKeyService) {
-		super(ModesContentHoverWidget.ID, editor, contextKeyService);
+	constructor(editor: ICodeEditor, openerService: IOpenerService, modeService: IModeService) {
+		super(ModesContentHoverWidget.ID, editor);
 
 		this._computer = new ModesContentComputer(this._editor);
 		this._highlightDecorations = [];
@@ -253,9 +249,6 @@ export class ModesContentHoverWidget extends SourcegraphHoverWidget {
 					}
 				}
 				if (filteredMessages.length > 0) {
-					if (hoverContentsEquals(filteredMessages, this._messages)) {
-						return;
-					}
 					this._renderMessages(range, filteredMessages);
 				} else {
 					this.hide();
@@ -306,12 +299,6 @@ export class ModesContentHoverWidget extends SourcegraphHoverWidget {
 		var renderColumn = Number.MAX_VALUE,
 			highlightRange = messages[0].range,
 			fragment = document.createDocumentFragment();
-
-		// PATCH(Sourcegraph): allow j2d, refs, search via tooltip buttons
-		const isLoading = messages.length === 1 && !(messages[0] instanceof ColorHover) && (messages[0] as Hover).contents[0] === loadingMessage;
-		// Don't show buttons if the only hovers are from SCM blame. (Their hovers start
-		// with the hacky comment syntax `[](scm)`.)
-		const showButtons = messages.some(msg => !(msg instanceof ColorHover) && msg.contents.some(ms => (typeof ms === 'string' ? ms : ms.value).indexOf('[](scm)') !== 0));
 
 		messages.forEach((msg) => {
 			if (!msg.range) {
@@ -383,11 +370,9 @@ export class ModesContentHoverWidget extends SourcegraphHoverWidget {
 		});
 
 		// show
-		this.telemetryService.publicLog('editor.contentHoverWidgetDisplayed');
 		this.showAt(new Position(renderRange.startLineNumber, renderColumn), this._shouldFocus);
 
-		// PATCH(Sourcegraph): allow j2d, refs, search via tooltip buttons
-		this.updateContents(fragment, !isLoading && showButtons);
+		this.updateContents(fragment);
 
 		if (this._colorPicker) {
 			this._colorPicker.layout();
@@ -404,21 +389,4 @@ export class ModesContentHoverWidget extends SourcegraphHoverWidget {
 	private static _DECORATION_OPTIONS = ModelDecorationOptions.register({
 		className: 'hoverHighlight'
 	});
-}
-
-function hoverContentsEquals(first: HoverPart[], second: HoverPart[]): boolean {
-	if ((!first && second) || (first && !second) || first.length !== second.length) {
-		return false;
-	}
-	for (let i = 0; i < first.length; i++) {
-		const ai = first[i];
-		const bi = second[i];
-		if (ai instanceof ColorHover || bi instanceof ColorHover) {
-			return false;
-		}
-		if (!markedStringsEquals(ai.contents, bi.contents)) {
-			return false;
-		}
-	}
-	return true;
 }

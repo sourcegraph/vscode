@@ -23,8 +23,6 @@ import { IDisposable, dispose } from 'vs/base/common/lifecycle';
 import { registerThemingParticipant } from 'vs/platform/theme/common/themeService';
 import { editorHoverHighlight, editorHoverBackground, editorHoverBorder, textLinkForeground, textCodeBlockBackground } from 'vs/platform/theme/common/colorRegistry';
 import { EditorContextKeys } from 'vs/editor/common/editorContextKeys';
-import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
-import { IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
 
 @editorContribution
 export class ModesHoverController implements editorCommon.IEditorContribution {
@@ -46,9 +44,7 @@ export class ModesHoverController implements editorCommon.IEditorContribution {
 
 	constructor(editor: ICodeEditor,
 		@IOpenerService openerService: IOpenerService,
-		@IModeService modeService: IModeService,
-		@ITelemetryService telemetryService: ITelemetryService,
-		@IContextKeyService contextKeyService: IContextKeyService,
+		@IModeService modeService: IModeService
 	) {
 		this._editor = editor;
 
@@ -59,12 +55,7 @@ export class ModesHoverController implements editorCommon.IEditorContribution {
 			this._toUnhook.push(this._editor.onMouseDown((e: IEditorMouseEvent) => this._onEditorMouseDown(e)));
 			this._toUnhook.push(this._editor.onMouseUp((e: IEditorMouseEvent) => this._onEditorMouseUp(e)));
 			this._toUnhook.push(this._editor.onMouseMove((e: IEditorMouseEvent) => this._onEditorMouseMove(e)));
-			this._toUnhook.push(this._editor.onMouseLeave((e: IEditorMouseEvent) => {
-				if (e.event.leftButton) {
-					return;
-				}
-				this._hideWidgets();
-			}));
+			this._toUnhook.push(this._editor.onMouseLeave((e: IEditorMouseEvent) => this._hideWidgets()));
 			this._toUnhook.push(this._editor.onKeyDown((e: IKeyboardEvent) => this._onKeyDown(e)));
 			this._toUnhook.push(this._editor.onDidChangeModel(() => this._hideWidgets()));
 			this._toUnhook.push(this._editor.onDidChangeModelDecorations(() => this._onModelDecorationsChanged()));
@@ -74,7 +65,7 @@ export class ModesHoverController implements editorCommon.IEditorContribution {
 				}
 			}));
 
-			this._contentWidget = new ModesContentHoverWidget(telemetryService, editor, openerService, modeService, contextKeyService);
+			this._contentWidget = new ModesContentHoverWidget(editor, openerService, modeService);
 			this._glyphWidget = new ModesGlyphHoverWidget(editor, openerService, modeService);
 		}
 	}
