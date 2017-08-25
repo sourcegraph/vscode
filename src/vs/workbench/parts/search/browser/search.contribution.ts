@@ -438,7 +438,7 @@ configurationRegistry.registerConfiguration({
 		},
 		'search.profiles': {
 			'type': 'array',
-			'description': nls.localize('search.profiles', "Configure profiles for searching groups of repositories"),
+			'description': nls.localize('search.profiles', "Configure profiles for searching groups of repositories. Example: {0}", '[{"name":"Go","uris":["github.com/golang/go","github.com/golang/tools"]}]'),
 			'default': [],
 			'items': {
 				'type': 'object',
