@@ -37,7 +37,7 @@ import jsonContributionRegistry = require('vs/platform/jsonschemas/common/jsonCo
 import { ExtensionsConfigurationSchema, ExtensionsConfigurationSchemaId } from 'vs/workbench/parts/extensions/common/extensionsFileTemplate';
 import { CommandsRegistry } from 'vs/platform/commands/common/commands';
 import { ServicesAccessor } from 'vs/platform/instantiation/common/instantiation';
-import { KeymapExtensions, BetterMergeDisabled } from 'vs/workbench/parts/extensions/electron-browser/extensionsUtils';
+import { KeymapExtensions, BetterMergeDisabled, TSLintAlternateRequired } from 'vs/workbench/parts/extensions/electron-browser/extensionsUtils';
 import { adoptToGalleryExtensionId } from 'vs/platform/extensionManagement/common/extensionManagementUtil';
 
 // Singletons
@@ -49,6 +49,7 @@ const workbenchRegistry = Registry.as<IWorkbenchContributionsRegistry>(Workbench
 workbenchRegistry.registerWorkbenchContribution(StatusUpdater);
 workbenchRegistry.registerWorkbenchContribution(KeymapExtensions);
 workbenchRegistry.registerWorkbenchContribution(BetterMergeDisabled);
+workbenchRegistry.registerWorkbenchContribution(TSLintAlternateRequired);
 
 Registry.as<IOutputChannelRegistry>(OutputExtensions.OutputChannels)
 	.registerChannel(ExtensionsChannelId, ExtensionsLabel);
