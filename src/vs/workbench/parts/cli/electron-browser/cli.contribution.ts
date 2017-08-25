@@ -28,7 +28,7 @@ function ignore<T>(code: string, value: T = null): (err: any) => TPromise<T> {
 }
 
 const root = URI.parse(require.toUrl('')).fsPath;
-const source = path.resolve(root, '..', 'bin', 'code');
+const source = path.resolve(root, '..', 'bin', 'src');
 
 function isAvailable(): TPromise<boolean> {
 	return pfs.exists(source);
@@ -154,6 +154,6 @@ if (process.platform === 'darwin') {
 	const category = nls.localize('shellCommand', "Shell Command");
 
 	const workbenchActionsRegistry = Registry.as<IWorkbenchActionRegistry>(ActionExtensions.WorkbenchActions);
-	workbenchActionsRegistry.registerWorkbenchAction(new SyncActionDescriptor(InstallAction, InstallAction.ID, InstallAction.LABEL), 'Shell Command: Install \'code\' command in PATH', category);
-	workbenchActionsRegistry.registerWorkbenchAction(new SyncActionDescriptor(UninstallAction, UninstallAction.ID, UninstallAction.LABEL), 'Shell Command: Uninstall \'code\' command from PATH', category);
+	workbenchActionsRegistry.registerWorkbenchAction(new SyncActionDescriptor(InstallAction, InstallAction.ID, InstallAction.LABEL), 'Shell Command: Install \'src\' command in PATH', category);
+	workbenchActionsRegistry.registerWorkbenchAction(new SyncActionDescriptor(UninstallAction, UninstallAction.ID, UninstallAction.LABEL), 'Shell Command: Uninstall \'src\' command from PATH', category);
 }
