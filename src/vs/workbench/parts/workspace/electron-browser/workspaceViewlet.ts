@@ -26,7 +26,7 @@ import { IWorkspaceViewlet, VIEWLET_ID, IFolderCatalogService } from '../common/
 import {
 	ClearWorkspaceViewletInputAction, AddLocalWorkspaceFolderAction
 } from 'vs/workbench/parts/workspace/browser/folderActions';
-import { FoldersListView, CurrentWorkspaceFoldersView, OtherFoldersView, SearchFoldersView } from './foldersViews';
+import { FoldersListView, CurrentWorkspaceFoldersView, SearchFoldersView } from './foldersViews';
 import { EmptyView } from './emptyView';
 import { OpenGlobalSettingsAction } from 'vs/workbench/parts/preferences/browser/preferencesActions';
 import { IProgressService } from 'vs/platform/progress/common/progress';
@@ -54,9 +54,6 @@ const WorkspaceViewletVisibleContext = new RawContextKey<boolean>('workspaceView
 const SearchFoldersContext = new RawContextKey<boolean>('searchFolders', false);
 
 export class WorkspaceViewlet extends PersistentViewsViewlet implements IWorkspaceViewlet {
-
-	// Temporarily disable the "other folders" view.
-	private static SHOW_OTHER_FOLDERS_VIEW = false;
 
 	private onSearchChange: EventOf<string>;
 	private workspaceViewletVisibleContextKey: IContextKey<boolean>;
@@ -108,9 +105,6 @@ export class WorkspaceViewlet extends PersistentViewsViewlet implements IWorkspa
 			viewDescriptors.push(this.createEmptyViewDescriptor());
 		} else {
 			viewDescriptors.push(this.createCurrentWorkspaceFoldersListViewDescriptor());
-			if (WorkspaceViewlet.SHOW_OTHER_FOLDERS_VIEW) {
-				viewDescriptors.push(this.createOtherFoldersListViewDescriptor());
-			}
 			viewDescriptors.push(this.createSearchFoldersListViewDescriptor());
 		}
 
@@ -126,19 +120,6 @@ export class WorkspaceViewlet extends PersistentViewsViewlet implements IWorkspa
 			when: ContextKeyExpr.and(ContextKeyExpr.has('workspaceViewletVisible'), ContextKeyExpr.not('searchFolders')),
 			order: 0,
 			size: 100,
-		};
-	}
-
-	private createOtherFoldersListViewDescriptor(): IViewDescriptor {
-		return {
-			id: 'workspace.otherFolders',
-			name: localize('otherFolders', "Other Repositories and Folders"),
-			location: ViewLocation.Workspace,
-			ctor: OtherFoldersView,
-			when: ContextKeyExpr.and(ContextKeyExpr.has('workspaceViewletVisible'), ContextKeyExpr.not('searchFolders')),
-			order: 2,
-			size: 10,
-			canToggleVisibility: true
 		};
 	}
 

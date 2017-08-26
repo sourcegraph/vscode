@@ -58,19 +58,6 @@ export interface IFolderCatalogService {
 	getCurrentWorkspaceFolders(): TPromise<IFolder[]>;
 
 	/**
-	 * Returns an array of folders that contain open documents, with additional catalog
-	 * information associated if available.
-	 */
-	getContainingFolders(): TPromise<IFolder[]>;
-
-	/**
-	 * Returns an array of other folders that were recently open or that are related to
-	 * the current workspace folders, with additional catalog information associated if
-	 * available.
-	 */
-	getOtherFolders(): TPromise<IFolder[]>;
-
-	/**
 	 * Searches the catalog and returns matching folders.
 	 */
 	search(query: string): TPromise<IPagedModel<IFolder>>;

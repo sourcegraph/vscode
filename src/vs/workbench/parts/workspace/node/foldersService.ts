@@ -5,7 +5,6 @@
 
 'use strict';
 
-import * as arrays from 'vs/base/common/arrays';
 import Event, { Emitter } from 'vs/base/common/event';
 import * as paths from 'vs/base/common/paths';
 import { Schemas } from 'vs/base/common/network';
@@ -21,7 +20,6 @@ import { ICatalogFolder } from 'vs/platform/workspace/common/folder';
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
 import { IWorkspaceSearchService } from 'vs/platform/multiWorkspace/common/search';
 import { IEditorGroupService } from 'vs/workbench/services/group/common/groupService';
-import { toResource } from 'vs/workbench/common/editor';
 import { IFolderContainmentService } from 'vs/platform/folder/common/folderContainment';
 import { IFolderSearchService } from 'vs/platform/folders/common/folderSearch';
 
@@ -171,26 +169,6 @@ export class FolderCatalogService implements IFolderCatalogService {
 		return TPromise.as(this.populateCatalogInfo(roots.map(root => new Folder(this, this.stateProvider, root))));
 	}
 
-	public getContainingFolders(): TPromise<IFolder[]> {
-		const model = this.editorGroupService.getStacksModel();
-		const allEditors = arrays.flatten(model.groups.map(group => group.getEditors()));
-		const allInputResources = arrays.coalesce(allEditors.map(editor => toResource(editor)));
-
-		const folderPromises = allInputResources.map(resource => this.folderContainmentService.findContainingFolder(resource));
-		return TPromise.join(folderPromises).then((folders: URI[]) => {
-			return this.populateCatalogInfo(
-				arrays.distinct(arrays.coalesce(folders), uri => uri.toString())
-					.map(folder => new Folder(this, this.stateProvider, folder)),
-			);
-		});
-	}
-
-	public getOtherFolders(): TPromise<IFolder[]> {
-		return TPromise.as(this.populateCatalogInfo(
-			HARDCODED_FOLDERS.map(folder => new Folder(this, this.stateProvider, URI.parse(folder))),
-		));
-	}
-
 	public search(query: string): TPromise<IPagedModel<IFolder>> {
 		return this.folderSearchService.search(query).then(results => {
 			return new PagedModel(results.map(result => {
@@ -274,16 +252,3 @@ export class FolderCatalogService implements IFolderCatalogService {
 		this.disposables = dispose(this.disposables);
 	}
 }
-const HARDCODED_FOLDERS = [
-	'repo://github.com/gorilla/mux',
-	'repo://github.com/dropwizard/dropwizard',
-	'repo://github.com/pallets/flask',
-	'repo://github.com/gorilla/schema',
-	'repo://github.com/go-kit/kit',
-	'repo://github.com/dgrijalva/jwt-go',
-	'repo://github.com/mholt/caddy',
-	'repo://github.com/golang/dep',
-	'repo://github.com/Microsoft/vscode-languageserver-node',
-	'repo://github.com/golang/oauth2',
-	'repo://github.com/sourcegraph/checkup',
-];
