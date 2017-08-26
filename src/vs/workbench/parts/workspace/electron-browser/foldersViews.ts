@@ -21,7 +21,7 @@ import { append, $, toggleClass } from 'vs/base/browser/dom';
 import { PagedList } from 'vs/base/browser/ui/list/listPaging';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { Delegate, Renderer } from 'vs/workbench/parts/workspace/browser/foldersList';
-import { IFolder, IFolderCatalogService, WorkspaceFolderState } from 'vs/workbench/parts/workspace/common/workspace';
+import { IFolder, IFoldersWorkbenchService, WorkspaceFolderState } from 'vs/workbench/parts/workspace/common/workspace';
 import { IFolderAction, AddWorkspaceFolderAction, RemoveWorkspaceFoldersAction, ExploreWorkspaceFolderAction, AddAndExploreWorkspaceFolderAction } from 'vs/workbench/parts/workspace/browser/folderActions';
 import { IListService } from 'vs/platform/list/browser/listService';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
@@ -38,6 +38,7 @@ import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
 import { domEvent } from 'vs/base/browser/event';
 import { StandardKeyboardEvent } from 'vs/base/browser/keyboardEvent';
 import { KeyCode } from 'vs/base/common/keyCodes';
+import { defaultGenerator } from 'vs/base/common/idGenerator';
 
 export abstract class FoldersListView extends CollapsibleView {
 
@@ -63,7 +64,7 @@ export abstract class FoldersListView extends CollapsibleView {
 		@ITelemetryService private telemetryService: ITelemetryService,
 		@IProgressService private progressService: IProgressService,
 		@IWorkspaceContextService protected contextService: IWorkspaceContextService,
-		@IFolderCatalogService protected catalogService: IFolderCatalogService,
+		@IFoldersWorkbenchService protected catalogService: IFoldersWorkbenchService,
 		@IViewletService private viewletService: IViewletService,
 	) {
 		super({ ...(options as IViewOptions), ariaHeaderLabel: options.name, sizing: ViewSizing.Flexible, collapsed: !!options.collapsed, initialBodySize: 1 * 62 }, keybindingService, contextMenuService);
@@ -153,6 +154,14 @@ export abstract class FoldersListView extends CollapsibleView {
 
 	protected abstract async query(value: string): TPromise<IPagedModel<IFolder>>;
 
+	/**
+	 * Returns how long to delay before performing the search. Views that know their results
+	 * are cached should return 0 to provide faster responses to user input.
+	 */
+	public getDelayForQuery(value: string): number {
+		return 0;
+	}
+
 	private setModel(model: IPagedModel<IFolder>) {
 		this.list.model = model;
 		this.list.scrollTop = 0;
@@ -229,7 +238,32 @@ export class CurrentWorkspaceFoldersView extends FoldersListView {
 }
 
 export class SearchFoldersView extends FoldersListView {
+	private cacheKey = defaultGenerator.nextId();
+
+	setVisible(visible: boolean): TPromise<void> {
+		// Reset the cache each time we show/hide the viewlet, to avoid stale results.
+		this.cacheKey = defaultGenerator.nextId();
+
+		return super.setVisible(visible);
+	}
+
+	public getDelayForQuery(value: string): number {
+		if (this.catalogService.isSearchCached({ value, cacheKey: this.cacheKey })) {
+			return 0;
+		}
+		// Shorter queries will return more irrelevant results slowly, so don't
+		// immediately fire off short searches.
+		if (value.length <= 2) {
+			return 1250;
+		} else if (value.length <= 3) {
+			return 1000;
+		}
+		return 500;
+	}
+
 	protected query(value: string): TPromise<IPagedModel<IFolder>> {
-		return this.catalogService.search(value);
+		return this.catalogService.search({ value, cacheKey: this.cacheKey }).then(complete => {
+			return new PagedModel(complete.results);
+		});
 	}
 }

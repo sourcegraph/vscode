@@ -31,7 +31,7 @@ export abstract class FolderSCMRevisionAction extends Action {
 		}
 	}
 	set folder(folder: IFolder) {
-		this.folderResource = folder ? folder.uri : undefined;
+		this.folderResource = folder ? folder.resource : undefined;
 	}
 
 	protected scmProvider?: ISCMProvider;
@@ -81,8 +81,6 @@ export abstract class FolderSCMRevisionAction extends Action {
 	}
 
 	protected update(): void {
-		console.log('SCM revision label update', this._folder && this._folder.toString(), this.scmProvider && this.scmProvider.revision);
-
 		if (!this._folder) {
 			this.enabled = false;
 			this.class = this.resolvedClass;

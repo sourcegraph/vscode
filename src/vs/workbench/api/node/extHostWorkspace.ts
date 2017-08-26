@@ -21,7 +21,7 @@ import { asWinJsPromise } from 'vs/base/common/async';
 import { Disposable } from 'vs/workbench/api/node/extHostTypes';
 import { TrieMap } from 'vs/base/common/map';
 import { IFileStat, IResolveFileOptions } from 'vs/platform/files/common/files';
-import { IFolderResult } from 'vs/platform/folders/common/folderSearch';
+import { ICatalogFolder } from 'vs/platform/folders/common/folderCatalog';
 import { findContainingFolder } from 'vs/platform/folder/common/folderContainment';
 
 class Workspace2 extends Workspace {
@@ -263,21 +263,25 @@ export class ExtHostWorkspace implements ExtHostWorkspaceShape {
 
 	// folder search
 
-	private readonly _folderSearchProvider = new Map<number, vscode.FolderSearchProvider>();
+	private readonly _folderCatalogProvider = new Map<number, vscode.FolderCatalogProvider>();
 
-	public registerFolderSearchProvider(id: string, provider: vscode.FolderSearchProvider): vscode.Disposable {
-
-		const handle = this._folderSearchProvider.size;
-		this._folderSearchProvider.set(handle, provider);
-		this._proxy.$registerFolderSearchProvider(handle, id);
+	public registerFolderCatalogProvider(root: URI, provider: vscode.FolderCatalogProvider): vscode.Disposable {
+		const handle = this._folderCatalogProvider.size;
+		this._folderCatalogProvider.set(handle, provider);
+		this._proxy.$registerFolderCatalogProvider(handle, root);
 		return new Disposable(() => {
-			this._folderSearchProvider.delete(handle);
+			this._folderCatalogProvider.delete(handle);
 		});
 	}
 
-	$searchFolders(handle: number, query: string): TPromise<IFolderResult[]> {
-		const provider = this._folderSearchProvider.get(handle);
-		return asWinJsPromise(token => provider.search(query, token) as TPromise<IFolderResult[]>);
+	$resolveFolder(handle: number, resource: URI): TPromise<ICatalogFolder> {
+		const provider = this._folderCatalogProvider.get(handle);
+		return asWinJsPromise(token => provider.resolveFolder(resource) as TPromise<ICatalogFolder>);
+	}
+
+	$searchFolders(handle: number, query: string): TPromise<ICatalogFolder[]> {
+		const provider = this._folderCatalogProvider.get(handle);
+		return asWinJsPromise(token => provider.search(query, token) as TPromise<ICatalogFolder[]>);
 	}
 
 	// --- EXPERIMENT: folder containment

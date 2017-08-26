@@ -345,24 +345,24 @@ Registry.as<IQuickOpenRegistry>(QuickOpenExtensions.Quickopen).registerQuickOpen
 	)
 );
 
-import 'vs/workbench/parts/search/browser/openRepoHandler'; // ensure it's in the synchronous bundle
-import { PROFILE_PICKER_PREFIX } from 'vs/workbench/parts/search/browser/searchProfileHandler';
+import 'vs/workbench/parts/search/browser/openFolderHandler'; // ensure it's in the synchronous bundle
 Registry.as<IQuickOpenRegistry>(QuickOpenExtensions.Quickopen).registerQuickOpenHandler(
 	new QuickOpenHandlerDescriptor(
-		'vs/workbench/parts/search/browser/openRepoHandler',
-		'OpenAnyWorkspaceHandler',
+		'vs/workbench/parts/search/browser/openFolderHandler',
+		'OpenAnyFolderHandler',
 		ALL_REPOS_PREFIX,
 		'',
 		[
 			{
 				prefix: ALL_REPOS_PREFIX,
 				needsEditor: false,
-				description: nls.localize('openRepositoryDescriptionNormal', "Go to Repository")
+				description: nls.localize('openFolderDescriptionNormal', "Go to Folder or Repository")
 			}
 		]
 	)
 );
 
+import { PROFILE_PICKER_PREFIX } from 'vs/workbench/parts/search/browser/searchProfileHandler';
 Registry.as<IQuickOpenRegistry>(QuickOpenExtensions.Quickopen).registerQuickOpenHandler(
 	new QuickOpenHandlerDescriptor(
 		'vs/workbench/parts/search/browser/searchProfileHandler',

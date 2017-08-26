@@ -42,7 +42,6 @@ import { IRequestService } from 'vs/platform/request/node/request';
 import { RequestService } from 'vs/platform/request/electron-browser/requestService';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { RemoteSearchService } from 'vs/workbench/services/search/electron-browser/remoteSearchService';
-import { WorkspaceSearchService } from 'vs/platform/multiWorkspace/node/searchService';
 import { LifecycleService } from 'vs/workbench/services/lifecycle/electron-browser/lifecycleService';
 import { MarkerService } from 'vs/platform/markers/common/markerService';
 import { IModelService } from 'vs/editor/common/services/modelService';
@@ -65,7 +64,6 @@ import { IEnvironmentService } from 'vs/platform/environment/common/environment'
 import { IMessageService, IChoiceService, Severity } from 'vs/platform/message/common/message';
 import { ChoiceChannel } from 'vs/platform/message/common/messageIpc';
 import { ISearchService, ISearchProfileService } from 'vs/platform/search/common/search';
-import { IWorkspaceSearchService } from 'vs/platform/multiWorkspace/common/search';
 import { ICommandService } from 'vs/platform/commands/common/commands';
 import { CommandService } from 'vs/platform/commands/common/commandService';
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
@@ -379,7 +377,6 @@ export class WorkbenchShell {
 		serviceCollection.set(IIntegrityService, new SyncDescriptor(IntegrityServiceImpl));
 
 		serviceCollection.set(IRemoteService, new SyncDescriptor(RemoteService));
-		serviceCollection.set(IWorkspaceSearchService, new SyncDescriptor(WorkspaceSearchService));
 		serviceCollection.set(ISearchProfileService, new SyncDescriptor(SearchProfileService));
 
 		return [instantiationService, serviceCollection];

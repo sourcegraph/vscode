@@ -59,15 +59,24 @@
 	background: url('loading.svg') center center no-repeat;
 }
 
-.workspace-viewlet > .folders .folder > .icon {
-	width: 42px;
-	height: 42px;
-	padding: 10px 14px 10px 0;
+.workspace-viewlet > .folders .folder > .icon,
+.workspace-viewlet > .folders .folder > .octicon {
+	width: 18px;
+	height: 18px;
+	padding: 4px 4px 8px 0;
 	flex-shrink: 0;
 	object-fit: contain;
+
+	/* for octicon */
+	font-size: 18px;
 }
 
-.workspace-viewlet.narrow > .folders .folder > .icon {
+.workspace-viewlet > .folders .folder > .octicon.octicon-repo {
+	padding-top: 7px; /* looks more aligned this way */
+}
+
+.workspace-viewlet.narrow > .folders .folder > .icon,
+.workspace-viewlet.narrow > .folders .folder > .octicon {
 	display: none;
 }
 
@@ -102,7 +111,6 @@
 }
 
 .workspace-viewlet > .folders .folder > .details > .header-container > .header > .name {
-	font-weight: bold;
 	white-space: nowrap;
 	text-overflow: ellipsis;
 	overflow: hidden;
@@ -118,7 +126,7 @@
 	margin-right: 2px;
 }
 
-.workspace-viewlet.narrow > .folders .folder > .details > .header-container > .header > .stars {
+.workspace-viewlet.narrow > .folders .folder > .details > .header-container > .stars {
 	display: none;
 }
 

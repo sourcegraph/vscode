@@ -8,9 +8,10 @@
 import 'vs/css!./media/foldersWidgets';
 import { isUndefinedOrNull } from 'vs/base/common/types';
 import { IDisposable, dispose } from 'vs/base/common/lifecycle';
-import { IFolder, IFolderCatalogService } from '../common/workspace';
-import { append, $, addClass } from 'vs/base/browser/dom';
+import { IFolder, IFoldersWorkbenchService } from '../common/workspace';
+import { append, $, addClass, toggleClass } from 'vs/base/browser/dom';
 import * as platform from 'vs/base/common/platform';
+import * as paths from 'vs/base/common/paths';
 
 export interface IOptions {
 	folder?: IFolder;
@@ -27,7 +28,7 @@ export class Label implements IDisposable {
 	constructor(
 		private element: HTMLElement,
 		private fn: (folder: IFolder) => string,
-		@IFolderCatalogService catalogService: IFolderCatalogService
+		@IFoldersWorkbenchService catalogService: IFoldersWorkbenchService
 	) {
 		this.render();
 		this.listener = catalogService.onChange(this.render, this);
@@ -35,6 +36,65 @@ export class Label implements IDisposable {
 
 	private render(): void {
 		this.element.textContent = this.folder ? this.fn(this.folder) : '';
+	}
+
+	dispose(): void {
+		this.listener = dispose(this.listener);
+	}
+}
+
+/**
+ * A label for emphasizing (bolding) the final path component in a folder display path.
+ */
+export class PathLabel implements IDisposable {
+
+	private listener: IDisposable;
+	private _folder: IFolder;
+	get folder(): IFolder { return this._folder; }
+	set folder(folder: IFolder) { this._folder = folder; this.render(); }
+
+	constructor(
+		private container: HTMLElement,
+		@IFoldersWorkbenchService catalogService: IFoldersWorkbenchService
+	) {
+		addClass(container, 'folder-path');
+		this.render();
+		this.listener = catalogService.onChange(this.render, this);
+	}
+
+	private render(): void {
+		this.container.innerHTML = '';
+		if (!this.folder) {
+			return;
+		}
+
+		const isAbsolute = paths.isAbsolute(this.folder.displayPath) || paths.isAbsolute_posix(this.folder.displayPath);
+		toggleClass(this.container, 'abs-path', isAbsolute);
+
+		const path = isAbsolute ? this.folder.displayName : this.folder.displayPath;
+
+		const components = path.split(/[/\\]/);
+		let separatorIndex = 0;
+		for (let i = 0; i < components.length; i++) {
+			const component = components[i];
+			const isAncestor = i !== components.length - 1;
+
+			if (!component) {
+				separatorIndex++;
+				return;
+			}
+			separatorIndex += component.length;
+
+			if (isAncestor) {
+				const elem = append(this.container, $('span.ancestor'));
+				elem.textContent = component;
+				append(this.container, $('span.separator')).textContent = path[separatorIndex];
+				separatorIndex++;
+			} else {
+				const elem = append(this.container, $('span.leaf'));
+				elem.textContent = component;
+			}
+		}
 	}
 
 	dispose(): void {
@@ -52,7 +112,7 @@ export class StarsWidget implements IDisposable {
 	constructor(
 		private container: HTMLElement,
 		private options: IOptions,
-		@IFolderCatalogService catalogService: IFolderCatalogService
+		@IFoldersWorkbenchService catalogService: IFoldersWorkbenchService
 	) {
 		this._folder = options.folder;
 		this.disposables.push(catalogService.onChange(() => this.render()));

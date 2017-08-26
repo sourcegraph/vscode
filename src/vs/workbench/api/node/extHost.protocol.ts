@@ -40,7 +40,7 @@ import { ISCMRevision, ICommandOptions } from 'vs/workbench/services/scm/common/
 
 import { IFileStat, IResolveFileOptions } from 'vs/platform/files/common/files';
 
-import { IFolderResult } from 'vs/platform/folders/common/folderSearch';
+import { ICatalogFolder } from 'vs/platform/folders/common/folderCatalog';
 
 import { TaskSet } from 'vs/workbench/parts/tasks/common/tasks';
 import { IModelChangedEvent } from 'vs/editor/common/model/mirrorModel';
@@ -311,7 +311,7 @@ export interface MainThreadWorkspaceShape extends IDisposable {
 	$registerFileSystemProvider(handle: number, authority: string): void;
 	$onFileSystemChange(handle: number, resource: URI): void;
 	$registerResourceResolutionProvider(handle: number, scheme: string): void;
-	$registerFolderSearchProvider(handle: number, id: string): void;
+	$registerFolderCatalogProvider(handle: number, root: URI): void;
 }
 
 export interface MainThreadTaskShape extends IDisposable {
@@ -456,7 +456,8 @@ export interface ExtHostWorkspaceShape {
 	$resolveFile(handle: number, resource: URI): TPromise<string>;
 	$storeFile(handle: number, resource: URI, content: string): TPromise<any>;
 	$resolveResource(handle: number, resource: URI): TPromise<URI>;
-	$searchFolders(handle: number, query: string): TPromise<IFolderResult[]>;
+	$resolveFolder(handle: number, resource: URI): TPromise<ICatalogFolder>;
+	$searchFolders(handle: number, query: string): TPromise<ICatalogFolder[]>;
 }
 
 export interface ExtHostExtensionServiceShape {

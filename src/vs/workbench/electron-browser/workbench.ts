@@ -107,8 +107,8 @@ import { ISimpleFindWidgetService, SimpleFindWidgetService } from 'vs/editor/con
 // tslint:disable-next-line:import-patterns
 import { ModalPart } from 'vs/workbench/parts/modal/modalPart';
 import { SourcegraphTelemetryService } from 'vs/platform/telemetry/common/sourcegraphTelemetryService';
-import { IFolderSearchService } from 'vs/platform/folders/common/folderSearch';
-import { FolderSearchService } from 'vs/workbench/services/folders/common/folderSearchService';
+import { IFolderCatalogService } from 'vs/platform/folders/common/folderCatalog';
+import { FolderCatalogService } from 'vs/workbench/services/folders/common/folderCatalogService';
 
 export const MessagesVisibleContext = new RawContextKey<boolean>('globalMessageVisible', false);
 export const EditorsVisibleContext = new RawContextKey<boolean>('editorIsOpen', false);
@@ -615,7 +615,7 @@ export class Workbench implements IPartService {
 		this.toDispose.push(fileService.onFileChanges(e => this.configurationService.handleWorkspaceFileEvents(e)));
 
 		// Folder Search Service
-		serviceCollection.set(IFolderSearchService, new SyncDescriptor(FolderSearchService));
+		serviceCollection.set(IFolderCatalogService, new SyncDescriptor(FolderCatalogService));
 
 		// History
 		serviceCollection.set(IHistoryService, new SyncDescriptor(HistoryService));

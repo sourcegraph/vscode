@@ -22,7 +22,7 @@ import { append, $, addStandardDisposableListener, EventType, addClass, removeCl
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { IExtensionService } from 'vs/platform/extensions/common/extensions';
-import { IWorkspaceViewlet, VIEWLET_ID, IFolderCatalogService } from '../common/workspace';
+import { IWorkspaceViewlet, VIEWLET_ID, IFoldersWorkbenchService } from '../common/workspace';
 import {
 	ClearWorkspaceViewletInputAction, AddLocalWorkspaceFolderAction
 } from 'vs/workbench/parts/workspace/browser/folderActions';
@@ -82,16 +82,16 @@ export class WorkspaceViewlet extends PersistentViewsViewlet implements IWorkspa
 		@IContextKeyService contextKeyService: IContextKeyService,
 		@IContextMenuService contextMenuService: IContextMenuService,
 		@IExtensionService extensionService: IExtensionService,
-		@IFolderCatalogService catalogService: IFolderCatalogService,
+		@IFoldersWorkbenchService foldersWorkbenchService: IFoldersWorkbenchService,
 	) {
 		super(VIEWLET_ID, ViewLocation.Workspace, `${VIEWLET_ID}.state`, true, telemetryService, storageService, instantiationService, themeService, contextService, contextKeyService, contextMenuService, extensionService);
 
 		this.registerViews();
-		this.searchDelayer = new ThrottledDelayer(500);
+		this.searchDelayer = new ThrottledDelayer(0);
 		this.workspaceViewletVisibleContextKey = WorkspaceViewletVisibleContext.bindTo(contextKeyService);
 		this.searchFoldersContextKey = SearchFoldersContext.bindTo(contextKeyService);
 
-		this.disposables.push(catalogService.onChange(() => this.updateViews([], true), null, this.disposables));
+		this.disposables.push(foldersWorkbenchService.onChange(() => this.updateViews([], true), null, this.disposables));
 	}
 
 	private get showEmptyView(): boolean {
@@ -223,7 +223,7 @@ export class WorkspaceViewlet extends PersistentViewsViewlet implements IWorkspa
 	}
 
 	layout(dimension: Dimension): void {
-		toggleClass(this.root, 'narrow', dimension.width <= 300);
+		toggleClass(this.root, 'narrow', dimension.width <= 250);
 		super.layout(new Dimension(dimension.width, dimension.height - 38));
 	}
 
@@ -270,7 +270,9 @@ export class WorkspaceViewlet extends PersistentViewsViewlet implements IWorkspa
 	}
 
 	private triggerSearch(immediate = false): void {
-		this.searchDelayer.trigger(() => this.doSearch(), immediate || !this.searchBox.value ? 0 : 500)
+		const delay = (<FoldersListView>this.views[0]).getDelayForQuery(this.searchBox.value);
+
+		this.searchDelayer.trigger(() => this.doSearch(), immediate || !this.searchBox.value ? 0 : delay)
 			.done(null, err => this.onError(err));
 	}
 

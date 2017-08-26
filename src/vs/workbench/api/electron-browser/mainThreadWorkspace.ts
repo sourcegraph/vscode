@@ -21,7 +21,7 @@ import { RemoteFileService, IRemoteFileSystemProvider } from 'vs/workbench/servi
 import { Emitter } from 'vs/base/common/event';
 import { extHostNamedCustomer } from 'vs/workbench/api/electron-browser/extHostCustomers';
 import { IResourceResolutionProvider, IResourceResolverService } from 'vs/platform/resourceResolver/common/resourceResolver';
-import { IFolderSearchProvider, IFolderSearchService } from 'vs/platform/folders/common/folderSearch';
+import { IFolderCatalogProvider, IFolderCatalogService } from 'vs/platform/folders/common/folderCatalog';
 
 @extHostNamedCustomer(MainContext.MainThreadWorkspace)
 export class MainThreadWorkspace implements MainThreadWorkspaceShape {
@@ -38,7 +38,7 @@ export class MainThreadWorkspace implements MainThreadWorkspaceShape {
 		@IWorkbenchEditorService private readonly _editorService: IWorkbenchEditorService,
 		@ITextModelService private readonly _textModelResolverService: ITextModelService,
 		@IResourceResolverService private readonly _resourceResolverService: IResourceResolverService,
-		@IFolderSearchService private readonly _folderSearchService: IFolderSearchService,
+		@IFolderCatalogService private readonly _folderCatalogService: IFolderCatalogService,
 		@IFileService private readonly _fileService: IFileService
 	) {
 		this._proxy = extHostContext.get(ExtHostContext.ExtHostWorkspace);
@@ -172,16 +172,19 @@ export class MainThreadWorkspace implements MainThreadWorkspaceShape {
 
 	// folder search
 
-	private _folderSearchProviders = new Map<number, IFolderSearchProvider>();
+	private _folderCatalogProviders = new Map<number, IFolderCatalogProvider>();
 
-	$registerFolderSearchProvider(handle: number, id: string): void {
+	$registerFolderCatalogProvider(handle: number, root: URI): void {
 		const provider = {
+			resolveFolder: resource => {
+				return this._proxy.$resolveFolder(handle, resource);
+			},
 			search: query => {
 				return this._proxy.$searchFolders(handle, query);
 			},
 		};
-		this._folderSearchProviders.set(handle, provider);
-		this._toDispose.push(this._folderSearchService.registerFolderSearchProvider(id, provider));
+		this._folderCatalogProviders.set(handle, provider);
+		this._toDispose.push(this._folderCatalogService.registerFolderCatalogProvider(root, provider));
 	}
 }
 

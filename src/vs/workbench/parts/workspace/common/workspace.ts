@@ -7,8 +7,7 @@
 import { TPromise } from 'vs/base/common/winjs.base';
 import { IViewlet } from 'vs/workbench/common/viewlet';
 import Event from 'vs/base/common/event';
-import { ICatalogFolder } from 'vs/platform/workspace/common/folder';
-import { IPagedModel } from 'vs/base/common/paging';
+import { ICatalogFolder, FolderGenericIconClass } from 'vs/platform/folders/common/folderCatalog';
 import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
 
 export const VIEWLET_ID = 'workbench.view.workspace';
@@ -17,10 +16,13 @@ export interface IWorkspaceViewlet extends IViewlet {
 	search(text: string): void;
 }
 
+/**
+ * A folder from the folder catalog, augmented with additional information
+ * from the workbench.
+ */
 export interface IFolder extends ICatalogFolder {
 	readonly id: string;
-	readonly iconUrl: string;
-	readonly iconUrlFallback: string;
+	readonly genericIconClass: FolderGenericIconClass;
 	readonly state: WorkspaceFolderState;
 	readonly telemetryData: any;
 };
@@ -37,13 +39,43 @@ export enum FolderOperation {
 	Removing
 }
 
-export const IFolderCatalogService = createDecorator<IFolderCatalogService>('folderCatalogService');
+/**
+ * A query for folders in the folder catalog.
+ */
+export interface ISearchQuery {
+	/**
+	 * The query input string.
+	 */
+	value?: string;
+
+	maxResults?: number;
+
+	sortByScore?: boolean;
+
+	cacheKey: string;
+}
+
+export interface ISearchComplete {
+	limitHit?: boolean;
+	results: IFolder[];
+	stats: ISearchStats;
+}
+
+export interface ISearchStats {
+	fromCache: boolean;
+	resultCount: number;
+	unsortedResultTime?: number;
+	sortedResultTime?: number;
+}
+
+export const IFoldersWorkbenchService = createDecorator<IFoldersWorkbenchService>('foldersWorkbenchService');
 
 /**
- * A service that returns search results for folders (repositories). It typically
- * represents an external repository host.
+ * The workbench folders service, which augments the folder catalog service with
+ * additional folder information (relating to the status of a folder in the workbench) and information
+ * about folders that are workspace roots.
  */
-export interface IFolderCatalogService {
+export interface IFoldersWorkbenchService {
 	_serviceBrand: any;
 
 	/**
@@ -60,7 +92,18 @@ export interface IFolderCatalogService {
 	/**
 	 * Searches the catalog and returns matching folders.
 	 */
-	search(query: string): TPromise<IPagedModel<IFolder>>;
+	search(query: ISearchQuery): TPromise<ISearchComplete>;
+
+	/**
+	 * Reports whether the query can be satisfied using only the local cache (without
+	 * hitting the network).
+	 */
+	isSearchCached(query: ISearchQuery): boolean;
+
+	/**
+	 * Clears the search cache data associated with the specified cache key.
+	 */
+	clearSearchCache(cacheKey: string): TPromise<void>;
 
 	/**
 	 * Tells the service that the folder (with the given id) is undergoing an operation,

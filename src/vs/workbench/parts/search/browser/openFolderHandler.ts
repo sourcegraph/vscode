@@ -22,7 +22,6 @@ import { EditorInput, IWorkbenchEditorConfiguration } from 'vs/workbench/common/
 import { IResourceInput } from 'vs/platform/editor/common/editor';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
-import { IWorkspaceSearchService, ISearchStats, ISearchQuery, IWorkspaceMatch } from 'vs/platform/multiWorkspace/common/search';
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
 import { IWindowsService } from 'vs/platform/windows/common/windows';
 import { ThrottledDelayer } from 'vs/base/common/async';
@@ -34,12 +33,12 @@ import { ExplorerViewlet } from 'vs/workbench/parts/files/browser/explorerViewle
 import { VIEWLET_ID as EXPLORER_VIEWLET_ID } from 'vs/workbench/parts/files/common/files';
 import { IWorkspacesService } from 'vs/platform/workspaces/common/workspaces';
 import { IResourceResolverService } from 'vs/platform/resourceResolver/common/resourceResolver';
-import { IFolderSearchService } from 'vs/platform/folders/common/folderSearch';
+import { IFolder, IFoldersWorkbenchService, ISearchStats, ISearchQuery } from 'vs/workbench/parts/workspace/common/workspace';
 
 /**
-* The quick open model representing workspace results from a single handler.
+* The quick open model representing folder results from a single handler.
 */
-export class WorkspaceQuickOpenModel extends QuickOpenModel {
+export class FolderQuickOpenModel extends QuickOpenModel {
 	constructor(
 		entries: QuickOpenEntry[],
 		public readonly handler: QuickOpenHandler,
@@ -49,32 +48,30 @@ export class WorkspaceQuickOpenModel extends QuickOpenModel {
 		super(entries);
 	}
 
-	public createGroup(entry: WorkspaceEntry): WorkspaceEntryGroup {
-		return new WorkspaceEntryGroup(entry, this.groupLabel, true);
+	public createGroup(entry: FolderEntry): FolderEntryGroup {
+		return new FolderEntryGroup(entry, this.groupLabel, true);
 	}
 }
 
 /**
  * The quick open model representing multiple (merged) handler results.
  */
-export class MergedWorkspaceQuickOpenModel extends QuickOpenModel {
+export class MergedFolderQuickOpenModel extends QuickOpenModel {
 
 	constructor(searchValueIsEmpty: boolean) {
 		super();
 
 		if (searchValueIsEmpty) {
-			// Show OpenWorkspaceHandler first because its empty state informs the user
+			// Show OpenFolderHandler first because its empty state informs the user
 			// that they can type to search, and that's useful for the user to see.
 			this.pendingHandlers = [
-				{ type: OpenWorkspaceHandler },
-				{ type: OpenAffiliatedWorkspaceHandler },
-				{ type: OpenStarredWorkspaceHandler },
+				{ type: OpenFolderHandler },
+				{ type: OpenRecentFolderHandler },
 			];
 		} else {
 			this.pendingHandlers = [
-				{ type: OpenAffiliatedWorkspaceHandler },
-				{ type: OpenStarredWorkspaceHandler },
-				{ type: OpenWorkspaceHandler },
+				{ type: OpenRecentFolderHandler },
+				{ type: OpenFolderHandler },
 			];
 		}
 	}
@@ -156,35 +153,35 @@ export class MergedWorkspaceQuickOpenModel extends QuickOpenModel {
 }
 
 /**
- * A quick open group (e.g., "your repositories") in a MergedWorkspaceQuickOpenModel.
+ * A quick open group (of folders) in a MergedFolderQuickOpenModel.
  */
-export class WorkspaceEntryGroup extends QuickOpenEntryGroup {
+export class FolderEntryGroup extends QuickOpenEntryGroup {
 	// Marker class
 
 	/**
-	 * See WorkspaceEntry#prepareLabelForDisplay.
+	 * See FolderEntry#prepareLabelForDisplay.
 	 */
 	public prepareLabelForDisplay(): void {
 		const entry = this.getEntry();
-		if (WorkspaceEntry.isWorkspaceEntry(entry)) {
+		if (FolderEntry.isFolderEntry(entry)) {
 			entry.prepareLabelForDisplay();
 		}
 	}
 }
 
 /**
- * A quick open entry representing a workspace.
+ * A quick open entry representing a folder from a folder catalog.
  */
-export class WorkspaceEntry extends QuickOpenEntry {
+export class FolderEntry extends QuickOpenEntry {
 
-	static isWorkspaceEntry(value: any): value is WorkspaceEntry {
+	static isFolderEntry(value: any): value is FolderEntry {
 		return value && value.prepareLabelForDisplay && value instanceof QuickOpenEntry;
 	}
 
 	private label: string;
 
 	constructor(
-		private match: IWorkspaceMatch,
+		private folder: IFolder,
 		@IConfigurationService private configurationService: IConfigurationService,
 		@IWorkspaceContextService private contextService: IWorkspaceContextService,
 		@IWorkspaceEditingService private workspaceEditingService: IWorkspaceEditingService,
@@ -194,7 +191,7 @@ export class WorkspaceEntry extends QuickOpenEntry {
 		@IWindowsService private windowsService: IWindowsService
 	) {
 		super();
-		this.label = match.displayName;
+		this.label = folder.displayPath;
 	}
 
 	/**
@@ -216,21 +213,19 @@ export class WorkspaceEntry extends QuickOpenEntry {
 	}
 
 	public getAriaLabel(): string {
-		return nls.localize('entryAriaLabel', "{0}, repo picker", this.getLabel());
+		return nls.localize('entryAriaLabel', "{0}, folder picker", this.getLabel());
 	}
 
 	public getDescription(): string {
-		return this.match.description;
+		return this.folder.description;
 	}
 
 	public getIcon(): string {
-		if (this.match.isPrivate) { return 'octicon octicon-lock'; }
-		if (this.match.fork) { return 'octicon octicon-repo-forked'; }
-		return 'octicon octicon-repo';
+		return `octicon octicon-${this.folder.genericIconClass}`;
 	}
 
 	public getResource(): URI {
-		return this.match.uri;
+		return this.folder.resource;
 	}
 
 	public isFile(): boolean {
@@ -239,7 +234,7 @@ export class WorkspaceEntry extends QuickOpenEntry {
 
 	public getInput(): IResourceInput | EditorInput {
 		const input: IResourceInput = {
-			resource: this.match.uri,
+			resource: this.folder.resource,
 			options: {
 				pinned: !this.configurationService.getConfiguration<IWorkbenchEditorConfiguration>().workbench.editor.enablePreviewFromQuickOpen
 			}
@@ -248,7 +243,7 @@ export class WorkspaceEntry extends QuickOpenEntry {
 		return input;
 	}
 
-	// Override to switch to the workspace of this entry's repo (instead of just opening a new editor).
+	// Override to add this folder as a workspace root (instead of just opening a new editor).
 	public run(mode: Mode, context: IEntryRunContext): boolean {
 		// Ctrl+Enter opens in background.
 		if (context && context.keymods.indexOf(KeyMod.CtrlCmd) >= 0) {
@@ -260,15 +255,15 @@ export class WorkspaceEntry extends QuickOpenEntry {
 		if (mode === Mode.OPEN) {
 			if (!this.contextService.hasWorkspace() || this.contextService.hasFolderWorkspace()) {
 				// Upgrade workspace to multi-root workspace.
-				this.resourceResolverService.resolveResource(this.match.uri)
+				this.resourceResolverService.resolveResource(this.folder.resource)
 					.then(resolvedResource => this.workspacesService.createWorkspace([resolvedResource.toString()]))
 					.then(({ configPath }) => this.windowsService.openWindow([configPath]))
 					.done(null, errors.onUnexpectedError);
 				return true;
 			}
 
-			this.resourceResolverService.resolveResource(this.match.uri).then(resolvedResource => {
-				// Add repo as another root folder in the workspace.
+			this.resourceResolverService.resolveResource(this.folder.resource).then(resolvedResource => {
+				// Add folder as a root folder in the workspace.
 				let rootExists = false;
 				if (this.contextService.hasWorkspace()) {
 					rootExists = this.contextService.getWorkspace().roots.some(root => root.toString() === resolvedResource.toString());
@@ -300,7 +295,7 @@ export class WorkspaceEntry extends QuickOpenEntry {
 			});
 		} else if (mode === Mode.OPEN_IN_BACKGROUND) {
 			// Opens a window for this workspace.
-			this.resourceResolverService.resolveResource(this.match.uri)
+			this.resourceResolverService.resolveResource(this.folder.resource)
 				.then(resolvedResource => this.windowsService.openWindow([resolvedResource.toString()]))
 				.done(null, errors.onUnexpectedError);
 		}
@@ -323,13 +318,12 @@ class PlaceholderQuickOpenEntry extends QuickOpenEntryGroup {
 	}
 }
 
-export type WorkspaceEntryOrGroup = WorkspaceEntry | WorkspaceEntryGroup;
+export type FolderEntryOrGroup = FolderEntry | FolderEntryGroup;
 
 /**
-* Quick open handler that combines results from all workspaces, affiliated workspaces,
-* etc.
+* Quick open handler that combines results from folder catalogs and recent folders.
 */
-export class OpenAnyWorkspaceHandler extends QuickOpenHandler {
+export class OpenAnyFolderHandler extends QuickOpenHandler {
 
 	private static MAX_DISPLAYED_RESULTS = 150;
 
@@ -337,9 +331,8 @@ export class OpenAnyWorkspaceHandler extends QuickOpenHandler {
 
 	private pendingSearch: TPromise<QuickOpenModel> | undefined;
 
-	private openWorkspaceHandler: OpenWorkspaceHandler;
-	private openAffiliatedWorkspaceHandler: OpenAffiliatedWorkspaceHandler;
-	private openStarredWorkspaceHandler: OpenStarredWorkspaceHandler;
+	private openFolderHandler: OpenFolderHandler;
+	private openRecentFolderHandler: OpenRecentFolderHandler;
 	private isClosed: boolean;
 	private scorerCache: { [key: string]: number };
 
@@ -347,16 +340,15 @@ export class OpenAnyWorkspaceHandler extends QuickOpenHandler {
 		@IInstantiationService private instantiationService: IInstantiationService,
 		@IWorkbenchThemeService private themeService: IWorkbenchThemeService,
 		@IWorkspaceContextService private contextService: IWorkspaceContextService,
-		@IWorkspaceSearchService private workspaceSearchService: IWorkspaceSearchService,
+		@IFoldersWorkbenchService private foldersWorkbenchService: IFoldersWorkbenchService,
 		@IMessageService private messageService: IMessageService
 	) {
 		super();
 
 		this.scorerCache = Object.create(null);
 
-		this.openWorkspaceHandler = instantiationService.createInstance(OpenWorkspaceHandler);
-		this.openAffiliatedWorkspaceHandler = instantiationService.createInstance(OpenAffiliatedWorkspaceHandler);
-		this.openStarredWorkspaceHandler = instantiationService.createInstance(OpenStarredWorkspaceHandler);
+		this.openFolderHandler = instantiationService.createInstance(OpenFolderHandler);
+		this.openRecentFolderHandler = instantiationService.createInstance(OpenRecentFolderHandler);
 
 		this.updateHandlers();
 	}
@@ -369,23 +361,22 @@ export class OpenAnyWorkspaceHandler extends QuickOpenHandler {
 			skipHighlighting: true,
 		};
 
-		this.openWorkspaceHandler.setOptions(options);
-		this.openAffiliatedWorkspaceHandler.setOptions(options);
-		this.openStarredWorkspaceHandler.setOptions(options);
+		this.openFolderHandler.setOptions(options);
+		this.openRecentFolderHandler.setOptions(options);
 	}
 
-	private getHandlerResults(handler: QuickOpenHandler, searchValue: string): TPromise<WorkspaceQuickOpenModel> {
+	private getHandlerResults(handler: QuickOpenHandler, searchValue: string): TPromise<FolderQuickOpenModel> {
 		if (handler.canRun() !== true) {
-			return TPromise.as(new WorkspaceQuickOpenModel([], handler));
+			return TPromise.as(new FolderQuickOpenModel([], handler));
 		}
 
-		return handler.getResults(searchValue).then((model: WorkspaceQuickOpenModel) => {
+		return handler.getResults(searchValue).then((model: FolderQuickOpenModel) => {
 			if (model && !model.entries.length) {
 				const emptyEntry = new PlaceholderQuickOpenEntry(handler.getEmptyLabel(searchValue));
-				if (model.handler instanceof OpenAffiliatedWorkspaceHandler || model.handler instanceof OpenStarredWorkspaceHandler) {
+				if (model.handler instanceof OpenRecentFolderHandler) {
 					// We don't actually want to show this entry, but we do want its
-					// addition to trigger a refresh (so that when the affiliated
-					// workspaces are no longer matched, they disappear immediately).
+					// addition to trigger a refresh (so that when the recent
+					// folders are no longer matched, they disappear immediately).
 					emptyEntry.setHidden(true);
 				}
 				model.setEntries([emptyEntry]);
@@ -401,17 +392,16 @@ export class OpenAnyWorkspaceHandler extends QuickOpenHandler {
 		this.isClosed = false;
 
 		const promiseFactory = () => {
-			const resultPromises: TPromise<WorkspaceQuickOpenModel>[] = [];
+			const resultPromises: TPromise<FolderQuickOpenModel>[] = [];
 
-			resultPromises.push(this.getHandlerResults(this.openWorkspaceHandler, searchValue));
-			resultPromises.push(this.getHandlerResults(this.openAffiliatedWorkspaceHandler, searchValue));
-			resultPromises.push(this.getHandlerResults(this.openStarredWorkspaceHandler, searchValue));
+			resultPromises.push(this.getHandlerResults(this.openFolderHandler, searchValue));
+			resultPromises.push(this.getHandlerResults(this.openRecentFolderHandler, searchValue));
 
 			// Reuse model so that the quick open controller merges the results from the
 			// individual handlers.
-			const model = new MergedWorkspaceQuickOpenModel(!searchValue.trim());
+			const model = new MergedFolderQuickOpenModel(!searchValue.trim());
 
-			const handleResult = (result: WorkspaceQuickOpenModel) => {
+			const handleResult = (result: FolderQuickOpenModel) => {
 				this.pendingSearch = undefined;
 
 				// If the quick open widget has been closed meanwhile, ignore the result
@@ -419,15 +409,15 @@ export class OpenAnyWorkspaceHandler extends QuickOpenHandler {
 					return new QuickOpenModel();
 				}
 
-				const entries = result.entries as WorkspaceEntry[];
+				const entries = result.entries as FolderEntry[];
 
 				// Sort
 				const unsortedResultTime = Date.now();
 				const normalizedSearchValue = strings.stripWildcards(searchValue).toLowerCase();
-				const viewResults: WorkspaceEntryOrGroup[] = arrays.top(
+				const viewResults: FolderEntryOrGroup[] = arrays.top(
 					entries,
 					this.createComparer(searchValue, normalizedSearchValue),
-					OpenAnyWorkspaceHandler.MAX_DISPLAYED_RESULTS,
+					OpenAnyFolderHandler.MAX_DISPLAYED_RESULTS,
 				);
 				const sortedResultTime = Date.now();
 
@@ -441,13 +431,13 @@ export class OpenAnyWorkspaceHandler extends QuickOpenHandler {
 
 				const duration = Date.now() - startTime;
 				const handlerName = (result.handler.constructor as any).name;
-				if (OpenAnyWorkspaceHandler.LOG_VERBOSE) {
+				if (OpenAnyFolderHandler.LOG_VERBOSE) {
 					console.log(`OpenAnyWorkspaceHandler[${handlerName}]: ${entries.length} results for ${JSON.stringify(searchValue)} in ${duration}ms (sorting ${sortedResultTime - unsortedResultTime}ms, highlighting ${highlightedResultTime - unhighlightedResultTime}ms)`);
 				}
 
 				// Group
 				if (viewResults.length) {
-					viewResults[0] = result.createGroup(viewResults[0] as WorkspaceEntry);
+					viewResults[0] = result.createGroup(viewResults[0] as FolderEntry);
 				}
 
 				// Prepare for display
@@ -485,35 +475,35 @@ export class OpenAnyWorkspaceHandler extends QuickOpenHandler {
 	}
 
 	/**
-	 * Create a function to compare two WorkspaceEntry instances, weighting matches on the
+	 * Create a function to compare two FolderEntry instances, weighting matches on the
 	 * final workspace path component more highly.
 	 */
-	private createComparer(searchValue: string, normalizedSearchValue: string): (elementA: WorkspaceEntry, elementB: WorkspaceEntry) => number {
-		return (a: WorkspaceEntry, b: WorkspaceEntry) => {
-			return compareByScore<WorkspaceEntry>(a, b, OpenAnyWorkspaceHandler.WorkspaceEntryAccessor, searchValue, normalizedSearchValue, this.scorerCache);
+	private createComparer(searchValue: string, normalizedSearchValue: string): (elementA: FolderEntry, elementB: FolderEntry) => number {
+		return (a: FolderEntry, b: FolderEntry) => {
+			return compareByScore<FolderEntry>(a, b, OpenAnyFolderHandler.FolderEntryAccessor, searchValue, normalizedSearchValue, this.scorerCache);
 		};
 	}
 
-	private static WorkspaceEntryAccessor: IScorableResourceAccessor<WorkspaceEntry> = {
-		getLabel(entry: WorkspaceEntry): string {
+	private static FolderEntryAccessor: IScorableResourceAccessor<FolderEntry> = {
+		getLabel(entry: FolderEntry): string {
 			// Only return the final path component, so that it's weighted more heavily in
 			// scoring.
 			const label = entry.getLabel();
 			return label.slice(label.lastIndexOf('/') + 1);
 		},
 
-		getResourcePath(entry: WorkspaceEntry): string {
+		getResourcePath(entry: FolderEntry): string {
 			const resource = entry.getResource();
 			return resource.authority + resource.path;
 		},
 	};
 
 	public getGroupLabel(): string {
-		return nls.localize('repositorySearchResults', "repository results");
+		return nls.localize('folderSearchResults', "folder results");
 	}
 
 	public getEmptyLabel(searchString: string): string {
-		return this.openWorkspaceHandler.getEmptyLabel(searchString);
+		return this.openFolderHandler.getEmptyLabel(searchString);
 	}
 
 	public getAutoFocus(searchValue: string): IAutoFocus {
@@ -523,9 +513,8 @@ export class OpenAnyWorkspaceHandler extends QuickOpenHandler {
 	}
 
 	public onOpen(): void {
-		this.openWorkspaceHandler.onOpen();
-		this.openAffiliatedWorkspaceHandler.onOpen();
-		this.openStarredWorkspaceHandler.onOpen();
+		this.openFolderHandler.onOpen();
+		this.openRecentFolderHandler.onOpen();
 	}
 
 	public onClose(canceled: boolean): void {
@@ -538,9 +527,8 @@ export class OpenAnyWorkspaceHandler extends QuickOpenHandler {
 		this.scorerCache = Object.create(null);
 
 		// Propagate
-		this.openWorkspaceHandler.onClose(canceled);
-		this.openAffiliatedWorkspaceHandler.onClose(canceled);
-		this.openStarredWorkspaceHandler.onClose(canceled);
+		this.openFolderHandler.onClose(canceled);
+		this.openRecentFolderHandler.onClose(canceled);
 	}
 
 	private cancelPendingSearch(): void {
@@ -563,21 +551,20 @@ export interface IOpenWorkspaceOptions {
  * The abstract base class for quick open handlers that send a query to the search service
  * and return workspace results.
  */
-export abstract class AbstractOpenWorkspaceHandler extends QuickOpenHandler {
+export abstract class AbstractOpenFolderHandler extends QuickOpenHandler {
 
 	protected options: IOpenWorkspaceOptions;
 	protected cacheState: CacheState;
 
-	private pendingSearch: TPromise<WorkspaceQuickOpenModel> | undefined;
+	private pendingSearch: TPromise<FolderQuickOpenModel> | undefined;
 	private searchDelayer: ThrottledDelayer<QuickOpenModel | void>;
 
 	constructor(
 		@IInstantiationService private instantiationService: IInstantiationService,
 		@IWorkbenchThemeService private themeService: IWorkbenchThemeService,
 		@IWorkspaceContextService private contextService: IWorkspaceContextService,
-		@IWorkspaceSearchService protected workspaceSearchService: IWorkspaceSearchService,
+		@IFoldersWorkbenchService private foldersWorkbenchService: IFoldersWorkbenchService,
 		@IMessageService private messageService: IMessageService,
-		@IFolderSearchService private folderSearchService: IFolderSearchService,
 	) {
 		super();
 
@@ -603,7 +590,7 @@ export abstract class AbstractOpenWorkspaceHandler extends QuickOpenHandler {
 	 */
 	protected abstract extendQuery(query: ISearchQuery, searchValue?: string): void;
 
-	public getResults(searchValue: string, maxSortedResults?: number): PPromise<WorkspaceQuickOpenModel, WorkspaceQuickOpenModel> {
+	public getResults(searchValue: string, maxSortedResults?: number): PPromise<FolderQuickOpenModel, FolderQuickOpenModel> {
 		this.cancelPendingSearch();
 
 		if (!this.cacheState) {
@@ -622,7 +609,7 @@ export abstract class AbstractOpenWorkspaceHandler extends QuickOpenHandler {
 
 		// Set delay before triggering search.
 		let delay: number; // msec
-		if (this.workspaceSearchService.isCached(query)) {
+		if (this.foldersWorkbenchService.isSearchCached(query)) {
 			delay = 0;
 		} else {
 			delay = this.getDelayForSearchValue(searchValue);
@@ -633,20 +620,19 @@ export abstract class AbstractOpenWorkspaceHandler extends QuickOpenHandler {
 		return pendingSearch;
 	}
 
-	private search(query: ISearchQuery): TPromise<WorkspaceQuickOpenModel | void> {
-		return this.folderSearchService.search(query.pattern).then(folders => {
+	private search(query: ISearchQuery): TPromise<FolderQuickOpenModel | void> {
+		return this.foldersWorkbenchService.search(query).then(complete => {
 			this.pendingSearch = undefined;
 
-			const results = folders.map(folder => {
-				const match: IWorkspaceMatch = { uri: folder.resource, name: folder.name, displayName: folder.path } as any;
-				const entry = this.instantiationService.createInstance(WorkspaceEntry, match);
+			const results = complete.results.map(folder => {
+				const entry = this.instantiationService.createInstance(FolderEntry, folder);
 				if (!this.options.skipHighlighting) {
-					setHighlights(entry, query.pattern);
+					setHighlights(entry, query.value);
 				}
 				return entry;
-			}) as WorkspaceEntryOrGroup[];
+			}) as FolderEntryOrGroup[];
 
-			return new WorkspaceQuickOpenModel(results, this, this.getGroupLabel(), {} as any /* TODO(sqs) */);
+			return new FolderQuickOpenModel(results, this, this.getGroupLabel(), complete.stats);
 		}, err => {
 			this.pendingSearch = undefined;
 			this.messageService.show(Severity.Error, err);
@@ -666,7 +652,7 @@ export abstract class AbstractOpenWorkspaceHandler extends QuickOpenHandler {
 		if (this.canRun() !== true) {
 			return;
 		}
-		this.cacheState = new CacheState(cacheKey => this.cacheQuery(cacheKey), query => this.workspaceSearchService.search(query), cacheKey => this.workspaceSearchService.clearCache(cacheKey), this.cacheState);
+		this.cacheState = new CacheState(cacheKey => this.cacheQuery(cacheKey), query => this.foldersWorkbenchService.search(query), cacheKey => this.foldersWorkbenchService.clearSearchCache(cacheKey), this.cacheState);
 		this.cacheState.load();
 	}
 
@@ -680,18 +666,14 @@ export abstract class AbstractOpenWorkspaceHandler extends QuickOpenHandler {
 	}
 
 	public getGroupLabel(): string {
-		return nls.localize('repositorySearchResults', "repository results");
+		return nls.localize('folderSearchResults', "folder results");
 	}
 
 	public getEmptyLabel(searchString: string): string {
 		if (searchString.length > 0) {
-			const isAuthenticated = false;
-			if (isAuthenticated) {
-				return nls.localize('noWorkspacesMatching', "No repositories matching");
-			}
-			return nls.localize('noWorkspacesMatchingLimited', "No repositories matching (sign in to add)");
+			return nls.localize('noFoldersMatching', "No folders matching");
 		}
-		return nls.localize('noWorkspacesWithoutInput', "Type to search for repositories");
+		return nls.localize('noFoldersWithoutInput', "Type to search for folders");
 	}
 
 	public getAutoFocus(searchValue: string): IAutoFocus {
@@ -710,10 +692,10 @@ export abstract class AbstractOpenWorkspaceHandler extends QuickOpenHandler {
 }
 
 /**
- * A quick open handler that provides results from among all workspaces. This is a large
+ * A quick open handler that provides results from among all folders. This is a large
  * dataset that is assumed to not be cacheable locally.
  */
-export class OpenWorkspaceHandler extends AbstractOpenWorkspaceHandler {
+export class OpenFolderHandler extends AbstractOpenFolderHandler {
 
 	protected getDelayForSearchValue(searchValue: string): number {
 		// Shorter queries will return more irrelevant results slowly, so don't
@@ -728,52 +710,30 @@ export class OpenWorkspaceHandler extends AbstractOpenWorkspaceHandler {
 
 	public extendQuery(query: ISearchQuery, searchValue?: string): void {
 		if (searchValue !== undefined) {
-			query.pattern = searchValue.trim();
+			query.value = searchValue.trim();
 		}
-
-		// Unauthenticated users must use the fast query path that only searches
-		// repositories that are already mirrored on the server.
-		//
-		// TODO(sqs): indicate that the results are incomplete to the user and prompt them
-		// to sign up to see full results
-		// query.fast = !this.userService.isAuthenticated;
-		query.fast = true;
 	}
 
 	public getGroupLabel(): string {
-		return nls.localize('workspaceSearchResults', "other repositories");
-		// TODO
-		// if (this.userService.isAuthenticated) {
-		//	return nls.localize('workspaceSearchResults', "other repositories");
-		// }
-		// Unauthenticated users hit a search endpoint that only returns already mirrored
-		// repos.
-		// return nls.localize('workspaceSearchResultsLimited', "repositories (sign in for all)");
+		return nls.localize('folderSearchResults', "folder results");
 	}
 }
 
 /**
- * A quick open handler that provides results from the subset of workspaces that the
- * current user is affiliated with (e.g., is an owner of or contributor to). It is
+ * A quick open handler that provides results from the list of recent folders. It is
  * separate because that subset can be locally cached and then locally searched, which is
  * fast.
  */
-export class OpenAffiliatedWorkspaceHandler extends AbstractOpenWorkspaceHandler {
+export class OpenRecentFolderHandler extends AbstractOpenFolderHandler {
 
 	public extendQuery(query: ISearchQuery, searchValue?: string): void {
 		if (searchValue !== undefined) {
-			query.pattern = searchValue.trim();
+			query.value = searchValue.trim();
 		}
-		query.affiliated = true;
 	}
 
 	public canRun(): boolean | string {
-		return 'SignIn not implemented';
-		// TODO
-		// if (!this.userService.isAuthenticated) {
-		//	return nls.localize('affiliatedWorkspaceNoUser', "Sign in to see your repositories.");
-		// }
-		// return true;
+		return true;
 	}
 
 	public hasShortResponseTime(): boolean {
@@ -785,47 +745,10 @@ export class OpenAffiliatedWorkspaceHandler extends AbstractOpenWorkspaceHandler
 	}
 
 	public getGroupLabel(): string {
-		return nls.localize('affiliatedWorkspaceSearchResults', "your repositories");
+		return nls.localize('recentFolderSearchResults', "recently used");
 	}
 }
-
-/**
- * A quick open handler that provides results from the subset of workspaces that the
- * current user has starred. It is separate because that subset can be locally cached and
- * then locally searched, which is fast.
- */
-export class OpenStarredWorkspaceHandler extends AbstractOpenWorkspaceHandler {
-
-	public extendQuery(query: ISearchQuery, searchValue?: string): void {
-		if (searchValue !== undefined) {
-			query.pattern = searchValue.trim();
-		}
-		query.starred = true;
-	}
-
-	public canRun(): boolean | string {
-		return 'SignUp not implemented';
-		// TODO
-		// if (!this.userService.isAuthenticated) {
-		//	return nls.localize('starredWorkspaceNoUser', "Sign in to see your starred repositories.");
-		// }
-		// return true;
-	}
-
-	public hasShortResponseTime(): boolean {
-		return this.isCacheLoaded;
-	}
-
-	private get isCacheLoaded(): boolean {
-		return this.cacheState && this.cacheState.isLoaded;
-	}
-
-	public getGroupLabel(): string {
-		return nls.localize('starredWorkspaceSearchResults', "starred repositories");
-	}
-}
-
-function setHighlights(result: WorkspaceEntry, query: string): void {
+function setHighlights(result: FolderEntry, query: string): void {
 	if (!query) { return; }
 	const { labelHighlights, descriptionHighlights } = QuickOpenEntry.highlight(result, query, true /* fuzzy highlight */);
 	result.setHighlights(labelHighlights, descriptionHighlights);

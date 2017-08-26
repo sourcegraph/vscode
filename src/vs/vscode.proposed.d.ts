@@ -72,43 +72,142 @@ declare module 'vscode' {
 	}
 
 	/**
-	 * Provides a method to search for folders (typically repositories).
-	 */
-	export interface FolderSearchProvider {
-		/**
-		 * Searches for folders, typically repositories on a remote code host.
-		 */
-		search(query: string, token: CancellationToken): Thenable<FolderResult[]>;
-	}
-
-	/**
-	 * A folder search result from a FolderSearchProvider, typically representing a repository on
+ 	 * A folder from the folder catalog service, typically representing a repository on
 	 * a remote code host.
-	 */
-	export interface FolderResult {
+ 	 */
+	export interface CatalogFolder {
 		/**
-		 * The unique identifier for this folder (typically repository).
+		 * The unique identifier for this folder.
+		 *
+		 * For folders on the local file system, this is the folder's file: URI.
+		 *
+		 * For repositories on a remote code host, this should be a URI that is a child
+		 * of the registered provider's root URI. For example, a GitHub folder catalog
+		 * provider's root URI might be github://github.com and a repository's resource URI
+		 * would then be of the form github://github.com/repository/M6A8DY3daz8q4f==
+		 * (where the last path component is the repository's ID obtained from GitHub's GraphQL
+		 * API). It is better to use unique, stable IDs (such as in that example) than names,
+		 * which change when repositories are renamed.
 		 */
 		resource: Uri;
 
 		/**
-		 * A slash-separated path that names the folder. It should only contain the
-		 * relevant path components. For example, a GitHub repository at
-		 * https://github.com/foo/bar has path "github.com/foo/bar".
+		 * The path of the folder (typically excluding common ancestor directories), for display
+		 * purposes only. For example, a GitHub repository at https://github.com/foo/bar might
+		 * have path "foo/bar".
 		 */
-		path: string;
+		displayPath?: string;
 
 		/**
-		 * The name of the folder, typically consisting of the last path component in
-		 * the folder's path.
+		 * The name of the folder (typically the last component of its path), for display purposes
+		 * only.
 		 */
-		name: string;
+		displayName?: string;
 
 		/**
-		 * The icon to show for the result. Any icon in the [octicon](https://octicons.github.com)
-		 * icon set can be used (e.g., `repo`, `lock`, `repo-forked`, etc.).
+		 * The URL to an icon image for this folder.
 		 */
-		icon?: string;
+		iconUrl?: string;
+
+		/**
+		 * The class of icon to use for this folder, used when the visual representation
+		 * of the folder is likely too small to display the icon image from iconUrl.
+		 */
+		genericIconClass?: 'repo' | 'lock' | 'repo-forked' | 'mirror' | 'circle-slash' | 'file-directory' | 'file-submodule' | 'file-symlink-directory';
+
+		/**
+		 * The primary clone URL of this folder's repository.
+		 */
+		cloneUrl?: Uri;
+
+		/**
+		 * The user-provided description of the folder (e.g., the
+		 * repository description).
+		 */
+		description?: string;
+
+		/**
+		 * Whether this folder represents a repository that is private,
+		 * as defined by the repository's host.
+		 */
+		isPrivate?: boolean;
+
+		/**
+		 * Whether this folder represents a repository that is a fork
+		 * of some other repository, as reported by the repository's host.
+		 */
+		isFork?: boolean;
+
+		/**
+		 * Whether this folder represents a repository that is a mirror
+		 * of some other repository, as reported by the repository's host.
+		 */
+		isMirror?: boolean;
+
+		/**
+		 * The number of users who have starred this folder's repository.
+		 */
+		starsCount?: number;
+
+		/**
+		 * The number of forks of this folder's repository that exist.
+		 */
+		forksCount?: number;
+
+		/**
+		 * The number of users watching this folder's repository.
+		 */
+		watchersCount?: number;
+
+		/**
+		 * The primary programming language of the code in this folder.
+		 */
+		primaryLanguage?: string;
+
+		/**
+		 * The date when this folder's repository was created.
+		 */
+		createdAt?: Date;
+
+		/**
+		 * The date when this folder's repository was last updated.
+		 */
+		updatedAt?: Date;
+
+		/**
+		 * The date when this folder's repository was last pushed to.
+		 */
+		pushedAt?: Date;
+
+		/**
+		 * Whether the viewer has starred this folder.
+		 */
+		viewerHasStarred?: boolean;
+
+		/**
+		 * Whether the viewer has admin permissions on this folder.
+		 */
+		viewerCanAdminister?: boolean;
+
+		/**
+		 * The approximate number of bytes that this folder takes up on disk.
+		 */
+		approximateByteSize?: number;
+	}
+
+	/**
+	 * Provides a method to search for folders (typically repositories).
+	 */
+	export interface FolderCatalogProvider {
+		/**
+		 * Gets information about the folder (typically a repository) with the given URI.
+		 */
+		resolveFolder(resource: Uri): Thenable<CatalogFolder>;
+
+		/**
+		 * Searches for folders, typically repositories on a remote code host.
+		 */
+		search(query: string, token: CancellationToken): Thenable<CatalogFolder[]>;
 	}
 
 	export namespace workspace {
@@ -133,9 +232,13 @@ declare module 'vscode' {
 		export function registerResourceResolutionProvider(scheme: string, provider: ResourceResolutionProvider): Disposable;
 
 		/**
-		 * Registers an IFolderSearchProvider that searches for folders (typically repositories).
+		 * Registers a folder catalog provider to search and manage folders (typically repositories on
+		 * a remote code host).
+		 *
+		 * All folders underneath the given root resource are associated with the provider. See
+		 * CatalogFolder#resource for more information.
 		 */
-		export function registerFolderSearchProvider(id: string, provider: FolderSearchProvider): Disposable;
+		export function registerFolderCatalogProvider(root: Uri, provider: FolderCatalogProvider): Disposable;
 	}
 
 	export namespace window {

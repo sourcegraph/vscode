@@ -11,21 +11,8 @@
 	font-size: 80%;
 }
 
-.folder-stars > .star {
-	display: inline-block;
-	width: 16px;
-	height: 16px;
-	background-repeat: no-repeat;
-	background-position: center center;
-}
-
-.folder-stars > .star:not(:first-child) {
-	margin-left: 3px;
-}
-
-.folder-stars.small > .star {
-	width: 10px;
-	height: 10px;
+.folder-stars.small > .octicon {
+	font-size: 13px;
 }
 
 .folder-stars > .count {
@@ -34,4 +21,19 @@
 
 .folder-stars.small > .count {
 	margin-left: 2px;
+}
+
+.folder-path:not(.abs-path) > .separator {
+	display: inline-block;
+	margin-left: 3px;
+	margin-right: 4px;
+	opacity: 0.65;
+}
+
+.folder-path > .ancestor {
+	opacity: 0.8;
+}
+
+.folder-path > .leaf {
+	font-weight: bold;
 }

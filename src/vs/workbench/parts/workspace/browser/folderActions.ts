@@ -15,7 +15,7 @@ import URI from 'vs/base/common/uri';
 import { ActionItem, IActionItem, Separator } from 'vs/base/browser/ui/actionbar/actionbar';
 import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
 import { IDisposable, dispose } from 'vs/base/common/lifecycle';
-import { VIEWLET_ID, IWorkspaceViewlet, IFolder, WorkspaceFolderState, IFolderCatalogService, FolderOperation } from 'vs/workbench/parts/workspace/common/workspace';
+import { VIEWLET_ID, IWorkspaceViewlet, IFolder, WorkspaceFolderState, IFoldersWorkbenchService, FolderOperation } from 'vs/workbench/parts/workspace/common/workspace';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { ToggleViewletAction } from 'vs/workbench/browser/viewlet';
 import { ExplorerViewlet } from 'vs/workbench/parts/files/browser/explorerViewlet';
@@ -49,7 +49,7 @@ export class AddWorkspaceFolderAction extends Action {
 	constructor(
 		@IWorkspaceEditingService private workspaceEditingService: IWorkspaceEditingService,
 		@IConfigurationService private configurationService: IConfigurationService,
-		@IFolderCatalogService private catalogService: IFolderCatalogService,
+		@IFoldersWorkbenchService private catalogService: IFoldersWorkbenchService,
 	) {
 		super('workspace.folder.add', AddWorkspaceFolderAction.AddLabel, AddWorkspaceFolderAction.Class, false);
 
@@ -77,7 +77,7 @@ export class AddWorkspaceFolderAction extends Action {
 	}
 
 	run(): TPromise<any> {
-		const promise = this.workspaceEditingService.addRoots([this.folder.uri])
+		const promise = this.workspaceEditingService.addRoots([this.folder.resource])
 			.then(() => this.configurationService.reloadConfiguration());
 		this.catalogService.monitorFolderOperation(this.folder, FolderOperation.Adding, promise);
 		return promise;
@@ -105,7 +105,7 @@ export class RemoveWorkspaceFolderAction extends Action {
 	constructor(
 		@IWorkspaceEditingService private workspaceEditingService: IWorkspaceEditingService,
 		@IConfigurationService private configurationService: IConfigurationService,
-		@IFolderCatalogService private catalogService: IFolderCatalogService,
+		@IFoldersWorkbenchService private catalogService: IFoldersWorkbenchService,
 	) {
 		super('workspace.folder.remove', RemoveWorkspaceFolderAction.RemoveLabel, RemoveWorkspaceFolderAction.RemoveClass, false);
 
@@ -135,7 +135,7 @@ export class RemoveWorkspaceFolderAction extends Action {
 	}
 
 	run(): TPromise<any> {
-		const promise = this.workspaceEditingService.removeRoots([this.folder.uri])
+		const promise = this.workspaceEditingService.removeRoots([this.folder.resource])
 			.then(() => this.configurationService.reloadConfiguration());
 		this.catalogService.monitorFolderOperation(this.folder, FolderOperation.Removing, promise);
 		return promise;
@@ -156,13 +156,13 @@ export class RemoveWorkspaceFoldersAction extends Action {
 		private foldersToRemove: IFolder[],
 		@IWorkspaceEditingService private workspaceEditingService: IWorkspaceEditingService,
 		@IConfigurationService private configurationService: IConfigurationService,
-		@IFolderCatalogService private catalogService: IFolderCatalogService,
+		@IFoldersWorkbenchService private catalogService: IFoldersWorkbenchService,
 	) {
 		super('workspace.folder.removeMultiple');
 	}
 
 	run(): TPromise<any> {
-		const promise = this.workspaceEditingService.removeRoots(this.foldersToRemove.map(f => f.uri))
+		const promise = this.workspaceEditingService.removeRoots(this.foldersToRemove.map(f => f.resource))
 			.then(() => this.configurationService.reloadConfiguration());
 		for (const folder of this.foldersToRemove) {
 			this.catalogService.monitorFolderOperation(folder, FolderOperation.Removing, promise);
@@ -213,7 +213,7 @@ export class ExploreWorkspaceFolderAction extends Action {
 		return this.viewletService.openViewlet(EXPLORER_VIEWLET_ID, true).then((viewlet: ExplorerViewlet) => {
 			const explorerView = viewlet.getExplorerView();
 			if (explorerView) {
-				explorerView.select(this.folder.uri, true);
+				explorerView.select(this.folder.resource, true);
 				explorerView.expand();
 			}
 			return void 0;

@@ -47,10 +47,6 @@ export class Workspace implements vscode.Disposable {
 		this.registerUnionFileSystem();
 		this.registerResourceResolver();
 
-		this.toDispose.push(vscode.workspace.registerFolderSearchProvider('github', {
-			search: (query: string): Thenable<vscode.FolderResult[]> => this.searchFolders(query),
-		}));
-
 		this.toDispose.push(vscode.commands.registerCommand(SWITCH_REVISION_COMMAND_ID, (resource: vscode.Uri, revision?: vscode.SCMRevision) => this.switchRevision(resource, revision)));
 
 		// Create status bar item for switching the revision for the repository that is
@@ -214,17 +210,6 @@ export class Workspace implements vscode.Disposable {
 		}
 
 		repo.revision = revision;
-	}
-
-	private searchFolders(query: string): Thenable<vscode.FolderResult[]> {
-		return Promise.resolve([
-			{
-				resource: vscode.Uri.parse('git+exp://github.com/gorilla/securecookie'),
-				path: 'github.com/gorilla/securecookie',
-				name: 'securecookie',
-				icon: 'repo',
-			}
-		]);
 	}
 
 	dispose(): void {

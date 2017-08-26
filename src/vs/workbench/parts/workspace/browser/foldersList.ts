@@ -22,14 +22,15 @@ import { FolderSCMRevisionLabelAction } from 'vs/workbench/parts/workspace/brows
 import { EventType } from 'vs/base/common/events';
 import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
-import { Label, StarsWidget } from './foldersWidgets';
+import { Label, PathLabel, StarsWidget } from './foldersWidgets';
 // tslint:disable-next-line:import-patterns
 import * as date from 'date-fns';
 
 export interface ITemplateData {
 	root: HTMLElement;
 	element: HTMLElement;
-	icon: HTMLImageElement;
+	iconImage: HTMLImageElement;
+	iconOcticon: HTMLElement;
 	name: HTMLElement;
 	stars: HTMLElement;
 	description: HTMLElement;
@@ -58,15 +59,19 @@ export class Renderer implements IPagedRenderer<IFolder, ITemplateData> {
 
 	renderTemplate(root: HTMLElement): ITemplateData {
 		const element = append(root, $('.folder'));
-		const icon = append(element, $<HTMLImageElement>('img.icon'));
+		const iconImage = append(element, $<HTMLImageElement>('img.icon'));
+		const iconOcticon = append(element, $('span.octicon'));
 		const details = append(element, $('.details'));
 		const headerContainer = append(details, $('.header-container'));
 		const header = append(headerContainer, $('.header'));
 		const name = append(header, $('div.name'));
+		const stars = append(headerContainer, $('.stars'));
 		const description = append(details, $('.description.ellipsis'));
 		const footer = append(details, $('.footer'));
-		const stars = append(footer, $('.stars'));
 		const timestamp = append(footer, $('.timestamp.ellipsis'));
+
+		iconImage.style.display = 'none';
+		iconOcticon.style.display = 'none';
 
 		const headerActionBar = new ActionBar(header, {
 			animated: false,
@@ -84,6 +89,7 @@ export class Renderer implements IPagedRenderer<IFolder, ITemplateData> {
 		});
 		footerActionBar.addListener(EventType.RUN, ({ error }) => error && this.messageService.show(Severity.Error, error));
 
+		const nameWidget = this.instantiationService.createInstance(PathLabel, name);
 		const starsWidget = this.instantiationService.createInstance(StarsWidget, stars, { small: true });
 		const timestampWidget = this.instantiationService.createInstance(Label, timestamp, (f: IFolder) => {
 			if (f.updatedAt) {
@@ -100,12 +106,13 @@ export class Renderer implements IPagedRenderer<IFolder, ITemplateData> {
 		const manageAction = this.instantiationService.createInstance(ManageWorkspaceFolderAction);
 		footerActionBar.push([addAction, removeAction, manageAction], actionOptions);
 
-		const disposables = [starsWidget, timestampWidget, scmRevisionAction, headerActionBar, addAction, removeAction, manageAction, footerActionBar];
+		const disposables = [nameWidget, starsWidget, timestampWidget, scmRevisionAction, headerActionBar, addAction, removeAction, manageAction, footerActionBar];
 
 		return {
-			root, element, icon, name, stars, description, disposables,
+			root, element, iconImage, iconOcticon, name, stars, description, disposables,
 			folderDisposables: [],
 			set folder(folder: IFolder) {
+				nameWidget.folder = folder;
 				starsWidget.folder = folder;
 				timestampWidget.folder = folder;
 				scmRevisionAction.folder = folder;
@@ -121,8 +128,11 @@ export class Renderer implements IPagedRenderer<IFolder, ITemplateData> {
 
 		data.root.removeAttribute('aria-label');
 		data.folderDisposables = dispose(data.folderDisposables);
-		data.icon.src = '';
-		data.name.textContent = '';
+		data.iconImage.style.display = 'none';
+		data.iconImage.src = '';
+		data.iconOcticon.style.display = 'none';
+		data.iconOcticon.className = 'octicon';
+		data.name.style.display = 'none';
 		data.description.textContent = '';
 		data.stars.style.display = 'none';
 		data.folder = null;
@@ -135,19 +145,33 @@ export class Renderer implements IPagedRenderer<IFolder, ITemplateData> {
 
 		toggleClass(data.element, 'disabled', folder.state !== WorkspaceFolderState.Active && folder.state !== WorkspaceFolderState.Inactive);
 
-		const onError = once(domEvent(data.icon, 'error'));
-		onError(() => data.icon.src = folder.iconUrlFallback, null, data.folderDisposables);
-		data.icon.src = folder.iconUrl;
-
-		if (!data.icon.complete) {
-			data.icon.style.visibility = 'hidden';
-			data.icon.onload = () => data.icon.style.visibility = 'inherit';
+		const displayGenericIcon = () => {
+			data.iconOcticon.className = `octicon octicon-${folder.genericIconClass}`;
+			data.iconOcticon.style.display = '';
+		};
+		if (folder.iconUrl) {
+			const onError = once(domEvent(data.iconImage, 'error'));
+			onError(() => {
+				data.iconImage.src = '';
+				data.iconImage.style.display = 'none';
+				displayGenericIcon();
+			}, null, data.folderDisposables);
+			data.iconImage.style.display = '';
+			data.iconImage.src = folder.iconUrl;
 		} else {
-			data.icon.style.visibility = 'inherit';
+			displayGenericIcon();
 		}
 
-		data.root.setAttribute('aria-label', folder.displayName);
-		data.name.textContent = folder.displayName;
+		if (!data.iconImage.complete) {
+			data.iconImage.style.visibility = 'hidden';
+			data.iconImage.onload = () => data.iconImage.style.visibility = 'inherit';
+		} else {
+			data.iconImage.style.visibility = 'inherit';
+		}
+
+		data.root.setAttribute('aria-label', folder.displayPath);
+		data.name.style.display = '';
+		data.name.title = folder.displayPath;
 		data.description.textContent = folder.description;
 		data.stars.style.display = '';
 		data.folder = folder;
