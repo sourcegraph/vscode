@@ -38,7 +38,7 @@ import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { inputForeground, inputBackground, inputBorder } from 'vs/platform/theme/common/colorRegistry';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { ViewsRegistry, ViewLocation, IViewDescriptor } from 'vs/workbench/parts/views/browser/viewsRegistry';
-import { ComposedViewsViewlet, IView } from 'vs/workbench/parts/views/browser/views';
+import { PersistentViewsViewlet, IView } from 'vs/workbench/parts/views/browser/views';
 import { IStorageService } from 'vs/platform/storage/common/storage';
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
 import { IContextKeyService, ContextKeyExpr, RawContextKey, IContextKey } from 'vs/platform/contextkey/common/contextkey';
@@ -53,7 +53,7 @@ interface SearchInputEvent extends Event {
 const WorkspaceViewletVisibleContext = new RawContextKey<boolean>('workspaceViewletVisible', false);
 const SearchFoldersContext = new RawContextKey<boolean>('searchFolders', false);
 
-export class WorkspaceViewlet extends ComposedViewsViewlet implements IWorkspaceViewlet {
+export class WorkspaceViewlet extends PersistentViewsViewlet implements IWorkspaceViewlet {
 
 	// Temporarily disable the "other folders" view.
 	private static SHOW_OTHER_FOLDERS_VIEW = false;
@@ -94,7 +94,7 @@ export class WorkspaceViewlet extends ComposedViewsViewlet implements IWorkspace
 		this.workspaceViewletVisibleContextKey = WorkspaceViewletVisibleContext.bindTo(contextKeyService);
 		this.searchFoldersContextKey = SearchFoldersContext.bindTo(contextKeyService);
 
-		this.disposables.push(catalogService.onChange(() => this.updateViews(true), null, this.disposables));
+		this.disposables.push(catalogService.onChange(() => this.updateViews([], true), null, this.disposables));
 	}
 
 	private get showEmptyView(): boolean {
@@ -297,10 +297,10 @@ export class WorkspaceViewlet extends ComposedViewsViewlet implements IWorkspace
 		const value = this.searchBox.value || '';
 		this.searchFoldersContextKey.set(!!value);
 
-		await this.updateViews(!!value);
+		await this.updateViews([], !!value);
 	}
 
-	protected async updateViews(showAll?: boolean): TPromise<IView[]> {
+	protected async updateViews(unregisteredViews: IViewDescriptor[] = [], showAll = false): TPromise<IView[]> {
 		const created = await super.updateViews();
 		const toShow = showAll ? this.views : created;
 		if (toShow.length) {

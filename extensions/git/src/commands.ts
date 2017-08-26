@@ -662,8 +662,6 @@ export class CommandCenter {
 
 	@command('git.cleanAll', { repository: true })
 	async cleanAll(repository: Repository): Promise<void> {
-		// const config = workspace.getConfiguration('git');
-		// let scope = config.get<string>('discardAllScope') || 'prompt';
 		let resources = repository.workingTreeGroup.resourceStates;
 
 		if (resources.length === 0) {
@@ -686,7 +684,7 @@ export class CommandCenter {
 				return;
 			}
 
-			await this.clean(...resources);
+			await repository.clean(resources.map(r => r.resourceUri));
 			return;
 		} else if (resources.length === 1) {
 			const message = localize('confirm delete', "Are you sure you want to DELETE {0}?", path.basename(resources[0].resourceUri.fsPath));
@@ -697,7 +695,7 @@ export class CommandCenter {
 				return;
 			}
 
-			await this.clean(...resources);
+			await repository.clean(resources.map(r => r.resourceUri));
 		} else if (trackedResources.length === 0) {
 			const message = localize('confirm delete multiple', "Are you sure you want to DELETE {0} files?", resources.length);
 			const yes = localize('delete files', "Delete Files");
@@ -707,7 +705,7 @@ export class CommandCenter {
 				return;
 			}
 
-			await this.clean(...resources);
+			await repository.clean(resources.map(r => r.resourceUri));
 
 		} else { // resources.length > 1 && untrackedResources.length > 0 && trackedResources.length > 0
 			const untrackedMessage = untrackedResources.length === 1
@@ -729,7 +727,7 @@ export class CommandCenter {
 				return;
 			}
 
-			await this.clean(...resources);
+			await repository.clean(resources.map(r => r.resourceUri));
 		}
 	}
 

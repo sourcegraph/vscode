@@ -53,6 +53,7 @@ import * as types from 'vs/base/common/types';
 import { ExtHostThreadService } from 'vs/workbench/services/thread/node/extHostThreadService';
 import { ProxyIdentifier } from 'vs/workbench/services/thread/common/threadService';
 import { ExtHostDialogs } from 'vs/workbench/api/node/extHostDialogs';
+import { MarkdownString } from 'vs/base/common/htmlContent';
 
 export interface IExtensionApiFactory {
 	(extension: IExtensionDescription): typeof vscode;
@@ -564,6 +565,7 @@ export function createApiFactory(
 			Hover: extHostTypes.Hover,
 			IndentAction: languageConfiguration.IndentAction,
 			Location: extHostTypes.Location,
+			MarkdownString: MarkdownString,
 			OverviewRulerLane: EditorCommon.OverviewRulerLane,
 			ParameterInformation: extHostTypes.ParameterInformation,
 			Position: extHostTypes.Position,
@@ -629,7 +631,7 @@ class Extension<T> implements vscode.Extension<T> {
 	}
 
 	activate(): Thenable<T> {
-		return this._extensionService.activateById(this.id).then(() => this.exports);
+		return this._extensionService.activateById(this.id, false).then(() => this.exports);
 	}
 }
 

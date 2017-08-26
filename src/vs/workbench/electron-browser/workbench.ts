@@ -103,6 +103,7 @@ import { WorkspaceEditingService } from 'vs/workbench/services/workspace/node/wo
 import URI from 'vs/base/common/uri';
 import { isWorkspaceIdentifier } from 'vs/platform/workspaces/common/workspaces';
 import { WorkspaceMigrationService } from 'vs/workbench/services/workspace/node/workspaceMigrationService';
+import { ISimpleFindWidgetService, SimpleFindWidgetService } from 'vs/editor/contrib/find/browser/simpleFindWidgetService';
 // tslint:disable-next-line:import-patterns
 import { ModalPart } from 'vs/workbench/parts/modal/modalPart';
 import { SourcegraphTelemetryService } from 'vs/platform/telemetry/common/sourcegraphTelemetryService';
@@ -653,6 +654,7 @@ export class Workbench implements IPartService {
 		this.toDispose.push(this.quickOpen);
 		this.toShutdown.push(this.quickOpen);
 		serviceCollection.set(IQuickOpenService, this.quickOpen);
+		serviceCollection.set(ISimpleFindWidgetService, this.instantiationService.createInstance(SimpleFindWidgetService));
 
 		// Contributed services
 		const contributedServices = getServices();
@@ -994,11 +996,9 @@ export class Workbench implements IPartService {
 		if (event.reason === ShutdownReason.RELOAD) {
 			const workspace = event.payload;
 
-			// We are transitioning into a workspace from an empty workspace or folder workspace
-			// As such we want to migrate UI state from the current workspace to the new one. Since
-			// many components write to storage only on shutdown, we register a shutdown listener
-			// very late to be called as the last one.
-			if (isWorkspaceIdentifier(workspace) && !this.contextService.hasMultiFolderWorkspace()) {
+			// We are transitioning into a workspace from an empty workspace or workspace, and
+			// as such we want to migrate UI state from the current workspace to the new one.
+			if (isWorkspaceIdentifier(workspace)) {
 				event.veto(this.instantiationService.createInstance(WorkspaceMigrationService).migrate(workspace).then(() => false, () => false));
 			}
 		}

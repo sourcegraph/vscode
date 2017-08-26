@@ -13,7 +13,8 @@ import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace
 import { IWindowsService } from 'vs/platform/windows/common/windows';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 import { IJSONEditingService } from 'vs/workbench/services/configuration/common/jsonEditing';
-import { IWorkspacesService } from 'vs/platform/workspaces/common/workspaces';
+import { IWorkspacesService, IStoredWorkspaceFolder } from 'vs/platform/workspaces/common/workspaces';
+import { isLinux } from 'vs/base/common/platform';
 import { IResourceResolverService } from 'vs/platform/resourceResolver/common/resourceResolver';
 
 export class WorkspaceEditingService implements IWorkspaceEditingService {
@@ -71,8 +72,9 @@ export class WorkspaceEditingService implements IWorkspaceEditingService {
 			return TPromise.as(void 0);
 		}
 
-		// Apply to config
-		return this.jsonEditingService.write(workspace.configuration, { key: 'folders', value: newWorkspaceRoots }, true);
+		const value: IStoredWorkspaceFolder[] = newWorkspaceRoots.map(newWorkspaceRoot => ({ path: newWorkspaceRoot }));
+
+		return this.jsonEditingService.write(workspace.configuration, { key: 'folders', value }, true);
 	}
 
 	private validateRoots(roots: URI[]): string[] {
@@ -81,7 +83,6 @@ export class WorkspaceEditingService implements IWorkspaceEditingService {
 		}
 
 		// Prevent duplicates
-		const validatedRoots = distinct(roots.map(root => root.toString(true /* skip encoding */)));
-		return validatedRoots;
+		return distinct(roots.map(root => root.fsPath), root => isLinux ? root : root.toLowerCase());
 	}
 }
