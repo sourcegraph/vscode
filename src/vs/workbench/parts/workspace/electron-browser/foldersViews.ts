@@ -159,7 +159,7 @@ export abstract class FoldersListView extends CollapsibleView {
 	 * are cached should return 0 to provide faster responses to user input.
 	 */
 	public getDelayForQuery(value: string): number {
-		return 0;
+		return 500;
 	}
 
 	private setModel(model: IPagedModel<IFolder>) {
