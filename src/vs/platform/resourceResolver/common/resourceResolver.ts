@@ -10,7 +10,7 @@ import { IDisposable } from 'vs/base/common/lifecycle';
 import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
 
 /**
- * Provides a method to resolve resources for a particular scheme (e.g. 'git+exp').
+ * Provides a method to resolve resources for a particular scheme (e.g. 'git+https').
  */
 export interface IResourceResolutionProvider {
 	/**

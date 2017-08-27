@@ -185,12 +185,31 @@ export class Workspace implements vscode.Disposable {
 	private registerResourceResolver(): void {
 		const provider: vscode.ResourceResolutionProvider = {
 			resolveResource: async (resource: vscode.Uri): Promise<vscode.Uri> => {
-				const path = await gitExtension.git.clone(resource.with({ scheme: 'https' }).toString(), '/tmp');
+				// For 'git' scheme, avoid conflict with builtin 'git' extension by only resolving URIs
+				// with a host (authority). The builtin 'git' extension does not construct or handle these.
+				if (resource.scheme === 'file' && !resource.authority) {
+					return resource;
+				}
+
+				// `git clone` doesn't actually understand the 'git+' prefix on the URI scheme.
+				if (resource.scheme.startsWith('git+')) {
+					resource = resource.with({ scheme: resource.scheme.replace(/^git\+/, '') });
+				}
+
+				const path = await gitExtension.git.clone(resource.toString(), '/tmp');
 				return vscode.Uri.file(path);
 			},
 		};
 
-		this.toDispose.push(vscode.workspace.registerResourceResolutionProvider('git+exp', provider));
+		const schemes = [
+			'git',
+			'git+https',
+			'git+ssh',
+			'git+http',
+		];
+		for (const scheme of schemes) {
+			this.toDispose.push(vscode.workspace.registerResourceResolutionProvider(scheme, provider));
+		}
 	}
 
 	private switchRevision(resource?: vscode.Uri, revision?: vscode.SCMRevision): void {

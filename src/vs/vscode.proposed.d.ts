@@ -60,7 +60,7 @@ declare module 'vscode' {
 	}
 
 	/**
-	 * Provides a method to resolve resources for a particular scheme (e.g. 'git+exp').
+	 * Provides a method to resolve resources for a particular scheme (e.g. 'git+https').
 	 */
 	export interface ResourceResolutionProvider {
 		/**
