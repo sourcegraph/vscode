@@ -26,13 +26,10 @@ class TestDiff {
 
 	/**
 	 * Asserts that the diff transforms `from` to `to`.
-	 * If `toU0` is provided, that value is used for the case
-	 * where no diff context is provided.
 	 */
-	public assertTransformRange(from: Range, to: Range, toU0?: Range) {
-		toU0 = toU0 || to;
+	public assertTransformRange(from: Range, to: Range) {
 		this.assertDiffTransformRange('u3\n' + diffHeader + this.u3Hunks, new Diff(diffHeader + this.u3Hunks), from, to);
-		this.assertDiffTransformRange('u0\n' + diffHeader + this.u0Hunks, new Diff(diffHeader + this.u0Hunks), from, toU0);
+		this.assertDiffTransformRange('u0\n' + diffHeader + this.u0Hunks, new Diff(diffHeader + this.u0Hunks), from, to);
 	}
 
 	private assertDiffTransformRange(label: string, diff: Diff, from: Range, to: Range) {
@@ -125,6 +122,7 @@ suite('diff', () => {
 +added line
 `);
 			diff.assertTransformRange(new Range(9, 1, 9, 2), new Range(9, 1, 9, 2));
+			diff.assertTransformRange(new Range(10, 1, 10, 1), new Range(12, 1, 12, 1));
 			diff.assertTransformRange(new Range(10, 1, 10, 2), new Range(12, 1, 12, 2));
 
 			diff.assertTransformRange(new Range(9, 1, 10, 2), new Range(9, 1, 12, 2));
@@ -270,18 +268,18 @@ suite('diff', () => {
 @@ -10 +9,0 @@ this is line 9
 -this is line 10
 `);
-			diff.assertTransformRange(new Range(8, 15, 9, 1), undefined, new Range(8, 15, 9, 1));
+			diff.assertTransformRange(new Range(8, 15, 9, 1), new Range(8, 15, 9, 1));
 			diff.assertTransformRange(new Range(9, 1, 9, 2), new Range(9, 1, 9, 2));
-			diff.assertTransformRange(new Range(9, 15, 10, 1), undefined, new Range(9, 15, 10, 1));
-			diff.assertTransformRange(new Range(9, 15, 10, 15), undefined, new Range(9, 15, 10, 1));
-			diff.assertTransformRange(new Range(9, 15, 11, 1), undefined, new Range(9, 15, 10, 1));
+			diff.assertTransformRange(new Range(9, 15, 10, 1), new Range(9, 15, 10, 1));
+			diff.assertTransformRange(new Range(9, 15, 10, 15), new Range(9, 15, 10, 1));
+			diff.assertTransformRange(new Range(9, 15, 11, 1), new Range(9, 15, 10, 1));
 			diff.assertTransformRange(new Range(10, 1, 10, 2), undefined);
 			diff.assertTransformRange(new Range(10, 1, 11, 1), undefined);
 			diff.assertTransformRange(new Range(11, 1, 11, 2), new Range(10, 1, 10, 2));
 
 			diff.assertTransformRange(new Range(9, 1, 11, 2), new Range(9, 1, 10, 2));
 			diff.assertTransformRange(new Range(10, 1, 11, 2), new Range(10, 1, 10, 2));
-			diff.assertTransformRange(new Range(9, 1, 10, 2), new Range(9, 1, 9, 15), new Range(9, 1, 10, 1));
+			diff.assertTransformRange(new Range(9, 1, 10, 2), new Range(9, 1, 10, 1));
 		});
 
 		test('delete one line at end', () => {
@@ -335,8 +333,11 @@ suite('diff', () => {
 -this is line 11
 `);
 			diff.assertTransformRange(new Range(9, 1, 9, 2), new Range(9, 1, 9, 2));
+			diff.assertTransformRange(new Range(10, 1, 10, 1), undefined);
 			diff.assertTransformRange(new Range(10, 1, 10, 2), undefined);
+			diff.assertTransformRange(new Range(11, 1, 11, 1), undefined);
 			diff.assertTransformRange(new Range(11, 1, 11, 2), undefined);
+			diff.assertTransformRange(new Range(12, 1, 12, 1), new Range(10, 1, 10, 1));
 			diff.assertTransformRange(new Range(12, 1, 12, 2), new Range(10, 1, 10, 2));
 
 			diff.assertTransformRange(new Range(9, 1, 12, 2), new Range(9, 1, 10, 2));
@@ -344,8 +345,8 @@ suite('diff', () => {
 			diff.assertTransformRange(new Range(10, 1, 12, 2), new Range(10, 1, 10, 2));
 			diff.assertTransformRange(new Range(11, 1, 12, 2), new Range(10, 1, 10, 2));
 
-			diff.assertTransformRange(new Range(9, 1, 10, 2), new Range(9, 1, 9, 15), new Range(9, 1, 10, 1));
-			diff.assertTransformRange(new Range(9, 1, 11, 2), new Range(9, 1, 9, 15), new Range(9, 1, 10, 1));
+			diff.assertTransformRange(new Range(9, 1, 10, 2), new Range(9, 1, 10, 1));
+			diff.assertTransformRange(new Range(9, 1, 11, 2), new Range(9, 1, 10, 1));
 		});
 
 		test('delete two lines at end', () => {
@@ -491,12 +492,13 @@ suite('diff', () => {
 -this is line 10
 +edited line
 `);
+			diff.assertTransformRange(new Range(10, 1, 10, 1), undefined);
 			diff.assertTransformRange(new Range(10, 1, 10, 2), undefined);
 			diff.assertTransformRange(new Range(11, 1, 11, 2), new Range(11, 1, 11, 2));
 
 			diff.assertTransformRange(new Range(9, 1, 11, 2), new Range(9, 1, 11, 2));
 			diff.assertTransformRange(new Range(10, 1, 11, 2), new Range(11, 1, 11, 2));
-			diff.assertTransformRange(new Range(9, 1, 10, 2), new Range(9, 1, 9, 15), new Range(9, 1, 10, 1));
+			diff.assertTransformRange(new Range(9, 1, 10, 2), new Range(9, 1, 10, 1));
 		});
 
 		test('edit one line in multiple hunks', () => {
@@ -609,7 +611,7 @@ suite('diff', () => {
 			diff.assertTransformRange(new Range(20, 1, 20, 2), undefined);
 			diff.assertTransformRange(new Range(21, 1, 21, 2), new Range(21, 1, 21, 2));
 
-			diff.assertTransformRange(new Range(1, 1, 20, 2), new Range(3, 1, 18, 16), new Range(3, 1, 19, 1));
+			diff.assertTransformRange(new Range(1, 1, 20, 2), new Range(3, 1, 19, 1));
 		});
 
 		test('net add lines in multiple hunks', () => {
@@ -663,7 +665,7 @@ suite('diff', () => {
 			diff.assertTransformRange(new Range(20, 1, 20, 2), undefined);
 			diff.assertTransformRange(new Range(21, 1, 21, 2), new Range(24, 1, 24, 2));
 
-			diff.assertTransformRange(new Range(1, 1, 20, 2), new Range(3, 1, 21, 16), new Range(3, 1, 22, 1));
+			diff.assertTransformRange(new Range(1, 1, 20, 2), new Range(3, 1, 22, 1));
 		});
 
 		test('net delete lines in multiple hunks', () => {
@@ -720,7 +722,7 @@ suite('diff', () => {
 			diff.assertTransformRange(new Range(20, 1, 20, 2), undefined);
 			diff.assertTransformRange(new Range(21, 1, 21, 2), new Range(18, 1, 18, 2));
 
-			diff.assertTransformRange(new Range(1, 1, 20, 2), new Range(2, 1, 16, 16), new Range(2, 1, 17, 1));
+			diff.assertTransformRange(new Range(1, 1, 20, 2), new Range(2, 1, 17, 1));
 		});
 
 		test('move first line forward one', () => {

@@ -12,8 +12,8 @@ import * as strings from 'vs/base/common/strings';
  * Diff is constructed from a unified diff string and provides a transformRange method
  * to transform a range according to the diff.
  *
- * For best results, construct with a diff that has at least one line of context.
- * Git diff defaults to three lines of context (and you can change it with the -U option).
+ * No diff context is necessary (Git defaults to three lines) so you can optimize diff
+ * size by excluding context (e.g. -U0 for Git).
  */
 export class Diff {
 	/**
@@ -35,11 +35,6 @@ export class Diff {
 	 * An index on added lines by content with leading and trailing whitespace removed.
 	 */
 	private addedIndexTrim = new Map<string, LineDiff>();
-
-	/**
-	 * An index on unchanged lines by line number.
-	 */
-	private unchangedIndex = new Map<number, LineDiff>();
 
 	public constructor(diff: string) {
 		const lines = diff.trim().split('\n');
@@ -79,8 +74,6 @@ export class Diff {
 					break;
 				}
 				case ' ':
-					const lineDiff: LineDiff = { beforeLine, afterLine, content, lineDelta: 0 };
-					this.unchangedIndex.set(beforeLine, lineDiff);
 					beforeLine += 1;
 					afterLine += 1;
 					break;
@@ -101,16 +94,23 @@ export class Diff {
 	 * does not exist after the diff.
 	 */
 	public transformRange(range: Range): Range | undefined {
-		const result = this.trimDeletedLines(range);
-		if (!result) {
+		const trimmedRange = this.trimDeletedLines(range);
+		if (!trimmedRange) {
 			return this.findMovedRange(range);
 		}
-		range = result.range;
+		range = trimmedRange;
 
+		// We want to exclude the trailing newline for diff computation purposes
+		// unless the range is empty.
+		const excludeTrailingNewline = (range.endColumn === 1 && !range.isEmpty());
+		const effectiveEndLine = excludeTrailingNewline ? range.endLineNumber - 1 : range.endLineNumber;
+
+		// Loop through the line diffs to compute the offsets that should
+		// be applied to the beginning and end of the range.
 		let startLineOffset = 0;
 		let endLineOffset = 0;
 		for (const lineDiff of this.lineDiffs) {
-			if (lineDiff.beforeLine > result.effectiveEndLine) {
+			if (lineDiff.beforeLine > effectiveEndLine) {
 				break;
 			}
 			if (lineDiff.beforeLine <= range.startLineNumber) {
@@ -118,10 +118,8 @@ export class Diff {
 			}
 			endLineOffset += lineDiff.lineDelta;
 		}
-		if (startLineOffset === 0 && endLineOffset === 0) {
-			return range;
-		}
-		return this.nonEmptyRange(new Range(range.startLineNumber + startLineOffset, range.startColumn, range.endLineNumber + endLineOffset, range.endColumn));
+		const transformedRange = new Range(range.startLineNumber + startLineOffset, range.startColumn, range.endLineNumber + endLineOffset, range.endColumn);
+		return range.isEmpty() ? transformedRange : this.nonEmptyRange(transformedRange);
 	}
 
 	/**
@@ -134,14 +132,13 @@ export class Diff {
 	/**
 	 * Returns the range with leading and trailing deleted lines removed.
 	 * If no lines remain, it returns undefined.
-	 * If lines are trimmed from the end of the range, the end position might be
-	 * the first character on the line after the effectiveEndLine
-	 * if the diff doesn't contain at least one line of context around each hunk.
 	 */
-	private trimDeletedLines(range: Range): { range: Range, effectiveEndLine: number } | undefined {
+	private trimDeletedLines(range: Range): Range | undefined {
+		if (range.isEmpty()) {
+			return this.deletedIndex.has(range.startLineNumber) ? undefined : range;
+		}
 		let endPosition: Position | undefined;
 		let startPosition: Position | undefined;
-		let effectiveEndLine: number;
 		for (let line = range.startLineNumber; line <= range.endLineNumber; line++) {
 			if (this.deletedIndex.has(line)) {
 				continue;
@@ -154,18 +151,7 @@ export class Diff {
 				}
 			}
 			if (line === range.endLineNumber) {
-				// Only update the end position if there is a meaningful column on the last line.
-				// Otherwise, we can just use the previous end position.
-				if (range.endColumn > 1) {
-					endPosition = range.getEndPosition();
-					effectiveEndLine = line;
-				}
-			} else if (this.unchangedIndex.has(line)) {
-				// The diff has this unchanged line in it so we can
-				// determine the end position based on the content.
-				const lineDiff = this.unchangedIndex.get(line);
-				endPosition = new Position(line, lineDiff.content.length + 1);
-				effectiveEndLine = line;
+				endPosition = range.getEndPosition();
 			} else {
 				// Either we are in the middle of the range and this endPosition will get overwritten
 				// on the next loop iteration, or the diff doesn't contain any context around changes (i.e. -U0).
@@ -173,20 +159,12 @@ export class Diff {
 				// of the range is just the first character in the next line.
 				// The existance of this case is why we store effectiveEndLine separately.
 				endPosition = new Position(line + 1, 1);
-				effectiveEndLine = line;
 			}
 		}
 		if (!startPosition || !endPosition) {
 			return undefined;
 		}
-		const trimmedRange = this.nonEmptyRange(new Range(startPosition.lineNumber, startPosition.column, endPosition.lineNumber, endPosition.column));
-		if (!trimmedRange) {
-			return undefined;
-		}
-		return {
-			range: trimmedRange,
-			effectiveEndLine,
-		};
+		return this.nonEmptyRange(new Range(startPosition.lineNumber, startPosition.column, endPosition.lineNumber, endPosition.column));
 	}
 
 	/**
