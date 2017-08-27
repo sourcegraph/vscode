@@ -72,9 +72,9 @@ declare module 'vscode' {
 	}
 
 	/**
- 	 * A folder from the folder catalog service, typically representing a repository on
+	 * A folder from the folder catalog service, typically representing a repository on
 	 * a remote code host.
- 	 */
+	 */
 	export interface CatalogFolder {
 		/**
 		 * The unique identifier for this folder.
