@@ -740,7 +740,10 @@ suite('diff', () => {
 @@ -2,0 +2 @@ this is line 2
 +this is line 1
 `);
+			diff.assertTransformRange(new Range(1, 1, 1, 1), new Range(2, 1, 2, 1));
+			diff.assertTransformRange(new Range(1, 2, 1, 2), new Range(2, 2, 2, 2));
 			diff.assertTransformRange(new Range(1, 1, 1, 15), new Range(2, 1, 2, 15));
+			diff.assertTransformRange(new Range(1, 1, 2, 1), new Range(2, 1, 3, 1));
 			diff.assertTransformRange(new Range(1, 6, 1, 15), new Range(2, 6, 2, 15));
 			diff.assertTransformRange(new Range(1, 6, 1, 8), new Range(2, 6, 2, 8));
 		});
@@ -881,11 +884,9 @@ suite('diff', () => {
 @@ -7,0 +8 @@ this is line 7
 +this is line 5
 `);
-			// Either line (3 or 8) would be acceptible, but our implementation chooses the last line.
-			// Ideally it would return both but that requires cascading API changes.
-			diff.assertTransformRange(new Range(5, 1, 5, 15), new Range(8, 1, 8, 15));
-			diff.assertTransformRange(new Range(5, 6, 5, 15), new Range(8, 6, 8, 15));
-			diff.assertTransformRange(new Range(5, 6, 5, 8), new Range(8, 6, 8, 8));
+			diff.assertTransformRange(new Range(5, 1, 5, 15), undefined);
+			diff.assertTransformRange(new Range(5, 6, 5, 15), undefined);
+			diff.assertTransformRange(new Range(5, 6, 5, 8), undefined);
 		});
 
 		test('move three lines contiguous', () => {
@@ -952,8 +953,8 @@ suite('diff', () => {
 `);
 			// Ideally we would split the range into two.
 			diff.assertTransformRange(new Range(2, 6, 3, 8), new Range(6, 6, 7, 8));
-			diff.assertTransformRange(new Range(2, 6, 4, 8), new Range(6, 6, 7, 15));
-			diff.assertTransformRange(new Range(3, 6, 4, 8), new Range(7, 6, 7, 15));
+			diff.assertTransformRange(new Range(2, 6, 4, 8), new Range(6, 6, 8, 1));
+			diff.assertTransformRange(new Range(3, 6, 4, 8), new Range(7, 6, 8, 1));
 		});
 
 		test('move and add', () => {
@@ -988,8 +989,8 @@ suite('diff', () => {
 `);
 			// Ideally we would split the range into two.
 			diff.assertTransformRange(new Range(2, 6, 3, 8), new Range(7, 6, 8, 8));
-			diff.assertTransformRange(new Range(2, 6, 4, 8), new Range(7, 6, 8, 15));
-			diff.assertTransformRange(new Range(3, 6, 4, 8), new Range(8, 6, 8, 15));
+			diff.assertTransformRange(new Range(2, 6, 4, 8), new Range(7, 6, 9, 1));
+			diff.assertTransformRange(new Range(3, 6, 4, 8), new Range(8, 6, 9, 1));
 		});
 
 		test('indent lines', () => {

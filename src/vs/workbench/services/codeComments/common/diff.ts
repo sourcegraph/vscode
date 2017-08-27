@@ -29,12 +29,12 @@ export class Diff {
 	/**
 	 * An index on added lines by content.
 	 */
-	private addedIndexExact = new Map<string, LineDiff>();
+	private addedIndexExact = new Map<string, LineDiff | false>();
 
 	/**
 	 * An index on added lines by content with leading and trailing whitespace removed.
 	 */
-	private addedIndexTrim = new Map<string, LineDiff>();
+	private addedIndexTrim = new Map<string, LineDiff | false>();
 
 	public constructor(diff: string) {
 		const lines = diff.trim().split('\n');
@@ -58,11 +58,19 @@ export class Diff {
 				case '+': {
 					const lineDiff: LineDiff = { beforeLine, afterLine, content, lineDelta: 1 };
 					this.lineDiffs.push(lineDiff);
-					// If there are duplicates, we just choose the last one.
-					// Future improvement: update transformRange to return an array of ranges
-					// so ranges can be split. We would need to store all values here.
-					this.addedIndexExact.set(content, lineDiff);
-					this.addedIndexTrim.set(content.trim(), lineDiff);
+					// If there are duplicates, we don't allow comments to move to these lines.
+					// We would have to make an arbitrary decision or attach the thread to both ranges.
+					if (this.addedIndexExact.has(content)) {
+						this.addedIndexExact.set(content, false);
+					} else {
+						this.addedIndexExact.set(content, lineDiff);
+					}
+					const trimmedContent = content.trim();
+					if (this.addedIndexTrim.has(trimmedContent)) {
+						this.addedIndexTrim.set(trimmedContent, false);
+					} else {
+						this.addedIndexTrim.set(trimmedContent, lineDiff);
+					}
 					afterLine += 1;
 					break;
 				}
@@ -99,11 +107,7 @@ export class Diff {
 			return this.findMovedRange(range);
 		}
 		range = trimmedRange;
-
-		// We want to exclude the trailing newline for diff computation purposes
-		// unless the range is empty.
-		const excludeTrailingNewline = (range.endColumn === 1 && !range.isEmpty());
-		const effectiveEndLine = excludeTrailingNewline ? range.endLineNumber - 1 : range.endLineNumber;
+		const effectiveEndLine = getEffectiveEndLine(range);
 
 		// Loop through the line diffs to compute the offsets that should
 		// be applied to the beginning and end of the range.
@@ -135,6 +139,8 @@ export class Diff {
 	 */
 	private trimDeletedLines(range: Range): Range | undefined {
 		if (range.isEmpty()) {
+			// Handle empty case specially because handling it in
+			// the general case below would be tricky.
 			return this.deletedIndex.has(range.startLineNumber) ? undefined : range;
 		}
 		let endPosition: Position | undefined;
@@ -203,13 +209,15 @@ export class Diff {
 				// Keep looking to see if part of the range was moved.
 				continue;
 			}
-			if (!startPosition || addedLine.afterLine === endPosition.lineNumber + 1) {
+
+			const effectiveEndLine = startPosition ? getEffectiveEndLine(Range.fromPositions(startPosition, endPosition)) : 0;
+			if (!startPosition || addedLine.afterLine === effectiveEndLine + 1) {
 				// Starting or continuing a range.
 				if (line === range.endLineNumber) {
 					const endColumn = Math.max(range.endColumn + columnDelta, 1);
 					endPosition = new Position(addedLine.afterLine, endColumn);
 				} else {
-					endPosition = new Position(addedLine.afterLine, addedLine.content.length + 1);
+					endPosition = new Position(addedLine.afterLine + 1, 1);
 				}
 			}
 			if (!startPosition) {
@@ -225,8 +233,20 @@ export class Diff {
 		if (!startPosition || !endPosition) {
 			return undefined;
 		}
-		return this.nonEmptyRange(new Range(startPosition.lineNumber, startPosition.column, endPosition.lineNumber, endPosition.column));
+		const movedRange = new Range(startPosition.lineNumber, startPosition.column, endPosition.lineNumber, endPosition.column);
+		return range.isEmpty() ? movedRange : this.nonEmptyRange(movedRange);
 	}
+}
+
+/**
+ * Returns the effective end line of a range.
+ * If a range ends on column one (e.g. [4, 2] -> [5, 1]),
+ * then the effective end line is the previous line (e.g. 4)
+ * unless the range was already empty.
+ */
+function getEffectiveEndLine(range: Range): number {
+	const excludeTrailingNewline = (range.endColumn === 1 && !range.isEmpty());
+	return excludeTrailingNewline ? range.endLineNumber - 1 : range.endLineNumber;
 }
 
 interface LineDiff {
