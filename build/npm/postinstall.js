@@ -37,6 +37,7 @@ const extensions = [
 	'git',
 	'lsp',
 	'repo',
+	'service-github',
 	'scm',
 	'file-links',
 	'gulp',
