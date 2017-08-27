@@ -26,9 +26,6 @@ export function renderComment(accessor: ServicesAccessor, comment: Comment): Nod
 			openerService.open(URI.parse(content)).then(void 0, onUnexpectedError);
 		},
 		codeBlockRenderer: (languageAlias, value): string | TPromise<string> => {
-			if (!languageAlias) {
-				return value;
-			}
 			const modeId = modeService.getModeIdForLanguageName(languageAlias);
 			return modeService.getOrCreateMode(modeId).then(() => {
 				return tokenizeToString(value, modeId);
