@@ -93,17 +93,14 @@ export class SCMService implements ISCMService {
 
 			this._providerIds.delete(provider.id);
 			this._repositories.splice(index, 1);
-			this._onDidRemoveProvider.fire(repository);
 			this.updateFolderProvidersMap();
+			this._onDidRemoveProvider.fire(repository);
 		});
 
 		const repository = new SCMRepository(provider, disposable);
 		this._repositories.push(repository);
+		this.updateFolderProvidersMap();
 		this._onDidAddProvider.fire(repository);
-
-		if (provider.rootFolder) {
-			this.updateFolderProvidersMap();
-		}
 
 		return repository;
 	}
