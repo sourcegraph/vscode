@@ -10,6 +10,7 @@ import URI from 'vs/base/common/uri';
 import { localize } from 'vs/nls';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { Action } from 'vs/base/common/actions';
+import { any } from 'vs/base/common/event';
 import { IDisposable, dispose } from 'vs/base/common/lifecycle';
 import { IFolder } from 'vs/workbench/parts/workspace/common/workspace';
 import { ISCMService, ISCMProvider, ISCMRevision, setSCMProviderRevision } from 'vs/workbench/services/scm/common/scm';
@@ -23,9 +24,11 @@ export abstract class FolderSCMRevisionAction extends Action {
 	private disposables: IDisposable[] = [];
 	private _folder: URI;
 	set folderResource(folder: URI) {
-		this._folder = folder;
-		this.updateSCMProvider();
-		this.update();
+		if (this._folder !== folder) {
+			this._folder = folder;
+			this.updateSCMProvider();
+			this.update();
+		}
 	}
 	set folder(folder: IFolder) {
 		this.folderResource = folder ? folder.uri : undefined;
@@ -45,7 +48,8 @@ export abstract class FolderSCMRevisionAction extends Action {
 		this.resolvedClass = this.class;
 		this.resolvingClass = `${this.class} resolving`;
 
-		this.disposables.push(this.scmService.onDidChangeRepository(() => {
+		const onDidChangeSCM = any(this.scmService.onDidChangeRepository, this.scmService.onDidAddRepository, this.scmService.onDidRemoveRepository);
+		this.disposables.push(onDidChangeSCM(() => {
 			this.updateSCMProvider();
 			this.update();
 		}));
@@ -57,6 +61,10 @@ export abstract class FolderSCMRevisionAction extends Action {
 		let provider: ISCMProvider | undefined;
 		if (this._folder) {
 			provider = this.scmService.getProviderForResource(this._folder);
+		}
+
+		if (this.scmProvider === provider) {
+			return;
 		}
 
 		// Clear old provider.
@@ -73,6 +81,8 @@ export abstract class FolderSCMRevisionAction extends Action {
 	}
 
 	protected update(): void {
+		console.log('SCM revision label update', this._folder && this._folder.toString(), this.scmProvider && this.scmProvider.revision);
+
 		if (!this._folder) {
 			this.enabled = false;
 			this.class = this.resolvedClass;
