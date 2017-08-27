@@ -56,7 +56,6 @@ export class Model {
 
 	private async onDidChangeWorkspaceFolders({ added, removed }: WorkspaceFoldersChangeEvent): Promise<void> {
 		const possibleRepositoryFolders = added
-			.filter(folder => this.validRepository(folder.uri))
 			.filter(folder => !this.getOpenRepository(folder.uri));
 
 		const activeRepositoriesList = window.visibleTextEditors
@@ -86,18 +85,8 @@ export class Model {
 				return;
 			}
 
-			if (!this.validRepository(uri)) {
-				return;
-			}
-
 			this.tryOpenRepository(path.dirname(uri.fsPath));
 		});
-	}
-
-	private validRepository(uri: Uri): boolean {
-		// This git extension only works for local git repositories, not for remote git
-		// repositories. The 'repo' extension is used for remote repositories.
-		return !uri.scheme || uri.scheme === 'file';
 	}
 
 	@sequentialize

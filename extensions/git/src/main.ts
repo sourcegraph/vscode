@@ -66,12 +66,6 @@ export function activate(context: ExtensionContext): Promise<IGitExtension | voi
 	const disposables: Disposable[] = [];
 	context.subscriptions.push(new Disposable(() => Disposable.from(...disposables).dispose()));
 
-	workspace.onDidChangeWorkspaceFolders(e => {
-		disposables.forEach(d => d.dispose());
-		disposables.length = 0;
-		init(context, disposables).catch(err => console.error(err));
-	});
-
 	return init(context, disposables)
 		.catch(err => console.error(err));
 }
