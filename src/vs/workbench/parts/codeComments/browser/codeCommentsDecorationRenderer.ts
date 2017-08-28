@@ -11,7 +11,7 @@ import { ICodeCommentsService, Thread } from 'vs/editor/common/services/codeComm
 import { ISCMService } from 'vs/workbench/services/scm/common/scm';
 import URI from 'vs/base/common/uri';
 import { isFileLikeResource } from 'vs/platform/files/common/files';
-import { buttonBackground } from 'vs/platform/theme/common/colorRegistry';
+import * as colors from 'vs/platform/theme/common/colorRegistry';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { ICodeEditor, MouseTargetType } from 'vs/editor/browser/editorBrowser';
 import { editorContribution } from 'vs/editor/browser/editorBrowserExtensions';
@@ -53,22 +53,18 @@ export class CodeCommentsDecorationRenderer extends Disposable implements IEdito
 
 	constructor(
 		private editor: ICodeEditor,
-		@ICodeEditorService codeEditorService: ICodeEditorService,
 		@IViewletService viewletService: IViewletService,
 		@IContextMenuService contextMenuService: IContextMenuService,
 		@ISCMService scmService: ISCMService,
-		@IThemeService themeService: IThemeService,
+		@ICodeEditorService private codeEditorService: ICodeEditorService,
+		@IThemeService private themeService: IThemeService,
 		@ICodeCommentsService private codeCommentsService: ICodeCommentsService,
 		@IWorkbenchEditorService private editorService: IWorkbenchEditorService,
 	) {
 		super();
 
-		const color = themeService.getTheme().getColor(buttonBackground).toString();
-		codeEditorService.registerDecorationType(HIGHLIGHT_DECORATION_KEY, {
-			backgroundColor: color,
-			overviewRulerLane: OverviewRulerLane.Full,
-			overviewRulerColor: color,
-		});
+		this._register(themeService.onThemeChange(t => this.onThemeChange()));
+		this.onThemeChange();
 
 		const gutterIconPath = URI.parse(require.toUrl('./media/comment.svg')).fsPath;
 		codeEditorService.registerDecorationType(GUTTER_ICON_DECORATION_KEY, {
@@ -114,6 +110,34 @@ export class CodeCommentsDecorationRenderer extends Disposable implements IEdito
 
 	public getId(): string {
 		return 'sg.codeComments.decorationRenderer';
+	}
+
+	private onThemeChange(): void {
+		const color = this.getColor(colors.buttonForeground);
+		const backgroundColor = this.getColor(colors.buttonBackground);
+		const borderColor = this.getColor(colors.contrastBorder);
+		const border = borderColor ? `1px solid ${borderColor}` : undefined;
+
+		// We have to re-register the decoration for the new styles to take effect.
+		this.codeEditorService.removeDecorationType(HIGHLIGHT_DECORATION_KEY);
+		this.codeEditorService.registerDecorationType(HIGHLIGHT_DECORATION_KEY, {
+			color,
+			backgroundColor,
+			border,
+			overviewRulerLane: OverviewRulerLane.Full,
+			overviewRulerColor: backgroundColor,
+		});
+		this.renderCurrentModelDecorations();
+	}
+
+	/**
+	 * Returns the string representation of the theme's color
+	 * or undefined if the theme doesn't have that color.
+	 */
+	private getColor(id: string): string | undefined {
+		const theme = this.themeService.getTheme();
+		const color = theme.getColor(id);
+		return color && color.toString();
 	}
 
 	/**
