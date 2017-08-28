@@ -350,10 +350,17 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 
 	public viewThread(threadID: number, commentID: number): void {
 		const modelUri = this.getActiveModelUri();
-		this.codeCommentsService.refreshThreads(modelUri);
+		const refreshThreads = this.codeCommentsService.refreshThreads(modelUri);
 		const selectedThread = this.codeCommentsService.getThread(modelUri, threadID);
-		this.codeCommentsService.getModel(modelUri).selectedThread = selectedThread;
-		// TODO: scroll to and/or highlight comment?
+		if (selectedThread) {
+			this.codeCommentsService.getModel(modelUri).selectedThread = selectedThread;
+		} else {
+			refreshThreads.then(() => {
+				const selectedThread = this.codeCommentsService.getThread(modelUri, threadID);
+				this.codeCommentsService.getModel(modelUri).selectedThread = selectedThread;
+			});
+		}
+		// TODO(nick): scroll to and/or highlight comment?
 	}
 }
 
