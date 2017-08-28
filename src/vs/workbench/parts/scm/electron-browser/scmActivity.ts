@@ -19,7 +19,6 @@ export class StatusUpdater implements IWorkbenchContribution {
 
 	private static ID = 'vs.scm.statusUpdater';
 
-	private lastCount: number | undefined;
 	private badgeDisposable: IDisposable = EmptyDisposable;
 	private disposables: IDisposable[] = [];
 
@@ -59,19 +58,11 @@ export class StatusUpdater implements IWorkbenchContribution {
 			}
 		}, 0);
 
-		if (count !== this.lastCount) {
-			if (this.badgeDisposable) {
-				this.badgeDisposable.dispose();
-			}
-
-			if (count > 0) {
-				const badge = new NumberBadge(count, num => localize('scmPendingChangesBadge', '{0} pending changes', num));
-				this.badgeDisposable = this.activityBarService.showActivity(VIEWLET_ID, badge, 'scm-viewlet-label');
-			} else {
-				this.badgeDisposable = EmptyDisposable;
-			}
-
-			this.lastCount = count;
+		if (count > 0) {
+			const badge = new NumberBadge(count, num => localize('scmPendingChangesBadge', '{0} pending changes', num));
+			this.badgeDisposable = this.activityBarService.showActivity(VIEWLET_ID, badge, 'scm-viewlet-label');
+		} else {
+			this.badgeDisposable = EmptyDisposable;
 		}
 	}
 

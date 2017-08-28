@@ -501,10 +501,6 @@ export class SCMViewlet extends PersistentViewsViewlet {
 	) {
 		super(VIEWLET_ID, ViewLocation.SCM, 'scm', true,
 			telemetryService, storageService, instantiationService, themeService, contextService, contextKeyService, contextMenuService, extensionService);
-
-		this.scmService.onDidAddRepository(this.onDidAddRepository, this, this.disposables);
-		this.scmService.onDidRemoveRepository(this.onDidRemoveRepository, this, this.disposables);
-		this.scmService.repositories.forEach(p => this.onDidAddRepository(p));
 	}
 
 	private onDidAddRepository(repository: ISCMRepository): void {
@@ -522,6 +518,10 @@ export class SCMViewlet extends PersistentViewsViewlet {
 		await super.create(parent);
 
 		parent.addClass('scm-viewlet');
+
+		this.scmService.onDidAddRepository(this.onDidAddRepository, this, this.disposables);
+		this.scmService.onDidRemoveRepository(this.onDidRemoveRepository, this, this.disposables);
+		this.scmService.repositories.forEach(p => this.onDidAddRepository(p));
 	}
 
 	protected createView(viewDescriptor: IViewDescriptor, initialSize: number, options: IViewletViewOptions): IView {
