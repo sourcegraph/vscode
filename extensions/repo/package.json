@@ -23,7 +23,7 @@
       "properties": {
         "repo.mappings": {
           "type": "object",
-          "description": "Mapping of repository URI to local filesystem location."
+          "description": "Map of repository identifiers to local filesystem locations.\ne.g. {\"github.com/vuejs/vue\": \"/Users/alice/src/vue\"}"
         }
       }
     },
