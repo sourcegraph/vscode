@@ -5,7 +5,7 @@
 
 'use strict';
 
-import { workspace, WorkspaceFoldersChangeEvent, Uri, window, Event, EventEmitter, QuickPickItem, Disposable, SourceControl, SourceControlResourceGroup, TextEditor } from 'vscode';
+import { workspace, WorkspaceFoldersChangeEvent, Uri, window, Event, EventEmitter, QuickPickItem, Disposable, SourceControl, SourceControlResourceGroup, TextEditor, TextDocument } from 'vscode';
 import { Repository } from './repository';
 import { memoize, sequentialize } from './decorators';
 import { dispose } from './util';
@@ -52,6 +52,8 @@ export class Model {
 
 		window.onDidChangeVisibleTextEditors(this.onDidChangeVisibleTextEditors, this, this.disposables);
 		this.onDidChangeVisibleTextEditors(window.visibleTextEditors);
+
+		workspace.onDidCloseTextDocument(this.onDidCloseTextDocument, this, this.disposables);
 	}
 
 	private async onDidChangeWorkspaceFolders({ added, removed }: WorkspaceFoldersChangeEvent): Promise<void> {
@@ -87,6 +89,35 @@ export class Model {
 
 			this.tryOpenRepository(path.dirname(uri.fsPath));
 		});
+	}
+
+	private onDidCloseTextDocument(doc: TextDocument): void {
+		// Dispose a repository when it is no longer in use (no open documents, not a workspace root).
+		if (doc.uri.scheme !== 'file') {
+			return;
+		}
+
+		const repository = this.getOpenRepository(doc.uri);
+		if (!repository) {
+			return;
+		}
+
+		const activeRepositoriesList = (workspace.workspaceFolders || [])
+			.map(folder => this.getOpenRepository(folder.uri))
+			.filter(r => !!r) as OpenRepository[];
+		const activeRepositories = new Set<OpenRepository>(activeRepositoriesList);
+		for (const otherDoc of workspace.textDocuments) {
+			if (otherDoc.uri.scheme === 'file') {
+				const otherRepository = this.getOpenRepository(otherDoc.uri);
+				if (otherRepository) {
+					activeRepositories.add(otherRepository);
+				}
+			}
+		}
+
+		if (!activeRepositories.has(repository)) {
+			repository.dispose();
+		}
 	}
 
 	@sequentialize
