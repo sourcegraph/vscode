@@ -19,7 +19,8 @@
     "precommit": "node build/gulpfile.hygiene.js",
     "gulp": "gulp --max_old_space_size=4096",
     "7z": "7z",
-    "update-grammars": "node build/npm/update-all-grammars.js"
+    "update-grammars": "node build/npm/update-all-grammars.js",
+    "graphql": "get-graphql-schema http://localhost:3080/.api/graphql --json | gql2ts -o src/typings/gqlschema.gen.d.ts"
   },
   "dependencies": {
     "applicationinsights": "0.17.1",
@@ -68,7 +69,9 @@
     "event-stream": "^3.1.7",
     "express": "^4.13.1",
     "flatpak-bundler": "^0.1.1",
+    "get-graphql-schema": "^2.1.1",
     "glob": "^5.0.13",
+    "gql2ts": "^1.2.1",
     "gulp": "^3.8.9",
     "gulp-atom-electron": "^1.11.0",
     "gulp-azure-storage": "^0.7.0",
