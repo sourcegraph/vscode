@@ -500,32 +500,27 @@ export class SCMViewlet extends ViewsViewlet {
 	) {
 		super(VIEWLET_ID, ViewLocation.SCM, true,
 			telemetryService, storageService, instantiationService, themeService, contextService, contextKeyService, contextMenuService, extensionService);
+
+		this.scmService.onDidAddRepository(this.onDidAddRepository, this, this.disposables);
+		this.scmService.onDidRemoveRepository(this.onDidRemoveRepository, this, this.disposables);
+		this.scmService.repositories.forEach(p => this.onDidAddRepository(p));
 	}
 
-	private onDidAddRepository(repository: ISCMRepository, updateViews = true): void {
+	private onDidAddRepository(repository: ISCMRepository): void {
 		const view = new SourceControlViewDescriptor(repository);
 		ViewsRegistry.registerViews([view]);
 		this.updateTitleArea();
-		if (updateViews) {
-			this.updateViews();
-		}
 	}
 
 	private onDidRemoveRepository(repository: ISCMRepository): void {
 		ViewsRegistry.deregisterViews([repository.provider.id], ViewLocation.SCM);
 		this.updateTitleArea();
-		this.updateViews();
 	}
 
 	async create(parent: Builder): TPromise<void> {
 		await super.create(parent);
 
 		parent.addClass('scm-viewlet');
-
-		this.scmService.onDidAddRepository(this.onDidAddRepository, this, this.disposables);
-		this.scmService.onDidRemoveRepository(this.onDidRemoveRepository, this, this.disposables);
-		this.scmService.repositories.forEach(p => this.onDidAddRepository(p, false));
-		this.updateViews();
 	}
 
 	protected createView(viewDescriptor: IViewDescriptor, options: IViewletViewOptions): IView {
