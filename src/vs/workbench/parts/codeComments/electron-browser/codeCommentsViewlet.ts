@@ -95,6 +95,13 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 		return this.actions;
 	}
 
+	public setVisible(visible: boolean): TPromise<void> {
+		if (visible) {
+			this.telemetryService.publicLog('codeComments.openViewlet');
+		}
+		return super.setVisible(visible);
+	}
+
 	public create(parent: Builder): TPromise<void> {
 		super.create(parent);
 

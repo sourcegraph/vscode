@@ -17,6 +17,8 @@ import { IInstantiationService } from 'vs/platform/instantiation/common/instanti
 import { MessageType } from 'vs/base/browser/ui/inputbox/inputBox';
 import Event, { Emitter } from 'vs/base/common/event';
 import { Range } from 'vs/editor/common/core/range';
+import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
+import { getCommentTelemetryData } from 'vs/workbench/parts/codeComments/common/codeComments';
 
 /**
  * Renders a view to add a new comment to a file (i.e. creating a new thread).
@@ -37,8 +39,10 @@ export class CreateThreadView extends Disposable {
 		@ICodeCommentsService private codeCommentsService: ICodeCommentsService,
 		@IProgressService private progressService: IProgressService,
 		@IInstantiationService private instantiationService: IInstantiationService,
+		@ITelemetryService private telemetryService: ITelemetryService,
 	) {
 		super();
+		this.telemetryService.publicLog('codeComments.openCreateThreadView', getCommentTelemetryData({ range: this.range }));
 		this.render();
 	}
 
@@ -56,11 +60,13 @@ export class CreateThreadView extends Disposable {
 	private createThread(content: string): void {
 		this.input.setEnabled(false);
 		const promise = this.codeCommentsService.createThread(this.file, this.range, content).then(thread => {
+			this.telemetryService.publicLog('codeComments.createThread', getCommentTelemetryData({ range: this.range, thread, content, error: false }));
 			if (this.disposed) {
 				return;
 			}
 			this.codeCommentsService.getModel(this.file).selectedThread = thread;
 		}, error => {
+			this.telemetryService.publicLog('codeComments.createThread', getCommentTelemetryData({ range: this.range, content, error: true }));
 			if (this.disposed) {
 				return;
 			}

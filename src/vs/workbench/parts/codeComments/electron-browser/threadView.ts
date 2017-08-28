@@ -25,6 +25,8 @@ import { IModeService } from 'vs/editor/common/services/modeService';
 import { editorActiveLinkForeground, editorBackground } from 'vs/platform/theme/common/colorRegistry';
 import { registerThemingParticipant } from 'vs/platform/theme/common/themeService';
 import { renderComment } from 'vs/workbench/parts/codeComments/browser/renderComment';
+import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
+import { getCommentTelemetryData } from 'vs/workbench/parts/codeComments/common/codeComments';
 
 /**
  * Renders the list of comments in a single thread.
@@ -46,8 +48,10 @@ export class ThreadView extends Disposable {
 		@IContextMenuService private contextMenuService: IContextMenuService,
 		@IOpenerService private openerService: IOpenerService,
 		@IModeService private modeService: IModeService,
+		@ITelemetryService private telemetryService: ITelemetryService,
 	) {
 		super();
+		this.telemetryService.publicLog('codeComments.viewThread', { codeComments: { commentCount: thread.comments.length } });
 		this._register(this.codeCommentsService.onCommentsDidChange(e => this.onCommentsDidChange(e)));
 		this.render();
 	}
@@ -99,7 +103,9 @@ export class ThreadView extends Disposable {
 		input.setEnabled(false);
 		const promise = this.codeCommentsService.replyToThread(modelUri, thread, content).then(() => {
 			// CommentsDidChange event has already been handled so we don't need to re-enable input or clear its content.
+			this.telemetryService.publicLog('codeComments.replyToThread', getCommentTelemetryData({ range: thread.range, thread, content, error: false }));
 		}, error => {
+			this.telemetryService.publicLog('codeComments.replyToThread', getCommentTelemetryData({ range: thread.range, thread, content, error: true }));
 			if (this.disposed) {
 				return;
 			}
