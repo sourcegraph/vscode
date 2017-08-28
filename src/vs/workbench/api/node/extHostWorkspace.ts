@@ -20,6 +20,8 @@ import { compare } from 'vs/base/common/strings';
 import { asWinJsPromise } from 'vs/base/common/async';
 import { Disposable } from 'vs/workbench/api/node/extHostTypes';
 import { TrieMap } from 'vs/base/common/map';
+import { CancellationTokenSource } from 'vs/base/common/cancellation';
+import { Progress } from 'vs/platform/progress/common/progress';
 import { IFileStat, IResolveFileOptions } from 'vs/platform/files/common/files';
 import { ICatalogFolder } from 'vs/platform/folders/common/folderCatalog';
 import { findContainingFolder } from 'vs/platform/folder/common/folderContainment';
@@ -213,33 +215,55 @@ export class ExtHostWorkspace implements ExtHostWorkspaceShape {
 
 	// --- EXPERIMENT: workspace resolver
 
-	private readonly _provider = new Map<number, vscode.FileSystemProvider>();
 
-	public registerFileSystemProvider(scheme: string, provider: vscode.FileSystemProvider): vscode.Disposable {
+	private _handlePool = 0;
+	private readonly _fsProvider = new Map<number, vscode.FileSystemProvider>();
+	private readonly _searchSession = new Map<number, CancellationTokenSource>();
 
-		const handle = this._provider.size;
-		this._provider.set(handle, provider);
+	registerFileSystemProvider(authority: string, provider: vscode.FileSystemProvider): vscode.Disposable {
+		const handle = ++this._handlePool;
+		this._fsProvider.set(handle, provider);
 		const reg = provider.onDidChange(e => this._proxy.$onFileSystemChange(handle, <URI>e));
-		this._proxy.$registerFileSystemProvider(handle, scheme);
+		this._proxy.$registerFileSystemProvider(handle, authority);
 		return new Disposable(() => {
-			this._provider.delete(handle);
+			this._fsProvider.delete(handle);
 			reg.dispose();
 		});
 	}
 
 	$resolveFileStat(handle: number, resource: URI, options: IResolveFileOptions | vscode.ResolveFileOptions): TPromise<IFileStat | null> {
-		const provider = this._provider.get(handle);
+		const provider = this._fsProvider.get(handle);
 		return asWinJsPromise(token => provider.resolveFile(resource, options as vscode.ResolveFileOptions) as TPromise<IFileStat>);
 	}
 
 	$resolveFile(handle: number, resource: URI): TPromise<string> {
-		const provider = this._provider.get(handle);
-		return asWinJsPromise(token => provider.resolveContent(resource));
+		const provider = this._fsProvider.get(handle);
+		return asWinJsPromise(token => provider.resolveContents(resource));
 	}
 
 	$storeFile(handle: number, resource: URI, content: string): TPromise<any> {
-		const provider = this._provider.get(handle);
+		const provider = this._fsProvider.get(handle);
 		return asWinJsPromise(token => provider.writeContents(resource, content));
+	}
+
+	$startSearch(handle: number, session: number, query: string): void {
+		const provider = this._fsProvider.get(handle);
+		const source = new CancellationTokenSource();
+		const progress = new Progress<any>(chunk => this._proxy.$updateSearchSession(session, chunk));
+
+		this._searchSession.set(session, source);
+		TPromise.wrap(provider.findFiles(query, progress, source.token)).then(() => {
+			this._proxy.$finishSearchSession(session);
+		}, err => {
+			this._proxy.$finishSearchSession(session, err);
+		});
+	}
+
+	$cancelSearch(handle: number, session: number): void {
+		if (this._searchSession.has(session)) {
+			this._searchSession.get(session).cancel();
+			this._searchSession.delete(session);
+		}
 	}
 
 	// resource resolver

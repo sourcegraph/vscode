@@ -103,7 +103,6 @@ import { WorkspaceEditingService } from 'vs/workbench/services/workspace/node/wo
 import URI from 'vs/base/common/uri';
 import { isWorkspaceIdentifier } from 'vs/platform/workspaces/common/workspaces';
 import { WorkspaceMigrationService } from 'vs/workbench/services/workspace/node/workspaceMigrationService';
-import { ISimpleFindWidgetService, SimpleFindWidgetService } from 'vs/editor/contrib/find/browser/simpleFindWidgetService';
 // tslint:disable-next-line:import-patterns
 import { ModalPart } from 'vs/workbench/parts/modal/modalPart';
 import { SourcegraphTelemetryService } from 'vs/platform/telemetry/common/sourcegraphTelemetryService';
@@ -659,7 +658,6 @@ export class Workbench implements IPartService {
 		this.toDispose.push(this.quickOpen);
 		this.toShutdown.push(this.quickOpen);
 		serviceCollection.set(IQuickOpenService, this.quickOpen);
-		serviceCollection.set(ISimpleFindWidgetService, this.instantiationService.createInstance(SimpleFindWidgetService));
 
 		// Contributed services
 		const contributedServices = getServices();

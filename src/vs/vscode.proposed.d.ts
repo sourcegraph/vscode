@@ -51,8 +51,12 @@ declare module 'vscode' {
 		 */
 		resolveFile(resource: Uri, options?: ResolveFileOptions): Thenable<FileStat | null>;
 
-		resolveContent(resource: Uri): string | Thenable<string>;
+		resolveContents(resource: Uri): string | Thenable<string>;
 		writeContents(resource: Uri, contents: string): void | Thenable<void>;
+
+		// -- search
+		// todo@joh - extract into its own provider?
+		findFiles(query: string, progress: Progress<Uri>, token?: CancellationToken): Thenable<void>;
 	}
 
 	/**
@@ -224,7 +228,7 @@ declare module 'vscode' {
 		 */
 		export function findContainingFolder(resource: Uri): Uri | undefined;
 
-		export function registerFileSystemProvider(scheme: string, provider: FileSystemProvider): Disposable;
+		export function registerFileSystemProvider(authority: string, provider: FileSystemProvider): Disposable;
 
 		/**
 		 * Registers a IResourceResolutionProvider for the given scheme (e.g. 'git+ssh').

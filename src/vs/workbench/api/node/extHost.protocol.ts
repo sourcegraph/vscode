@@ -308,8 +308,12 @@ export interface MainThreadWorkspaceShape extends IDisposable {
 	$cancelSearch(requestId: number): Thenable<boolean>;
 	$saveAll(includeUntitled?: boolean): Thenable<boolean>;
 	$applyWorkspaceEdit(edits: IResourceEdit[]): TPromise<boolean>;
-	$registerFileSystemProvider(handle: number, authority: string): void;
+
+	$registerFileSystemProvider(handle: number, scheme: string): void;
+	$unregisterFileSystemProvider(handle): void;
 	$onFileSystemChange(handle: number, resource: URI): void;
+	$updateSearchSession(session: number, data): void;
+	$finishSearchSession(session: number, err?: any): void;
 	$registerResourceResolutionProvider(handle: number, scheme: string): void;
 	$registerFolderCatalogProvider(handle: number, root: URI): void;
 }
@@ -377,6 +381,10 @@ export interface MainThreadCredentialsShape extends IDisposable {
 	$readSecret(service: string, account: string): Thenable<string | undefined>;
 	$writeSecret(service: string, account: string, secret: string): Thenable<void>;
 	$deleteSecret(service: string, account: string): Thenable<boolean>;
+}
+
+export interface MainThreadWindowShape extends IDisposable {
+	$getWindowVisibility(): TPromise<boolean>;
 }
 
 // -- extension host
@@ -455,6 +463,8 @@ export interface ExtHostWorkspaceShape {
 	$resolveFileStat(handle: number, resource: URI, options: IResolveFileOptions): TPromise<IFileStat | null>;
 	$resolveFile(handle: number, resource: URI): TPromise<string>;
 	$storeFile(handle: number, resource: URI, content: string): TPromise<any>;
+	$startSearch(handle: number, session: number, query: string): void;
+	$cancelSearch(handle: number, session: number): void;
 	$resolveResource(handle: number, resource: URI): TPromise<URI>;
 	$resolveFolder(handle: number, resource: URI): TPromise<ICatalogFolder>;
 	$searchFolders(handle: number, query: string): TPromise<ICatalogFolder[]>;
@@ -556,6 +566,10 @@ export interface ExtHostDebugServiceShape {
 export interface ExtHostCredentialsShape {
 }
 
+export interface ExtHostWindowShape {
+	$onDidChangeWindowFocus(value: boolean): void;
+}
+
 // --- proxy identifiers
 
 export const MainContext = {
@@ -584,6 +598,7 @@ export const MainContext = {
 	MainThreadSCM: createMainId<MainThreadSCMShape>('MainThreadSCM'),
 	MainThreadTask: createMainId<MainThreadTaskShape>('MainThreadTask'),
 	MainThreadCredentials: createMainId<MainThreadCredentialsShape>('MainThreadCredentials'),
+	MainThreadWindow: createMainId<MainThreadWindowShape>('MainThreadWindow'),
 };
 
 export const ExtHostContext = {
@@ -607,4 +622,5 @@ export const ExtHostContext = {
 	ExtHostTask: createExtId<ExtHostTaskShape>('ExtHostTask'),
 	ExtHostWorkspace: createExtId<ExtHostWorkspaceShape>('ExtHostWorkspace'),
 	ExtHostCredentials: createExtId<ExtHostCredentialsShape>('ExtHostCredentials'),
+	ExtHostWindow: createExtId<ExtHostWindowShape>('ExtHostWindow'),
 };

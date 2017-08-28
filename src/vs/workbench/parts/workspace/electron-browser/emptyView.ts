@@ -27,6 +27,7 @@ export class EmptyView extends CollapsibleView {
 	private openWorkspaceButton: Button;
 
 	constructor(
+		initialSize: number,
 		options: IViewletViewOptions,
 		@IThemeService private themeService: IThemeService,
 		@IInstantiationService private instantiationService: IInstantiationService,
@@ -34,7 +35,7 @@ export class EmptyView extends CollapsibleView {
 		@IContextMenuService contextMenuService: IContextMenuService,
 		@IWorkspaceContextService private contextService: IWorkspaceContextService,
 	) {
-		super({ ...(options as IViewOptions), sizing: ViewSizing.Flexible }, keybindingService, contextMenuService);
+		super(initialSize, { ...(options as IViewOptions), sizing: ViewSizing.Flexible }, keybindingService, contextMenuService);
 	}
 
 	public renderHeader(container: HTMLElement): void {

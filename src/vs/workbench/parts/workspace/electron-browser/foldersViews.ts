@@ -50,6 +50,7 @@ export abstract class FoldersListView extends CollapsibleView {
 	private disposables: IDisposable[] = [];
 
 	constructor(
+		initialSize: number,
 		private options: IViewletViewOptions,
 		@IKeybindingService keybindingService: IKeybindingService,
 		@IContextMenuService contextMenuService: IContextMenuService,
@@ -67,7 +68,7 @@ export abstract class FoldersListView extends CollapsibleView {
 		@IFoldersWorkbenchService protected catalogService: IFoldersWorkbenchService,
 		@IViewletService private viewletService: IViewletService,
 	) {
-		super({ ...(options as IViewOptions), ariaHeaderLabel: options.name, sizing: ViewSizing.Flexible, collapsed: !!options.collapsed, initialBodySize: 1 * 62 }, keybindingService, contextMenuService);
+		super(initialSize, { ...(options as IViewOptions), ariaHeaderLabel: options.name, sizing: ViewSizing.Flexible, collapsed: !!options.collapsed, initialBodySize: 1 * 62 }, keybindingService, contextMenuService);
 	}
 
 	renderHeader(container: HTMLElement): void {

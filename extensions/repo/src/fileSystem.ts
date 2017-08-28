@@ -84,7 +84,7 @@ export class RepoFileSystem implements vscode.FileSystemProvider, vscode.Disposa
 		);
 	}
 
-	resolveContent(resource: vscode.Uri): Thenable<string> {
+	resolveContents(resource: vscode.Uri): Thenable<string> {
 		const path = toRelativePath(this.root, resource);
 		if (!path) {
 			throw new Error(`repository ${this.root.toString()} does not contain resource ${resource.toString()}`);
@@ -94,6 +94,10 @@ export class RepoFileSystem implements vscode.FileSystemProvider, vscode.Disposa
 
 	writeContents(resource: vscode.Uri, value: string): void {
 		throw new Error('not implemented: RepoFileSystem writeContents');
+	}
+
+	findFiles(query: string, progress: vscode.Progress<vscode.Uri>, token?: vscode.CancellationToken): Thenable<void> {
+		throw new Error('findFiles not implemented');
 	}
 
 	dispose(): void {

@@ -438,13 +438,23 @@ export class WorkspaceServiceImpl extends WorkspaceService {
 				const workspaceConfigurationModel = this.workspaceConfiguration.workspaceConfigurationModel;
 				const workspaceId = (this.workspaceIdentifier as IWorkspaceIdentifier).id;
 				const workspaceName = getWorkspaceLabel({ id: workspaceId, configPath: this.workspaceConfigPath.fsPath }, this.environmentService);
-				this.workspace = new Workspace(workspaceId, workspaceName, workspaceConfigurationModel.folders, this.workspaceConfigPath);
+				this.workspace = new Workspace(workspaceId, workspaceName, this.parseWorkspaceFolders(workspaceConfigurationModel.folders), this.workspaceConfigPath);
 				if (this.workspace.roots.length) {
 					this.legacyWorkspace = new LegacyWorkspace(this.workspace.roots[0]);
 				}
 				this._register(this.workspaceConfiguration.onDidUpdateConfiguration(() => this.onWorkspaceConfigurationChanged()));
 				return null;
 			});
+	}
+
+	private parseWorkspaceFolders(configuredFolders: string[]): URI[] {
+		return configuredFolders.map(configuredFolder => {
+			if (paths.isAbsolute(configuredFolder)) {
+				return URI.file(configuredFolder);
+			}
+
+			return URI.file(paths.join(paths.dirname(this.workspaceConfigPath.fsPath), configuredFolder));
+		});
 	}
 
 	private registerWorkspaceConfigSchema(): void {
@@ -524,14 +534,14 @@ export class WorkspaceServiceImpl extends WorkspaceService {
 	}
 
 	private onWorkspaceConfigurationChanged(): void {
-		let configuredFolders = this.workspaceConfiguration.workspaceConfigurationModel.folders;
+		let configuredFolders = this.parseWorkspaceFolders(this.workspaceConfiguration.workspaceConfigurationModel.folders);
 		if (!configuredFolders) {
 			// This can occur when the configuration was read during a concurrent
 			// truncate/write operation. Ignore this; we will receive another file system
 			// event when the write finishes.
 			return;
 		}
-		const foldersChanged = !equals(this.workspace.roots, configuredFolders, (r1, r2) => r1.toString() === r2.toString());
+		const foldersChanged = !equals(this.workspace.roots, configuredFolders, (r1, r2) => r1.fsPath === r2.fsPath);
 		if (foldersChanged) { // TODO@Sandeep be smarter here about detecting changes
 			this.workspace.roots = configuredFolders;
 			this.onFoldersChanged()

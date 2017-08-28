@@ -156,11 +156,14 @@ export class Workspace implements vscode.Disposable {
 			resolveFile: (resource: vscode.Uri, options?: vscode.ResolveFileOptions): Thenable<vscode.FileStat | null> => {
 				return this.getRepository(resource)!.fileSystem.resolveFile(resource, options);
 			},
-			resolveContent: (resource: vscode.Uri): string | Thenable<string> => {
-				return this.getRepository(resource)!.fileSystem.resolveContent(resource);
+			resolveContents: (resource: vscode.Uri): string | Thenable<string> => {
+				return this.getRepository(resource)!.fileSystem.resolveContents(resource);
 			},
 			writeContents: (resource: vscode.Uri, value: string): void => {
 				this.getRepository(resource)!.fileSystem.writeContents(resource, value);
+			},
+			findFiles: (query: string, progress: vscode.Progress<vscode.Uri>, token?: vscode.CancellationToken): Thenable<void> => {
+				throw new Error('findFiles not implemented');
 			},
 		};
 		this.toDispose.push(vscode.workspace.registerFileSystemProvider(REPO_SCHEME, provider));
@@ -174,7 +177,7 @@ export class Workspace implements vscode.Disposable {
 		this.toDispose.push(vscode.workspace.registerTextDocumentContentProvider(REPO_VERSION_SCHEME, {
 			onDidChange: this.onDidFileSystemChange.event,
 			provideTextDocumentContent: (uri: vscode.Uri, token: vscode.CancellationToken): vscode.ProviderResult<string> => {
-				return this.getRepository(uri)!.fileSystem.resolveContent(uri);
+				return this.getRepository(uri)!.fileSystem.resolveContents(uri);
 			},
 		}));
 	}
