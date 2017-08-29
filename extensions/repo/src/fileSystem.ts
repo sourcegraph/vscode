@@ -97,7 +97,7 @@ export class RepoFileSystem implements vscode.FileSystemProvider, vscode.Disposa
 	}
 
 	findFiles(query: string, progress: vscode.Progress<vscode.Uri>, token?: vscode.CancellationToken): Thenable<void> {
-		throw new Error('findFiles not implemented');
+		return Promise.resolve();
 	}
 
 	dispose(): void {

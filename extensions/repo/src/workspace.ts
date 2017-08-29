@@ -165,7 +165,7 @@ export class Workspace implements vscode.Disposable {
 				this.getRepository(resource)!.fileSystem.writeContents(resource, value);
 			},
 			findFiles: (query: string, progress: vscode.Progress<vscode.Uri>, token?: vscode.CancellationToken): Thenable<void> => {
-				throw new Error('findFiles not implemented');
+				return Promise.resolve();
 			},
 		};
 		this.toDispose.push(vscode.workspace.registerFileSystemProvider(REPO_SCHEME, provider));
