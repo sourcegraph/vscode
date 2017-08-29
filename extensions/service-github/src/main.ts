@@ -6,6 +6,9 @@
 
 import * as vscode from 'vscode';
 import { requestGraphQL } from './util';
+import * as nls from 'vscode-nls';
+
+const localize = nls.loadMessageBundle();
 
 const GITHUB_SCHEME = 'github';
 
@@ -25,7 +28,7 @@ query($id: ID!) {
 				if (!node) {
 					throw new Error(`GitHub repository not found: '${resource.toString()}'`);
 				}
-				return vscode.Uri.parse(`git+https://github.com/${node.nameWithOwner}.git`);
+				return vscode.Uri.parse(`git+ssh://git@github.com/${node.nameWithOwner}.git`);
 			});
 		},
 	}));
@@ -67,7 +70,12 @@ query($id: ID!) {
 				return toCatalogFolder(node);
 			});
 		},
-		search(query: string): Thenable<vscode.CatalogFolder[]> {
+		async search(query: string): Promise<vscode.CatalogFolder[]> {
+			const ok = await checkGitHubToken();
+			if (!ok) {
+				return [];
+			}
+
 			let request: Thenable<any>;
 			if (query) {
 				request = requestGraphQL(`
@@ -100,6 +108,46 @@ query {
 			});
 		},
 	}));
+}
+
+/**
+ * Checks if the user has a GitHub token configured. If not, it walks them through
+ * creating and configuring one.
+ */
+async function checkGitHubToken(): Promise<boolean> {
+	const hasToken = vscode.workspace.getConfiguration('github').get<string>('token');
+	if (hasToken) {
+		return true;
+	}
+
+	// Close quickopen so the user sees our message.
+	await vscode.commands.executeCommand('workbench.action.closeMessages');
+
+	const createTokenItem: vscode.MessageItem = { title: localize('createToken', "Create Token on GitHub.com") };
+	const enterTokenItem: vscode.MessageItem = { title: localize('enterToken', "Enter Token") };
+	const cancelItem: vscode.MessageItem = { title: localize('cancel', "Cancel"), isCloseAffordance: true };
+	const value = await vscode.window.showInformationMessage(
+		localize('noGitHubToken', "Must enter GitHub token"),
+		{ modal: false },
+		createTokenItem, enterTokenItem, cancelItem,
+	);
+	if (value === createTokenItem) {
+		await vscode.commands.executeCommand('vscode.open', vscode.Uri.parse('https://github.com/settings/tokens/new'));
+	} else if (value === cancelItem) {
+		return false;
+	}
+
+	const token = await vscode.window.showInputBox({
+		prompt: localize('tokenPrompt', "GitHub Personal Access Token"),
+		ignoreFocusOut: true,
+	});
+	if (token) {
+		// TODO(sqs): There is currently an upstream bug that makes this add the setting to your workspace
+		// folder config, not your user settings.
+		await vscode.workspace.getConfiguration('github').update('token', token, vscode.ConfigurationTarget.Global);
+		return true;
+	}
+	return false;
 }
 
 function toCatalogFolder(repo: {
