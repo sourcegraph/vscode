@@ -157,7 +157,7 @@ export class WorkspacesMainService implements IWorkspacesMainService {
 		const untitledWorkspaceConfigPath = join(untitledWorkspaceConfigFolder, UNTITLED_WORKSPACE_NAME);
 
 		const storedWorkspace: IStoredWorkspace = {
-			folders: folders.map(folder => ({
+			folders: (folders || []).map(folder => ({
 				path: folder
 			}))
 		};
