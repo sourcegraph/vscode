@@ -797,5 +797,6 @@ export const SUPPORTED_ENCODINGS: { [encoding: string]: { labelLong: string; lab
 export enum FileKind {
 	FILE,
 	FOLDER,
+	REPOSITORY,
 	ROOT_FOLDER
 }

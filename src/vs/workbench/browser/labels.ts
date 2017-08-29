@@ -219,12 +219,9 @@ export function getIconClasses(modelService: IModelService, modeService: IModeSe
 	// we always set these base classes even if we do not have a path
 	let classes: string[];
 	if (fileKind === FileKind.ROOT_FOLDER) {
-		// TODO icons for private, fork
-		if (resource.scheme === 'repo') {
-			classes = ['repo-icon'];
-		} else {
-			classes = ['rootfolder-icon'];
-		}
+		classes = ['rootfolder-icon'];
+	} else if (fileKind === FileKind.REPOSITORY) {
+		classes = ['repo-icon']; // TODO(sqs): icons for private, fork, mirror, etc.
 	} else if (fileKind === FileKind.FOLDER) {
 		classes = ['folder-icon'];
 	} else {

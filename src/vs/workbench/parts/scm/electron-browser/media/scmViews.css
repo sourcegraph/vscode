@@ -1,0 +1,36 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Sourcegraph. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.scm-viewlet {
+	height: 100%;
+}
+
+.scm-viewlet .repositories-list > .monaco-tree .monaco-tree-row .content {
+	display: flex;
+	margin-top: 5.5px;
+}
+
+.scm-viewlet .repositories-list > .monaco-tree .monaco-tree-row .header {
+	flex: 1;
+	display: flex;
+	justify-content: flex-start;
+}
+
+.scm-viewlet .repositories-list .monaco-action-bar {
+	margin-left: 6px;
+	margin-top: -2px;
+}
+
+.scm-viewlet .repositories-list .monaco-tree-row .content:not(.dirty) .monaco-count-badge {
+	display: none;
+}
+
+.scm-viewlet .repositories-list .monaco-tree-row .badge {
+	margin-top: -2px;
+}
+
+.scm-viewlet .repositories-list .monaco-tree-row .monaco-count-badge {
+	margin-right: 12px;
+}

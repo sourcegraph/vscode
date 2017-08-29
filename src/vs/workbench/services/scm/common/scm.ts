@@ -144,14 +144,6 @@ export interface ISCMService {
 
 	registerSCMProvider(provider: ISCMProvider): ISCMRepository;
 
-	// NOTE(sqs): Re: getProviderForResource API: I don't know the vscode team will
-	// implement multi-root support for SCM providers, but this is my best attempt at the
-	// simplest API and one that we can easily fold into the upstream API when it's ready.
-	//
-	// Monitor https://github.com/Microsoft/vscode/issues/28344 and
-	// https://github.com/Microsoft/vscode/compare/master...joaomoreno:scm-multiroot for
-	// upstream updates.
-
 	/**
 	 * Returns the SCM repository provider for the given resource (by traversing up the
 	 * directory hierarchy until we reach an SCM provider's root folder). Can be undefined

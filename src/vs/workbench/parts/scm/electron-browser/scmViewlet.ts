@@ -17,7 +17,7 @@ import { append, $, toggleClass, trackFocus } from 'vs/base/browser/dom';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { List } from 'vs/base/browser/ui/list/listWidget';
 import { IDelegate, IRenderer, IListContextMenuEvent } from 'vs/base/browser/ui/list/list';
-import { VIEWLET_ID } from 'vs/workbench/parts/scm/common/scm';
+import { VIEWLET_ID, SCMViewletActiveRepositoryContext } from 'vs/workbench/parts/scm/common/scm';
 import { FileLabel } from 'vs/workbench/browser/labels';
 import { CountBadge } from 'vs/base/browser/ui/countBadge/countBadge';
 import { ISCMService, ISCMRepository, ISCMResourceGroup, ISCMResource } from 'vs/workbench/services/scm/common/scm';
@@ -25,7 +25,7 @@ import { IEditorGroupService } from 'vs/workbench/services/group/common/groupSer
 import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { IContextViewService, IContextMenuService } from 'vs/platform/contextview/browser/contextView';
-import { IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
+import { IContextKeyService, ContextKeyExpr } from 'vs/platform/contextkey/common/contextkey';
 import { ICommandService } from 'vs/platform/commands/common/commands';
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { IMessageService } from 'vs/platform/message/common/message';
@@ -52,6 +52,7 @@ import * as platform from 'vs/base/common/platform';
 import { domEvent } from 'vs/base/browser/event';
 import { StandardKeyboardEvent } from 'vs/base/browser/keyboardEvent';
 import { KeyMod, KeyCode } from 'vs/base/common/keyCodes';
+import { OpenRepositoriesView } from './views/openRepositoriesView';
 
 // TODO@Joao
 // Need to subclass MenuItemActionItem in order to respect
@@ -239,6 +240,7 @@ class SourceControlViewDescriptor implements IViewDescriptor {
 	get id(): string { return this._repository.provider.id; }
 	get name(): string { return this._repository.provider.label; }
 	get ctor(): any { return null; }
+	get when(): ContextKeyExpr { return SCMViewletActiveRepositoryContext.isEqualTo(this._repository.provider.id); }
 	get location(): ViewLocation { return ViewLocation.SCM; }
 
 	constructor(private _repository: ISCMRepository) { }
@@ -501,6 +503,19 @@ export class SCMViewlet extends PersistentViewsViewlet {
 	) {
 		super(VIEWLET_ID, ViewLocation.SCM, 'scm', true,
 			telemetryService, storageService, instantiationService, themeService, contextService, contextKeyService, contextMenuService, extensionService);
+
+		this.registerViews();
+	}
+
+	private registerViews(): void {
+		const openRepositoriesListViewDescriptor: IViewDescriptor = {
+			id: OpenRepositoriesView.ID,
+			name: OpenRepositoriesView.NAME,
+			location: ViewLocation.SCM,
+			ctor: OpenRepositoriesView,
+			size: 50,
+		};
+		ViewsRegistry.registerViews([openRepositoriesListViewDescriptor]);
 	}
 
 	private onDidAddRepository(repository: ISCMRepository): void {

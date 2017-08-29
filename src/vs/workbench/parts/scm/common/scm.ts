@@ -5,4 +5,8 @@
 
 'use strict';
 
+import { RawContextKey } from 'vs/platform/contextkey/common/contextkey';
+
 export const VIEWLET_ID = 'workbench.view.scm';
+
+export const SCMViewletActiveRepositoryContext = new RawContextKey<string>('scmViewletActiveRepository', undefined);
