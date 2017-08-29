@@ -312,6 +312,11 @@ export class ModesContentHoverWidget extends ContentHoverWidget {
 				msg.contents
 					.filter(contents => !isEmptyMarkdownString(contents))
 					.forEach(contents => {
+						// HACK: fix issue where hovers with code were not being tokenized
+						if (contents['language'] && contents['language'] !== 'markdown') {
+							contents.value = '```' + contents['language'] + '\n' + contents.value + '\n```';
+						}
+
 						const renderedContents = renderMarkdown(contents, {
 							actionCallback: (content) => {
 								this._openerService.open(URI.parse(content)).then(void 0, onUnexpectedError);
