@@ -52,7 +52,7 @@
         "url": "vscode://schemas/workspaceConfig"
       },
       {
-        "fileMatch": "**/*.src-workspace",
+        "fileMatch": "**/*.code-workspace",
         "url": "vscode://schemas/workspaceConfig"
       },
       {

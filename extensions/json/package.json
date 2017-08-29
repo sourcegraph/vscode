@@ -34,7 +34,7 @@
           ".eslintrc",
           ".babelrc",
           ".webmanifest",
-          ".src-workspace"
+          ".code-workspace"
         ],
         "mimetypes": [
           "application/json",

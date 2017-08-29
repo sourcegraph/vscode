@@ -18,8 +18,8 @@ import { tildify, getPathLabel } from 'vs/base/common/labels';
 export const IWorkspacesMainService = createDecorator<IWorkspacesMainService>('workspacesMainService');
 export const IWorkspacesService = createDecorator<IWorkspacesService>('workspacesService');
 
-export const WORKSPACE_EXTENSION = 'src-workspace';
-export const WORKSPACE_FILTER = [{ name: localize('srcWorkspace', "Workspace"), extensions: [WORKSPACE_EXTENSION] }];
+export const WORKSPACE_EXTENSION = 'code-workspace';
+export const WORKSPACE_FILTER = [{ name: localize('codeWorkspace', "Code Workspace"), extensions: [WORKSPACE_EXTENSION] }];
 export const UNTITLED_WORKSPACE_NAME = 'workspace.json';
 
 /**

@@ -17,7 +17,6 @@ import { WorkspacesMainService } from 'vs/platform/workspaces/electron-main/work
 import { IStoredWorkspace, WORKSPACE_EXTENSION, IWorkspaceSavedEvent, IWorkspaceIdentifier } from 'vs/platform/workspaces/common/workspaces';
 import { LogMainService } from 'vs/platform/log/common/log';
 import URI from 'vs/base/common/uri';
-import * as json from 'vs/base/common/json';
 
 suite('WorkspacesMainService', () => {
 	const parentDir = path.join(os.tmpdir(), 'vsctests', 'service');
@@ -65,7 +64,7 @@ suite('WorkspacesMainService', () => {
 			assert.ok(fs.existsSync(workspace.configPath));
 			assert.ok(service.isUntitledWorkspace(workspace));
 
-			const ws = json.parse(fs.readFileSync(workspace.configPath).toString()) as IStoredWorkspace;
+			const ws = JSON.parse(fs.readFileSync(workspace.configPath).toString()) as IStoredWorkspace;
 			assert.equal(ws.folders.length, 0);
 
 			done();
@@ -78,8 +77,8 @@ suite('WorkspacesMainService', () => {
 			assert.ok(fs.existsSync(workspace.configPath));
 			assert.ok(service.isUntitledWorkspace(workspace));
 
-			const ws = json.parse(fs.readFileSync(workspace.configPath).toString()) as IStoredWorkspace;
-			assert.equal(ws.folders.length, 2); //
+			const ws = JSON.parse(fs.readFileSync(workspace.configPath).toString()) as IStoredWorkspace;
+			assert.equal(ws.folders.length, 2);
 			assert.equal(ws.folders[0].path, process.cwd());
 			assert.equal(ws.folders[1].path, os.tmpdir());
 
@@ -93,7 +92,7 @@ suite('WorkspacesMainService', () => {
 		assert.ok(fs.existsSync(workspace.configPath));
 		assert.ok(service.isUntitledWorkspace(workspace));
 
-		const ws = json.parse(fs.readFileSync(workspace.configPath).toString()) as IStoredWorkspace;
+		const ws = JSON.parse(fs.readFileSync(workspace.configPath).toString()) as IStoredWorkspace;
 		assert.equal(ws.folders.length, 0); //
 	});
 
@@ -103,7 +102,7 @@ suite('WorkspacesMainService', () => {
 		assert.ok(fs.existsSync(workspace.configPath));
 		assert.ok(service.isUntitledWorkspace(workspace));
 
-		const ws = json.parse(fs.readFileSync(workspace.configPath).toString()) as IStoredWorkspace;
+		const ws = JSON.parse(fs.readFileSync(workspace.configPath).toString()) as IStoredWorkspace;
 		assert.equal(ws.folders.length, 2); //
 		assert.equal(ws.folders[0].path, process.cwd());
 		assert.equal(ws.folders[1].path, os.tmpdir());
@@ -222,7 +221,7 @@ suite('WorkspacesMainService', () => {
 
 				assert.equal(service.deleteWorkspaceCall, workspace);
 
-				const ws = json.parse(fs.readFileSync(savedWorkspace.configPath).toString()) as IStoredWorkspace;
+				const ws = JSON.parse(fs.readFileSync(savedWorkspace.configPath).toString()) as IStoredWorkspace;
 				assert.equal(ws.folders.length, 3);
 				assert.equal(ws.folders[0].path, process.cwd()); // absolute
 				assert.equal(ws.folders[1].path, '.'); // relative
@@ -254,7 +253,7 @@ suite('WorkspacesMainService', () => {
 					assert.notEqual(newSavedWorkspace.id, workspace.id);
 					assert.equal(newSavedWorkspace.configPath, newWorkspaceConfigPath);
 
-					const ws = json.parse(fs.readFileSync(newSavedWorkspace.configPath).toString()) as IStoredWorkspace;
+					const ws = JSON.parse(fs.readFileSync(newSavedWorkspace.configPath).toString()) as IStoredWorkspace;
 					assert.equal(ws.folders.length, 3);
 					assert.equal(ws.folders[0].path, process.cwd()); // absolute path because outside of tmpdir
 					assert.equal(ws.folders[1].path, '.'); // relative path because inside of tmpdir

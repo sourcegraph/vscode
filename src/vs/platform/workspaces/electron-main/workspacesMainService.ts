@@ -18,8 +18,6 @@ import Event, { Emitter } from 'vs/base/common/event';
 import { ILogService } from 'vs/platform/log/common/log';
 import { isEqual, isEqualOrParent } from 'vs/base/common/paths';
 import { coalesce } from 'vs/base/common/arrays';
-import { localize } from 'vs/nls';
-import * as json from 'vs/base/common/json';
 import { createHash } from 'crypto';
 import URI from 'vs/base/common/uri';
 
@@ -84,7 +82,7 @@ export class WorkspacesMainService implements IWorkspacesMainService {
 			const legacyStoredWorkspace = (<any>workspace) as ILegacyStoredWorkspace;
 			if (legacyStoredWorkspace.folders.some(folder => typeof folder === 'string')) {
 				workspace.folders = legacyStoredWorkspace.folders.map(folder => ({ path: URI.parse(folder).fsPath }));
-				writeFileSync(path, stringifyWorkspace(workspace));
+				writeFileSync(path, JSON.stringify(workspace, null, '\t'));
 			}
 
 			// relative paths get resolved against the workspace location
@@ -111,7 +109,7 @@ export class WorkspacesMainService implements IWorkspacesMainService {
 		// Parse workspace file
 		let storedWorkspace: IStoredWorkspace;
 		try {
-			storedWorkspace = json.parse(contents); // use fault tolerant parser
+			storedWorkspace = JSON.parse(contents);
 		} catch (error) {
 			throw new Error(`${path} cannot be parsed as JSON file (${error}).`);
 		}
@@ -137,7 +135,7 @@ export class WorkspacesMainService implements IWorkspacesMainService {
 		const { workspace, configParent, storedWorkspace } = this.createUntitledWorkspace(folders);
 
 		return mkdirp(configParent).then(() => {
-			return writeFile(workspace.configPath, stringifyWorkspace(storedWorkspace)).then(() => workspace);
+			return writeFile(workspace.configPath, JSON.stringify(storedWorkspace, null, '\t')).then(() => workspace);
 		});
 	}
 
@@ -150,7 +148,7 @@ export class WorkspacesMainService implements IWorkspacesMainService {
 
 		mkdirSync(configParent);
 
-		writeFileSync(workspace.configPath, stringifyWorkspace(storedWorkspace));
+		writeFileSync(workspace.configPath, JSON.stringify(storedWorkspace, null, '\t'));
 
 		return workspace;
 	}
@@ -220,7 +218,7 @@ export class WorkspacesMainService implements IWorkspacesMainService {
 				}
 			});
 
-			return writeFile(targetConfigPath, stringifyWorkspace(storedWorkspace)).then(() => {
+			return writeFile(targetConfigPath, JSON.stringify(storedWorkspace, null, '\t')).then(() => {
 				const savedWorkspaceIdentifier = { id: this.getWorkspaceId(targetConfigPath), configPath: targetConfigPath };
 
 				// Event
@@ -275,12 +273,4 @@ export class WorkspacesMainService implements IWorkspacesMainService {
 
 		return untitledWorkspaces;
 	}
-}
-
-function stringifyWorkspace(storedWorkspace: IStoredWorkspace): string {
-	const header = localize('srcWorkspaceHeader', `This is a Sourcegraph workspace that defines a set of related repositories
-and associated configuration.
-
-To open it, you must first download Sourcegraph at https://about.sourcegraph.com/beta/201708.`).split('\n').map(s => '// ' + s + '\n').join('');
-	return header + JSON.stringify(storedWorkspace, null, '\t');
 }

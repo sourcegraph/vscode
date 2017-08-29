@@ -12,7 +12,7 @@ const path = require('path');
 const mkdirp = require('mkdirp');
 
 const testDataPath = path.join(process.cwd(), 'test_data');
-const codeWorkspacePath = path.join(testDataPath, 'smoketest.src-workspace');
+const codeWorkspacePath = path.join(testDataPath, 'smoketest.code-workspace');
 const testRepoUrl = 'https://github.com/Microsoft/vscode-smoketest-express';
 const testRepoLocalDir = path.join(testDataPath, 'vscode-smoketest-express');
 const keybindingsUrl = 'https://raw.githubusercontent.com/Microsoft/vscode-docs/master/scripts/keybindings';
