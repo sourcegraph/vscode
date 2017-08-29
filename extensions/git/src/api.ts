@@ -17,6 +17,7 @@ export interface IExecutionResult {
 export interface IGitExtension {
 	git: {
 		clone(url: string, parentPath: string): Thenable<string>;
+		getRepositoryRoot(path: string): Thenable<string>;
 		exec(cwd: string, args: string[], options?: any): Thenable<IExecutionResult>;
 	};
 }

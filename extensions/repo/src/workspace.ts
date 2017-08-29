@@ -6,6 +6,8 @@
 'use strict';
 
 import * as vscode from 'vscode';
+import * as path from 'path';
+import * as os from 'os';
 import { GitRepository } from './git';
 import { isRepoResource, REPO_SCHEME, REPO_VERSION_SCHEME } from './repository';
 import { toRelativePath } from './util';
@@ -196,8 +198,18 @@ export class Workspace implements vscode.Disposable {
 					resource = resource.with({ scheme: resource.scheme.replace(/^git\+/, '') });
 				}
 
-				const path = await gitExtension.git.clone(resource.toString(), '/tmp');
-				return vscode.Uri.file(path);
+				// Clone repo, or use existing repo if it has already been cloned.
+				const parentPath = os.tmpdir();
+				try {
+					const path = await gitExtension.git.clone(resource.toString(), parentPath);
+					return vscode.Uri.file(path);
+				} catch (err) {
+					const folderName = decodeURI(resource.toString()).replace(/^.*\//, '').replace(/\.git$/, '') || 'repository'; // copied from git extension
+					const folderPath = path.join(parentPath, folderName);
+					return gitExtension.git.getRepositoryRoot(folderPath).then(repositoryRoot => {
+						return vscode.Uri.file(repositoryRoot);
+					});
+				}
 			},
 		};
 
