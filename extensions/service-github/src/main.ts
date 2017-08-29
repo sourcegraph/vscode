@@ -28,7 +28,7 @@ query($id: ID!) {
 				if (!node) {
 					throw new Error(`GitHub repository not found: '${resource.toString()}'`);
 				}
-				return vscode.Uri.parse(`git+https://github.com/${node.nameWithOwner}.git`);
+				return vscode.Uri.parse(`git+ssh://git@github.com/${node.nameWithOwner}.git`);
 			});
 		},
 	}));
