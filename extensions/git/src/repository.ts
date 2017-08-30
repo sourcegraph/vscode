@@ -817,9 +817,18 @@ export class Repository implements Disposable {
 			case RepositoryState.Disposed: stateContextKey = 'norepo'; break;
 		}
 
-		this._sourceControl.remoteResources = remotes.map(remote => Uri.parse(remote.url));
+		this._sourceControl.remoteResources = remotes.map(remote => this.parseRemote(remote.url));
 
 		this._onDidChangeStatus.fire();
+	}
+
+	private parseRemote(remote: string): Uri {
+		// Convert ssh short syntax (e.g. user@company.com:foo/bar) to a valid URI.
+		const sshMatch = remote.match(/^([^/@:]+@)?([^:/]+):([^/].*)$/);
+		if (sshMatch) {
+			remote = `ssh://${sshMatch[1]}${sshMatch[2]}/${sshMatch[3]}`;
+		}
+		return Uri.parse(remote);
 	}
 
 	private onFSChange(uri: Uri): void {
