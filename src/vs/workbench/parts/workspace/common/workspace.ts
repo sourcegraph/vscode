@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 'use strict';
 
+import URI from 'vs/base/common/uri';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { IViewlet } from 'vs/workbench/common/viewlet';
 import Event from 'vs/base/common/event';
@@ -110,4 +111,10 @@ export interface IFoldersWorkbenchService {
 	 * so that it can update the UI to reflect the operation.
 	 */
 	monitorFolderOperation(folder: IFolder, operation: FolderOperation, promise: TPromise<any>): void;
+
+	/**
+	 * Returns the workspace root folder, if any, that is the local clone of
+	 * the remote catalog folder.
+	 */
+	getWorkspaceFolderForCatalogFolder(catalogFolder: IFolder): URI | undefined;
 }
