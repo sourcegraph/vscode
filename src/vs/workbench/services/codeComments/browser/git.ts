@@ -171,7 +171,7 @@ export class Git {
 	}
 }
 
-interface IAuthConfiguration {
+export interface IAuthConfiguration {
 	auth?: {
 		displayName?: string;
 		email?: string;

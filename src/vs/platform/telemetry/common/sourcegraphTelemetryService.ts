@@ -18,6 +18,7 @@ import { IEditorInput } from 'vs/platform/editor/common/editor';
 import { IFileEditorInput } from 'vs/workbench/common/editor';
 // tslint:disable-next-line
 import { EditorPart } from 'vs/workbench/browser/parts/editor/editorPart';
+import { IAuthConfiguration } from 'vs/workbench/services/codeComments/browser/git';
 
 const CLEANUP_INDICATOR_STRING = '$DATA_REMOVED';
 
@@ -71,6 +72,19 @@ export class SourcegraphTelemetryService extends TelemetryService implements ITe
 				}
 				return undefined;
 			});
+
+			// TODO(Dan) determine if we should remove this section before launch, we
+			// will replace with sourcegraph accounts
+			const config = this._configurationService.getConfiguration<IAuthConfiguration>();
+			if (config) {
+				console.log(config.auth);
+			}
+			if (config && config.auth && config.auth.displayName) {
+				data.native.git_auth_displayName = config.auth.displayName;
+			}
+			if (config && config.auth && config.auth.email) {
+				data.native.git_auth_email = config.auth.email;
+			}
 
 			this._appender.log(eventName, data);
 
