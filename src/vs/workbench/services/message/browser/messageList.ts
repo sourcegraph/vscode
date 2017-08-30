@@ -281,6 +281,8 @@ export class MessageList {
 	}
 
 	private renderMessage(message: IMessageEntry, container: Builder, total: number, delta: number): void {
+		this.telemetryService.publicLog('MessageRendered', { message: { severity: message.severity, text: message.text } });
+
 		container.li({ class: 'message-list-entry message-list-entry-with-action' }, li => {
 
 			// Actions (if none provided, add one default action to hide message)
