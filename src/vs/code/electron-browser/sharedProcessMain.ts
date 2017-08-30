@@ -29,6 +29,7 @@ import { combinedAppender, NullTelemetryService } from 'vs/platform/telemetry/co
 import { resolveCommonProperties, machineIdStorageKey } from 'vs/platform/telemetry/node/commonProperties';
 import { TelemetryAppenderChannel } from 'vs/platform/telemetry/common/telemetryIpc';
 import { ITelemetryServiceConfig } from 'vs/platform/telemetry/common/telemetryService';
+import { AppInsightsAppender } from 'vs/platform/telemetry/node/appInsightsAppender';
 import { SourcegraphTelemetryService } from 'vs/platform/telemetry/common/sourcegraphTelemetryService';
 import { IChoiceService } from 'vs/platform/message/common/message';
 import { ChoiceChannelClient } from 'vs/platform/message/common/messageIpc';
@@ -67,6 +68,8 @@ class ActiveWindowManager implements IDisposable {
 	}
 }
 
+const eventPrefix = 'monacoworkbench';
+
 function main(server: Server, initData: ISharedProcessInitData): void {
 	const services = new ServiceCollection();
 
@@ -87,14 +90,19 @@ function main(server: Server, initData: ISharedProcessInitData): void {
 	const instantiationService = new InstantiationService(services);
 
 	instantiationService.invokeFunction(accessor => {
-		const appenders = [instantiationService.createInstance(SourcegraphEventLogger, WindowLevel.SharedProcess)];
+		const appenders: AppInsightsAppender[] = [];
+
+		appenders.push(instantiationService.createInstance(SourcegraphEventLogger, WindowLevel.SharedProcess));
+		if (product.aiConfig && product.aiConfig.asimovKey) {
+			appenders.push(new AppInsightsAppender(eventPrefix, null, product.aiConfig.asimovKey));
+		}
 
 		// It is important to dispose the AI adapter properly because
 		// only then they flush remaining data.
 		process.once('exit', () => appenders.forEach(a => a.dispose()));
 
 		const appender = combinedAppender(...appenders);
-		server.registerChannel('sourcegraphTelemetryAppender', new TelemetryAppenderChannel(appender));
+		server.registerChannel('telemetryAppender', new TelemetryAppenderChannel(appender));
 
 		const services = new ServiceCollection();
 		const { appRoot, extensionsPath, extensionDevelopmentPath, isBuilt, extensionTestsPath } = accessor.get(IEnvironmentService);

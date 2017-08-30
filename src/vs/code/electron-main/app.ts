@@ -293,7 +293,7 @@ export class CodeApplication {
 
 		// Telemtry
 		if (this.environmentService.eventLogDebug || (this.environmentService.isBuilt && !this.environmentService.isExtensionDevelopment && !!product.enableTelemetry)) {
-			const channel = getDelayedChannel<ITelemetryAppenderChannel>(this.sharedProcessClient.then(c => c.getChannel('sourcegraphTelemetryAppender')));
+			const channel = getDelayedChannel<ITelemetryAppenderChannel>(this.sharedProcessClient.then(c => c.getChannel('telemetryAppender')));
 			const appender = new TelemetryAppenderClient(channel, WindowLevel.Main);
 			const commonProperties = resolveCommonProperties(product.commit, pkg.version)
 				.then(result => Object.defineProperty(result, 'common.machineId', {
