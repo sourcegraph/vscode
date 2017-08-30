@@ -25,6 +25,7 @@ class FakeSCMProvider implements ISCMProvider {
 	readonly acceptInputCommand?: any;
 	readonly statusBarCommands?: any;
 	readonly setRevisionCommand?: any;
+	readonly remoteResources?: any;
 
 	/**
 	 * Test cases can set the output for executeCommand.

@@ -337,6 +337,7 @@ export interface SCMProviderFeatures {
 	statusBarCommands?: modes.Command[];
 	setRevisionCommand?: modes.Command;
 	revision?: ISCMRevision;
+	remoteResources?: URI[];
 }
 
 export interface SCMGroupFeatures {

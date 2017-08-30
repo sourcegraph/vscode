@@ -325,6 +325,15 @@ declare module 'vscode' {
 		 */
 		setRevisionCommand?: Command;
 
+		/**
+		 * A list of remote resources that this provider's repository represents. If there are
+		 * multiple, then the first element should be the primary remote resource. It is used to
+		 * map a local resource to a remote resource.
+		 *
+		 * For example, for a Git repository, this is the list of Git remote URLs.
+		 */
+		remoteResources?: Uri[];
+
 		commandExecutor?: CommandExecutor;
 	}
 

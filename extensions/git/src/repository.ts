@@ -817,6 +817,8 @@ export class Repository implements Disposable {
 			case RepositoryState.Disposed: stateContextKey = 'norepo'; break;
 		}
 
+		this._sourceControl.remoteResources = remotes.map(remote => Uri.parse(remote.url));
+
 		this._onDidChangeStatus.fire();
 	}
 

@@ -257,6 +257,17 @@ class ExtHostSourceControl implements vscode.SourceControl {
 		this._proxy.$updateSourceControl(this._handle, { setRevisionCommand: internal });
 	}
 
+	private _remoteResources: vscode.Uri[] | undefined = undefined;
+
+	get remoteResources(): vscode.Uri[] | undefined {
+		return this._remoteResources;
+	}
+
+	set remoteResources(resources: vscode.Uri[] | undefined) {
+		this._remoteResources = resources;
+
+		this._proxy.$updateSourceControl(this._handle, { remoteResources: resources as URI[] });
+	}
 
 	private _handle: number = ExtHostSourceControl._handlePool++;
 
