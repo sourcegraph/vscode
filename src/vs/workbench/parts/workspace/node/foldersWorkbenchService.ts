@@ -19,6 +19,7 @@ import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace
 import { IEditorGroupService } from 'vs/workbench/services/group/common/groupService';
 import { IFolderContainmentService } from 'vs/platform/folder/common/folderContainment';
 import { IFolderCatalogService, ICatalogFolder, FolderGenericIconClass } from 'vs/platform/folders/common/folderCatalog';
+import { ISCMService } from 'vs/workbench/services/scm/common/scm';
 
 interface IWorkspaceFolderStateProvider {
 	(folder: Folder): WorkspaceFolderState;
@@ -198,6 +199,7 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 		@IEditorGroupService private editorGroupService: IEditorGroupService,
 		@IFolderContainmentService private folderContainmentService: IFolderContainmentService,
 		@IFolderCatalogService private folderCatalogService: IFolderCatalogService,
+		@ISCMService private scmService: ISCMService,
 	) {
 		this.stateProvider = folder => this.getFolderState(folder);
 
@@ -311,6 +313,7 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 		return TPromise.join(folders.filter(folder => !folder.catalog).map(folder => {
 			return this.folderCatalogService.resolveFolder(folder.resource)
 				.then(result => {
+					console.log('RESULT', result);
 					if (!folder.catalog && result) {
 						folder.catalog = result;
 					}
@@ -353,25 +356,47 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 		promise.done(onDone, onDone);
 	}
 
+	private getRemoteResourcesForWorkspaceFolders(): URI[] {
+		if (!this.contextService.hasWorkspace()) {
+			return [];
+		}
+
+		const remoteResources: URI[] = [];
+		for (const root of this.contextService.getWorkspace().roots) {
+			const provider = this.scmService.getProviderForResource(root);
+			if (provider && provider.remoteResources) {
+				for (const remoteResource of provider.remoteResources) {
+					remoteResources.push(remoteResource);
+				}
+			}
+		}
+
+		return remoteResources;
+	}
+
 	private getFolderState(folder: Folder): WorkspaceFolderState {
 
-		// TODO(sqs): hack, actually map local folder <-> clone url
-		const isMaybeHackilyAdding = this.adding.some(op => op.folder.displayPath === folder.displayPath);
-		if (this.adding.some(op => op.folder.id === folder.id) || isMaybeHackilyAdding) {
+		if (this.adding.some(op => op.folder.id === folder.id)) {
 			return WorkspaceFolderState.Adding;
 		}
 
-		// TODO(sqs): hack, actually map local folder <-> clone url
-		const isMaybeHackilyRemoving = this.removing.some(op => op.folder.displayPath === folder.displayPath);
-		if (this.removing.some(op => op.folder.id === folder.id) || isMaybeHackilyRemoving) {
+		if (this.removing.some(op => op.folder.id === folder.id)) {
 			return WorkspaceFolderState.Removing;
 		}
 
 		const currentWorkspaceFolders = this.contextService.hasWorkspace() ? this.contextService.getWorkspace().roots : [];
-		const isActive = currentWorkspaceFolders.some(uri => uri.toString() === folder.resource.toString());
-		// TODO(sqs): hack, actually map local folder <-> clone url
-		const isMaybeHackilyActive = currentWorkspaceFolders.some(uri => paths.basename(uri.path) === paths.basename(folder.displayPath));
-		return (isActive || isMaybeHackilyActive) ? WorkspaceFolderState.Active : WorkspaceFolderState.Inactive;
+		let isActive = currentWorkspaceFolders.some(uri => uri.toString() === folder.resource.toString());
+		if (!isActive) {
+			// Treat it as active if it corresponds to a workspace root folder's remote resource (i.e., the catalog folder
+			// represents a repository that has been cloned to a local dir that is a workspace root).
+			const activeRemoteResources = this.getRemoteResourcesForWorkspaceFolders();
+			isActive = activeRemoteResources.some(remoteResource => {
+				return (folder.resource.toString() === remoteResource.toString()) ||
+					(folder.cloneUrl && folder.cloneUrl.toString() === remoteResource.toString()) ||
+					(folder.cloneUrl && remoteResourcesProbablyEquivalent(folder.cloneUrl, remoteResource));
+			});
+		}
+		return isActive ? WorkspaceFolderState.Active : WorkspaceFolderState.Inactive;
 	}
 
 	private reportTelemetry(active: IActiveFolderOperation, success: boolean): void {
@@ -385,4 +410,25 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 	dispose(): void {
 		this.disposables = dispose(this.disposables);
 	}
+}
+
+/**
+ * Match two resources that probably represent the same repository clone URL. For example,
+ * git://github.com/gorilla/mux and ssh://git@github.com/gorilla/mux.git are "probably equivalent".
+ */
+function remoteResourcesProbablyEquivalent(a: URI, b: URI): boolean {
+	const stripUserinfo = (authority: string): string => {
+		const idx = authority.indexOf('@');
+		if (idx === -1) {
+			return authority;
+		}
+		return authority.slice(idx + 1);
+	};
+
+	const stripVCSPathSuffix = (path: string): string => {
+		return path.replace(/\.(git|hg|svn)$/i, '');
+	};
+
+	return stripUserinfo(a.authority).toLowerCase() === stripUserinfo(b.authority).toLowerCase() &&
+		stripVCSPathSuffix(a.path).toLowerCase() === stripVCSPathSuffix(b.path).toLowerCase();
 }
