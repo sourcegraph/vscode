@@ -135,7 +135,12 @@ export class RemoveWorkspaceFolderAction extends Action {
 	}
 
 	run(): TPromise<any> {
-		const promise = this.workspaceEditingService.removeRoots([this.folder.resource])
+		const rootToRemove = this.catalogService.getWorkspaceFolderForCatalogFolder(this.folder);
+		if (!rootToRemove) {
+			return TPromise.as(void 0);
+		}
+
+		const promise = this.workspaceEditingService.removeRoots([rootToRemove])
 			.then(() => this.configurationService.reloadConfiguration());
 		this.catalogService.monitorFolderOperation(this.folder, FolderOperation.Removing, promise);
 		return promise;
@@ -162,7 +167,11 @@ export class RemoveWorkspaceFoldersAction extends Action {
 	}
 
 	run(): TPromise<any> {
-		const promise = this.workspaceEditingService.removeRoots(this.foldersToRemove.map(f => f.resource))
+		const rootsToRemove = this.foldersToRemove
+			.map(folder => this.catalogService.getWorkspaceFolderForCatalogFolder(folder))
+			.filter(root => !!root);
+
+		const promise = this.workspaceEditingService.removeRoots(rootsToRemove)
 			.then(() => this.configurationService.reloadConfiguration());
 		for (const folder of this.foldersToRemove) {
 			this.catalogService.monitorFolderOperation(folder, FolderOperation.Removing, promise);
@@ -199,6 +208,7 @@ export class ExploreWorkspaceFolderAction extends Action {
 
 	constructor(
 		@IViewletService private viewletService: IViewletService,
+		@IFoldersWorkbenchService private catalogService: IFoldersWorkbenchService,
 	) {
 		super('workspace.folder.showInExplorer', ExploreWorkspaceFolderAction.LABEL, 'folder-action explore', false);
 
@@ -213,7 +223,7 @@ export class ExploreWorkspaceFolderAction extends Action {
 		return this.viewletService.openViewlet(EXPLORER_VIEWLET_ID, true).then((viewlet: ExplorerViewlet) => {
 			const explorerView = viewlet.getExplorerView();
 			if (explorerView) {
-				explorerView.select(this.folder.resource, true);
+				explorerView.select(this.catalogService.getWorkspaceFolderForCatalogFolder(this.folder), true);
 				explorerView.expand();
 			}
 			return void 0;
@@ -332,6 +342,7 @@ export class ManageWorkspaceFolderAction extends Action {
 
 	constructor(
 		@IWorkspaceContextService private workspaceContextService: IWorkspaceContextService,
+		@IFoldersWorkbenchService private catalogService: IFoldersWorkbenchService,
 		@IInstantiationService private instantiationService: IInstantiationService
 	) {
 		super(ManageWorkspaceFolderAction.ID);
@@ -349,7 +360,7 @@ export class ManageWorkspaceFolderAction extends Action {
 		]);
 		this.disposables.push(this._actionItem);
 
-		this.disposables.push(this.workspaceContextService.onDidChangeWorkspaceRoots(() => this.update()));
+		this.disposables.push(this.catalogService.onChange(() => this.update()));
 		this.update();
 	}
 

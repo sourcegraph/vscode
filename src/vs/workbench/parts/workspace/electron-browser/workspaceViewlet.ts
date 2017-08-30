@@ -90,8 +90,6 @@ export class WorkspaceViewlet extends PersistentViewsViewlet implements IWorkspa
 		this.searchDelayer = new ThrottledDelayer(0);
 		this.workspaceViewletVisibleContextKey = WorkspaceViewletVisibleContext.bindTo(contextKeyService);
 		this.searchFoldersContextKey = SearchFoldersContext.bindTo(contextKeyService);
-
-		this.disposables.push(foldersWorkbenchService.onChange(() => this.updateViews([], true), null, this.disposables));
 	}
 
 	private get showEmptyView(): boolean {

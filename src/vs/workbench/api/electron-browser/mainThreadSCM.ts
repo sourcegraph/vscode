@@ -89,6 +89,7 @@ class MainThreadSCMProvider implements ISCMProvider {
 	get acceptInputCommand(): Command | undefined { return this.features.acceptInputCommand; }
 	get statusBarCommands(): Command[] | undefined { return this.features.statusBarCommands; }
 	get setRevisionCommand(): Command | undefined { return this.features.setRevisionCommand; }
+	get remoteResources(): URI[] | undefined { return this.features.remoteResources; }
 
 	private _onDidChangeCommitTemplate = new Emitter<string>();
 	get onDidChangeCommitTemplate(): Event<string> { return this._onDidChangeCommitTemplate.event; }

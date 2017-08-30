@@ -9,7 +9,6 @@ import * as errors from 'vs/base/common/errors';
 import { isMacintosh } from 'vs/base/common/platform';
 import { localize } from 'vs/nls';
 import { TPromise } from 'vs/base/common/winjs.base';
-import { IDisposable, dispose } from 'vs/base/common/lifecycle';
 import { chain } from 'vs/base/common/event';
 import { PagedModel, IPagedModel } from 'vs/base/common/paging';
 import { ViewSizing } from 'vs/base/browser/ui/splitview/splitview';
@@ -47,7 +46,6 @@ export abstract class FoldersListView extends CollapsibleView {
 	private badge: CountBadge;
 
 	private list: PagedList<IFolder>;
-	private disposables: IDisposable[] = [];
 
 	constructor(
 		initialSize: number,
@@ -69,13 +67,17 @@ export abstract class FoldersListView extends CollapsibleView {
 		@IViewletService private viewletService: IViewletService,
 	) {
 		super(initialSize, { ...(options as IViewOptions), ariaHeaderLabel: options.name, sizing: ViewSizing.Flexible, collapsed: !!options.collapsed, initialBodySize: 1 * 62 }, keybindingService, contextMenuService);
+
+		this.registerListeners();
 	}
+
+	protected registerListeners(): void { }
 
 	renderHeader(container: HTMLElement): void {
 		const titleDiv = append(container, $('div.title'));
 		append(titleDiv, $('span')).textContent = this.options.name;
 		this.badge = new CountBadge(append(container, $('.count-badge-wrapper')));
-		this.disposables.push(attachBadgeStyler(this.badge, this.themeService));
+		this.toDispose.push(attachBadgeStyler(this.badge, this.themeService));
 	}
 
 	renderBody(container: HTMLElement): void {
@@ -93,17 +95,17 @@ export abstract class FoldersListView extends CollapsibleView {
 
 		const onKeyDownForList = onKeyDown.filter(() => this.count() > 0);
 		onKeyDownForList.filter(e => e.keyCode === KeyCode.Enter && (e.ctrlKey || (isMacintosh && e.metaKey)))
-			.on(this.onModifierEnter, this, this.disposables);
+			.on(this.onModifierEnter, this, this.toDispose);
 		onKeyDownForList.filter(e => e.keyCode === KeyCode.Delete || e.keyCode === KeyCode.Backspace)
-			.on(this.onDelete, this, this.disposables);
+			.on(this.onDelete, this, this.toDispose);
 
-		this.disposables.push(attachListStyler(this.list.widget, this.themeService));
-		this.disposables.push(this.listService.register(this.list.widget));
+		this.toDispose.push(attachListStyler(this.list.widget, this.themeService));
+		this.toDispose.push(this.listService.register(this.list.widget));
 
 		chain(this.list.onPin)
 			.map(e => e.elements[0])
 			.filter(e => !!e)
-			.on(this.pin, this, this.disposables);
+			.on(this.pin, this, this.toDispose);
 	}
 
 	setVisible(visible: boolean): TPromise<void> {
@@ -225,14 +227,22 @@ export abstract class FoldersListView extends CollapsibleView {
 		action.folder = folder;
 		action.run().done(null, errors.onUnexpectedError);
 	}
-
-	dispose(): void {
-		this.disposables = dispose(this.disposables);
-		super.dispose();
-	}
 }
 
 export class CurrentWorkspaceFoldersView extends FoldersListView {
+	protected registerListeners(): void {
+		super.registerListeners();
+
+		// The only time that an entry can be deleted (a list structural change) is when
+		// a root is removed. All other changes are handled by the actions' and widgets'
+		// own listeners within an entry.
+		if (this.contextService.hasWorkspace()) {
+			this.toDispose.push(this.contextService.onDidChangeWorkspaceRoots(() => {
+				this.show(''); // trigger a reload; query is always empty in this view
+			}));
+		}
+	}
+
 	protected query(value: string): TPromise<IPagedModel<IFolder>> {
 		return this.catalogService.getCurrentWorkspaceFolders().then(folders => new PagedModel(folders));
 	}

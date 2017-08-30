@@ -5,12 +5,12 @@
 
 'use strict';
 
-import Event, { Emitter } from 'vs/base/common/event';
+import Event, { Emitter, filterEvent, toPromise } from 'vs/base/common/event';
 import * as paths from 'vs/base/common/paths';
 import { Schemas } from 'vs/base/common/network';
 import { assign } from 'vs/base/common/objects';
 import { TPromise } from 'vs/base/common/winjs.base';
-import { IDisposable, dispose } from 'vs/base/common/lifecycle';
+import { IDisposable, dispose, combinedDisposable } from 'vs/base/common/lifecycle';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IMessageService } from 'vs/platform/message/common/message';
 import URI from 'vs/base/common/uri';
@@ -19,6 +19,7 @@ import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace
 import { IEditorGroupService } from 'vs/workbench/services/group/common/groupService';
 import { IFolderContainmentService } from 'vs/platform/folder/common/folderContainment';
 import { IFolderCatalogService, ICatalogFolder, FolderGenericIconClass } from 'vs/platform/folders/common/folderCatalog';
+import { ISCMService, ISCMRepository } from 'vs/workbench/services/scm/common/scm';
 
 interface IWorkspaceFolderStateProvider {
 	(folder: Folder): WorkspaceFolderState;
@@ -198,12 +199,39 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 		@IEditorGroupService private editorGroupService: IEditorGroupService,
 		@IFolderContainmentService private folderContainmentService: IFolderContainmentService,
 		@IFolderCatalogService private folderCatalogService: IFolderCatalogService,
+		@ISCMService private scmService: ISCMService,
 	) {
 		this.stateProvider = folder => this.getFolderState(folder);
 
+		this.registerListeners();
+	}
+
+	private registerListeners(): void {
 		// Fire onChange even for folder operations that aren't monitored by
 		// monitorFolderOperation.
-		this.disposables.push(contextService.onDidChangeWorkspaceRoots(() => this._onChange.fire()));
+		this.disposables.push(this.contextService.onDidChangeWorkspaceRoots(() => this._onChange.fire()));
+		this.disposables.push(this.scmService.onDidAddRepository(repository => this.onDidAddRepository(repository)));
+		this.disposables.push(this.scmService.onDidChangeRepository(() => this._onChange.fire()));
+		for (const repository of this.scmService.repositories) {
+			this.onDidAddRepository(repository);
+		}
+	}
+
+	private onDidAddRepository(repository: ISCMRepository): void {
+		this._onChange.fire();
+
+		const changeDisposable = repository.provider.onDidChange(() => {
+			this._onChange.fire();
+		});
+
+		const onDidRemove = filterEvent(this.scmService.onDidRemoveRepository, e => e === repository);
+		const removeDisposable = onDidRemove(() => {
+			disposable.dispose();
+			this.disposables = this.disposables.filter(d => d !== removeDisposable);
+		});
+
+		const disposable = combinedDisposable([changeDisposable, removeDisposable]);
+		this.disposables.push(disposable);
 	}
 
 	public getCurrentWorkspaceFolders(): TPromise<IFolder[]> {
@@ -254,7 +282,9 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 					// Don't store canceled or rejected result promises.
 					this.storeInCache(query, null);
 				});
-			if (!cachedValue) { return result; }
+			if (!cachedValue) {
+				return result;
+			}
 		}
 		return TPromise.as(cachedValue.result) as TPromise<ISearchComplete>;
 	}
@@ -325,13 +355,19 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 	}
 
 	public monitorFolderOperation(folder: IFolder, operation: FolderOperation, promise: TPromise<any>): void {
-		this._onChange.fire();
-
 		const op: IActiveFolderOperation = { operation, folder, start: new Date() };
 
 		let onDone: (success: boolean) => void;
 		switch (operation) {
 			case FolderOperation.Adding:
+				// Also wait for the folder's SCM provider to be ready.
+				promise = promise.then(() => {
+					return TPromise.any<any>([
+						toPromise(filterEvent(this.onChange, () => !!this.getWorkspaceFolderForCatalogFolder(folder))),
+						TPromise.timeout(5000),
+					]);
+				});
+
 				this.adding.push(op);
 				onDone = (success: boolean) => {
 					this.adding = this.adding.filter(e => e !== op);
@@ -350,28 +386,45 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 				break;
 		}
 
+		this._onChange.fire();
 		promise.done(onDone, onDone);
 	}
 
-	private getFolderState(folder: Folder): WorkspaceFolderState {
+	public getWorkspaceFolderForCatalogFolder(catalogFolder: IFolder): URI | undefined {
+		if (catalogFolder.resource.scheme === Schemas.file) {
+			return catalogFolder.resource;
+		}
 
-		// TODO(sqs): hack, actually map local folder <-> clone url
-		const isMaybeHackilyAdding = this.adding.some(op => op.folder.displayPath === folder.displayPath);
-		if (this.adding.some(op => op.folder.id === folder.id) || isMaybeHackilyAdding) {
+		if (!this.contextService.hasWorkspace()) {
+			return undefined;
+		}
+
+		for (const root of this.contextService.getWorkspace().roots) {
+			const provider = this.scmService.getProviderForResource(root);
+			if (provider && provider.remoteResources) {
+				for (const remoteResource of provider.remoteResources) {
+					if (catalogFolder.resource.toString() === remoteResource.toString() ||
+						remoteResourcesProbablyEquivalent(catalogFolder.cloneUrl, remoteResource)) {
+						return root;
+					}
+				}
+			}
+		}
+
+		return undefined;
+	}
+
+	private getFolderState(folder: Folder): WorkspaceFolderState {
+		if (this.adding.some(op => op.folder.id === folder.id)) {
 			return WorkspaceFolderState.Adding;
 		}
 
-		// TODO(sqs): hack, actually map local folder <-> clone url
-		const isMaybeHackilyRemoving = this.removing.some(op => op.folder.displayPath === folder.displayPath);
-		if (this.removing.some(op => op.folder.id === folder.id) || isMaybeHackilyRemoving) {
+		if (this.removing.some(op => op.folder.id === folder.id)) {
 			return WorkspaceFolderState.Removing;
 		}
 
-		const currentWorkspaceFolders = this.contextService.hasWorkspace() ? this.contextService.getWorkspace().roots : [];
-		const isActive = currentWorkspaceFolders.some(uri => uri.toString() === folder.resource.toString());
-		// TODO(sqs): hack, actually map local folder <-> clone url
-		const isMaybeHackilyActive = currentWorkspaceFolders.some(uri => paths.basename(uri.path) === paths.basename(folder.displayPath));
-		return (isActive || isMaybeHackilyActive) ? WorkspaceFolderState.Active : WorkspaceFolderState.Inactive;
+		const isActive = !!this.getWorkspaceFolderForCatalogFolder(folder);
+		return isActive ? WorkspaceFolderState.Active : WorkspaceFolderState.Inactive;
 	}
 
 	private reportTelemetry(active: IActiveFolderOperation, success: boolean): void {
@@ -385,4 +438,25 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 	dispose(): void {
 		this.disposables = dispose(this.disposables);
 	}
+}
+
+/**
+ * Match two resources that probably represent the same repository clone URL. For example,
+ * git://github.com/gorilla/mux and ssh://git@github.com/gorilla/mux.git are "probably equivalent".
+ */
+function remoteResourcesProbablyEquivalent(a: URI, b: URI): boolean {
+	const stripUserinfo = (authority: string): string => {
+		const idx = authority.indexOf('@');
+		if (idx === -1) {
+			return authority;
+		}
+		return authority.slice(idx + 1);
+	};
+
+	const stripVCSPathSuffix = (path: string): string => {
+		return path.replace(/\.(git|hg|svn)$/i, '');
+	};
+
+	return stripUserinfo(a.authority).toLowerCase() === stripUserinfo(b.authority).toLowerCase() &&
+		stripVCSPathSuffix(a.path).toLowerCase() === stripVCSPathSuffix(b.path).toLowerCase();
 }
