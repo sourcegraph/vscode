@@ -403,12 +403,12 @@ export class ViewsViewlet extends Viewlet {
 
 	public getContextMenuActions(): IAction[] {
 		return this.getViewDescriptorsFromRegistry(true)
-			.filter(viewDescriptor => viewDescriptor.canToggleVisibility)
+			.filter(viewDescriptor => viewDescriptor.canToggleVisibility && this.contextKeyService.contextMatchesRules(viewDescriptor.when))
 			.map(viewDescriptor => (<IAction>{
 				id: `${viewDescriptor.id}.toggleVisibility`,
 				label: viewDescriptor.name,
 				checked: this.isCurrentlyVisible(viewDescriptor),
-				enabled: this.contextKeyService.contextMatchesRules(viewDescriptor.when),
+				enabled: true,
 				run: () => this.toggleViewVisibility(viewDescriptor.id)
 			}));
 	}
@@ -595,7 +595,7 @@ export class ViewsViewlet extends Viewlet {
 
 	private canBeVisible(viewDescriptor: IViewDescriptor): boolean {
 		const viewstate = this.viewsStates.get(viewDescriptor.id);
-		if (viewstate && viewstate.isHidden) {
+		if (viewDescriptor.canToggleVisibility && viewstate && viewstate.isHidden) {
 			return false;
 		}
 		return this.contextKeyService.contextMatchesRules(viewDescriptor.when);
@@ -652,7 +652,7 @@ export class ViewsViewlet extends Viewlet {
 			getAnchor: () => anchor,
 			getActions: () => TPromise.as([<IAction>{
 				id: `${view.id}.removeView`,
-				label: nls.localize('removeView', "Remove from Side Bar"),
+				label: nls.localize('hideView', "Hide from Side Bar"),
 				enabled: true,
 				run: () => this.toggleViewVisibility(view.id)
 			}]),
@@ -669,8 +669,11 @@ export class ViewsViewlet extends Viewlet {
 		if (ViewLocation.getContributedViewLocation(this.location.id) && !this.areExtensionsReady) {
 			// Checks in cache so that view do not jump. See #29609
 			let visibleViewsCount = 0;
-			this.viewsStates.forEach(viewState => {
-				if (!viewState.isHidden) {
+			const viewDecriptors = this.getViewDescriptorsFromRegistry();
+			this.viewsStates.forEach((viewState, id) => {
+				const viewDescriptor = viewDecriptors.filter(viewDescriptor => viewDescriptor.id === id)[0];
+				const isHidden = viewState.isHidden || (viewDescriptor && !this.contextKeyService.contextMatchesRules(viewDescriptor.when));
+				if (!isHidden) {
 					visibleViewsCount++;
 				}
 			});

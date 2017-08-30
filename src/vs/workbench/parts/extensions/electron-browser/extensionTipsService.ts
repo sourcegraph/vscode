@@ -240,6 +240,8 @@ export class ExtensionTipsService implements IExtensionTipsService {
 									);
 									this.telemetryService.publicLog('extensionRecommendations:popup', { userReaction: 'neverShowAgain' });
 									return this.ignoreExtensionRecommendations();
+								case 2:
+									this.telemetryService.publicLog('extensionRecommendations:popup', { userReaction: 'close' });
 							}
 						}, () => {
 							this.telemetryService.publicLog('extensionRecommendations:popup', { userReaction: 'cancelled' });
@@ -291,6 +293,8 @@ export class ExtensionTipsService implements IExtensionTipsService {
 						case 1:
 							this.telemetryService.publicLog('extensionWorkspaceRecommendations:popup', { userReaction: 'neverShowAgain' });
 							return this.storageService.store(storageKey, true, StorageScope.WORKSPACE);
+						case 2:
+							this.telemetryService.publicLog('extensionWorkspaceRecommendations:popup', { userReaction: 'close' });
 					}
 				}, () => {
 					this.telemetryService.publicLog('extensionWorkspaceRecommendations:popup', { userReaction: 'cancelled' });
