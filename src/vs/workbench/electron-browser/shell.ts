@@ -24,7 +24,7 @@ import { Workbench, IWorkbenchStartedInfo } from 'vs/workbench/electron-browser/
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { NullTelemetryService, configurationTelemetry, lifecycleTelemetry } from 'vs/platform/telemetry/common/telemetryUtils';
 import { IExperimentService, ExperimentService } from 'vs/platform/telemetry/common/experiments';
-import { ITelemetryServiceConfig } from 'vs/platform/telemetry/common/telemetryService';
+import { TelemetryService, ITelemetryServiceConfig } from 'vs/platform/telemetry/common/telemetryService';
 import { SourcegraphTelemetryService } from 'vs/platform/telemetry/common/sourcegraphTelemetryService';
 import { IRemoteService } from 'vs/platform/remote/node/remote';
 import { RemoteService } from 'vs/platform/remote/node/remoteService';
@@ -295,8 +295,8 @@ export class WorkbenchShell {
 
 			const listener = idleMonitor.onStatusChange(status =>
 				this.telemetryService.publicLog(status === UserStatus.Active
-					? SourcegraphTelemetryService.IDLE_STOP_EVENT_NAME
-					: SourcegraphTelemetryService.IDLE_START_EVENT_NAME
+					? TelemetryService.IDLE_STOP_EVENT_NAME
+					: TelemetryService.IDLE_START_EVENT_NAME
 				));
 
 			disposables.push(telemetryService, errorTelemetry, listener, idleMonitor);
