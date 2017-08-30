@@ -9,6 +9,7 @@ import * as path from 'path';
 import * as fs from 'original-fs';
 import { localize } from 'vs/nls';
 import * as arrays from 'vs/base/common/arrays';
+import * as strings from 'vs/base/common/strings';
 import { assign, mixin, equals } from 'vs/base/common/objects';
 import { IBackupMainService } from 'vs/platform/backup/common/backup';
 import { IEnvironmentService, ParsedArgs } from 'vs/platform/environment/common/environment';
@@ -32,9 +33,6 @@ import { TPromise } from 'vs/base/common/winjs.base';
 import { IWorkspacesMainService, IWorkspaceIdentifier, ISingleFolderWorkspaceIdentifier, WORKSPACE_FILTER, isSingleFolderWorkspaceIdentifier } from 'vs/platform/workspaces/common/workspaces';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { mnemonicButtonLabel } from 'vs/base/common/labels';
-import { findContainingFolder } from 'vs/platform/folder/common/folderContainment';
-import { parseFragment } from 'vs/base/common/urlRoutes';
-import URI from 'vs/base/common/uri';
 
 enum WindowError {
 	UNRESPONSIVE,
@@ -80,6 +78,8 @@ interface IOpenBrowserWindowOptions {
 	filesToOpen?: IPath[];
 	filesToCreate?: IPath[];
 	filesToDiff?: IPath[];
+
+	urisToHandle?: string[];
 
 	forceNewWindow?: boolean;
 	windowToUse?: CodeWindow;
@@ -390,6 +390,17 @@ export class WindowsManager implements IWindowsMainService {
 		const foldersToOpen = arrays.distinct(pathsToOpen.filter(win => win.folderPath && !win.filePath).map(win => win.folderPath), folder => isLinux ? folder : folder.toLowerCase()); // prevent duplicates
 
 		//
+		// These are URIs to handle to perform various actions
+		//
+		let urisToHandle: string[] = openConfig.urisToHandle || [];
+		for (const arg of openConfig.cli._) {
+			if (strings.startsWith(arg, `${product.urlProtocol}:`)) {
+				urisToHandle.push(arg);
+			}
+		}
+		urisToHandle = arrays.distinct(urisToHandle);
+
+		//
 		// These are windows to restore because of hot-exit or from previous session (only performed once on startup!)
 		//
 		let foldersToRestore: string[] = [];
@@ -412,7 +423,7 @@ export class WindowsManager implements IWindowsMainService {
 		const emptyToOpen = pathsToOpen.filter(win => !win.workspace && !win.folderPath && !win.filePath && !win.backupPath).length;
 
 		// Open based on config
-		const usedWindows = this.doOpen(openConfig, workspacesToOpen, workspacesToRestore, foldersToOpen, foldersToRestore, emptyToRestore, emptyToOpen, filesToOpen, filesToCreate, filesToDiff, foldersToAdd);
+		const usedWindows = this.doOpen(openConfig, workspacesToOpen, workspacesToRestore, foldersToOpen, foldersToRestore, emptyToRestore, emptyToOpen, filesToOpen, filesToCreate, filesToDiff, foldersToAdd, urisToHandle);
 
 		// Make sure the last active window gets focus if we opened multiple
 		if (usedWindows.length > 1 && this.windowsState.lastActiveWindow) {
@@ -470,22 +481,32 @@ export class WindowsManager implements IWindowsMainService {
 		filesToOpen: IPath[],
 		filesToCreate: IPath[],
 		filesToDiff: IPath[],
-		foldersToAdd: IPath[]
+		foldersToAdd: IPath[],
+		urisToHandle: string[],
 	) {
 		const usedWindows: CodeWindow[] = [];
 
 		// Settings can decide if files/folders open in new window or not
 		let { openFolderInNewWindow, openFilesInNewWindow } = this.shouldOpenNewWindow(openConfig);
 
-		// Handle folders to add by looking for the last active workspace (not on initial startup)
-		if (!openConfig.initialStartup && foldersToAdd.length > 0) {
+		// Handle folders to add and URIs by looking for the last active workspace (not on initial startup)
+		if (!openConfig.initialStartup && (foldersToAdd.length > 0 || urisToHandle.length > 0)) {
 			const lastActiveWindow = this.getLastActiveWindow();
 			if (lastActiveWindow) {
-				usedWindows.push(this.doAddFoldersToExistingWidow(lastActiveWindow, foldersToAdd));
-			}
+				if (foldersToAdd.length > 0) {
+					usedWindows.push(this.doAddFoldersToExistingWidow(lastActiveWindow, foldersToAdd));
 
-			// Reset because we handled them
-			foldersToAdd = [];
+					// Reset because we handled them
+					foldersToAdd = [];
+				}
+
+				if (urisToHandle.length > 0) {
+					usedWindows.push(this.doHandleUrisInExistingWindow(lastActiveWindow, urisToHandle));
+
+					// Reset because we handled them
+					urisToHandle = [];
+				}
+			}
 		}
 
 		// Handle files to open/diff or to create when we dont open a folder and we do not restore any folder/untitled from hot-exit
@@ -544,6 +565,7 @@ export class WindowsManager implements IWindowsMainService {
 					filesToOpen,
 					filesToCreate,
 					filesToDiff,
+					urisToHandle,
 					forceNewWindow: true
 				}));
 
@@ -551,6 +573,7 @@ export class WindowsManager implements IWindowsMainService {
 				filesToOpen = [];
 				filesToCreate = [];
 				filesToDiff = [];
+				urisToHandle = [];
 			}
 		}
 
@@ -587,6 +610,7 @@ export class WindowsManager implements IWindowsMainService {
 				filesToOpen = [];
 				filesToCreate = [];
 				filesToDiff = [];
+				urisToHandle = [];
 
 				openFolderInNewWindow = true; // any other folders to open must open in new window then
 			});
@@ -625,9 +649,26 @@ export class WindowsManager implements IWindowsMainService {
 				filesToOpen = [];
 				filesToCreate = [];
 				filesToDiff = [];
+				urisToHandle = [];
 
 				openFolderInNewWindow = true; // any other folders to open must open in new window then
 			});
+		}
+
+		// Handle URIs
+		if (urisToHandle.length > 0) {
+			this.openInBrowserWindow({
+				userEnv: openConfig.userEnv,
+				cli: openConfig.cli,
+				initialStartup: openConfig.initialStartup,
+				urisToHandle,
+				forceNewWindow: true,
+			});
+
+			// Reset these because we handled them
+			urisToHandle = [];
+
+			openFolderInNewWindow = true; // any other folders to open must open in new window then
 		}
 
 		// Handle empty to restore
@@ -640,6 +681,7 @@ export class WindowsManager implements IWindowsMainService {
 					filesToOpen,
 					filesToCreate,
 					filesToDiff,
+					urisToHandle,
 					forceNewWindow: true,
 					emptyWindowBackupFolder
 				}));
@@ -648,6 +690,7 @@ export class WindowsManager implements IWindowsMainService {
 				filesToOpen = [];
 				filesToCreate = [];
 				filesToDiff = [];
+				urisToHandle = [];
 
 				openFolderInNewWindow = true; // any other folders to open must open in new window then
 			});
@@ -690,6 +733,16 @@ export class WindowsManager implements IWindowsMainService {
 		return window;
 	}
 
+	private doHandleUrisInExistingWindow(window: CodeWindow, urisToHandle: string[]): CodeWindow {
+		window.focus(); // make sure window has focus
+
+		window.ready().then(readyWindow => {
+			readyWindow.send('vscode:handleUris', urisToHandle);
+		});
+
+		return window;
+	}
+
 	private doOpenFolderOrWorkspace(openConfig: IOpenConfiguration, folderOrWorkspace: IPathToOpen, openInNewWindow: boolean, filesToOpen: IPath[], filesToCreate: IPath[], filesToDiff: IPath[], windowToUse?: CodeWindow): CodeWindow {
 		const browserWindow = this.openInBrowserWindow({
 			userEnv: openConfig.userEnv,
@@ -700,6 +753,7 @@ export class WindowsManager implements IWindowsMainService {
 			filesToOpen,
 			filesToCreate,
 			filesToDiff,
+			urisToHandle: openConfig.urisToHandle,
 			forceNewWindow: openInNewWindow,
 			windowToUse
 		});
@@ -898,27 +952,8 @@ export class WindowsManager implements IWindowsMainService {
 			return null;
 		}
 
-		let uri = URI.parse(anyPath);
-
-		const selection = parseFragment(uri.fragment).selection;
-		uri = uri.with({ fragment: null });
-
-		if (uri.scheme) {
-			const folder = findContainingFolder(uri);
-
-			if (!folder) {
-				return null; // path not found
-			}
-
-			if (folder.toString() !== uri.toString()) {
-				return {
-					filePath: uri.toString(),
-					folderPath: folder.toString(),
-					lineNumber: selection ? selection.startLineNumber : void 0,
-					columnNumber: selection ? selection.startColumn : void 0
-				};
-			}
-			return { folderPath: folder.toString() };
+		if (strings.startsWith(anyPath, `${product.urlProtocol}:`)) {
+			return null; // handle via urisToHandle
 		}
 
 		let parsedPath: IPathWithLineAndColumn;
@@ -1040,6 +1075,7 @@ export class WindowsManager implements IWindowsMainService {
 		configuration.filesToOpen = options.filesToOpen;
 		configuration.filesToCreate = options.filesToCreate;
 		configuration.filesToDiff = options.filesToDiff;
+		configuration.urisToHandle = options.urisToHandle;
 		configuration.nodeCachedDataDir = this.environmentService.nodeCachedDataDir;
 
 		// Force open in multi-root workspace (prevent opening in non-multi-root
@@ -1047,7 +1083,9 @@ export class WindowsManager implements IWindowsMainService {
 		if (!configuration.workspace) {
 			const folders: string[] = [];
 			if (configuration.folderPath) {
-				folders.push(configuration.folderPath);
+				if (configuration.folderPath !== '.') {
+					folders.push(configuration.folderPath);
+				}
 				configuration.folderPath = undefined;
 			}
 			configuration.workspace = this.workspacesService.createWorkspaceSync(folders);

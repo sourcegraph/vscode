@@ -47,10 +47,11 @@ export class WindowsService implements IWindowsService, IDisposable {
 
 		// Catch resource URLs (code:open?resource=URI to open the resource at URI)
 		chain(urlService.onOpenURL)
-			.filter(uri => uri.scheme === product.urlProtocol && uri.path === 'open' &&
-				uri.query && /^resource=/.test(uri.query))
-			.map(uri => URI.parse(decodeURIComponent(uri.query.replace(/^resource=/, ''))))
-			.on(this.openForURI, this, this.disposables);
+			.filter(uri => uri.scheme === product.urlProtocol && uri.path === 'open')
+			.on(this.openForRemoteURI, this, this.disposables);
+
+		chain(urlService.onOpenURL)
+			.map(e => console.log('URI', e.toString()));
 
 		// Catch extension URLs when there are no windows open
 		chain(urlService.onOpenURL)
@@ -367,6 +368,14 @@ export class WindowsService implements IWindowsService, IDisposable {
 		const pathsToOpen = [uri.toString()];
 
 		this.windowsMainService.open({ context: OpenContext.API, cli, pathsToOpen });
+		return TPromise.as(null);
+	}
+
+	private openForRemoteURI(uri: URI): TPromise<void> {
+		const cli = assign(Object.create(null), this.environmentService.args, { goto: true });
+		const urisToHandle = [uri.toString()];
+
+		this.windowsMainService.open({ context: OpenContext.API, cli, urisToHandle });
 		return TPromise.as(null);
 	}
 
