@@ -234,6 +234,7 @@ export class Controller extends DefaultController {
 
 	public openRepository(element: ISCMRepository): void {
 		this.model.activeRepository = element;
+		element.focus();
 	}
 }
 
