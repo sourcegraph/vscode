@@ -222,7 +222,7 @@ suite('WorkspacesMainService', () => {
 
 				assert.equal(service.deleteWorkspaceCall, workspace);
 
-				const ws = JSON.parse(fs.readFileSync(savedWorkspace.configPath).toString()) as IStoredWorkspace;
+				const ws = json.parse(fs.readFileSync(savedWorkspace.configPath).toString()) as IStoredWorkspace;
 				assert.equal(ws.folders.length, 3);
 				assert.equal(ws.folders[0].path, process.cwd()); // absolute
 				assert.equal(ws.folders[1].path, '.'); // relative
@@ -254,7 +254,7 @@ suite('WorkspacesMainService', () => {
 					assert.notEqual(newSavedWorkspace.id, workspace.id);
 					assert.equal(newSavedWorkspace.configPath, newWorkspaceConfigPath);
 
-					const ws = JSON.parse(fs.readFileSync(newSavedWorkspace.configPath).toString()) as IStoredWorkspace;
+					const ws = json.parse(fs.readFileSync(newSavedWorkspace.configPath).toString()) as IStoredWorkspace;
 					assert.equal(ws.folders.length, 3);
 					assert.equal(ws.folders[0].path, process.cwd()); // absolute path because outside of tmpdir
 					assert.equal(ws.folders[1].path, '.'); // relative path because inside of tmpdir
