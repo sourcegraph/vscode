@@ -1044,8 +1044,13 @@ export class WindowsManager implements IWindowsMainService {
 
 		// Force open in multi-root workspace (prevent opening in non-multi-root
 		// workspace).
-		if (!configuration.workspace && !configuration.folderPath) {
-			configuration.workspace = this.workspacesService.createWorkspaceSync();
+		if (!configuration.workspace) {
+			const folders: string[] = [];
+			if (configuration.folderPath) {
+				folders.push(configuration.folderPath);
+				configuration.folderPath = undefined;
+			}
+			configuration.workspace = this.workspacesService.createWorkspaceSync(folders);
 		}
 
 		// if we know the backup folder upfront (for empty windows to restore), we can set it
