@@ -13,7 +13,7 @@ import { Action } from 'vs/base/common/actions';
 import { any } from 'vs/base/common/event';
 import { IDisposable, dispose } from 'vs/base/common/lifecycle';
 import { IFolder } from 'vs/workbench/parts/workspace/common/workspace';
-import { ISCMService, ISCMProvider, ISCMRevision, setSCMProviderRevision } from 'vs/workbench/services/scm/common/scm';
+import { ISCMService, ISCMRepository, ISCMRevision, setSCMProviderRevision } from 'vs/workbench/services/scm/common/scm';
 import { ICommandService } from 'vs/platform/commands/common/commands';
 
 export abstract class FolderSCMRevisionAction extends Action {
@@ -26,7 +26,7 @@ export abstract class FolderSCMRevisionAction extends Action {
 	set folderResource(folder: URI) {
 		if (this._folder !== folder) {
 			this._folder = folder;
-			this.updateSCMProvider();
+			this.updateRepository();
 			this.update();
 		}
 	}
@@ -34,8 +34,8 @@ export abstract class FolderSCMRevisionAction extends Action {
 		this.folderResource = folder ? folder.resource : undefined;
 	}
 
-	protected scmProvider?: ISCMProvider;
-	private scmProviderDisposable?: IDisposable;
+	protected repository?: ISCMRepository;
+	private repositoryDisposable?: IDisposable;
 
 	constructor(
 		id: string,
@@ -50,33 +50,33 @@ export abstract class FolderSCMRevisionAction extends Action {
 
 		const onDidChangeSCM = any(this.scmService.onDidChangeRepository, this.scmService.onDidAddRepository, this.scmService.onDidRemoveRepository);
 		this.disposables.push(onDidChangeSCM(() => {
-			this.updateSCMProvider();
+			this.updateRepository();
 			this.update();
 		}));
-		this.updateSCMProvider();
+		this.updateRepository();
 		this.update();
 	}
 
-	private updateSCMProvider(): void {
-		let provider: ISCMProvider | undefined;
+	private updateRepository(): void {
+		let repository: ISCMRepository | undefined;
 		if (this._folder) {
-			provider = this.scmService.getProviderForResource(this._folder);
+			repository = this.scmService.getRepositoryForResource(this._folder);
 		}
 
-		if (this.scmProvider === provider) {
+		if (this.repository === repository) {
 			return;
 		}
 
 		// Clear old provider.
-		this.scmProvider = undefined;
-		if (this.scmProviderDisposable) {
-			this.scmProviderDisposable.dispose();
+		this.repository = undefined;
+		if (this.repositoryDisposable) {
+			this.repositoryDisposable.dispose();
 		}
-		this.scmProviderDisposable = undefined;
+		this.repositoryDisposable = undefined;
 
-		if (provider) {
-			this.scmProvider = provider;
-			this.scmProviderDisposable = this.scmProvider.onDidChange(() => this.update());
+		if (repository) {
+			this.repository = repository;
+			this.repositoryDisposable = this.repository.provider.onDidChange(() => this.update());
 		}
 	}
 
@@ -88,14 +88,14 @@ export abstract class FolderSCMRevisionAction extends Action {
 			return;
 		}
 
-		if (!this.scmProvider || !this.scmProvider.revision) {
+		if (!this.repository || !this.repository.provider.revision) {
 			this.enabled = false;
 			this.class = this.resolvedClass;
 			this.label = '';
 			return;
 		}
 
-		const revision = this.scmProvider.revision;
+		const revision = this.repository.provider.revision;
 		if (!revision.id) {
 			// Not yet resolved.
 			//
@@ -112,14 +112,14 @@ export abstract class FolderSCMRevisionAction extends Action {
 	}
 
 	run(): TPromise<any> {
-		return setSCMProviderRevision(this.commandService, this.scmProvider);
+		return setSCMProviderRevision(this.commandService, this.repository.provider);
 	}
 
 	dispose(): void {
 		super.dispose();
 
-		if (this.scmProviderDisposable) {
-			this.scmProviderDisposable.dispose();
+		if (this.repositoryDisposable) {
+			this.repositoryDisposable.dispose();
 		}
 
 		this.disposables = dispose(this.disposables);
@@ -160,7 +160,7 @@ export class FolderSCMRevisionLabelAction extends FolderSCMRevisionAction {
 			return;
 		}
 
-		this.label = this.revisionLabel(this.scmProvider.revision);
+		this.label = this.revisionLabel(this.repository.provider.revision);
 	}
 
 	private revisionLabel(revision: ISCMRevision): string {

@@ -410,9 +410,9 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 		}
 
 		for (const root of this.contextService.getWorkspace().roots) {
-			const provider = this.scmService.getProviderForResource(root);
-			if (provider && provider.remoteResources) {
-				for (const remoteResource of provider.remoteResources) {
+			const repository = this.scmService.getRepositoryForResource(root);
+			if (repository && repository.provider && repository.provider.remoteResources) {
+				for (const remoteResource of repository.provider.remoteResources) {
 					if (catalogFolder.resource.toString() === remoteResource.toString() ||
 						remoteResourcesProbablyEquivalent(catalogFolder.cloneUrl, remoteResource)) {
 						return root;

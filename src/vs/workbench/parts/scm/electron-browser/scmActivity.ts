@@ -8,7 +8,6 @@
 import { localize } from 'vs/nls';
 import { IDisposable, dispose, empty as EmptyDisposable, combinedDisposable } from 'vs/base/common/lifecycle';
 import { filterEvent } from 'vs/base/common/event';
-import * as arrays from 'vs/base/common/arrays';
 import { VIEWLET_ID } from 'vs/workbench/parts/scm/common/scm';
 import { ISCMService, ISCMRepository } from 'vs/workbench/services/scm/common/scm';
 import { IActivityBarService, NumberBadge } from 'vs/workbench/services/activity/common/activityBarService';
@@ -165,13 +164,10 @@ export class StatusBarController implements IWorkbenchContribution {
 	private onDidChangeOrFocusActiveEditor(activeEditor: IEditor = this.editorService.getActiveEditor()): boolean {
 		const activeResource = activeEditor ? toResource(activeEditor.input, { supportSideBySide: true, filter: 'file' }) : void 0;
 		if (activeResource) {
-			const provider = this.scmService.getProviderForResource(activeResource);
-			if (provider) {
-				const repository = arrays.first(this.scmService.repositories, r => r.provider === provider);
-				if (repository) {
-					this.onDidFocusRepository(repository);
-					return true;
-				}
+			const repository = this.scmService.getRepositoryForResource(activeResource);
+			if (repository) {
+				this.onDidFocusRepository(repository);
+				return true;
 			}
 		} else {
 			// Keep last-viewed repository's status bar items.

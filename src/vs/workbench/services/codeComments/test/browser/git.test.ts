@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 'use strict';
 
-import { ISCMService, ISCMProvider } from 'vs/workbench/services/scm/common/scm';
+import { ISCMService, ISCMProvider, ISCMRepository } from 'vs/workbench/services/scm/common/scm';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { Git } from 'vs/workbench/services/codeComments/browser/git';
 
@@ -54,8 +54,14 @@ class FakeSCMService implements ISCMService {
 
 	registerSCMProvider(provider: ISCMProvider): any { }
 
-	getProviderForResource(resource: any): ISCMProvider {
-		return this.fakeProvider;
+	getRepositoryForResource(resource: any): ISCMRepository {
+		return {
+			provider: this.fakeProvider,
+			input: undefined,
+			onDidFocus: undefined,
+			focus: () => void 0,
+			dispose: () => void 0,
+		};
 	}
 }
 

@@ -79,10 +79,10 @@ export class RemoteSearchService extends SearchService implements ISearchService
 		// If the query is searching a folder inside an SCM repository, search in its
 		// current revision.
 		const workspaces: WorkspaceRevision[] = (query.folderQueries || []).map(folderQuery => {
-			const provider = this.scmService.getProviderForResource(folderQuery.folder);
+			const repository = this.scmService.getRepositoryForResource(folderQuery.folder);
 			return {
 				workspace: folderQuery.folder,
-				revision: provider && provider.revision ? provider.revision.id : undefined,
+				revision: repository && repository.provider.revision ? repository.provider.revision.id : undefined,
 			};
 		});
 
@@ -103,9 +103,9 @@ export class RemoteSearchService extends SearchService implements ISearchService
 					const repoRoot = URI.from({ scheme: Schemas.repo, authority: oldFormatResource.authority, path: oldFormatResource.path });
 					const resultRevision = oldFormatResource.query;
 
-					const scmProvider = this.scmService.getProviderForResource(repoRoot);
+					const repository = this.scmService.getRepositoryForResource(repoRoot);
 					let resourceLocallyNamed: URI;
-					if (scmProvider && scmProvider.revision && scmProvider.revision && scmProvider.revision.id === resultRevision) {
+					if (repository && repository.provider.revision && repository.provider.revision && repository.provider.revision.id === resultRevision) {
 						resourceLocallyNamed = URI.from({
 							scheme: Schemas.repo,
 							authority: oldFormatResource.authority,
