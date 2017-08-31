@@ -100,6 +100,40 @@ class CreateBranchItem implements QuickPickItem {
 	}
 }
 
+class AddWorktreeItem implements QuickPickItem {
+
+	protected get shortCommit(): string { return (this.ref.commit || '').substr(0, 8); }
+	protected get treeish(): string | undefined { return this.ref.fullName; }
+	get label(): string { return this.ref.name || this.shortCommit; }
+	get description(): string { return this.shortCommit; }
+
+	constructor(private worktreeDir: string, protected ref: Ref) { }
+
+	async run(repository: Repository): Promise<void> {
+		const ref = this.treeish;
+
+		if (!ref) {
+			return;
+		}
+
+		await repository.addWorktree(this.worktreeDir, ref);
+	}
+}
+
+class AddWorktreeTagItem extends AddWorktreeItem {
+
+	get description(): string {
+		return localize('tag at', "Tag at {0}", this.shortCommit);
+	}
+}
+
+class AddWorktreeRemoteHeadItem extends AddWorktreeItem {
+
+	get description(): string {
+		return localize('remote branch at', "Remote branch at {0}", this.shortCommit);
+	}
+}
+
 interface CommandOptions {
 	repository?: boolean;
 	diff?: boolean;
@@ -933,6 +967,63 @@ export class CommandCenter {
 		}
 
 		await choice.run(repository);
+	}
+
+	@command('git.addWorktree', { repository: true })
+	async addWorktree(repository: Repository, path?: string, rev?: string): Promise<void> {
+		if (typeof path === 'string' && typeof rev === 'string') {
+			return await repository.addWorktree(path, rev);
+		}
+
+		let worktreePath: string;
+		if (typeof path === 'string') {
+			worktreePath = path;
+		} else if (typeof path !== 'string') {
+			const config = workspace.getConfiguration('git');
+			const value = config.get<string>('defaultCloneDirectory') || os.homedir();
+
+			const inputPath = await window.showInputBox({
+				prompt: localize('directory', "Create Worktree at Directory"),
+				value,
+				ignoreFocusOut: true
+			});
+
+			if (!inputPath) {
+				this.telemetryReporter.sendTelemetryEvent('addWorktree', { outcome: 'no_directory' });
+				return;
+			}
+			worktreePath = inputPath;
+		}
+
+		const config = workspace.getConfiguration('git');
+		const checkoutType = config.get<string>('checkoutType') || 'all';
+		const includeTags = checkoutType === 'all' || checkoutType === 'tags';
+		const includeRemotes = checkoutType === 'all' || checkoutType === 'remote';
+
+		const heads = repository.refs.filter(ref => ref.type === RefType.Head)
+			.map(ref => new AddWorktreeItem(worktreePath, ref));
+
+		const tags = (includeTags ? repository.refs.filter(ref => ref.type === RefType.Tag) : [])
+			.map(ref => new AddWorktreeTagItem(worktreePath, ref));
+
+		const remoteHeads = (includeRemotes ? repository.refs.filter(ref => ref.type === RefType.RemoteHead) : [])
+			.map(ref => new AddWorktreeRemoteHeadItem(worktreePath, ref));
+
+		const picks = [...heads, ...tags, ...remoteHeads];
+		const placeHolder = localize('select a ref to checkout in the worktree', 'Select a ref to checkout in the worktree');
+		const choice = await window.showQuickPick(picks, { placeHolder });
+
+		if (!choice) {
+			this.telemetryReporter.sendTelemetryEvent('addWorktree', { outcome: 'no_ref' });
+			return;
+		}
+
+		const promise = choice.run(repository);
+		window.withProgress({ location: ProgressLocation.SourceControl, title: localize('addingWorktree', "Adding git worktree...") }, () => promise);
+		window.withProgress({ location: ProgressLocation.Window, title: localize('addingWorktree', "Adding git worktree...") }, () => promise);
+		await promise;
+
+		this.telemetryReporter.sendTelemetryEvent('addWorktree', { outcome: 'success' });
 	}
 
 	@command('git.branch', { repository: true })

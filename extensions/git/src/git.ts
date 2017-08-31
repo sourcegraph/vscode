@@ -46,6 +46,7 @@ export enum RefType {
 
 export interface Ref {
 	type: RefType;
+	fullName?: string;
 	name?: string;
 	commit?: string;
 	remote?: string;
@@ -620,6 +621,16 @@ export class Repository {
 		}
 	}
 
+	async addWorktree(worktreeDir: string, ref: string): Promise<void> {
+		const args = ['worktree', 'add', worktreeDir];
+
+		if (ref) {
+			args.push(ref);
+		}
+
+		await this.run(args);
+	}
+
 	async commit(message: string, opts: { all?: boolean, amend?: boolean, signoff?: boolean, signCommit?: boolean } = Object.create(null)): Promise<void> {
 		const args = ['commit', '--quiet', '--allow-empty-message', '--file', '-'];
 
@@ -951,11 +962,11 @@ export class Repository {
 			let match: RegExpExecArray | null;
 
 			if (match = /^refs\/heads\/([^ ]+) ([0-9a-f]{40})$/.exec(line)) {
-				return { name: match[1], commit: match[2], type: RefType.Head };
+				return { fullName: `refs/heads/${match[1]}`, name: match[1], commit: match[2], type: RefType.Head };
 			} else if (match = /^refs\/remotes\/([^/]+)\/([^ ]+) ([0-9a-f]{40})$/.exec(line)) {
-				return { name: `${match[1]}/${match[2]}`, commit: match[3], type: RefType.RemoteHead, remote: match[1] };
+				return { fullName: `refs/remotes/${match[1]}/${match[2]}`, name: `${match[1]}/${match[2]}`, commit: match[3], type: RefType.RemoteHead, remote: match[1] };
 			} else if (match = /^refs\/tags\/([^ ]+) ([0-9a-f]{40})$/.exec(line)) {
-				return { name: match[1], commit: match[2], type: RefType.Tag };
+				return { fullName: `refs/tags/${match[1]}`, name: match[1], commit: match[2], type: RefType.Tag };
 			}
 
 			return null;
