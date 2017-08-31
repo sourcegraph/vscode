@@ -84,6 +84,7 @@ export interface IOpenConfiguration {
 	cli: ParsedArgs;
 	userEnv?: IProcessEnvironment;
 	pathsToOpen?: string[];
+	urisToHandle?: string[];
 	preferNewWindow?: boolean;
 	forceNewWindow?: boolean;
 	forceReuseWindow?: boolean;

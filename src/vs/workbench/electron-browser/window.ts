@@ -48,6 +48,8 @@ import { ICodeCommentsViewlet } from 'vs/workbench/parts/codeComments/common/cod
 import { ipcRenderer as ipc, webFrame } from 'electron';
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
 import { IWorkspaceEditingService } from 'vs/workbench/services/workspace/common/workspaceEditing';
+import { parseSelection } from 'vs/base/common/urlRoutes';
+import { IResourceResolverService } from 'vs/platform/resourceResolver/common/resourceResolver';
 
 const TextInputActions: IAction[] = [
 	new Action('undo', nls.localize('undo', "Undo"), null, true, () => document.execCommand('undo') && TPromise.as(true)),
@@ -89,6 +91,7 @@ export class ElectronWindow extends Themable {
 		@IEnvironmentService private environmentService: IEnvironmentService,
 		@ITelemetryService private telemetryService: ITelemetryService,
 		@IWorkspaceContextService private contextService: IWorkspaceContextService,
+		@IResourceResolverService private resourceResolverService: IResourceResolverService,
 		@IWorkspaceEditingService private workspaceEditingService: IWorkspaceEditingService
 	) {
 		super(themeService);
@@ -168,6 +171,11 @@ export class ElectronWindow extends Themable {
 
 		// Support addFolders event if we have a workspace opened
 		ipc.on('vscode:addFolders', (event, request: IAddFoldersRequest) => this.onAddFolders(request));
+
+		// Support handleUris event
+		ipc.on('vscode:handleUris', (event, urisToHandle: string[]) => {
+			TPromise.wrap(this.onHandleUris(urisToHandle)).done(null, errors.onUnexpectedError);
+		});
 
 		// Emit event when vscode has loaded
 		this.partService.joinCreation().then(() => {
@@ -424,6 +432,62 @@ export class ElectronWindow extends Themable {
 
 			return input;
 		});
+	}
+
+	/**
+	 * Handles URIs referring to remote resources, of the form:
+	 *
+	 *   code:open?
+	 *     repo=encodeURIComponent(cloneURL)&
+	 *     vcs=git&
+	 *     revision=encodeURIComponent(revision)&
+	 *     path=encodeURIComponent(path)&
+	 *     selection=1:2-3:4&selection=5:6-7-8&
+	 *     thread=123&comment=456&
+	 */
+	private async onHandleUris(uriStringsToHandle: string[]): Promise<void> {
+		const urisToHandle = uriStringsToHandle.map(s => URI.parse(s))
+			.filter(uri => uri.path === 'open');
+
+		// TODO(sqs): handle when window is not multi-root
+
+		for (let uri of urisToHandle) {
+			type HandledURI = {
+				repo?: string;
+				vcs?: 'git';
+				revision?: string;
+				path?: string;
+				selection?: string | string[];
+			};
+
+			// Without this, a %2B in the querystring will be decoded into a
+			// space. We want it to be decoded into a '+'.
+			if (uri.query && uri.query.indexOf('+') !== -1) {
+				uri = uri.with({ query: uri.query.replace(/\+/g, '%2B') });
+			}
+			const query = querystring.parse(uri.query);
+
+			let root: URI;
+			if (query.repo) {
+				await this.extensionService.onReady(); // extensions register resource resolvers
+				await TPromise.timeout(1000); // HACK(sqs): wait for git extension to register resource resolver
+				root = await this.resourceResolverService.resolveResource(URI.parse(query.repo));
+				await this.workspaceEditingService.addRoots([root]);
+			}
+			// TODO(sqs): handle revision, need to avoid clobbering git state if != current revision
+			if (root && query.path) {
+				const inputPath: IPath = { filePath: path.join(root.fsPath, query.path) };
+				if (query.selection) {
+					// TODO(sqs): handle multiple selections
+					const selection = parseSelection(types.isArray(query.selection) ? query.selection[0] : query.selection);
+					if (selection) {
+						inputPath.lineNumber = selection.startLineNumber;
+						inputPath.columnNumber = selection.startColumn;
+					}
+				}
+				await this.openResources(this.toInputs([inputPath], false), false);
+			}
+		}
 	}
 
 	private toggleAutoSave(): void {

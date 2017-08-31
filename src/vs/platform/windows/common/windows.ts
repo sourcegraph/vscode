@@ -202,11 +202,15 @@ export interface IOpenFileRequest {
 	filesToDiff?: IPath[];
 }
 
+export interface IHandleURIRequest {
+	urisToHandle?: string[];
+}
+
 export interface IAddFoldersRequest {
 	foldersToAdd: IPath[];
 }
 
-export interface IWindowConfiguration extends ParsedArgs, IOpenFileRequest {
+export interface IWindowConfiguration extends ParsedArgs, IOpenFileRequest, IHandleURIRequest {
 	appRoot: string;
 	execPath: string;
 	isInitialStartup?: boolean;

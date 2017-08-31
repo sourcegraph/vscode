@@ -77,8 +77,8 @@ export function formatFragment(args: FragmentArgs): string {
 
 // parseSelection parses a string like '1-2', '1:2', '1:2-3', '1-2:3', or
 // '1:2-3:4'. It assumes that line and column numbers are 1-indexed.
-function parseSelection(range: string): Selection | undefined {
-	let m = range.match(/^L(\d+)(?::(\d+))?(?:-(\d+)(?::(\d+))?)?$/);
+export function parseSelection(range: string): Selection | undefined {
+	let m = range.match(/^L?(\d+)(?::(\d+))?(?:-(\d+)(?::(\d+))?)?$/);
 	if (m) {
 		const sel: Selection = { startLineNumber: Number(m[1]) };
 		if (typeof m[2] === 'string') { sel.startColumn = Number(m[2]); }
