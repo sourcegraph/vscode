@@ -69,6 +69,6 @@ export const virtualMachineHint: { value(): number } = new class {
 
 let machineId: TPromise<string>;
 export function getMachineId(): TPromise<string> {
-	return machineId || (machineId = getNodeMachineId())
-		.then(id => id || uuid.generateUuid()); // fallback, generate a UUID
+	return machineId || (machineId = getNodeMachineId()
+		.then(id => id || uuid.generateUuid())); // fallback, generate a UUID
 }
