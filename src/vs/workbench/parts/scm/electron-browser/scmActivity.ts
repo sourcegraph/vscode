@@ -8,12 +8,18 @@
 import { localize } from 'vs/nls';
 import { IDisposable, dispose, empty as EmptyDisposable, combinedDisposable } from 'vs/base/common/lifecycle';
 import { filterEvent } from 'vs/base/common/event';
+import * as arrays from 'vs/base/common/arrays';
 import { VIEWLET_ID } from 'vs/workbench/parts/scm/common/scm';
 import { ISCMService, ISCMRepository } from 'vs/workbench/services/scm/common/scm';
 import { IActivityBarService, NumberBadge } from 'vs/workbench/services/activity/common/activityBarService';
 import { IWorkbenchContribution } from 'vs/workbench/common/contributions';
 import { IContextKeyService, IContextKey } from 'vs/platform/contextkey/common/contextkey';
 import { IStatusbarService, StatusbarAlignment as MainThreadStatusBarAlignment } from 'vs/platform/statusbar/common/statusbar';
+import { IEditorGroupService } from 'vs/workbench/services/group/common/groupService';
+import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
+import { toResource } from 'vs/workbench/common/editor';
+import { getCodeEditor as getEditorWidget } from 'vs/editor/common/services/codeEditorService';
+import { IEditor } from 'vs/platform/editor/common/editor';
 
 export class StatusUpdater implements IWorkbenchContribution {
 
@@ -81,17 +87,23 @@ export class StatusBarController implements IWorkbenchContribution {
 	private focusDisposable: IDisposable = EmptyDisposable;
 	private focusedRepository: ISCMRepository | undefined = undefined;
 	private focusedProviderContextKey: IContextKey<string | undefined>;
+	private activeEditorListeners: IDisposable[] = [];
 	private disposables: IDisposable[] = [];
 
 	constructor(
 		@ISCMService private scmService: ISCMService,
 		@IStatusbarService private statusbarService: IStatusbarService,
+		@IEditorGroupService private editorGroupService: IEditorGroupService,
+		@IWorkbenchEditorService private editorService: IWorkbenchEditorService,
 		@IContextKeyService contextKeyService: IContextKeyService
 	) {
 		this.focusedProviderContextKey = contextKeyService.createKey<string | undefined>('scmProvider', void 0);
 		this.scmService.onDidAddRepository(this.onDidAddRepository, this, this.disposables);
 
-		if (this.scmService.repositories.length > 0) {
+		this.editorGroupService.onEditorsChanged(this.onEditorsChanged, this, this.disposables);
+
+		const renderedForEditor = this.onDidChangeOrFocusActiveEditor();
+		if (!renderedForEditor && this.scmService.repositories.length > 0) {
 			this.onDidFocusRepository(this.scmService.repositories[0]);
 		}
 	}
@@ -117,7 +129,8 @@ export class StatusBarController implements IWorkbenchContribution {
 		const disposable = combinedDisposable([changeDisposable, removeDisposable]);
 		this.disposables.push(disposable);
 
-		if (this.scmService.repositories.length === 1) {
+		const renderedForEditor = this.onDidChangeOrFocusActiveEditor();
+		if (!renderedForEditor && this.scmService.repositories.length === 1) {
 			this.onDidFocusRepository(repository);
 		}
 	}
@@ -131,6 +144,40 @@ export class StatusBarController implements IWorkbenchContribution {
 		this.focusDisposable.dispose();
 		this.focusDisposable = repository.provider.onDidChange(() => this.render(repository));
 		this.render(repository);
+	}
+
+	private onEditorsChanged(): void {
+		const activeEditor = this.editorService.getActiveEditor();
+
+		// Also handle when the user clicks back into the editor from somewhere else (e.g.,
+		// the SCM viewlet) that could've changed the focused repository.
+		const control = getEditorWidget(activeEditor);
+
+		// Dispose old active editor listeners
+		dispose(this.activeEditorListeners);
+
+		// Attach new listeners to active editor
+		if (control) {
+			this.activeEditorListeners.push(control.onDidFocusEditor(() => this.onDidChangeOrFocusActiveEditor()));
+		}
+	}
+
+	private onDidChangeOrFocusActiveEditor(activeEditor: IEditor = this.editorService.getActiveEditor()): boolean {
+		const activeResource = activeEditor ? toResource(activeEditor.input, { supportSideBySide: true, filter: 'file' }) : void 0;
+		if (activeResource) {
+			const provider = this.scmService.getProviderForResource(activeResource);
+			if (provider) {
+				const repository = arrays.first(this.scmService.repositories, r => r.provider === provider);
+				if (repository) {
+					this.onDidFocusRepository(repository);
+					return true;
+				}
+			}
+		} else {
+			// Keep last-viewed repository's status bar items.
+		}
+
+		return false;
 	}
 
 	private render(repository: ISCMRepository): void {
@@ -150,6 +197,7 @@ export class StatusBarController implements IWorkbenchContribution {
 	dispose(): void {
 		this.focusDisposable.dispose();
 		this.statusBarDisposable.dispose();
+		this.activeEditorListeners = dispose(this.activeEditorListeners);
 		this.disposables = dispose(this.disposables);
 	}
 }
