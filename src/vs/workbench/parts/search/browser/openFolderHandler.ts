@@ -33,7 +33,8 @@ import { ExplorerViewlet } from 'vs/workbench/parts/files/browser/explorerViewle
 import { VIEWLET_ID as EXPLORER_VIEWLET_ID } from 'vs/workbench/parts/files/common/files';
 import { IWorkspacesService } from 'vs/platform/workspaces/common/workspaces';
 import { IResourceResolverService } from 'vs/platform/resourceResolver/common/resourceResolver';
-import { IFolder, IFoldersWorkbenchService, ISearchStats, ISearchQuery } from 'vs/workbench/parts/workspace/common/workspace';
+import { IFolder, IFoldersWorkbenchService, ISearchStats, ISearchQuery, FolderOperation } from 'vs/workbench/parts/workspace/common/workspace';
+import { IProgressService2, ProgressLocation } from 'vs/platform/progress/common/progress';
 
 /**
 * The quick open model representing folder results from a single handler.
@@ -188,7 +189,9 @@ export class FolderEntry extends QuickOpenEntry {
 		@IWorkspacesService private workspacesService: IWorkspacesService,
 		@IViewletService private viewletService: IViewletService,
 		@IResourceResolverService private resourceResolverService: IResourceResolverService,
-		@IWindowsService private windowsService: IWindowsService
+		@IWindowsService private windowsService: IWindowsService,
+		@IFoldersWorkbenchService private foldersWorkbenchService: IFoldersWorkbenchService,
+		@IProgressService2 private progressService: IProgressService2,
 	) {
 		super();
 		this.label = folder.displayPath;
@@ -252,17 +255,23 @@ export class FolderEntry extends QuickOpenEntry {
 
 		const hideWidget = (mode === Mode.OPEN);
 
+		const resolvedResource = this.resourceResolverService.resolveResource(this.folder.resource);
+
 		if (mode === Mode.OPEN) {
 			if (!this.contextService.hasWorkspace() || this.contextService.hasFolderWorkspace()) {
 				// Upgrade workspace to multi-root workspace.
-				this.resourceResolverService.resolveResource(this.folder.resource)
+				const p = resolvedResource
 					.then(resolvedResource => this.workspacesService.createWorkspace([resolvedResource.toString()]))
-					.then(({ configPath }) => this.windowsService.openWindow([configPath]))
-					.done(null, errors.onUnexpectedError);
+					.then(({ configPath }) => this.windowsService.openWindow([configPath]));
+				p.done(null, errors.onUnexpectedError);
+				this.progressService.withProgress({
+					location: ProgressLocation.Window,
+					title: nls.localize('fetchingFolder', "Fetching {0}...", this.folder.displayPath),
+				}, () => p);
 				return true;
 			}
 
-			this.resourceResolverService.resolveResource(this.folder.resource).then(resolvedResource => {
+			const p = resolvedResource.then(resolvedResource => {
 				// Add folder as a root folder in the workspace.
 				let rootExists = false;
 				if (this.contextService.hasWorkspace()) {
@@ -291,13 +300,20 @@ export class FolderEntry extends QuickOpenEntry {
 						}
 						return void 0;
 					})
-				).done(null, errors.onUnexpectedError);
+				);
 			});
+			p.done(null, errors.onUnexpectedError);
+			this.foldersWorkbenchService.monitorFolderOperation(this.folder, FolderOperation.Adding, p);
 		} else if (mode === Mode.OPEN_IN_BACKGROUND) {
 			// Opens a window for this workspace.
-			this.resourceResolverService.resolveResource(this.folder.resource)
-				.then(resolvedResource => this.windowsService.openWindow([resolvedResource.toString()]))
-				.done(null, errors.onUnexpectedError);
+			const p = resolvedResource
+				.then(resolvedResource => this.windowsService.openWindow([resolvedResource.toString()]));
+
+			p.done(null, errors.onUnexpectedError);
+			this.progressService.withProgress({
+				location: ProgressLocation.Window,
+				title: nls.localize('fetchingFolder', "Fetching {0}...", this.folder.displayPath),
+			}, () => p);
 		}
 
 		return hideWidget;
