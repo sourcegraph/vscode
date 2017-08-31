@@ -5,7 +5,7 @@
 
 'use strict';
 
-import { IWorkspacesMainService, IWorkspaceIdentifier, IStoredWorkspace, WORKSPACE_EXTENSION, IWorkspaceSavedEvent, UNTITLED_WORKSPACE_NAME, IResolvedWorkspace, IStoredWorkspaceFolder } from 'vs/platform/workspaces/common/workspaces';
+import { IWorkspacesMainService, IWorkspaceIdentifier, IStoredWorkspace, WORKSPACE_EXTENSION, IWorkspaceSavedEvent, UNTITLED_WORKSPACE_NAME, IResolvedWorkspace } from 'vs/platform/workspaces/common/workspaces';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { isParent } from 'vs/platform/files/common/files';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
@@ -87,21 +87,17 @@ export class WorkspacesMainService implements IWorkspacesMainService {
 				writeFileSync(path, stringifyWorkspace(workspace));
 			}
 
-			let absoluteFolders: IStoredWorkspaceFolder[] = [];
+			// relative paths get resolved against the workspace location
 			workspace.folders.forEach(folder => {
-				if (isAbsolute(folder.path)) {
-					absoluteFolders.push(folder);
-				} else {
-					absoluteFolders.push({
-						path: resolve(dirname(path), folder.path) // relative paths get resolved against the workspace location
-					});
+				if (!isAbsolute(folder.path)) {
+					folder.path = resolve(dirname(path), folder.path);
 				}
 			});
 
 			return {
 				id: this.getWorkspaceId(path),
 				configPath: path,
-				folders: absoluteFolders
+				folders: workspace.folders
 			};
 		} catch (error) {
 			this.logService.log(error.toString());
@@ -111,13 +107,21 @@ export class WorkspacesMainService implements IWorkspacesMainService {
 	}
 
 	private doParseStoredWorkspace(path: string, contents: string): IStoredWorkspace {
+
+		// Parse workspace file
 		let storedWorkspace: IStoredWorkspace;
 		try {
-			storedWorkspace = json.parse(contents);
+			storedWorkspace = json.parse(contents); // use fault tolerant parser
 		} catch (error) {
 			throw new Error(`${path} cannot be parsed as JSON file (${error}).`);
 		}
 
+		// Filter out folders which do not have a path set
+		if (Array.isArray(storedWorkspace.folders)) {
+			storedWorkspace.folders = storedWorkspace.folders.filter(folder => !!folder.path);
+		}
+
+		// Validate
 		if (!Array.isArray(storedWorkspace.folders) || storedWorkspace.folders.length === 0) {
 			throw new Error(`${path} looks like an invalid workspace file.`);
 		}
@@ -212,7 +216,7 @@ export class WorkspacesMainService implements IWorkspacesMainService {
 				}
 
 				if (isEqualOrParent(folder.path, targetConfigFolder, !isLinux)) {
-					folder.path = relative(targetConfigFolder, folder.path); // absolute paths get converted to relative ones to workspace location if possible
+					folder.path = relative(targetConfigFolder, folder.path) || '.'; // absolute paths get converted to relative ones to workspace location if possible
 				}
 			});
 

@@ -384,7 +384,7 @@ export class Repository implements Disposable {
 		const onRelevantGitChange = filterEvent(onGitChange, uri => !/\/\.git\/index\.lock$/.test(uri.path));
 		onRelevantGitChange(this._onDidChangeRepository.fire, this._onDidChangeRepository, this.disposables);
 
-		const label = `Git - ${path.basename(repository.root)}`;
+		const label = `${path.basename(repository.root)} (Git)`;
 
 		this._sourceControl = scm.createSourceControl('git', {
 			rootFolder: Uri.file(repository.root),
@@ -857,14 +857,25 @@ export class Repository implements Disposable {
 
 	@throttle
 	private async updateWhenIdleAndWait(): Promise<void> {
-		await this.whenIdle();
+		await this.whenIdleAndFocused();
 		await this.status();
 		await timeout(5000);
 	}
 
-	private async whenIdle(): Promise<void> {
-		while (!this.operations.isIdle()) {
-			await eventToPromise(this.onDidRunOperation);
+	private async whenIdleAndFocused(): Promise<void> {
+		while (true) {
+			if (!this.operations.isIdle()) {
+				await eventToPromise(this.onDidRunOperation);
+				continue;
+			}
+
+			if (!window.state.focused) {
+				const onDidFocusWindow = filterEvent(window.onDidChangeWindowState, e => e.focused);
+				await eventToPromise(onDidFocusWindow);
+				continue;
+			}
+
+			return;
 		}
 	}
 

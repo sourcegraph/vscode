@@ -30,6 +30,15 @@
       {
         "command": "git.init",
         "title": "%command.init%",
+        "category": "Git",
+        "icon": {
+          "light": "resources/icons/light/git.svg",
+          "dark": "resources/icons/dark/git.svg"
+        }
+      },
+      {
+        "command": "git.close",
+        "title": "%command.close%",
         "category": "Git"
       },
       {
@@ -536,11 +545,6 @@
           "when": "config.git.enabled && scmProvider == git"
         },
         {
-          "command": "git.showOutput",
-          "group": "6_output",
-          "when": "config.git.enabled && scmProvider == git"
-        },
-        {
           "command": "git.stash",
           "group": "5_stash",
           "when": "config.git.enabled && scmProvider == git"
@@ -553,6 +557,16 @@
         {
           "command": "git.stashPopLatest",
           "group": "5_stash",
+          "when": "config.git.enabled && scmProvider == git"
+        },
+        {
+          "command": "git.close",
+          "group": "6_misc",
+          "when": "config.git.enabled && scmProvider == git"
+        },
+        {
+          "command": "git.showOutput",
+          "group": "7_repository",
           "when": "config.git.enabled && scmProvider == git"
         }
       ],

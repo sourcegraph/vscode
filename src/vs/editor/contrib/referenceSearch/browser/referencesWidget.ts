@@ -619,7 +619,7 @@ export class ReferenceWidget extends PeekViewWidget {
 	}
 
 	show(where: IRange) {
-		this.editor.revealRangeInCenterIfOutsideViewport(where);
+		this.editor.revealRangeInCenterIfOutsideViewport(where, editorCommon.ScrollType.Smooth);
 		super.show(where, this.layoutData.heightInLines || 18);
 	}
 
@@ -860,7 +860,7 @@ export class ReferenceWidget extends PeekViewWidget {
 				this._preview.setModel(model.textEditorModel);
 				var sel = Range.lift(reference.range).collapseToStart();
 				this._preview.setSelection(sel);
-				this._preview.revealRangeInCenter(sel);
+				this._preview.revealRangeInCenter(sel, editorCommon.ScrollType.Smooth);
 			} else {
 				this._preview.setModel(this._previewNotAvailableMessage);
 				ref.dispose();

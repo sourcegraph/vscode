@@ -174,7 +174,7 @@ export class CommandCenter {
 
 		const activeTextEditor = window.activeTextEditor;
 
-		if (activeTextEditor && activeTextEditor.document.uri.toString() === right.toString()) {
+		if (activeTextEditor && activeTextEditor.document.uri.fsPath === right.fsPath) {
 			opts.selection = activeTextEditor.selection;
 		}
 
@@ -330,6 +330,11 @@ export class CommandCenter {
 		await this.model.tryOpenRepository(path);
 	}
 
+	@command('git.close', { repository: true })
+	async closeRepository(repository: Repository): Promise<void> {
+		this.model.close(repository);
+	}
+
 	@command('git.openFile')
 	async openFile(arg?: Resource | Uri, ...resourceStates: SourceControlResourceState[]): Promise<void> {
 		const preserveFocus = arg instanceof Resource;
@@ -368,7 +373,7 @@ export class CommandCenter {
 				viewColumn: activeTextEditor && activeTextEditor.viewColumn || ViewColumn.One
 			};
 
-			if (activeTextEditor && activeTextEditor.document.uri.toString() === uri.toString()) {
+			if (activeTextEditor && activeTextEditor.document.uri.fsPath === uri.fsPath) {
 				opts.selection = activeTextEditor.selection;
 			}
 

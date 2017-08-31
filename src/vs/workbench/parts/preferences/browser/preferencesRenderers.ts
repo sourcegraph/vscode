@@ -932,7 +932,7 @@ class SettingHighlighter extends Disposable {
 			resource: this.editor.getModel().uri
 		}, this.editor);
 
-		this.editor.revealLineInCenterIfOutsideViewport(setting.valueRange.startLineNumber);
+		this.editor.revealLineInCenterIfOutsideViewport(setting.valueRange.startLineNumber, editorCommon.ScrollType.Smooth);
 		this.focusEventEmitter.fire(setting);
 	}
 

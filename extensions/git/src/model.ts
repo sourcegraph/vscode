@@ -11,6 +11,7 @@ import { memoize, sequentialize, debounce } from './decorators';
 import { dispose, anyEvent, filterEvent } from './util';
 import { Git, GitErrorCodes } from './git';
 import * as path from 'path';
+import * as fs from 'fs';
 import * as nls from 'vscode-nls';
 
 const localize = nls.loadMessageBundle();
@@ -64,6 +65,23 @@ export class Model {
 		const onGitRepositoryChange = filterEvent(onWorkspaceChange, uri => /\/\.git\//.test(uri.path));
 		const onPossibleGitRepositoryChange = filterEvent(onGitRepositoryChange, uri => !this.getRepository(uri));
 		onPossibleGitRepositoryChange(this.onPossibleGitRepositoryChange, this, this.disposables);
+
+		this.scanWorkspaceFolders();
+	}
+
+	/**
+	 * Scans the first level of each workspace folder, looking
+	 * for git repositories.
+	 */
+	private async scanWorkspaceFolders(): Promise<void> {
+		for (const folder of workspace.workspaceFolders || []) {
+			const root = folder.uri.fsPath;
+			const children = await new Promise<string[]>((c, e) => fs.readdir(root, (err, r) => err ? e(err) : c(r)));
+
+			for (const child of children) {
+				this.tryOpenRepository(path.join(root, child));
+			}
+		}
 	}
 
 	private onPossibleGitRepositoryChange(uri: Uri): void {
@@ -147,14 +165,20 @@ export class Model {
 
 	@sequentialize
 	async tryOpenRepository(path: string): Promise<void> {
-		const repository = this.getRepository(path);
-
-		if (repository) {
+		if (this.getRepository(path)) {
 			return;
 		}
 
 		try {
 			const repositoryRoot = await this.git.getRepositoryRoot(path);
+
+			// This can happen whenever `path` has the wrong case sensitivity in
+			// case insensitive file systems
+			// https://github.com/Microsoft/vscode/issues/33498
+			if (this.getRepository(repositoryRoot)) {
+				return;
+			}
+
 			const repository = new Repository(this.git.open(repositoryRoot));
 
 			this.open(repository);
@@ -184,6 +208,16 @@ export class Model {
 		this._onDidOpenRepository.fire(repository);
 	}
 
+	close(repository: Repository): void {
+		const openRepository = this.getOpenRepository(repository);
+
+		if (!openRepository) {
+			return;
+		}
+
+		openRepository.dispose();
+	}
+
 	async pickRepository(): Promise<Repository | undefined> {
 		if (this.openRepositories.length === 0) {
 			throw new Error(localize('no repositories', "There are no available repositories"));
@@ -205,6 +239,7 @@ export class Model {
 		return liveRepository && liveRepository.repository;
 	}
 
+	private getOpenRepository(repository: Repository): OpenRepository | undefined;
 	private getOpenRepository(sourceControl: SourceControl): OpenRepository | undefined;
 	private getOpenRepository(resourceGroup: SourceControlResourceGroup): OpenRepository | undefined;
 	private getOpenRepository(path: string): OpenRepository | undefined;
@@ -212,6 +247,10 @@ export class Model {
 	private getOpenRepository(hint: any): OpenRepository | undefined {
 		if (!hint) {
 			return undefined;
+		}
+
+		if (hint instanceof Repository) {
+			return this.openRepositories.filter(r => r.repository === hint)[0];
 		}
 
 		if (typeof hint === 'string') {
