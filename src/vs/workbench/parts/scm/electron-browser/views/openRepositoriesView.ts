@@ -122,7 +122,7 @@ export class OpenRepositoriesView extends CollapsibleView {
 		// Open when selecting via keyboard
 		this.toDispose.push(this.tree.addListener('selection', event => {
 			if (event && event.payload && event.payload.origin === 'keyboard') {
-				this.model.activeRepository = this.tree.getFocus();
+				controller.openRepository(this.tree.getFocus());
 			}
 		}));
 
