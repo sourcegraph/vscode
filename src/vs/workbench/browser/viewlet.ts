@@ -151,8 +151,7 @@ export class ViewletDescriptor extends CompositeDescriptor<Viewlet> {
 		name: string,
 		cssClass?: string,
 		order?: number,
-		private _extensionId?: string,
-		public readonly defaultPinned = true,
+		private _extensionId?: string
 	) {
 		super(moduleId, ctorName, id, name, cssClass, order);
 

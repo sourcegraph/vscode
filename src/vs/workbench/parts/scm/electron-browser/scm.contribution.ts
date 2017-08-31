@@ -40,9 +40,7 @@ const viewletDescriptor = new ViewletDescriptor(
 	VIEWLET_ID,
 	localize('source control', "Source Control"),
 	'scm',
-	36,
-	undefined,
-	false,
+	36
 );
 
 Registry.as<ViewletRegistry>(ViewletExtensions.Viewlets)
