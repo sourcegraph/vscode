@@ -392,7 +392,7 @@ export class WindowsManager implements IWindowsMainService {
 		//
 		// These are URIs to handle to perform various actions
 		//
-		let urisToHandle: string[] = openConfig.urisToHandle || [];
+		let urisToHandle = openConfig.urisToHandle || [];
 		for (const arg of openConfig.cli._) {
 			if (strings.startsWith(arg, `${product.urlProtocol}:`)) {
 				urisToHandle.push(arg);
