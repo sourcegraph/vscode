@@ -7,6 +7,9 @@
 
 import * as vscode from 'vscode';
 import 'isomorphic-fetch';
+import * as nls from 'vscode-nls';
+
+const localize = nls.loadMessageBundle();
 
 export function requestGraphQL<T>(query: string, variables: { [name: string]: any }): Thenable<T> {
 	const headers: { [name: string]: string } = {
@@ -20,7 +23,13 @@ export function requestGraphQL<T>(query: string, variables: { [name: string]: an
 		headers,
 		body: JSON.stringify({ query, variables }),
 	})
-		.then(resp => resp.json() as Thenable<T>)
+		.then(resp => {
+			if (resp.status < 200 || resp.status > 299) {
+				return resp.json().then((err: { message: string }) =>
+					Promise.reject(localize('apiError', "Error from GitHub: {0}", err.message)));
+			}
+			return resp.json();
+		})
 		.then((body: any) => {
 			if (body.errors) {
 				console.error('ERRORS', body.errors);
