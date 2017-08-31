@@ -26,7 +26,7 @@ query($id: ID!) {
 				{ id: resource.path.replace(/^\/repository\//, '') },
 			).then(({ node }) => {
 				if (!node) {
-					throw new Error(`GitHub repository not found: '${resource.toString()}'`);
+					return showErrorImmediately(localize('notFound', "GitHub repository not found: {0}", resource.toString()));
 				}
 				return vscode.Uri.parse(`git+ssh://git@github.com/${node.nameWithOwner}.git`);
 			});
@@ -65,7 +65,7 @@ query($id: ID!) {
 				{ id: resource.path },
 			).then(({ node }) => {
 				if (!node) {
-					throw new Error(`GitHub repository not found: '${resource.toString()}'`);
+					return showErrorImmediately(localize('notFound', "GitHub repository not found: {0}", resource.toString()));
 				}
 				return toCatalogFolder(node);
 			});
@@ -88,7 +88,7 @@ query($query: String!) {
 		}
 	}
 }`,
-					{ query }).then((data: any) => data.search.nodes);
+					{ query }).then((data: any) => data.search.nodes, showErrorImmediately);
 			} else {
 				request = requestGraphQL(`
 query {
@@ -100,7 +100,7 @@ query {
 		}
 	}
 }`,
-					{}).then((data: any) => data.viewer.repositories.nodes);
+					{}).then((data: any) => data.viewer.repositories.nodes, showErrorImmediately);
 			}
 
 			return request.then(repos => {
@@ -108,6 +108,30 @@ query {
 			});
 		},
 	}));
+}
+
+/**
+ * Close quickopen and pass along the error so that the user sees it immediately instead
+ * of only when they close the quickopen (which probably isn't showing any results because of
+ * the error).
+ */
+function showErrorImmediately<T>(error: string): T | Thenable<T> {
+	return vscode.commands.executeCommand('workbench.action.closeMessages').then(() => {
+		const resetTokenItem: vscode.MessageItem = { title: localize('resetToken', "Reset Token") };
+		const cancelItem: vscode.MessageItem = { title: localize('cancel', "Cancel"), isCloseAffordance: true };
+		vscode.window.showErrorMessage(error, resetTokenItem, cancelItem)
+			.then(async (value) => {
+				if (value === resetTokenItem) {
+					const hasToken = vscode.workspace.getConfiguration('github').get<string>('token');
+					if (hasToken) {
+						await vscode.workspace.getConfiguration('github').update('token', undefined, vscode.ConfigurationTarget.Global);
+					}
+					checkGitHubToken(); // will walk the user through recreating the token
+				}
+			});
+
+		return Promise.reject(error);
+	});
 }
 
 /**
@@ -127,7 +151,7 @@ async function checkGitHubToken(): Promise<boolean> {
 	const enterTokenItem: vscode.MessageItem = { title: localize('enterToken', "Enter Token") };
 	const cancelItem: vscode.MessageItem = { title: localize('cancel', "Cancel"), isCloseAffordance: true };
 	const value = await vscode.window.showInformationMessage(
-		localize('noGitHubToken', "Must enter GitHub token"),
+		localize('noGitHubToken', "A GitHub personal access token is required to search for repositories."),
 		{ modal: false },
 		createTokenItem, enterTokenItem, cancelItem,
 	);
