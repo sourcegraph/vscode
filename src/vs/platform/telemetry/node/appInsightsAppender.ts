@@ -133,6 +133,14 @@ export class AppInsightsAppender implements ITelemetryAppender {
 			return;
 		}
 		data = mixin(data, this._defaultData);
+		// console.log(`TRACK: ${JSON.stringify(data, null, 2)}`);
+		// console.log(`CONTEXT: ${JSON.stringify(this._aiClient.context, null, 2)}`);
+		data[this._aiClient.context.keys.userId] = data['common.machineId'];
+		data[this._aiClient.context.keys.sessionId] = data['sessionID'];
+		data[this._aiClient.context.keys.sessionIsFirst] = data['common.firstSessionDate'] === data['common.lastSessionDate'];
+		data[this._aiClient.context.keys.sessionIsNew] = data['common.isNewSession'] && data['common.isNewSession'] !== '0';
+		data['ai.user.authUserId'] = data['git_auth_email'];
+
 		let { properties, measurements } = AppInsightsAppender._getData(data);
 		this._aiClient.trackEvent(this._eventPrefix + '/' + eventName, properties, measurements);
 	}
