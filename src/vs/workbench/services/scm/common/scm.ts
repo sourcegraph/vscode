@@ -146,8 +146,8 @@ export interface ISCMService {
 	registerSCMProvider(provider: ISCMProvider): ISCMRepository;
 
 	/**
-	 * Returns the SCM repository provider for the given resource (by traversing up the
-	 * directory hierarchy until we reach an SCM provider's root folder). Can be undefined
+	 * Returns the SCM repository for the given resource (by traversing up the
+	 * directory hierarchy until we reach an SCM repository's root folder). Can be undefined
 	 * if the resource is not in a known SCM repository.
 	 *
 	 * An SCM provider's root folder is set in the call to registerSCMProvider (in
@@ -155,7 +155,7 @@ export interface ISCMService {
 	 * vscode.scm.createSourceControl options arg. It can't be changed after
 	 * creation/registration.
 	 */
-	getProviderForResource(resource: URI): ISCMProvider | undefined;
+	getRepositoryForResource(resource: URI): ISCMRepository | undefined;
 }
 
 /**

@@ -160,14 +160,14 @@ export class Git {
 	}
 
 	private spawnPromiseTrim(context: URI, params: Array<string>): TPromise<string> {
-		const scmProvider = this.scmService.getProviderForResource(context);
-		if (!scmProvider) {
+		const repository = this.scmService.getRepositoryForResource(context);
+		if (!repository || !repository.provider) {
 			return TPromise.wrapError(new Error(`no scm provider in context ${context.toString()}`));
 		}
-		if (scmProvider.contextValue !== 'git') {
-			return TPromise.wrapError(new Error(`only git is supported; got ${scmProvider.contextValue}`));
+		if (repository.provider.contextValue !== 'git') {
+			return TPromise.wrapError(new Error(`only git is supported; got ${repository.provider.contextValue}`));
 		}
-		return scmProvider.executeCommand(params).then(result => result.trim());
+		return repository.provider.executeCommand(params).then(result => result.trim());
 	}
 }
 

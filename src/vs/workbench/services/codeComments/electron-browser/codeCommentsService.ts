@@ -443,14 +443,14 @@ export class CodeCommentsService implements ICodeCommentsService {
 	}
 
 	private getPathRelativeToRepo(file: URI): TPromise<string> {
-		const scmProvider = this.scmService.getProviderForResource(file);
-		if (!scmProvider) {
+		const repository = this.scmService.getRepositoryForResource(file);
+		if (!repository) {
 			return TPromise.wrapError(new Error(`no scm provider in context ${file.toString()}`));
 		}
-		if (!scmProvider.rootFolder) {
+		if (!repository.provider.rootFolder) {
 			return TPromise.wrapError(new Error(`scmProvider for context ${file.toString()} has no root folder`));
 		}
-		const root = this.endsWithSlash(scmProvider.rootFolder.path);
+		const root = this.endsWithSlash(repository.provider.rootFolder.path);
 		if (!startsWith(file.path, root)) {
 			return TPromise.wrapError(new Error(`file ${file.path} not in root ${root}`));
 		}

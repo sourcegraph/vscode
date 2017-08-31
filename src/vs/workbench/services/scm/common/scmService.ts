@@ -68,13 +68,13 @@ export class SCMService implements ISCMService {
 	get onDidChangeRepository(): Event<ISCMRepository> { return this._onDidChangeProvider.event; }
 
 	/**
-	 * Map of SCM root folders to the SCM provider that is used to provide SCM information
+	 * Map of SCM root folders to the SCM repository that is used to provide SCM information
 	 * about resources inside the folder.
 	 */
-	private _folderProvidersMap: TrieMap<ISCMProvider>;
+	private _folderRepositoriesMap: TrieMap<ISCMRepository>;
 
 	constructor() {
-		this.updateFolderProvidersMap();
+		this.updateFolderRepositoriesMap();
 	}
 
 	registerSCMProvider(provider: ISCMProvider): ISCMRepository {
@@ -93,27 +93,27 @@ export class SCMService implements ISCMService {
 
 			this._providerIds.delete(provider.id);
 			this._repositories.splice(index, 1);
-			this.updateFolderProvidersMap();
+			this.updateFolderRepositoriesMap();
 			this._onDidRemoveProvider.fire(repository);
 		});
 
 		const repository = new SCMRepository(provider, disposable);
 		this._repositories.push(repository);
-		this.updateFolderProvidersMap();
+		this.updateFolderRepositoriesMap();
 		this._onDidAddProvider.fire(repository);
 
 		return repository;
 	}
 
-	getProviderForResource(resource: URI): ISCMProvider | undefined {
-		return this._folderProvidersMap.findSubstr(resource.toString());
+	getRepositoryForResource(resource: URI): ISCMRepository | undefined {
+		return this._folderRepositoriesMap.findSubstr(resource.toString());
 	}
 
-	private updateFolderProvidersMap(): void {
-		this._folderProvidersMap = new TrieMap<ISCMProvider>(TrieMap.PathSplitter);
+	private updateFolderRepositoriesMap(): void {
+		this._folderRepositoriesMap = new TrieMap<ISCMRepository>(TrieMap.PathSplitter);
 		for (const repository of this._repositories) {
 			if (repository.provider.rootFolder) {
-				this._folderProvidersMap.insert(repository.provider.rootFolder.toString(), repository.provider);
+				this._folderRepositoriesMap.insert(repository.provider.rootFolder.toString(), repository);
 			}
 		}
 	}
