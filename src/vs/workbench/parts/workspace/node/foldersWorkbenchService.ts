@@ -7,6 +7,7 @@
 
 import Event, { Emitter, filterEvent, toPromise } from 'vs/base/common/event';
 import * as paths from 'vs/base/common/paths';
+import { localize } from 'vs/nls';
 import { Schemas } from 'vs/base/common/network';
 import { assign } from 'vs/base/common/objects';
 import { TPromise } from 'vs/base/common/winjs.base';
@@ -20,6 +21,7 @@ import { IEditorGroupService } from 'vs/workbench/services/group/common/groupSer
 import { IFolderContainmentService } from 'vs/platform/folder/common/folderContainment';
 import { IFolderCatalogService, ICatalogFolder, FolderGenericIconClass } from 'vs/platform/folders/common/folderCatalog';
 import { ISCMService, ISCMRepository } from 'vs/workbench/services/scm/common/scm';
+import { IProgressService2, IProgressOptions, ProgressLocation } from 'vs/platform/progress/common/progress';
 
 interface IWorkspaceFolderStateProvider {
 	(folder: Folder): WorkspaceFolderState;
@@ -200,6 +202,7 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 		@IFolderContainmentService private folderContainmentService: IFolderContainmentService,
 		@IFolderCatalogService private folderCatalogService: IFolderCatalogService,
 		@ISCMService private scmService: ISCMService,
+		@IProgressService2 private progressService: IProgressService2,
 	) {
 		this.stateProvider = folder => this.getFolderState(folder);
 
@@ -367,6 +370,13 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 						TPromise.timeout(5000),
 					]);
 				});
+
+				// Show progress while adding because it can take a while.
+				let options: IProgressOptions = {
+					location: ProgressLocation.Window,
+					title: localize('addingFolder', "Adding {0}...", folder.displayPath),
+				};
+				this.progressService.withProgress(options, () => promise);
 
 				this.adding.push(op);
 				onDone = (success: boolean) => {

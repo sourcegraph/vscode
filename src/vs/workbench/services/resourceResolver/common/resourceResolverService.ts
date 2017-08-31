@@ -13,6 +13,8 @@ export class ResourceResolverService implements IResourceResolverService {
 
 	_serviceBrand: any;
 
+	private static RECURSION_LIMIT = 5;
+
 	private providers = new Map<string, IResourceResolutionProvider>();
 
 	public registerResourceResolutionProvider(scheme: string, provider: IResourceResolutionProvider): IDisposable {
@@ -29,7 +31,7 @@ export class ResourceResolverService implements IResourceResolverService {
 		});
 	}
 
-	public resolveResource(resource: URI, recursionLimit: number = 5): TPromise<URI> {
+	public resolveResource(resource: URI, recursionLimit: number = ResourceResolverService.RECURSION_LIMIT): TPromise<URI> {
 		if (recursionLimit === 0) {
 			throw new Error('recursion limit reached');
 		}
