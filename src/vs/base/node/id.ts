@@ -72,5 +72,3 @@ export function getMachineId(): TPromise<string> {
 	return machineId || (machineId = getNodeMachineId())
 		.then(id => id || uuid.generateUuid()); // fallback, generate a UUID
 }
-
-getMachineId().then(id => console.log('MACHINE ID: ' + id));
