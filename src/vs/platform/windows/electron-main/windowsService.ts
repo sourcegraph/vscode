@@ -50,9 +50,6 @@ export class WindowsService implements IWindowsService, IDisposable {
 			.filter(uri => uri.scheme === product.urlProtocol && uri.path === 'open')
 			.on(this.openForRemoteURI, this, this.disposables);
 
-		chain(urlService.onOpenURL)
-			.map(e => console.log('URI', e.toString()));
-
 		// Catch extension URLs when there are no windows open
 		chain(urlService.onOpenURL)
 			.filter(uri => /^extension/.test(uri.path))
