@@ -305,6 +305,11 @@
       "from": "native-watchdog@0.3.0",
       "resolved": "https://registry.npmjs.org/native-watchdog/-/native-watchdog-0.3.0.tgz"
     },
+    "node-machine-id": {
+      "version": "1.1.9",
+      "from": "node-machine-id@latest",
+      "resolved": "https://registry.npmjs.org/node-machine-id/-/node-machine-id-1.1.9.tgz"
+    },
     "node-pty": {
       "version": "0.7.0",
       "from": "node-pty@0.7.0",

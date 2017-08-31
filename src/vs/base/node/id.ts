@@ -3,13 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as getmac from 'getmac';
-import * as crypto from 'crypto';
 import { TPromise } from 'vs/base/common/winjs.base';
-import * as errors from 'vs/base/common/errors';
 import * as uuid from 'vs/base/common/uuid';
 import { networkInterfaces } from 'os';
 import { TrieMap } from 'vs/base/common/map';
+import { machineId as getNodeMachineId } from 'node-machine-id';
 
 // http://www.techrepublic.com/blog/data-center/mac-address-scorecard-for-common-virtual-machine-platforms/
 // VMware ESX 3, Server, Workstation, Player	00-50-56, 00-0C-29, 00-05-69
@@ -71,23 +69,6 @@ export const virtualMachineHint: { value(): number } = new class {
 
 let machineId: TPromise<string>;
 export function getMachineId(): TPromise<string> {
-	return machineId || (machineId = getMacMachineId()
-		.then(id => id || uuid.generateUuid())); // fallback, generate a UUID
-}
-
-function getMacMachineId(): TPromise<string> {
-	return new TPromise<string>(resolve => {
-		try {
-			getmac.getMac((error, macAddress) => {
-				if (!error) {
-					resolve(crypto.createHash('sha256').update(macAddress, 'utf8').digest('hex'));
-				} else {
-					resolve(undefined);
-				}
-			});
-		} catch (err) {
-			errors.onUnexpectedError(err);
-			resolve(undefined);
-		}
-	});
+	return machineId || (machineId = getNodeMachineId())
+		.then(id => id || uuid.generateUuid()); // fallback, generate a UUID
 }
