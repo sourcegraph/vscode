@@ -4,14 +4,64 @@
  *--------------------------------------------------------------------------------------------*/
 'use strict';
 
-import { Diff } from 'vs/workbench/services/codeComments/common/diff';
+import { UnifiedDiff } from 'vs/workbench/services/codeComments/common/unifiedDiff';
+import { VSDiff } from 'vs/workbench/services/codeComments/common/vsdiff';
 import { Range } from 'vs/editor/common/core/range';
 import * as assert from 'assert';
+import { applyPatch } from 'diff';
 
 const diffHeader = `diff --git a/comments.txt b/comments.txt
 index 63ef680..47010db 100644
 --- a/comments.txt
 +++ b/comments.txt`;
+
+const defaultOriginalFile = `this is line 1
+this is line 2
+this is line 3
+this is line 4
+this is line 5
+this is line 6
+this is line 7
+this is line 8
+this is line 9
+this is line 10
+this is line 11
+this is line 12
+this is line 13
+this is line 14
+this is line 15
+this is line 16
+this is line 17
+this is line 18
+this is line 19
+this is line 20
+`;
+
+const indentedOriginalFile = `this is line 1
+this is line 2
+this is line 3
+this is line 4
+this is line 5
+this is line 6
+  this is line 7
+  this is line 8
+  this is line 9
+this is line 10
+this is line 11
+this is line 12
+this is line 13
+this is line 14
+this is line 15
+this is line 16
+this is line 17
+this is line 18
+this is line 19
+this is line 20
+`;
+
+function toLines(content: string): string[] {
+	return content.split('\n');
+}
 
 /**
  * Helper class for testing different forms of equivalent diffs.
@@ -19,23 +69,42 @@ index 63ef680..47010db 100644
  * u0 is a diff with 0 lines of context around each change (-U0 option).
  */
 class TestDiff {
+	private originalLines: string[];
 	constructor(
 		private u3Hunks: string,
 		private u0Hunks: string,
-	) { }
+		private originalFile: string = defaultOriginalFile
+	) {
+		this.originalLines = toLines(originalFile);
+	}
 
 	/**
 	 * Asserts that the diff transforms `from` to `to`.
 	 */
 	public assertTransformRange(from: Range, to: Range) {
-		this.assertDiffTransformRange('u3\n' + diffHeader + this.u3Hunks, new Diff(diffHeader + this.u3Hunks), from, to);
-		this.assertDiffTransformRange('u0\n' + diffHeader + this.u0Hunks, new Diff(diffHeader + this.u0Hunks), from, to);
+		this.assertDiffTransformRange('u3\n', this.u3Hunks, from, to);
+		this.assertDiffTransformRange('u0\n', this.u0Hunks, from, to);
 	}
 
-	private assertDiffTransformRange(label: string, diff: Diff, from: Range, to: Range) {
-		const actual = diff.transformRange(from);
-		const expectedActual = `diff.transformRange(${from})\nexpected: ${to}\nactual: ${actual}`;
-		assert.deepEqual(actual, to, label + expectedActual);
+	private assertDiffTransformRange(label: string, hunks: string, from: Range, to: Range) {
+		const patch = diffHeader + hunks;
+		label += patch;
+		{
+			const diff = new UnifiedDiff(patch);
+			const actual = diff.transformRange(from);
+			const expectedActual = `diff.transformRange(${from})\nexpected: ${to}\nactual: ${actual}`;
+			assert.deepEqual(actual, to, label + expectedActual);
+		}
+		{
+			// We always use u3Hunks here because there is a bug in applyPatch
+			const modified = applyPatch(this.originalFile, this.u3Hunks);
+			const diff = new VSDiff(this.originalLines, toLines(modified));
+			const actual = diff.transformRange(from);
+			const prettyLineChanges = diff.lineChanges.map(lc => JSON.stringify(lc)).join('\n');
+			const expectedActual = `diff2.transformRange(${from})\nexpected: ${to}\nactual: ${actual}\nline changes:\n${prettyLineChanges}}`;
+			assert.deepEqual(actual, to, label + `modified:\n${modified}` + expectedActual);
+		}
+
 	}
 }
 
@@ -1052,7 +1121,7 @@ suite('diff', () => {
 +this is line 7
 +this is line 8
 +this is line 9
-`);
+`, indentedOriginalFile);
 			diff.assertTransformRange(new Range(7, 1, 7, 10), new Range(7, 1, 7, 8));
 			diff.assertTransformRange(new Range(7, 2, 7, 10), new Range(7, 1, 7, 8));
 			diff.assertTransformRange(new Range(7, 3, 7, 10), new Range(7, 1, 7, 8));

@@ -7,7 +7,7 @@
 import { ICodeEditorService } from 'vs/editor/common/services/codeEditorService';
 import { IModel, OverviewRulerLane, IDecorationOptions, IEditorContribution } from 'vs/editor/common/editorCommon';
 import { IDisposable, Disposable, dispose } from 'vs/base/common/lifecycle';
-import { ICodeCommentsService, Thread } from 'vs/editor/common/services/codeCommentsService';
+import { ICodeCommentsService, IThreadComments, IFileComments } from 'vs/editor/common/services/codeCommentsService';
 import { ISCMService } from 'vs/workbench/services/scm/common/scm';
 import URI from 'vs/base/common/uri';
 import { Schemas } from 'vs/base/common/network';
@@ -44,12 +44,14 @@ export class CodeCommentsDecorationRenderer extends Disposable implements IEdito
 	 * There may be more than one thread on a given line but we only store one.
 	 * This is used to detect if the user is clicking on a gutter icon.
 	 */
-	private gutterIconLines = new Map<number, Thread>();
+	private gutterIconLines = new Map<number, IThreadComments>();
 
 	/**
 	 * Objects that need to be disposed when the editor's model changes.
 	 */
 	private disposeOnModelChange: IDisposable[] = [];
+
+	private fileComments: IFileComments;
 
 	constructor(
 		private editor: ICodeEditor,
@@ -91,17 +93,6 @@ export class CodeCommentsDecorationRenderer extends Disposable implements IEdito
 				.then(viewlet => viewlet as ICodeCommentsViewlet)
 				.then(viewlet => viewlet.viewThread(thread.id));
 		}));
-
-		// Re-render decorations when the scm service changes because
-		// it may not have been ready yet on previous renders and the
-		// scm data is necessary for rendering code comments correctly.
-		// TODO(nick): it would be nice if ICodeCommentsService abstracted this away.
-		scmService.onDidAddRepository(e => this.renderCurrentModelDecorations());
-		scmService.onDidRemoveRepository(e => this.renderCurrentModelDecorations());
-		scmService.onDidChangeRepository(e => this.renderCurrentModelDecorations());
-
-		// Render decorations any time comments change (e.g. one was created, data was fetched from network).
-		this._register(codeCommentsService.onCommentsDidChange(() => this.renderCurrentModelDecorations()));
 
 		// Render decorations on each model change, and do first render.
 		this._register(editor.onDidChangeModel(e => this.onDidChangeModel()));
@@ -147,11 +138,10 @@ export class CodeCommentsDecorationRenderer extends Disposable implements IEdito
 		this.disposeOnModelChange = dispose(this.disposeOnModelChange);
 		const model = this.getEditorModel();
 		if (model) {
+			this.fileComments = this.codeCommentsService.getModel(model.uri);
 			// Any time an editors model changes, initiate a refresh of the data.
-			this.codeCommentsService.refreshThreads(model.uri);
-
-			const fileCommentsModel = this.codeCommentsService.getModel(model.uri);
-			fileCommentsModel.onSelectedThreadDidChange(() => {
+			this.fileComments.refreshThreads();
+			this.disposeOnModelChange.push(this.fileComments.onSelectedThreadDidChange(() => {
 				// Update the highlighted range.
 				this.renderDecorations(model);
 
@@ -160,10 +150,12 @@ export class CodeCommentsDecorationRenderer extends Disposable implements IEdito
 				// scroll the editor that is active.
 				const activeEditor = this.editorService.getActiveEditor();
 				const control = activeEditor && activeEditor.getControl();
-				if (fileCommentsModel.selectedThread && control && this.editor === control) {
-					this.editor.revealRangeInCenter(fileCommentsModel.selectedThread.range);
+				if (this.fileComments.selectedThread && control && this.editor === control) {
+					this.editor.revealRangeInCenter(this.fileComments.selectedThread.displayRange);
 				}
-			}, this, this.disposeOnModelChange);
+			}));
+			// Render decorations any time threads change (e.g. one was created, or data was fetched from network).
+			this.fileComments.onThreadsDidChange(() => this.renderDecorations(model), this, this.disposeOnModelChange);
 			this.renderDecorations(model);
 		}
 	}
@@ -192,18 +184,18 @@ export class CodeCommentsDecorationRenderer extends Disposable implements IEdito
 	 * renders a highlight of the range for the currently selected thread (if there is one).
 	 */
 	private renderDecorations(model: IModel): void {
-		const threads = this.codeCommentsService.getThreads(model.uri);
-		const selectedThread = this.codeCommentsService.getModel(model.uri).selectedThread;
+		const threads = this.fileComments.threads.filter(t => !!t.displayRange);
+		const selectedThread = this.fileComments.selectedThread;
 
 		this.gutterIconLines = threads.reduce((lines, thread) => {
-			lines.set(thread.range.startLineNumber, thread);
+			lines.set(thread.displayRange.startLineNumber, thread);
 			return lines;
-		}, new Map<number, Thread>());
+		}, new Map<number, IThreadComments>());
 
-		const highlights: IDecorationOptions[] = selectedThread ? [{ range: selectedThread.range }] : [];
+		const highlights: IDecorationOptions[] = selectedThread && selectedThread.displayRange ? [{ range: selectedThread.displayRange }] : [];
 		this.editor.setDecorations(HIGHLIGHT_DECORATION_KEY, highlights);
 
-		const gutterIcons: IDecorationOptions[] = threads.map(thread => ({ range: thread.range.collapseToStart() }));
+		const gutterIcons: IDecorationOptions[] = threads.map(thread => ({ range: thread.displayRange.collapseToStart() }));
 		this.editor.setDecorations(GUTTER_ICON_DECORATION_KEY, gutterIcons);
 	}
 }

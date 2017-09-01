@@ -10,13 +10,12 @@ import { localize } from 'vs/nls';
 import { Disposable } from 'vs/base/common/lifecycle';
 import { clearNode, addDisposableListener } from 'vs/base/browser/dom';
 import { $ } from 'vs/base/browser/builder';
-import { ICodeCommentsService, Thread, CommentsDidChangeEvent } from 'vs/editor/common/services/codeCommentsService';
+import { IFileComments, ICodeCommentsService, IThreadComments } from 'vs/editor/common/services/codeCommentsService';
 import URI from 'vs/base/common/uri';
 import * as date from 'date-fns';
 import { IProgressService } from 'vs/platform/progress/common/progress';
 import { CommentInput } from 'vs/workbench/parts/codeComments/browser/commentInput';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
-import { MessageType } from 'vs/base/browser/ui/inputbox/inputBox';
 import Event, { Emitter } from 'vs/base/common/event';
 import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
 import { Action } from 'vs/base/common/actions';
@@ -37,11 +36,12 @@ export class ThreadView extends Disposable {
 
 	private onHeightChangeEmitter = new Emitter<void>();
 	public readonly onHeightChange: Event<void> = this.onHeightChangeEmitter.event;
+	private fileComments: IFileComments;
 
 	constructor(
 		private parent: HTMLElement,
 		private modelUri: URI,
-		private thread: Thread,
+		private thread: IThreadComments,
 		@ICodeCommentsService private codeCommentsService: ICodeCommentsService,
 		@IProgressService private progressService: IProgressService,
 		@IInstantiationService private instantiationService: IInstantiationService,
@@ -51,17 +51,13 @@ export class ThreadView extends Disposable {
 		@ITelemetryService private telemetryService: ITelemetryService,
 	) {
 		super();
+		this.fileComments = codeCommentsService.getModel(modelUri);
 		this.telemetryService.publicLog('codeComments.viewThread', { codeComments: { commentCount: thread.comments.length } });
-		this._register(this.codeCommentsService.onCommentsDidChange(e => this.onCommentsDidChange(e)));
-		this.render();
-	}
-
-	private onCommentsDidChange(e: CommentsDidChangeEvent): void {
-		const thread = this.codeCommentsService.getThread(this.modelUri, this.thread.id);
-		if (thread) {
-			this.thread = thread;
+		this._register(thread.onCommentsDidChange(() => {
 			this.render();
-		}
+
+		}));
+		this.render();
 	}
 
 	private render(): void {
@@ -94,26 +90,24 @@ export class ThreadView extends Disposable {
 			}
 			const commentInput = this.instantiationService.createInstance(CommentInput, div.getContainer(), localize('reply', "Reply..."));
 			this._register(commentInput);
+			this._register(commentInput.onDidChange(value => this.thread.draftReply = value));
 			this._register(commentInput.onDidHeightChange(() => this.onHeightChangeEmitter.fire()));
-			this._register(commentInput.onSubmitEvent(e => this.submitReply(commentInput, this.modelUri, this.thread, e.content)));
+			this._register(commentInput.onSubmit(e => this.submitReply(commentInput, this.thread, e.content)));
 		});
 	}
 
-	private submitReply(input: CommentInput, modelUri: URI, thread: Thread, content: string): void {
+	private submitReply(input: CommentInput, thread: IThreadComments, content: string): void {
 		input.setEnabled(false);
-		const promise = this.codeCommentsService.replyToThread(modelUri, thread, content).then(() => {
+		const promise = thread.submitDraftReply().then(() => {
 			// CommentsDidChange event has already been handled so we don't need to re-enable input or clear its content.
-			this.telemetryService.publicLog('codeComments.replyToThread', getCommentTelemetryData({ range: thread.range, thread, content, error: false }));
+			this.telemetryService.publicLog('codeComments.replyToThread', getCommentTelemetryData({ thread, content, error: false }));
 		}, error => {
-			this.telemetryService.publicLog('codeComments.replyToThread', getCommentTelemetryData({ range: thread.range, thread, content, error: true }));
+			this.telemetryService.publicLog('codeComments.replyToThread', getCommentTelemetryData({ thread, content, error: true }));
 			if (this.disposed) {
 				return;
 			}
 			input.setEnabled(true);
-			input.showMessage({
-				content: error.toString(),
-				type: MessageType.ERROR,
-			});
+			input.showError(error);
 		});
 		this.progressService.showWhile(promise);
 	}

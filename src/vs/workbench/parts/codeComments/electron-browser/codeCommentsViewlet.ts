@@ -17,10 +17,9 @@ import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import * as Constants from 'vs/workbench/parts/codeComments/common/constants';
 import { IThemeService, registerThemingParticipant } from 'vs/platform/theme/common/themeService';
 import { ICommonCodeEditor, isCommonCodeEditor } from 'vs/editor/common/editorCommon';
-import { ICodeCommentsService, Thread, CommentsDidChangeEvent } from 'vs/editor/common/services/codeCommentsService';
+import { ICodeCommentsService, IThreadComments } from 'vs/editor/common/services/codeCommentsService';
 import URI from 'vs/base/common/uri';
 import * as date from 'date-fns';
-import { ISCMService } from 'vs/workbench/services/scm/common/scm';
 import { IProgressService } from 'vs/platform/progress/common/progress';
 import { ScrollableElement } from 'vs/base/browser/ui/scrollbar/scrollableElement';
 import { ScrollbarVisibility } from 'vs/base/common/scrollable';
@@ -80,7 +79,6 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 		@IWorkbenchEditorService private editorService: IWorkbenchEditorService,
 		@IEditorGroupService private editorGroupService: IEditorGroupService,
 		@ICodeCommentsService private codeCommentsService: ICodeCommentsService,
-		@ISCMService private scmService: ISCMService,
 		@IProgressService private progressService: IProgressService,
 		@IInstantiationService private instantiationService: IInstantiationService,
 	) {
@@ -127,25 +125,9 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 		parent.addClass('codeComments');
 		parent.append(this.scrollContainer);
 
-		this._register(this.codeCommentsService.onCommentsDidChange(this.onCommentsDidChange, this));
 		this._register(this.editorGroupService.onEditorsChanged(this.onEditorsChanged, this));
-		this._register(this.scmService.onDidAddRepository(this.onDidRegisterScmProvider, this));
-		this._register(this.scmService.onDidRemoveRepository(this.onDidRegisterScmProvider, this));
-		this._register(this.scmService.onDidChangeRepository(this.onDidRegisterScmProvider, this));
-
 		this.onEditorsChanged();
 		return TPromise.as(null);
-	}
-
-	private onDidRegisterScmProvider(): void {
-		this.render(this.getActiveModelUri(), { refreshData: true });
-	}
-
-	private onCommentsDidChange(e: CommentsDidChangeEvent) {
-		const modelUri = this.getActiveModelUri();
-		if (e.file === modelUri && this.recentThreadsView) {
-			this.render(modelUri, {});
-		}
 	}
 
 	private onEditorsChanged(): void {
@@ -163,8 +145,14 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 		}));
 		const modelUri = this.getModelUri(editor);
 		if (modelUri) {
-			this.activeEditorListeners.push(this.codeCommentsService.getModel(modelUri).onSelectedThreadDidChange(() => {
-				this.render(this.getModelUri(editor), {});
+			const fileComments = this.codeCommentsService.getModel(modelUri);
+			this.activeEditorListeners.push(fileComments.onSelectedThreadDidChange(() => {
+				this.render(modelUri, {});
+			}));
+			this.activeEditorListeners.push(fileComments.onThreadsDidChange(() => {
+				if (this.recentThreadsView) {
+					this.render(modelUri, {});
+				}
 			}));
 		}
 		this.render(modelUri, { refreshData: true });
@@ -246,16 +234,16 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 		this.updateTitleArea();
 		this.renderDisposables = dispose(this.renderDisposables);
 
-		const threads = this.codeCommentsService.getThreads(modelUri);
+		const fileComments = this.codeCommentsService.getModel(modelUri);
 		if (options.refreshData) {
-			this.progressService.showWhile(this.codeCommentsService.refreshThreads(modelUri));
+			this.progressService.showWhile(fileComments.refreshThreads());
 		} else {
-			this.progressService.showWhile(this.codeCommentsService.refreshing(modelUri));
+			this.progressService.showWhile(fileComments.refreshing);
 		}
 
 		clearNode(this.list);
 		$(this.list).div({ class: 'threads' }, div => {
-			if (threads.length === 0) {
+			if (fileComments.threads.length === 0) {
 				div.div({ class: 'empty' }, div => {
 					div.div({}, div => {
 						div.text(localize('toStartConversationOnThisFile', "To start a conversation on this file:"));
@@ -272,7 +260,7 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 				return;
 			}
 
-			for (const thread of threads) {
+			for (const thread of fileComments.threads) {
 				const recentComment = thread.mostRecentComment;
 				div.div({ class: 'thread' }, div => {
 					div.on('click', () => {
@@ -301,7 +289,7 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 	/**
 	 * Renders comments for a single thread.
 	 */
-	private renderThreadView(modelUri: URI, thread: Thread): void {
+	private renderThreadView(modelUri: URI, thread: IThreadComments): void {
 		this.recentThreadsView = false;
 		this.renderDisposables = dispose(this.renderDisposables);
 
@@ -340,31 +328,32 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 		this.updateScrollbar();
 	}
 
-	public createThread(file: URI, range: Range): void {
-		if (this.getActiveModelUri() !== file) {
-			// User switched contexts before we could show this UI.
-			return;
-		}
+	public createThread(editor: ICommonCodeEditor): void {
 		this.recentThreadsView = false;
 		this.renderDisposables = dispose(this.renderDisposables);
 
-		this.renderTitleAndActionsForThreadRange(range);
+		this.renderTitleAndActionsForThreadRange(editor.getSelection());
+		const fileComments = this.codeCommentsService.getModel(editor.getModel().uri);
+		const draftThread = fileComments.createDraftThread(editor);
 
-		const createThreadView = this.instantiationService.createInstance(CreateThreadView, this.list, file, range);
+		const createThreadView = this.instantiationService.createInstance(CreateThreadView, this.list, draftThread);
 		this.renderDisposables.push(createThreadView);
 		this.renderDisposables.push(createThreadView.onHeightChange(() => this.updateScrollbar()));
 	}
 
 	public viewThread(threadID: number, commentID: number): void {
 		const modelUri = this.getActiveModelUri();
-		const refreshThreads = this.codeCommentsService.refreshThreads(modelUri);
-		const selectedThread = this.codeCommentsService.getThread(modelUri, threadID);
+
+		const fileComments = this.codeCommentsService.getModel(modelUri);
+
+		const refreshThreads = fileComments.refreshThreads();
+		const selectedThread = fileComments.getThread(threadID);
 		if (selectedThread) {
-			this.codeCommentsService.getModel(modelUri).selectedThread = selectedThread;
+			fileComments.selectedThread = selectedThread;
 		} else {
 			refreshThreads.then(() => {
-				const selectedThread = this.codeCommentsService.getThread(modelUri, threadID);
-				this.codeCommentsService.getModel(modelUri).selectedThread = selectedThread;
+				const selectedThread = fileComments.getThread(threadID);
+				fileComments.selectedThread = selectedThread;
 			});
 		}
 		// TODO(nick): scroll to and/or highlight comment?

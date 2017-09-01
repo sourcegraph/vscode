@@ -8,7 +8,7 @@ import { localize } from 'vs/nls';
 import { Disposable } from 'vs/base/common/lifecycle';
 import Event, { Emitter, chain } from 'vs/base/common/event';
 import { $ } from 'vs/base/browser/builder';
-import { InputBox, IMessage } from 'vs/base/browser/ui/inputbox/inputBox';
+import { InputBox } from 'vs/base/browser/ui/inputbox/inputBox';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { IContextViewService } from 'vs/platform/contextview/browser/contextView';
 import { attachInputBoxStyler, attachButtonStyler } from 'vs/platform/theme/common/styler';
@@ -17,6 +17,7 @@ import { domEvent } from 'vs/base/browser/event';
 import { KeyCode, KeyMod } from 'vs/base/common/keyCodes';
 import { Button } from 'vs/base/browser/ui/button/button';
 import { isMacintosh } from 'vs/base/common/platform';
+import { IMessageService, Severity } from 'vs/platform/message/common/message';
 
 export interface SubmitEvent {
 	content: string;
@@ -30,8 +31,11 @@ export class CommentInput extends Disposable {
 	private onDidHeightChangeEmitter = new Emitter<void>();
 	public readonly onDidHeightChange = this.onDidHeightChangeEmitter.event;
 
+	private onDidChangeEmitter = new Emitter<string>();
+	public readonly onDidChange = this.onDidChangeEmitter.event;
+
 	private onSubmitEmitter = new Emitter<SubmitEvent>();
-	public readonly onSubmitEvent: Event<SubmitEvent> = this.onSubmitEmitter.event;
+	public readonly onSubmit: Event<SubmitEvent> = this.onSubmitEmitter.event;
 
 	private inputBox: InputBox;
 	private submitButton: Button;
@@ -41,6 +45,7 @@ export class CommentInput extends Disposable {
 		placeholder: string,
 		@IContextViewService private contextViewService: IContextViewService,
 		@IThemeService private themeService: IThemeService,
+		@IMessageService private messageService: IMessageService,
 	) {
 		super();
 
@@ -53,11 +58,12 @@ export class CommentInput extends Disposable {
 				this._register(attachInputBoxStyler(this.inputBox, this.themeService));
 				this._register(this.inputBox);
 				this._register(this.inputBox.onDidHeightChange(() => this.onDidHeightChangeEmitter.fire()));
+				this._register(this.inputBox.onDidChange(value => this.onDidChangeEmitter.fire(value)));
 
 				this._register(chain(domEvent(this.inputBox.inputElement, 'keydown'))
 					.map(e => new StandardKeyboardEvent(e))
 					.filter(e => e.equals(KeyMod.CtrlCmd | KeyCode.Enter) || e.equals(KeyMod.CtrlCmd | KeyCode.KEY_S))
-					.on(() => this.onSubmit()));
+					.on(() => this.handleSubmit()));
 			});
 
 			div.div({ class: 'hint' }, div => {
@@ -69,7 +75,7 @@ export class CommentInput extends Disposable {
 				this.submitButton.label = localize('commitMessage', "Submit ({0})", isMacintosh ? 'Cmd+Enter' : 'Ctrl+Enter');
 				attachButtonStyler(this.submitButton, this.themeService);
 				this._register(this.submitButton);
-				this._register(this.submitButton.addListener('click', () => this.onSubmit()));
+				this._register(this.submitButton.addListener('click', () => this.handleSubmit()));
 			});
 		});
 	}
@@ -79,11 +85,16 @@ export class CommentInput extends Disposable {
 		this.inputBox.setEnabled(enabled);
 	}
 
-	public showMessage(message: IMessage, force?: boolean): void {
-		this.inputBox.showMessage(message, force);
+	public showError(error: Error): void {
+		const err = Array.isArray(error) ? error.filter(e => !!e).join('\n') : error.toString();
+		this.inputBox.showMessage({
+			content: err,
+			formatContent: true,
+		});
+		this.messageService.show(Severity.Error, err);
 	}
 
-	private onSubmit(): void {
+	private handleSubmit(): void {
 		this.onSubmitEmitter.fire({ content: this.inputBox.value });
 	}
 

@@ -6,95 +6,35 @@
 
 import { Position } from 'vs/editor/common/core/position';
 import { Range } from 'vs/editor/common/core/range';
-import * as strings from 'vs/base/common/strings';
 
 /**
- * Diff is constructed from a unified diff string and provides a transformRange method
- * to transform a range according to the diff.
+ * Base class for differs that provide a transformRange method.
+ * Subclass should do all work in the constructor and update
+ * the appropriate properties.
  *
- * No diff context is necessary (Git defaults to three lines) so you can optimize diff
- * size by excluding context (e.g. -U0 for Git).
+ * This class only exists to provide a consistent implementation
+ * between UnifiedDiff and VSDiff.
  */
-export class Diff {
+export abstract class Diff {
 	/**
 	 * Structured representation of the changed lines in the diff.
 	 */
-	private lineDiffs: LineDiff[] = [];
+	protected lineDiffs: LineDiff[] = [];
 
 	/**
 	 * An index on deleted lines by line number.
 	 */
-	private deletedIndex = new Map<number, LineDiff>();
+	protected deletedIndex = new Map<number, LineDiff>();
 
 	/**
 	 * An index on added lines by content.
 	 */
-	private addedIndexExact = new Map<string, LineDiff | false>();
+	protected addedIndexExact = new Map<string, LineDiff | false>();
 
 	/**
 	 * An index on added lines by content with leading and trailing whitespace removed.
 	 */
-	private addedIndexTrim = new Map<string, LineDiff | false>();
-
-	public constructor(diff: string) {
-		const lines = diff.trim().split('\n');
-		let beforeLine = -1;
-		let afterLine = -1;
-		let header = true;
-		for (const line of lines) {
-			if (strings.startsWith(line, '@@')) {
-				const hunk = parseHunkHeader(line);
-				beforeLine = hunk.before.count > 0 ? hunk.before.start : hunk.before.start + 1;
-				afterLine = hunk.after.count > 0 ? hunk.after.start : hunk.after.start + 1;
-				header = false;
-				continue;
-			}
-			if (header) {
-				// Skip past everything until the first hunk.
-				continue;
-			}
-			const content = line.substr(1);
-			switch (line[0]) {
-				case '+': {
-					const lineDiff: LineDiff = { beforeLine, afterLine, content, lineDelta: 1 };
-					this.lineDiffs.push(lineDiff);
-					// If there are duplicates, we don't allow comments to move to these lines.
-					// We would have to make an arbitrary decision or attach the thread to both ranges.
-					if (this.addedIndexExact.has(content)) {
-						this.addedIndexExact.set(content, false);
-					} else {
-						this.addedIndexExact.set(content, lineDiff);
-					}
-					const trimmedContent = content.trim();
-					if (this.addedIndexTrim.has(trimmedContent)) {
-						this.addedIndexTrim.set(trimmedContent, false);
-					} else {
-						this.addedIndexTrim.set(trimmedContent, lineDiff);
-					}
-					afterLine += 1;
-					break;
-				}
-				case '-': {
-					const lineDiff: LineDiff = { beforeLine, afterLine, content, lineDelta: -1 };
-					this.lineDiffs.push(lineDiff);
-					this.deletedIndex.set(beforeLine, lineDiff);
-					beforeLine += 1;
-					break;
-				}
-				case ' ':
-					beforeLine += 1;
-					afterLine += 1;
-					break;
-				case '\\':
-					// "\ No newline at end of file."
-					break;
-				default:
-					const err: any = new Error(`invalid diff line: ${line}`);
-					err.diff = diff;
-					throw err;
-			}
-		}
-	}
+	protected addedIndexTrim = new Map<string, LineDiff | false>();
 
 	/**
 	 * Converts a pre-diff range to a post-diff range.
@@ -123,14 +63,7 @@ export class Diff {
 			endLineOffset += lineDiff.lineDelta;
 		}
 		const transformedRange = new Range(range.startLineNumber + startLineOffset, range.startColumn, range.endLineNumber + endLineOffset, range.endColumn);
-		return range.isEmpty() ? transformedRange : this.nonEmptyRange(transformedRange);
-	}
-
-	/**
-	 * Returns range if it isn't empty and undefined otherwise.
-	 */
-	private nonEmptyRange(range: Range): Range | undefined {
-		return range.isEmpty() ? undefined : range;
+		return range.isEmpty() ? transformedRange : nonEmptyRange(transformedRange);
 	}
 
 	/**
@@ -170,7 +103,7 @@ export class Diff {
 		if (!startPosition || !endPosition) {
 			return undefined;
 		}
-		return this.nonEmptyRange(new Range(startPosition.lineNumber, startPosition.column, endPosition.lineNumber, endPosition.column));
+		return nonEmptyRange(new Range(startPosition.lineNumber, startPosition.column, endPosition.lineNumber, endPosition.column));
 	}
 
 	/**
@@ -234,7 +167,7 @@ export class Diff {
 			return undefined;
 		}
 		const movedRange = new Range(startPosition.lineNumber, startPosition.column, endPosition.lineNumber, endPosition.column);
-		return range.isEmpty() ? movedRange : this.nonEmptyRange(movedRange);
+		return range.isEmpty() ? movedRange : nonEmptyRange(movedRange);
 	}
 }
 
@@ -249,7 +182,14 @@ function getEffectiveEndLine(range: Range): number {
 	return excludeTrailingNewline ? range.endLineNumber - 1 : range.endLineNumber;
 }
 
-interface LineDiff {
+/**
+ * Returns range if it isn't empty and undefined otherwise.
+ */
+function nonEmptyRange(range: Range): Range | undefined {
+	return range.isEmpty() ? undefined : range;
+}
+
+export interface LineDiff {
 	/**
 	 * Line number (the first line of the file is 1).
 	 */
@@ -269,41 +209,4 @@ interface LineDiff {
 	 * 1 for add, -1 for delete.
 	 */
 	lineDelta: number;
-}
-
-const beforeHunkRegex = /-([0-9]+)(?:,([0-9]+))?/;
-const afterHunkRegex = /\+([0-9]+)(?:,([0-9]+))?/;
-
-interface Lines {
-	/**
-	 * 1-indexed
-	 */
-	start: number;
-	count: number;
-}
-
-interface HunkHeader {
-	before: Lines;
-	after: Lines;
-}
-
-/**
- * Parses a string like "@@ -1,3 2,4 @@".
- */
-function parseHunkHeader(hunk: string): HunkHeader {
-	const beforeHunk = beforeHunkRegex.exec(hunk);
-	const afterHunk = afterHunkRegex.exec(hunk);
-	if (!beforeHunk || !afterHunk) {
-		throw new Error('invalid hunk: ' + hunk);
-	}
-	return {
-		before: {
-			start: parseInt(beforeHunk[1]),
-			count: beforeHunk[2] ? parseInt(beforeHunk[2]) : 1,
-		},
-		after: {
-			start: parseInt(afterHunk[1]),
-			count: afterHunk[2] ? parseInt(afterHunk[2]) : 1,
-		},
-	};
 }

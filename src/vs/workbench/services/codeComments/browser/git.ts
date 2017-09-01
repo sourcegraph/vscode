@@ -19,6 +19,7 @@ import { Registry } from 'vs/platform/registry/common/platform';
 export class Git {
 
 	constructor(
+		private fileUri: URI,
 		@ISCMService private scmService: ISCMService,
 		@IConfigurationService protected configurationService: IConfigurationService,
 		@IConfigurationEditingService private configurationEditingService: IConfigurationEditingService,
@@ -28,11 +29,11 @@ export class Git {
 	/**
 	 * Returns the most recent revision in the current branch that is on any upstream.
 	 */
-	public getLastPushedRevision(context: URI): TPromise<string> {
+	public getLastPushedRevision(): TPromise<string> {
 		return TPromise.join<any>([
-			this.isCurrentRevPushed(context),
-			this.getRemoteTrackingBranches(context),
-			this.getRevisionSHA(context),
+			this.isCurrentRevPushed(),
+			this.getRemoteTrackingBranches(),
+			this.getRevisionSHA(),
 		]).then(([isCurrentRevPushed, remoteRevs, rev]: [boolean, Set<string>, string]) => {
 			if (isCurrentRevPushed) {
 				return rev;
@@ -40,10 +41,10 @@ export class Git {
 			const args: string[] = [];
 			remoteRevs.forEach(remoteRev => args.push('^' + remoteRev));
 			// This returns oldest revision that is reachable from HEAD but not from any of the revs in args.
-			return this.spawnPromiseTrim(context, ['rev-list', '--reverse', '--max-count', '1', 'HEAD'].concat(args))
+			return this.spawnPromiseTrim(['rev-list', '--reverse', '--max-count', '1', 'HEAD'].concat(args))
 				.then(oldestUnpushedRevision => {
 					// We want to return a rev that IS pushed so we get this revision's parent.
-					return this.spawnPromiseTrim(context, ['rev-parse', oldestUnpushedRevision + '~']);
+					return this.spawnPromiseTrim(['rev-parse', oldestUnpushedRevision + '~']);
 				});
 		});
 	}
@@ -51,15 +52,15 @@ export class Git {
 	/**
 	 * Returns true if this commit is reachable from at least on remote tracking branch.
 	 */
-	private isCurrentRevPushed(context: URI): TPromise<boolean> {
-		return this.spawnPromiseTrim(context, ['branch', '-r', '--contains', 'HEAD']).then(output => !!output);
+	private isCurrentRevPushed(): TPromise<boolean> {
+		return this.spawnPromiseTrim(['branch', '-r', '--contains', 'HEAD']).then(output => !!output);
 	}
 
 	/**
 	 * Returns the current revisions of all remote tracking branches.
 	 */
-	private getRemoteTrackingBranches(context: URI): TPromise<Set<string>> {
-		return this.spawnPromiseTrim(context, ['show-ref']).then(refs => {
+	private getRemoteTrackingBranches(): TPromise<Set<string>> {
+		return this.spawnPromiseTrim(['show-ref']).then(refs => {
 			return refs.split('\n').reduce((remoteRefs, line) => {
 				const [sha, ref] = line.split(' ', 3);
 				if (ref && ref.indexOf('refs/remotes/') === 0) {
@@ -73,19 +74,27 @@ export class Git {
 	/**
 	 * Returns the SHA of the current revision.
 	 */
-	public getRevisionSHA(context: URI): TPromise<string> {
-		return this.spawnPromiseTrim(context, ['rev-parse', 'HEAD']);
+	public getRevisionSHA(): TPromise<string> {
+		return this.spawnPromiseTrim(['rev-parse', 'HEAD']);
+	}
+
+	/**
+	 * Returns the files contents at a certain revision.
+	 * HACK! This should be removed
+	 */
+	public getContentsAtRevision(relativeFile: string, revision: string): TPromise<string> {
+		return this.spawnPromise(['show', `${revision}:${relativeFile}`]);
 	}
 
 	/**
 	 * Returns the user's configured display name.
 	 */
-	public getUserName(context: URI): TPromise<string> {
+	public getUserName(): TPromise<string> {
 		const config = this.configurationService.getConfiguration<IAuthConfiguration>();
 		if (config && config.auth && config.auth.displayName) {
 			return TPromise.wrap(config.auth.displayName);
 		}
-		return this.spawnPromiseTrim(context, ['config', 'user.name']).then(displayName => {
+		return this.spawnPromiseTrim(['config', 'user.name']).then(displayName => {
 			if (!displayName) {
 				throw new Error(localize('configureAuthDisplayName', 'Please configure auth.displayName and try again.'));
 			}
@@ -97,12 +106,12 @@ export class Git {
 	/**
 	 * Returns the user's configured email address.
 	 */
-	public getUserEmail(context: URI): TPromise<string> {
+	public getUserEmail(): TPromise<string> {
 		const config = this.configurationService.getConfiguration<IAuthConfiguration>();
 		if (config && config.auth && config.auth.email) {
 			return TPromise.wrap(config.auth.email);
 		}
-		return this.spawnPromiseTrim(context, ['config', 'user.email']).then(email => {
+		return this.spawnPromiseTrim(['config', 'user.email']).then(email => {
 			if (!email) {
 				throw new Error(localize('configureAuthEmail', 'Please configure auth.email and try again.'));
 			}
@@ -119,30 +128,29 @@ export class Git {
 	 * Beta testers in this iteration will be explictly told about this limitation.
 	 * Next iteration we will work on proper authorization controls by modeling organizations.
 	 */
-	public getAccessToken(context: URI): TPromise<string> {
-		return this.spawnPromiseTrim(context, ['rev-list', '--max-parents=0', 'HEAD']);
+	public getAccessToken(): TPromise<string> {
+		return this.spawnPromiseTrim(['rev-list', '--max-parents=0', 'HEAD']);
 	}
 
 	/**
 	 * Returns the diff of file from a revision to the current state.
 	 */
-	public getDiff(file: URI, fromRev: string, options?: { reverse?: boolean }): TPromise<string> {
+	public getDiff(fromRev: string, options?: { reverse?: boolean }): TPromise<string> {
 		// To help range transformations for comments:
-		// -U1 to request the minimum useful amount of context (git default is three)
 		// --histogram to spend extra time making more semantically correct diffs
-		const args = ['diff', '-U1', '--histogram'];
+		const args = ['diff', '-U0', '--histogram'];
 		if (options && options.reverse) {
 			args.push('-R');
 		}
-		args.push(fromRev, file.fsPath);
-		return this.spawnPromiseTrim(file, args);
+		args.push(fromRev, this.fileUri.fsPath);
+		return this.spawnPromiseTrim(args);
 	}
 
 	/**
 	 * Returns the primary upstream URL of the repository.
 	 */
-	public getRemoteRepo(context: URI): TPromise<string> {
-		return this.spawnPromiseTrim(context, ['ls-remote', '--get-url'])
+	public getRemoteRepo(): TPromise<string> {
+		return this.spawnPromiseTrim(['ls-remote', '--get-url'])
 			.then(url => url.replace(/\.git$/, '').replace(/\/$/, ''))
 			.then(url => {
 				url = decodeURIComponent(url);
@@ -160,15 +168,22 @@ export class Git {
 			});
 	}
 
-	private spawnPromiseTrim(context: URI, params: Array<string>): TPromise<string> {
-		const repository = this.scmService.getRepositoryForResource(context);
-		if (!repository || !repository.provider) {
-			return TPromise.wrapError(new Error(`no scm provider in context ${context.toString()}`));
+	private spawnPromiseTrim(params: Array<string>): TPromise<string> {
+		return this.spawnPromise(params).then(result => result.trim());
+	}
+
+	private spawnPromise(params: Array<string>): TPromise<string> {
+		const repository = this.scmService.getRepositoryForResource(this.fileUri);
+		if (!repository) {
+			return TPromise.wrapError(new Error(`no repository in context ${this.fileUri.toString()}`));
+		}
+		if (!repository.provider) {
+			return TPromise.wrapError(new Error(`no scm provider in context ${this.fileUri.toString()}`));
 		}
 		if (repository.provider.contextValue !== 'git') {
 			return TPromise.wrapError(new Error(`only git is supported; got ${repository.provider.contextValue}`));
 		}
-		return repository.provider.executeCommand(params).then(result => result.trim());
+		return repository.provider.executeCommand(params);
 	}
 }
 

@@ -6,7 +6,7 @@
 
 import { TPromise } from 'vs/base/common/winjs.base';
 import { renderMarkdown } from 'vs/base/browser/htmlContentRenderer';
-import { Comment } from 'vs/editor/common/services/codeCommentsService';
+import { IComment } from 'vs/editor/common/services/codeCommentsService';
 import { onUnexpectedError } from 'vs/base/common/errors';
 import URI from 'vs/base/common/uri';
 import { tokenizeToString } from 'vs/editor/common/modes/textToHtmlTokenizer';
@@ -18,7 +18,7 @@ import { MarkdownString } from 'vs/base/common/htmlContent';
 /**
  * Returns the rendered version of a comment.
  */
-export function renderComment(accessor: ServicesAccessor, comment: Comment): Node {
+export function renderComment(accessor: ServicesAccessor, comment: IComment): Node {
 	const openerService = accessor.get(IOpenerService);
 	const modeService = accessor.get(IModeService);
 	return renderMarkdown(new MarkdownString(comment.contents), {

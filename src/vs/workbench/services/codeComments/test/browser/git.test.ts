@@ -68,7 +68,7 @@ class FakeSCMService implements ISCMService {
 
 suite('git', function () {
 	let scmService = new FakeSCMService();
-	let git = new Git(scmService, undefined, undefined);
+	let git = new Git(undefined, scmService, undefined, undefined);
 
 	suite('getRemoteRepo', function () {
 		interface Test {
@@ -92,7 +92,7 @@ suite('git', function () {
 		accepts.forEach(function (accept) {
 			test(`accepts ${accept.in}`, function () {
 				scmService.fakeProvider.executeCommandOutput = accept.in;
-				return git.getRemoteRepo(null).then(actual => {
+				return git.getRemoteRepo().then(actual => {
 					if (actual !== accept.out) {
 						throw new Error(`${accept.in} expected ${accept.out} got ${actual}`);
 					}
@@ -115,7 +115,7 @@ suite('git', function () {
 			test(`rejects ${invalid}`, function () {
 				scmService.fakeProvider.executeCommandOutput = invalid;
 				return new Promise((resolve, reject) => {
-					git.getRemoteRepo(null).then(repo => reject(new Error(`expected ${invalid} to be rejected; got ${repo}`)), resolve);
+					git.getRemoteRepo().then(repo => reject(new Error(`expected ${invalid} to be rejected; got ${repo}`)), resolve);
 				});
 			});
 		});

@@ -9,14 +9,11 @@ import { localize } from 'vs/nls';
 import { Disposable } from 'vs/base/common/lifecycle';
 import { clearNode } from 'vs/base/browser/dom';
 import { $ } from 'vs/base/browser/builder';
-import { ICodeCommentsService } from 'vs/editor/common/services/codeCommentsService';
-import URI from 'vs/base/common/uri';
+import { ICodeCommentsService, IDraftThreadComments } from 'vs/editor/common/services/codeCommentsService';
 import { IProgressService } from 'vs/platform/progress/common/progress';
 import { CommentInput } from 'vs/workbench/parts/codeComments/browser/commentInput';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
-import { MessageType } from 'vs/base/browser/ui/inputbox/inputBox';
 import Event, { Emitter } from 'vs/base/common/event';
-import { Range } from 'vs/editor/common/core/range';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { getCommentTelemetryData } from 'vs/workbench/parts/codeComments/common/codeComments';
 
@@ -34,15 +31,14 @@ export class CreateThreadView extends Disposable {
 
 	constructor(
 		private parent: HTMLElement,
-		private file: URI,
-		private range: Range,
+		private draftThread: IDraftThreadComments,
 		@ICodeCommentsService private codeCommentsService: ICodeCommentsService,
 		@IProgressService private progressService: IProgressService,
 		@IInstantiationService private instantiationService: IInstantiationService,
 		@ITelemetryService private telemetryService: ITelemetryService,
 	) {
 		super();
-		this.telemetryService.publicLog('codeComments.openCreateThreadView', getCommentTelemetryData({ range: this.range }));
+		this.telemetryService.publicLog('codeComments.openCreateThreadView');
 		this.render();
 	}
 
@@ -51,32 +47,27 @@ export class CreateThreadView extends Disposable {
 		$(this.parent).div({ class: 'comments' }, div => {
 			this.input = this.instantiationService.createInstance(CommentInput, div.getContainer(), localize('leaveComment', "Leave a comment..."));
 			this._register(this.input);
+			this._register(this.input.onDidChange(value => this.draftThread.content = value));
 			this._register(this.input.onDidHeightChange(() => this.onHeightChangeEmitter.fire()));
-			this._register(this.input.onSubmitEvent(e => this.createThread(e.content)));
+			this._register(this.input.onSubmit(e => this.createThread(e.content)));
 		});
 		this.input.focus();
 	}
 
 	private createThread(content: string): void {
 		this.input.setEnabled(false);
-		const promise = this.codeCommentsService.createThread(this.file, this.range, content).then(thread => {
-			this.telemetryService.publicLog('codeComments.createThread', getCommentTelemetryData({ range: this.range, thread, content, error: false }));
+		const promise = this.draftThread.submit().then(thread => {
+			this.telemetryService.publicLog('codeComments.createThread', getCommentTelemetryData({ thread, content, error: false }));
 			if (this.disposed) {
 				return;
 			}
-			this.codeCommentsService.getModel(this.file).selectedThread = thread;
 		}, error => {
-			this.telemetryService.publicLog('codeComments.createThread', getCommentTelemetryData({ range: this.range, content, error: true }));
+			this.telemetryService.publicLog('codeComments.createThread', getCommentTelemetryData({ content, error: true }));
 			if (this.disposed) {
 				return;
 			}
-			const err = Array.isArray(error) ? error.filter(e => !!e).join('\n') : error.toString();
 			this.input.setEnabled(true);
-			this.input.showMessage({
-				content: err,
-				formatContent: true,
-				type: MessageType.ERROR,
-			});
+			this.input.showError(error);
 		});
 		this.progressService.showWhile(promise);
 	}
