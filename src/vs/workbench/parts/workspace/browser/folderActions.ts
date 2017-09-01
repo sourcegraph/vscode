@@ -15,7 +15,7 @@ import URI from 'vs/base/common/uri';
 import { ActionItem, IActionItem, Separator } from 'vs/base/browser/ui/actionbar/actionbar';
 import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
 import { IDisposable, dispose } from 'vs/base/common/lifecycle';
-import { VIEWLET_ID, IWorkspaceViewlet, IFolder, WorkspaceFolderState, IFoldersWorkbenchService, FolderOperation } from 'vs/workbench/parts/workspace/common/workspace';
+import { VIEWLET_ID, IWorkspaceViewlet, IFolder, WorkspaceFolderState, IFoldersWorkbenchService } from 'vs/workbench/parts/workspace/common/workspace';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { ToggleViewletAction } from 'vs/workbench/browser/viewlet';
 import { ExplorerViewlet } from 'vs/workbench/parts/files/browser/explorerViewlet';
@@ -47,8 +47,6 @@ export class AddWorkspaceFolderAction extends Action {
 	set folder(folder: IFolder) { this._folder = folder; this.update(); }
 
 	constructor(
-		@IWorkspaceEditingService private workspaceEditingService: IWorkspaceEditingService,
-		@IConfigurationService private configurationService: IConfigurationService,
 		@IFoldersWorkbenchService private catalogService: IFoldersWorkbenchService,
 	) {
 		super('workspace.folder.add', AddWorkspaceFolderAction.AddLabel, AddWorkspaceFolderAction.Class, false);
@@ -77,10 +75,7 @@ export class AddWorkspaceFolderAction extends Action {
 	}
 
 	run(): TPromise<any> {
-		const promise = this.workspaceEditingService.addRoots([this.folder.resource])
-			.then(() => this.configurationService.reloadConfiguration());
-		this.catalogService.monitorFolderOperation(this.folder, FolderOperation.Adding, promise);
-		return promise;
+		return this.catalogService.addFoldersAsWorkspaceRootFolders([this.folder]);
 	}
 
 	dispose(): void {
@@ -103,8 +98,6 @@ export class RemoveWorkspaceFolderAction extends Action {
 	set folder(folder: IFolder) { this._folder = folder; this.update(); }
 
 	constructor(
-		@IWorkspaceEditingService private workspaceEditingService: IWorkspaceEditingService,
-		@IConfigurationService private configurationService: IConfigurationService,
 		@IFoldersWorkbenchService private catalogService: IFoldersWorkbenchService,
 	) {
 		super('workspace.folder.remove', RemoveWorkspaceFolderAction.RemoveLabel, RemoveWorkspaceFolderAction.RemoveClass, false);
@@ -135,15 +128,7 @@ export class RemoveWorkspaceFolderAction extends Action {
 	}
 
 	run(): TPromise<any> {
-		const rootToRemove = this.catalogService.getWorkspaceFolderForCatalogFolder(this.folder);
-		if (!rootToRemove) {
-			return TPromise.as(void 0);
-		}
-
-		const promise = this.workspaceEditingService.removeRoots([rootToRemove])
-			.then(() => this.configurationService.reloadConfiguration());
-		this.catalogService.monitorFolderOperation(this.folder, FolderOperation.Removing, promise);
-		return promise;
+		return this.catalogService.removeFoldersAsWorkspaceRootFolders([this.folder]);
 	}
 
 	dispose(): void {
@@ -159,24 +144,13 @@ export class RemoveWorkspaceFoldersAction extends Action {
 
 	constructor(
 		private foldersToRemove: IFolder[],
-		@IWorkspaceEditingService private workspaceEditingService: IWorkspaceEditingService,
-		@IConfigurationService private configurationService: IConfigurationService,
 		@IFoldersWorkbenchService private catalogService: IFoldersWorkbenchService,
 	) {
 		super('workspace.folder.removeMultiple');
 	}
 
 	run(): TPromise<any> {
-		const rootsToRemove = this.foldersToRemove
-			.map(folder => this.catalogService.getWorkspaceFolderForCatalogFolder(folder))
-			.filter(root => !!root);
-
-		const promise = this.workspaceEditingService.removeRoots(rootsToRemove)
-			.then(() => this.configurationService.reloadConfiguration());
-		for (const folder of this.foldersToRemove) {
-			this.catalogService.monitorFolderOperation(folder, FolderOperation.Removing, promise);
-		}
-		return promise;
+		return this.catalogService.removeFoldersAsWorkspaceRootFolders(this.foldersToRemove);
 	}
 }
 
@@ -249,7 +223,6 @@ export class AddAndExploreWorkspaceFolderAction extends Action {
 
 	constructor(
 		@IInstantiationService instantiationService: IInstantiationService,
-		@IConfigurationService private configurationService: IConfigurationService,
 	) {
 		super('workspace.folder.addAndShowInExplorer', AddAndExploreWorkspaceFolderAction.LABEL, 'folder-action add-explore', false);
 
@@ -265,7 +238,6 @@ export class AddAndExploreWorkspaceFolderAction extends Action {
 
 	run(): TPromise<any> {
 		return this.addAction.run()
-			.then(() => this.configurationService.reloadConfiguration())
 			.then(() => this.exploreAction.run());
 	}
 }

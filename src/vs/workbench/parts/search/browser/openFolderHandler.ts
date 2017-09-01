@@ -18,23 +18,17 @@ import { IWorkbenchThemeService } from 'vs/workbench/services/themes/common/work
 import { Mode, IEntryRunContext, IAutoFocus } from 'vs/base/parts/quickopen/common/quickOpen';
 import { QuickOpenEntry, QuickOpenModel, QuickOpenEntryGroup } from 'vs/base/parts/quickopen/browser/quickOpenModel';
 import { QuickOpenHandler } from 'vs/workbench/browser/quickopen';
-import { EditorInput, IWorkbenchEditorConfiguration } from 'vs/workbench/common/editor';
-import { IResourceInput } from 'vs/platform/editor/common/editor';
-import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
 import { IWindowsService } from 'vs/platform/windows/common/windows';
 import { ThrottledDelayer } from 'vs/base/common/async';
 import { IMessageService, Severity } from 'vs/platform/message/common/message';
 import { KeyMod } from 'vs/base/common/keyCodes';
-import { IWorkspaceEditingService } from 'vs/workbench/services/workspace/common/workspaceEditing';
-import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
-import { ExplorerViewlet } from 'vs/workbench/parts/files/browser/explorerViewlet';
-import { VIEWLET_ID as EXPLORER_VIEWLET_ID } from 'vs/workbench/parts/files/common/files';
 import { IWorkspacesService } from 'vs/platform/workspaces/common/workspaces';
 import { IResourceResolverService } from 'vs/platform/resourceResolver/common/resourceResolver';
-import { IFolder, IFoldersWorkbenchService, ISearchStats, ISearchQuery, FolderOperation } from 'vs/workbench/parts/workspace/common/workspace';
+import { IFolder, IFoldersWorkbenchService, ISearchStats, ISearchQuery } from 'vs/workbench/parts/workspace/common/workspace';
 import { IProgressService2, ProgressLocation } from 'vs/platform/progress/common/progress';
+import { AddAndExploreWorkspaceFolderAction } from 'vs/workbench/parts/workspace/browser/folderActions';
 
 /**
 * The quick open model representing folder results from a single handler.
@@ -183,15 +177,12 @@ export class FolderEntry extends QuickOpenEntry {
 
 	constructor(
 		private folder: IFolder,
-		@IConfigurationService private configurationService: IConfigurationService,
 		@IWorkspaceContextService private contextService: IWorkspaceContextService,
-		@IWorkspaceEditingService private workspaceEditingService: IWorkspaceEditingService,
 		@IWorkspacesService private workspacesService: IWorkspacesService,
-		@IViewletService private viewletService: IViewletService,
 		@IResourceResolverService private resourceResolverService: IResourceResolverService,
 		@IWindowsService private windowsService: IWindowsService,
-		@IFoldersWorkbenchService private foldersWorkbenchService: IFoldersWorkbenchService,
 		@IProgressService2 private progressService: IProgressService2,
+		@IInstantiationService private instantiationService: IInstantiationService,
 	) {
 		super();
 		this.label = folder.displayPath;
@@ -235,17 +226,6 @@ export class FolderEntry extends QuickOpenEntry {
 		return false;
 	}
 
-	public getInput(): IResourceInput | EditorInput {
-		const input: IResourceInput = {
-			resource: this.folder.resource,
-			options: {
-				pinned: !this.configurationService.getConfiguration<IWorkbenchEditorConfiguration>().workbench.editor.enablePreviewFromQuickOpen
-			}
-		};
-
-		return input;
-	}
-
 	// Override to add this folder as a workspace root (instead of just opening a new editor).
 	public run(mode: Mode, context: IEntryRunContext): boolean {
 		// Ctrl+Enter opens in background.
@@ -255,12 +235,10 @@ export class FolderEntry extends QuickOpenEntry {
 
 		const hideWidget = (mode === Mode.OPEN);
 
-		const resolvedResource = this.resourceResolverService.resolveResource(this.folder.resource);
-
 		if (mode === Mode.OPEN) {
-			if (!this.contextService.hasWorkspace() || this.contextService.hasFolderWorkspace()) {
+			if (!this.contextService.hasMultiFolderWorkspace()) {
 				// Upgrade workspace to multi-root workspace.
-				const p = resolvedResource
+				const p = this.resourceResolverService.resolveResource(this.folder.resource)
 					.then(resolvedResource => this.workspacesService.createWorkspace([resolvedResource.toString()]))
 					.then(({ configPath }) => this.windowsService.openWindow([configPath]));
 				p.done(null, errors.onUnexpectedError);
@@ -271,44 +249,15 @@ export class FolderEntry extends QuickOpenEntry {
 				return true;
 			}
 
-			const p = resolvedResource.then(resolvedResource => {
-				// Add folder as a root folder in the workspace.
-				let rootExists = false;
-				if (this.contextService.hasWorkspace()) {
-					rootExists = this.contextService.getWorkspace().roots.some(root => root.toString() === resolvedResource.toString());
-				}
-				let p = TPromise.as<void, any>(void 0);
-				if (!rootExists) {
-					p = this.workspaceEditingService.addRoots([resolvedResource]).then(() =>
-						// Wait for workspace to reload and detect its newly added root.
-						this.configurationService.reloadConfiguration()
-					);
-				}
 
-				// Highlight the root folder in explorer.
-				p.then(() =>
-					this.viewletService.openViewlet(EXPLORER_VIEWLET_ID, true).then((viewlet: ExplorerViewlet) => {
-						const explorerView = viewlet.getExplorerView();
-						if (explorerView) {
-							// TODO(sqs): a full refresh waits too long; there is a visual lag
-							// between the new root folder appearing in the explorer and it
-							// being selected.
-							return explorerView.refresh().then(() => {
-								explorerView.expand();
-								explorerView.select(resolvedResource, true);
-							});
-						}
-						return void 0;
-					})
-				);
-			});
-			p.done(null, errors.onUnexpectedError);
-			this.foldersWorkbenchService.monitorFolderOperation(this.folder, FolderOperation.Adding, p);
+			// Add folder as a root folder in the workspace.
+			const addAndExploreAction = this.instantiationService.createInstance(AddAndExploreWorkspaceFolderAction);
+			addAndExploreAction.folder = this.folder;
+			addAndExploreAction.run().done(null, errors.onUnexpectedError);
 		} else if (mode === Mode.OPEN_IN_BACKGROUND) {
 			// Opens a window for this workspace.
-			const p = resolvedResource
+			const p = this.resourceResolverService.resolveResource(this.folder.resource)
 				.then(resolvedResource => this.windowsService.openWindow([resolvedResource.toString()]));
-
 			p.done(null, errors.onUnexpectedError);
 			this.progressService.withProgress({
 				location: ProgressLocation.Window,

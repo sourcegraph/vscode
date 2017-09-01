@@ -7,6 +7,7 @@
 
 import Event, { Emitter, filterEvent, toPromise } from 'vs/base/common/event';
 import * as paths from 'vs/base/common/paths';
+import * as arrays from 'vs/base/common/arrays';
 import { localize } from 'vs/nls';
 import { Schemas } from 'vs/base/common/network';
 import { assign } from 'vs/base/common/objects';
@@ -22,6 +23,8 @@ import { IFolderContainmentService } from 'vs/platform/folder/common/folderConta
 import { IFolderCatalogService, ICatalogFolder, FolderGenericIconClass } from 'vs/platform/folders/common/folderCatalog';
 import { ISCMService, ISCMRepository } from 'vs/workbench/services/scm/common/scm';
 import { IProgressService2, IProgressOptions, ProgressLocation } from 'vs/platform/progress/common/progress';
+import { IWorkspaceEditingService } from 'vs/workbench/services/workspace/common/workspaceEditing';
+import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 
 interface IWorkspaceFolderStateProvider {
 	(folder: Folder): WorkspaceFolderState;
@@ -203,6 +206,8 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 		@IFolderCatalogService private folderCatalogService: IFolderCatalogService,
 		@ISCMService private scmService: ISCMService,
 		@IProgressService2 private progressService: IProgressService2,
+		@IWorkspaceEditingService private workspaceEditingService: IWorkspaceEditingService,
+		@IConfigurationService private configurationService: IConfigurationService,
 	) {
 		this.stateProvider = folder => this.getFolderState(folder);
 
@@ -357,20 +362,39 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 		}));
 	}
 
-	public monitorFolderOperation(folder: IFolder, operation: FolderOperation, promise: TPromise<any>): void {
+	public addFoldersAsWorkspaceRootFolders(folders: IFolder[]): TPromise<void> {
+		const allPromise = this.workspaceEditingService.addRoots(folders.map(folder => folder.resource))
+			.then(() => this.configurationService.reloadConfiguration());
+
+		return TPromise.join(folders.map(folder => {
+			const folderPromise = allPromise.then(() => {
+				// Wait for each folder's SCM provider to be ready.
+				return toPromise(filterEvent(this.onChange, () => !!this.getWorkspaceFolderForCatalogFolder(folder)));
+			});
+
+			// Monitor the progress of the entire operation (addRoots, reloadConfiguration, and SCM ready).
+			this.monitorFolderOperation(folder, FolderOperation.Adding, folderPromise);
+		})) as TPromise<any>;
+	}
+
+	public removeFoldersAsWorkspaceRootFolders(folders: IFolder[]): TPromise<void> {
+		const rootsToRemove = arrays.coalesce(folders.map(folder => this.getWorkspaceFolderForCatalogFolder(folder)));
+
+		const promise = this.workspaceEditingService.removeRoots(rootsToRemove)
+			.then<void>(() => this.configurationService.reloadConfiguration());
+		for (const folder of folders) {
+			this.monitorFolderOperation(folder, FolderOperation.Removing, promise);
+		}
+
+		return promise;
+	}
+
+	private monitorFolderOperation(folder: IFolder, operation: FolderOperation, promise: TPromise<any>): void {
 		const op: IActiveFolderOperation = { operation, folder, start: new Date() };
 
 		let onDone: (success: boolean) => void;
 		switch (operation) {
 			case FolderOperation.Adding:
-				// Also wait for the folder's SCM provider to be ready.
-				promise = promise.then(() => {
-					return TPromise.any<any>([
-						toPromise(filterEvent(this.onChange, () => !!this.getWorkspaceFolderForCatalogFolder(folder))),
-						TPromise.timeout(5000),
-					]);
-				});
-
 				// Show progress while adding because it can take a while.
 				let options: IProgressOptions = {
 					location: ProgressLocation.Window,

@@ -107,10 +107,14 @@ export interface IFoldersWorkbenchService {
 	clearSearchCache(cacheKey: string): TPromise<void>;
 
 	/**
-	 * Tells the service that the folder (with the given id) is undergoing an operation,
-	 * so that it can update the UI to reflect the operation.
+	 * Adds the folders as workspace root folders, waiting for them to be resolved fully.
 	 */
-	monitorFolderOperation(folder: IFolder, operation: FolderOperation, promise: TPromise<any>): void;
+	addFoldersAsWorkspaceRootFolders(folders: IFolder[]): TPromise<void>;
+
+	/**
+	 * Removes the folders as workspace root folders.
+	 */
+	removeFoldersAsWorkspaceRootFolders(folders: IFolder[]): TPromise<void>;
 
 	/**
 	 * Returns the workspace root folder, if any, that is the local clone of
