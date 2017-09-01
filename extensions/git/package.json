@@ -187,6 +187,11 @@
         "category": "Git"
       },
       {
+        "command": "git.addWorktree",
+        "title": "%command.addWorktree%",
+        "category": "Git"
+      },
+      {
         "command": "git.branch",
         "title": "%command.branch%",
         "category": "Git"
@@ -371,6 +376,10 @@
           "when": "config.git.enabled && gitOpenRepositoryCount != 0"
         },
         {
+          "command": "git.addWorktree",
+          "when": "config.git.enabled && gitOpenRepositoryCount != 0"
+        },
+        {
           "command": "git.branch",
           "when": "config.git.enabled && gitOpenRepositoryCount != 0"
         },
@@ -552,6 +561,11 @@
         {
           "command": "git.stashPopLatest",
           "group": "5_stash",
+          "when": "config.git.enabled && scmProvider == git"
+        },
+        {
+          "command": "git.addWorktree",
+          "group": "6_misc",
           "when": "config.git.enabled && scmProvider == git"
         },
         {
