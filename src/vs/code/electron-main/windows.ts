@@ -1437,6 +1437,11 @@ export class WindowsManager implements IWindowsMainService {
 			return; // Windows/Linux: quits when last window is closed, so do not ask then
 		}
 
+		const resolvedWorkspace = this.workspacesService.resolveWorkspaceSync(workspace.configPath);
+		if (resolvedWorkspace.folders.length <= 1) {
+			return; // a workspace with 0 or 1 folders is usually not worth saving
+		}
+
 		this.promptToSaveUntitledWorkspace(e, workspace);
 	}
 
