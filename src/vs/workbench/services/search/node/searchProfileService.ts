@@ -9,7 +9,6 @@ import { IConfigurationService } from 'vs/platform/configuration/common/configur
 import Event, { Emitter } from 'vs/base/common/event';
 import { localize } from 'vs/nls';
 import * as arrays from 'vs/base/common/arrays';
-import * as strings from 'vs/base/common/strings';
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
 import { IRemoteService, requestGraphQL } from 'vs/platform/remote/node/remote';
 import { onUnexpectedError } from 'vs/base/common/errors';
@@ -100,7 +99,6 @@ export class SearchProfileService extends Disposable implements ISearchProfileSe
 	}
 
 	public getProfileForWorkspaces(workspaces: string[]): ISearchProfile {
-		workspaces = this.normalize(workspaces);
 		const workspacesSorted = workspaces.concat().sort();
 		const profile = arrays.first(this.getSearchProfiles(), profile => {
 			const sorted = profile.workspaces.concat().sort();
@@ -138,7 +136,7 @@ export class SearchProfileService extends Disposable implements ISearchProfileSe
 					return {
 						name: p.name,
 						description: p.description,
-						workspaces: this.normalize(p.repositories.map(repo => repo.uri)),
+						workspaces: p.repositories.map(repo => repo.uri),
 					};
 				});
 				this.didSearchProfilesChange.fire();
@@ -147,25 +145,10 @@ export class SearchProfileService extends Disposable implements ISearchProfileSe
 	}
 
 	private onConfigUpdated(): void {
-		const fromConfig = (this.configurationService.getConfiguration<ISearchConfiguration>().search.profiles || []).map(profile => {
-			return <ISearchProfile>{
-				...profile,
-				workspaces: this.normalize(profile.workspaces),
-			};
-		});
+		const fromConfig = (this.configurationService.getConfiguration<ISearchConfiguration>().search.profiles || []);
 		if (!arrays.equals(fromConfig, this._fromConfig)) {
 			this._fromConfig = fromConfig;
 			this.didSearchProfilesChange.fire();
 		}
-	}
-
-	private normalize(workspaces: string[]): string[] {
-		return arrays.distinct((workspaces || []).map(workspace => {
-			workspace = workspace.trim();
-			if (!strings.startsWith(workspace, 'repo://')) {
-				workspace = 'repo://' + workspace;
-			}
-			return workspace;
-		}), s => s);
 	}
 }

@@ -10,7 +10,7 @@ import { IDisposable, Disposable, dispose } from 'vs/base/common/lifecycle';
 import { ICodeCommentsService, Thread } from 'vs/editor/common/services/codeCommentsService';
 import { ISCMService } from 'vs/workbench/services/scm/common/scm';
 import URI from 'vs/base/common/uri';
-import { isFileLikeResource } from 'vs/platform/files/common/files';
+import { Schemas } from 'vs/base/common/network';
 import * as colors from 'vs/platform/theme/common/colorRegistry';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { ICodeEditor, MouseTargetType } from 'vs/editor/browser/editorBrowser';
@@ -174,7 +174,7 @@ export class CodeCommentsDecorationRenderer extends Disposable implements IEdito
 	 */
 	private getEditorModel(): IModel | undefined {
 		const model = this.editor.getModel();
-		return model && model.getLineCount() > 0 && isFileLikeResource(model.uri) && model;
+		return model && model.getLineCount() > 0 && model.uri.scheme === Schemas.file && model;
 	}
 
 	/**

@@ -7,7 +7,7 @@
 import * as vscode from 'vscode';
 import { Repository } from './repository';
 import { GitRepository } from './git';
-import { repoExtension } from './main';
+import { toRelativePath } from './util';
 
 export interface ResolvedSCMRevision extends vscode.SCMRevision {
 	id: string; // narrows from "| undefined"
@@ -35,15 +35,11 @@ export function getResourceInfo(resource: vscode.Uri): IResourceInfo | undefined
 	if (!repo) {
 		return;
 	}
-	if (!repo.sourceControl.revision || !repo.sourceControl.revision.id) {
+	if (!repo.sourceControl.revision || !repo.sourceControl.revision.id || !repo.sourceControl.rootFolder) {
 		return;
 	}
 
-	const folder = vscode.workspace.findContainingFolder(resource);
-	if (!folder) {
-		return;
-	}
-	const path = repoExtension.toRelativePath(folder, resource);
+	const path = toRelativePath(repo.sourceControl.rootFolder, resource);
 	if (!path) {
 		return;
 	}
@@ -51,7 +47,7 @@ export function getResourceInfo(resource: vscode.Uri): IResourceInfo | undefined
 	return {
 		repo,
 		revision: repo.sourceControl.revision as ResolvedSCMRevision,
-		immutable: repoExtension.isRepoResource(resource),
+		immutable: false,
 		path,
 	};
 }
@@ -82,7 +78,7 @@ function createRepository(sourceControl: vscode.SourceControl): Repository | und
 	if (!sourceControl.rootFolder) {
 		return;
 	}
-	if (sourceControl.rootFolder.scheme !== 'file' && sourceControl.rootFolder.scheme !== 'repo' && sourceControl.rootFolder.scheme !== 'gitremote') {
+	if (sourceControl.rootFolder.scheme !== 'file') {
 		return;
 	}
 

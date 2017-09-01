@@ -5,6 +5,8 @@
 
 'use strict';
 
+import * as vscode from 'vscode';
+
 export const SELECTION_DEBOUNCE_WAIT_MSEC = 250;
 
 export function pad(s: string, before: number = 0, after: number = 0, padding: string = `\u00a0`) {
@@ -80,4 +82,19 @@ export function shellFormat(args: string[]): string {
 
 export function flatten<T>(arr: T[][]): T[] {
 	return arr.reduce((r, v) => r.concat(v), []);
+}
+
+export function toRelativePath(folder: vscode.Uri, resource: vscode.Uri): string | undefined {
+	// Handle root with revision in querystring and resources with revision in
+	// querystring.
+	const folderString = folder.with({ query: '' }).toString(true /* skipEncoding */);
+	const resourceString = resource.with({ query: '' }).toString(true /* skipEncoding */);
+
+	const baseMatches = resourceString === folderString || resourceString.startsWith(folderString + '/');
+	const queryMatches = (!folder.query && !resource.query) || (folder.query === resource.query);
+	if (baseMatches && queryMatches) {
+		return resourceString.slice(folderString.length + 1);
+	}
+
+	return undefined; // resource is not inside folder
 }

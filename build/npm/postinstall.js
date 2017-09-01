@@ -35,8 +35,6 @@ const extensions = [
 	'css',
 	'html',
 	'git',
-	'lsp',
-	'repo',
 	'service-github',
 	'scm',
 	'file-links',

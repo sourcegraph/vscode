@@ -37,7 +37,6 @@ export class SourcegraphTelemetryService extends TelemetryService implements ITe
 		// Add static cleanup patterns for remote urls:
 		this._cleanupPatterns.push(
 			[/git:\/\/.*/gi, `git://${CLEANUP_INDICATOR_STRING}`],
-			[/repo:\/\/.*/gi, `repo://${CLEANUP_INDICATOR_STRING}`],
 			[/(https:\/\/)?(www\.)?github.com\/.*/gi, `github.com//${CLEANUP_INDICATOR_STRING}`],
 			[/Repository not found:.*/gi, `Repository not found: ${CLEANUP_INDICATOR_STRING}`],
 			[/Revision not found:.*/gi, `Revision not found: ${CLEANUP_INDICATOR_STRING}`],

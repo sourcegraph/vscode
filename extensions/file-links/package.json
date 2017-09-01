@@ -12,11 +12,9 @@
     "vscode": "*"
   },
   "enableProposedApi": true,
-    "activationEvents": [
+  "activationEvents": [
     "onCommand:file-links.goToSourcegraph",
-    "onCommand:file-links.goToGitHub",
-    "onCommand:file-links.goToImmutableRevision",
-    "onCommand:file-links.addResourceRoot"
+    "onCommand:file-links.goToGitHub"
   ],
   "contributes": {
     "commands": [
@@ -33,57 +31,29 @@
         }
       },
       {
-        "command": "file-links.goToImmutableRevision",
-        "title": "Go to Immutable Revision"
-      },
-      {
         "command": "file-links.addResourceRoot",
         "title": "Open Containing Repository"
       }
     ],
     "menus": {
-		"explorer/context": [
+      "editor/title/context": [
         {
-          "when": "resourceScheme == repo && resourceAuthority == github.com",
+          "when": "config.git.enabled && gitOpenRepositoryCount != 0 && resourceScheme == file",
           "command": "file-links.goToSourcegraph",
           "group": "file-links"
         },
         {
-          "when": "resourceScheme == repo && resourceAuthority == github.com",
+          "when": "config.git.enabled && gitOpenRepositoryCount != 0 && resourceScheme == file",
           "command": "file-links.goToGitHub",
           "group": "file-links"
-        }
-      ],
-      "editor/title": [
-        {
-          "when": "resourceScheme == repo && resourceAuthority == github.com",
-          "command": "file-links.goToSourcegraph",
-          "group": "file-links"
         },
         {
-          "when": "resourceScheme == repo && resourceAuthority == github.com",
-          "command": "file-links.goToGitHub",
-          "group": "navigation"
-        },
-        {
-          "when": "resourceScheme == repo",
-          "command": "file-links.goToImmutableRevision",
-          "group": "file"
-        },
-        {
-          "when": "resourceScheme == repo+version",
+          "when": "config.git.enabled && gitOpenRepositoryCount != 0 && resourceScheme == file",
           "command": "file-links.addResourceRoot",
-          "group": "navigation"
+          "group": "file-links"
         }
       ]
-    },
-    "keybindings": [
-      {
-        "command": "file-links.goToImmutableRevision",
-        "key": "alt+y",
-        "when": "resourceScheme == repo"
-      }
-    ]
+    }
   },
   "scripts": {
     "compile": "gulp compile-extension:file-links",

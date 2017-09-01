@@ -215,19 +215,6 @@ declare module 'vscode' {
 	}
 
 	export namespace workspace {
-		/**
-		 * Finds the preferred parent folder for the resource. Unlike getRoot, it may
-		 * return a URI that is not a currently open folder in the current workspace.
-		 *
-		 * If the resource is inside an existing workspace folder, it returns that
-		 * root. Otherwise it uses heuristics to find the preferred parent. If none of
-		 * these yield a result, it returns undefined.
-		 *
-		 * @param uri A uri.
-		 * @return A folder uri or `undefined`
-		 */
-		export function findContainingFolder(resource: Uri): Uri | undefined;
-
 		export function registerFileSystemProvider(authority: string, provider: FileSystemProvider): Disposable;
 
 		/**

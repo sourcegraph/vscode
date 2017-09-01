@@ -22,7 +22,7 @@
       "properties": {
         "github.token": {
           "type": "string",
-          "description": "GitHub.com personal access token. Create at https://github.com/settings/tokens. Must have 'repo' scope."
+          "description": "GitHub.com personal access token. Create at https://github.com/settings/tokens. Must have 'repo' scope to access private repositories."
         }
       }
     }

@@ -42,7 +42,7 @@ import { MessageService } from 'vs/workbench/services/message/electron-browser/m
 import { IRequestService } from 'vs/platform/request/node/request';
 import { RequestService } from 'vs/platform/request/electron-browser/requestService';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
-import { RemoteSearchService } from 'vs/workbench/services/search/electron-browser/remoteSearchService';
+import { SearchService } from 'vs/workbench/services/search/node/searchService';
 import { LifecycleService } from 'vs/workbench/services/lifecycle/electron-browser/lifecycleService';
 import { MarkerService } from 'vs/platform/markers/common/markerService';
 import { IModelService } from 'vs/editor/common/services/modelService';
@@ -95,7 +95,6 @@ import { foreground, selectionBackground, focusBorder, scrollbarShadow, scrollba
 import { TextMateService } from 'vs/workbench/services/textMate/electron-browser/TMSyntax';
 import { ITextMateService } from 'vs/workbench/services/textMate/electron-browser/textMateService';
 import { IBroadcastService, BroadcastService } from 'vs/platform/broadcast/electron-browser/broadcastService';
-import { IFolderContainmentService, FolderContainmentService } from 'vs/platform/folder/common/folderContainment';
 import { IResourceResolverService } from 'vs/platform/resourceResolver/common/resourceResolver';
 import { ResourceResolverService } from 'vs/workbench/services/resourceResolver/common/resourceResolverService';
 import { SourcegraphEventLogger } from 'vs/platform/telemetry/common/sourcegraphEventLogger';
@@ -340,10 +339,6 @@ export class WorkbenchShell {
 		const resourceResolverService = instantiationService.createInstance(ResourceResolverService);
 		serviceCollection.set(IResourceResolverService, resourceResolverService);
 
-		const folderContainmentService = instantiationService.createInstance(FolderContainmentService);
-		serviceCollection.set(IFolderContainmentService, folderContainmentService);
-		disposables.push(folderContainmentService);
-
 		this.extensionService = instantiationService.createInstance(ExtensionService);
 		serviceCollection.set(IExtensionService, this.extensionService);
 
@@ -376,7 +371,7 @@ export class WorkbenchShell {
 
 		serviceCollection.set(ITextMateService, new SyncDescriptor(TextMateService));
 
-		serviceCollection.set(ISearchService, new SyncDescriptor(RemoteSearchService));
+		serviceCollection.set(ISearchService, new SyncDescriptor(SearchService));
 
 		serviceCollection.set(ICodeEditorService, new SyncDescriptor(CodeEditorServiceImpl));
 

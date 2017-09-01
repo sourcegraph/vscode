@@ -24,7 +24,6 @@ import { CancellationTokenSource } from 'vs/base/common/cancellation';
 import { Progress } from 'vs/platform/progress/common/progress';
 import { IFileStat, IResolveFileOptions } from 'vs/platform/files/common/files';
 import { ICatalogFolder } from 'vs/platform/folders/common/folderCatalog';
-import { findContainingFolder } from 'vs/platform/folder/common/folderContainment';
 
 class Workspace2 extends Workspace {
 
@@ -306,18 +305,5 @@ export class ExtHostWorkspace implements ExtHostWorkspaceShape {
 	$searchFolders(handle: number, query: string): TPromise<ICatalogFolder[]> {
 		const provider = this._folderCatalogProvider.get(handle);
 		return asWinJsPromise(token => provider.search(query, token) as TPromise<ICatalogFolder[]>);
-	}
-
-	// --- EXPERIMENT: folder containment
-
-	// TODO(sqs): make asynchronous
-	findContainingFolder(resource: URI): URI | undefined {
-		if (this._workspace) {
-			const root = this._workspace.getRoot(resource);
-			if (root) {
-				return root;
-			}
-		}
-		return findContainingFolder(resource);
 	}
 }
