@@ -31,6 +31,7 @@ import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/edi
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { IEditorGroupService } from 'vs/workbench/services/group/common/groupService';
 import { IModeService } from 'vs/editor/common/services/modeService';
+import { ScrollType } from 'vs/editor/common/editorCommon';
 import { IEditorOptions } from 'vs/editor/common/config/editorOptions';
 import { Schemas } from 'vs/base/common/network';
 
@@ -108,7 +109,7 @@ export class TextFileEditor extends BaseTextEditor {
 
 			// TextOptions (avoiding instanceof here for a reason, do not change!)
 			if (options && types.isFunction((<TextEditorOptions>options).apply)) {
-				(<TextEditorOptions>options).apply(this.getControl());
+				(<TextEditorOptions>options).apply(this.getControl(), ScrollType.Smooth);
 			}
 
 			return TPromise.as<void>(null);
@@ -153,7 +154,7 @@ export class TextFileEditor extends BaseTextEditor {
 
 			// TextOptions (avoiding instanceof here for a reason, do not change!)
 			if (options && types.isFunction((<TextEditorOptions>options).apply)) {
-				(<TextEditorOptions>options).apply(textEditor);
+				(<TextEditorOptions>options).apply(textEditor, ScrollType.Immediate);
 			}
 		}, error => {
 

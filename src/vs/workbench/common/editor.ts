@@ -667,13 +667,13 @@ export class TextEditorOptions extends EditorOptions {
 	 *
 	 * @return if something was applied
 	 */
-	public apply(editor: IEditor): boolean {
+	public apply(editor: IEditor, scrollType: ScrollType): boolean {
 
 		// View state
-		return this.applyViewState(editor);
+		return this.applyViewState(editor, scrollType);
 	}
 
-	private applyViewState(editor: IEditor): boolean {
+	private applyViewState(editor: IEditor, scrollType: ScrollType): boolean {
 		let gotApplied = false;
 
 		// First try viewstate
@@ -695,9 +695,9 @@ export class TextEditorOptions extends EditorOptions {
 				};
 				editor.setSelection(range);
 				if (this.revealInCenterIfOutsideViewport) {
-					editor.revealRangeInCenterIfOutsideViewport(range, ScrollType.Immediate);
+					editor.revealRangeInCenterIfOutsideViewport(range, scrollType);
 				} else {
-					editor.revealRangeInCenter(range, ScrollType.Immediate);
+					editor.revealRangeInCenter(range, scrollType);
 				}
 			}
 
@@ -709,9 +709,9 @@ export class TextEditorOptions extends EditorOptions {
 				};
 				editor.setPosition(pos);
 				if (this.revealInCenterIfOutsideViewport) {
-					editor.revealPositionInCenterIfOutsideViewport(pos, ScrollType.Immediate);
+					editor.revealPositionInCenterIfOutsideViewport(pos, scrollType);
 				} else {
-					editor.revealPositionInCenter(pos, ScrollType.Immediate);
+					editor.revealPositionInCenter(pos, scrollType);
 				}
 			}
 
