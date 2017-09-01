@@ -82,7 +82,7 @@ function createRepository(sourceControl: vscode.SourceControl): Repository | und
 	if (!sourceControl.rootFolder) {
 		return;
 	}
-	if (sourceControl.rootFolder.scheme !== 'file' && sourceControl.rootFolder.scheme !== 'repo' && sourceControl.rootFolder.scheme !== 'gitremote') {
+	if (sourceControl.rootFolder.scheme !== 'file') {
 		return;
 	}
 
