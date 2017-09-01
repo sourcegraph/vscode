@@ -78,9 +78,9 @@ export class Model {
 			const root = folder.uri.fsPath;
 			const children = await new Promise<string[]>((c, e) => fs.readdir(root, (err, r) => err ? e(err) : c(r)));
 
-			for (const child of children) {
-				this.tryOpenRepository(path.join(root, child));
-			}
+			children
+				.filter(child => child !== '.git')
+				.forEach(child => this.tryOpenRepository(path.join(root, child)));
 		}
 	}
 
@@ -187,7 +187,7 @@ export class Model {
 				return;
 			}
 
-			console.error('Failed to find repository:', err);
+			// console.error('Failed to find repository:', err);
 		}
 	}
 
@@ -206,16 +206,6 @@ export class Model {
 		const openRepository = { repository, dispose };
 		this.openRepositories.push(openRepository);
 		this._onDidOpenRepository.fire(repository);
-	}
-
-	close(repository: Repository): void {
-		const openRepository = this.getOpenRepository(repository);
-
-		if (!openRepository) {
-			return;
-		}
-
-		openRepository.dispose();
 	}
 
 	async pickRepository(): Promise<Repository | undefined> {

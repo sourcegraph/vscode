@@ -345,13 +345,7 @@ class SourceControlView extends CollapsibleView {
 
 		this.list = new List(this.listContainer, delegate, renderers, {
 			identityProvider,
-			keyboardSupport: false,
-
-			// sad... we must do this because the list can be rerendered between a
-			// mousedown and the respective mouseup events. since the list isn't as
-			// cool as react (yet), it always removes all DOM nodes on rerender
-			// https://github.com/Microsoft/vscode/issues/30323
-			selectOnMouseDown: true
+			keyboardSupport: false
 		});
 
 		this.disposables.push(attachListStyler(this.list, this.themeService));
@@ -583,6 +577,10 @@ export class SCMViewlet extends PersistentViewsViewlet {
 		}
 
 		return this.instantiationService.createInstance(viewDescriptor.ctor, initialSize, options);
+	}
+
+	protected getDefaultViewSize(): number | undefined {
+		return this.dimension && this.dimension.height / this.views.length;
 	}
 
 	getOptimalWidth(): number {

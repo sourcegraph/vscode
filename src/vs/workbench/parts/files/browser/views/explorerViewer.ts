@@ -110,7 +110,14 @@ export class FileDataSource implements IDataSource {
 
 				return stat.children;
 			}, (e: any) => {
-				this.messageService.show(Severity.Error, e);
+				stat.exists = false;
+				stat.hasChildren = false;
+				if (!stat.isRoot) {
+					this.messageService.show(Severity.Error, e);
+				} else {
+					// We render the roots that do not exist differently, nned to do a refresh
+					tree.refresh(stat, false);
+				}
 
 				return []; // we could not resolve any children because of an error
 			});
@@ -351,6 +358,9 @@ export class FileRenderer implements IRenderer {
 			}
 
 			templateData.label.element.style.display = 'block';
+			if (!stat.exists && stat.isRoot) {
+				extraClasses.push('nonexistent-root');
+			}
 			templateData.label.setFile(stat.resource, { hidePath: true, fileKind: stat.isRoot ? FileKind.ROOT_FOLDER : stat.isDirectory ? FileKind.FOLDER : FileKind.FILE, extraClasses });
 		}
 

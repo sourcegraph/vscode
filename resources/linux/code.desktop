@@ -11,7 +11,6 @@ Categories=Utility;TextEditor;Development;IDE;
 MimeType=text/plain;inode/directory;x-scheme-handler/@@URL_PROTOCOL@@;
 Actions=new-window;
 Keywords=sourcegraph;src;
-X-Unity-IconBackgroundColor=#1e1e1e;
 
 [Desktop Action new-window]
 Name=New Window
