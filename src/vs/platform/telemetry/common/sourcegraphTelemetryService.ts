@@ -5,7 +5,6 @@
 
 'use strict';
 
-import paths = require('vs/base/common/paths');
 import { ITelemetryService, ITelemetryData } from 'vs/platform/telemetry/common/telemetry';
 import { optional } from 'vs/platform/instantiation/common/instantiation';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
@@ -13,6 +12,7 @@ import { TPromise } from 'vs/base/common/winjs.base';
 import { cloneAndChange } from 'vs/base/common/objects';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 import { TelemetryService, ITelemetryServiceConfig } from 'vs/platform/telemetry/common/telemetryService';
+import { telemetryURIDescriptor } from 'vs/platform/telemetry/common/telemetryUtils';
 import { IEditorInput } from 'vs/platform/editor/common/editor';
 // tslint:disable-next-line
 import { IFileEditorInput } from 'vs/workbench/common/editor';
@@ -76,9 +76,6 @@ export class SourcegraphTelemetryService extends TelemetryService implements ITe
 			// TODO(Dan) determine if we should remove this section before launch, we
 			// will replace with sourcegraph accounts
 			const config = this._configurationService.getConfiguration<IAuthConfiguration>();
-			if (config) {
-				console.log(config.auth);
-			}
 			if (config && config.auth && config.auth.displayName) {
 				data.native.git_auth_displayName = config.auth.displayName;
 			}
@@ -104,10 +101,11 @@ export class SourcegraphTelemetryService extends TelemetryService implements ITe
 				page_title: 'ViewOther'
 			};
 			if (input && isIFileEditorInput(input)) {
+				const uriDescriptor = telemetryURIDescriptor(input.getResource());
 				params = {
 					page_title: 'ViewFile',
-					path_name: input.getResource().toString(),
-					language: paths.extname(input.getResource().path).slice(1)
+					path_name: uriDescriptor.path,
+					language: uriDescriptor.ext.slice(1)
 				};
 			}
 
