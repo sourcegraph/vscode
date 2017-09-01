@@ -684,6 +684,12 @@ Root: HKCR; Subkey: "{#RegValueName}.sql"; ValueType: string; ValueName: ""; Val
 Root: HKCR; Subkey: "{#RegValueName}.sql\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\resources\app\resources\win32\code_file.ico"; Tasks: associatewithfiles
 Root: HKCR; Subkey: "{#RegValueName}.sql\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#ExeBasename}.exe"" ""%1"""; Tasks: associatewithfiles
 
+Root: HKCR; Subkey: ".src-workspace\OpenWithProgids"; ValueType: none; ValueName: "{#RegValueName}"; Flags: deletevalue uninsdeletevalue; Tasks: associatewithfiles
+Root: HKCR; Subkey: ".src-workspace\OpenWithProgids"; ValueType: string; ValueName: "{#RegValueName}.src-workspace"; ValueData: ""; Flags: uninsdeletevalue; Tasks: associatewithfiles
+Root: HKCR; Subkey: "{#RegValueName}.src-workspace"; ValueType: string; ValueName: ""; ValueData: "{cm:SourceFile,Src Workspace}"; Flags: uninsdeletekey; Tasks: associatewithfiles
+Root: HKCR; Subkey: "{#RegValueName}.src-workspace\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\resources\app\resources\win32\code_file.ico"; Tasks: associatewithfiles
+Root: HKCR; Subkey: "{#RegValueName}.src-workspace\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#ExeBasename}.exe"" ""%1"""; Tasks: associatewithfiles
+
 Root: HKCR; Subkey: ".svg\OpenWithProgids"; ValueType: none; ValueName: "{#RegValueName}"; Flags: deletevalue uninsdeletevalue; Tasks: associatewithfiles
 Root: HKCR; Subkey: ".svg\OpenWithProgids"; ValueType: string; ValueName: "{#RegValueName}.svg"; ValueData: ""; Flags: uninsdeletevalue; Tasks: associatewithfiles
 Root: HKCR; Subkey: "{#RegValueName}.svg"; ValueType: string; ValueName: ""; ValueData: "{cm:SourceFile,SVG}"; Flags: uninsdeletekey; Tasks: associatewithfiles

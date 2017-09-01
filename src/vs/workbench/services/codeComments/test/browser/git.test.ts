@@ -85,7 +85,8 @@ suite('git', function () {
 			{ in: 'user@subdomain.company.internal:Bar.git', out: 'subdomain.company.internal/Bar' },
 			{ in: 'user@subdomain.company.internal:foo/Bar.git', out: 'subdomain.company.internal/foo/Bar' },
 			{ in: 'ssh://user@subdomain.company.com/Bar.git', out: 'subdomain.company.com/Bar' },
-			{ in: 'ssh://user@subdomain.company.com/foo/Bar.git', out: 'subdomain.company.com/foo/Bar' },
+			{ in: 'ssh://user@subdomain.company.com/Bar.git', out: 'subdomain.company.com/Bar' },
+			{ in: 'ssh://user%40subdomain.company.com/foo/Bar.git', out: 'subdomain.company.com/foo/Bar' },
 			{ in: 'https://user@github.com/sourcegraph/sourcegraph/', out: 'github.com/sourcegraph/sourcegraph' },
 		];
 		accepts.forEach(function (accept) {

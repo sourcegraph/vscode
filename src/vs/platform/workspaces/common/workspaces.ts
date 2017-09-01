@@ -19,7 +19,10 @@ export const IWorkspacesMainService = createDecorator<IWorkspacesMainService>('w
 export const IWorkspacesService = createDecorator<IWorkspacesService>('workspacesService');
 
 export const WORKSPACE_EXTENSION = 'code-workspace';
-export const WORKSPACE_FILTER = [{ name: localize('codeWorkspace', "Code Workspace"), extensions: [WORKSPACE_EXTENSION] }];
+export const EXPORTED_WORKSPACE_EXTENSION = 'src-workspace';
+export const WORKSPACE_FILTER_OPEN = [{ name: localize('codeWorkspace', "Code Workspace"), extensions: [WORKSPACE_EXTENSION, EXPORTED_WORKSPACE_EXTENSION] }];
+export const WORKSPACE_FILTER_SAVE = [{ name: localize('codeWorkspace', "Code Workspace"), extensions: [WORKSPACE_EXTENSION] }];
+export const WORKSPACE_FILTER_EXPORT = [{ name: localize('exportedCodeWorkspace', "Exported Workspace"), extensions: [EXPORTED_WORKSPACE_EXTENSION] }];
 export const UNTITLED_WORKSPACE_NAME = 'workspace.json';
 
 /**
@@ -38,6 +41,9 @@ export interface IStoredWorkspaceFolder {
 
 export interface IStoredWorkspace {
 	folders: IStoredWorkspaceFolder[];
+
+	// PATCH(sourcegraph) Optional roots to add in addition to folders. These are URIs.
+	roots?: string[];
 }
 
 export interface IResolvedWorkspace extends IWorkspaceIdentifier, IStoredWorkspace { }
@@ -88,7 +94,7 @@ export function getWorkspaceLabel(workspace: (IWorkspaceIdentifier | ISingleFold
 
 	// Workspace: Saved
 	const filename = basename(workspace.configPath);
-	const workspaceName = filename.substr(0, filename.length - WORKSPACE_EXTENSION.length - 1);
+	const workspaceName = filename.replace(/\.[^.]*$/, ''); // remove extension
 	if (options && options.verbose) {
 		return localize('workspaceNameVerbose', "{0} (Workspace)", getPathLabel(join(dirname(workspace.configPath), workspaceName), null, environmentService));
 	}

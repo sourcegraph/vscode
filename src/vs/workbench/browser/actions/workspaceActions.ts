@@ -16,7 +16,7 @@ import { IWorkspaceEditingService } from 'vs/workbench/services/workspace/common
 import URI from 'vs/base/common/uri';
 import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
-import { IWorkspacesService, WORKSPACE_FILTER } from 'vs/platform/workspaces/common/workspaces';
+import { IWorkspacesService, WORKSPACE_FILTER_SAVE, WORKSPACE_FILTER_EXPORT, EXPORTED_WORKSPACE_EXTENSION } from 'vs/platform/workspaces/common/workspaces';
 import { IMessageService, Severity } from 'vs/platform/message/common/message';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 import { isLinux } from 'vs/base/common/platform';
@@ -26,6 +26,7 @@ import { isParent } from 'vs/platform/files/common/files';
 import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { IStorageService, StorageScope } from 'vs/platform/storage/common/storage';
 import { IQuickOpenService } from 'vs/platform/quickOpen/common/quickOpen';
+import { IWorkspaceSharingService } from 'vs/workbench/services/workspace/common/workspaceSharing';
 
 export class OpenFolderAction extends Action {
 
@@ -286,9 +287,60 @@ export class SaveWorkspaceAsAction extends BaseWorkspacesAction {
 		return this.windowService.showSaveDialog({
 			buttonLabel: mnemonicButtonLabel(nls.localize({ key: 'save', comment: ['&& denotes a mnemonic'] }, "&&Save")),
 			title: nls.localize('saveWorkspace', "Save Workspace"),
-			filters: WORKSPACE_FILTER,
+			filters: WORKSPACE_FILTER_SAVE,
 			defaultPath
 		});
+	}
+
+	private isUntitledWorkspace(path: string): boolean {
+		return isParent(path, this.environmentService.workspacesHome, !isLinux /* ignore case */);
+	}
+}
+
+/**
+ * Writes out a src-workspace of the current workspace. A src-workspace is a
+ * code-workspace that is shareable/relocatable.
+ */
+export class ExportWorkspaceAction extends BaseWorkspacesAction {
+
+	public static ID = 'workbench.action.exportWorkspace';
+	public static LABEL = nls.localize('exportWorkspaceAction', "Export Workspace...");
+
+	constructor(
+		id: string,
+		label: string,
+		@IWindowService windowService: IWindowService,
+		@IEnvironmentService environmentService: IEnvironmentService,
+		@IWorkspaceContextService contextService: IWorkspaceContextService,
+		@IWorkspaceSharingService private workspaceSharingService: IWorkspaceSharingService,
+		@IMessageService private messageService: IMessageService,
+	) {
+		super(id, label, windowService, environmentService, contextService);
+	}
+
+	public run(): TPromise<any> {
+		if (!this.contextService.hasWorkspace()) {
+			this.messageService.show(Severity.Info, nls.localize('exportEmptyWorkspaceNotSupported', "Please open a workspace first to export."));
+			return TPromise.as(null);
+		}
+
+		const workspace = this.contextService.getWorkspace();
+		let defaultPath: string;
+		if (this.contextService.hasMultiFolderWorkspace() && !this.isUntitledWorkspace(workspace.configuration.fsPath)) {
+			defaultPath = workspace.configuration.fsPath.replace(/\.[^.]*$/, '.' + EXPORTED_WORKSPACE_EXTENSION);
+		}
+
+		const target = this.windowService.showSaveDialog({
+			buttonLabel: mnemonicButtonLabel(nls.localize({ key: 'export', comment: ['&& denotes a mnemonic'] }, "&&Export")),
+			title: nls.localize('exportWorkspace', "Export Workspace"),
+			filters: WORKSPACE_FILTER_EXPORT,
+			defaultPath,
+		});
+		if (!target) {
+			return TPromise.as(null);
+		}
+
+		return this.workspaceSharingService.export(URI.file(target));
 	}
 
 	private isUntitledWorkspace(path: string): boolean {

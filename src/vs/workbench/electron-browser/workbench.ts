@@ -100,6 +100,8 @@ import { KeybindingsRegistry } from 'vs/platform/keybinding/common/keybindingsRe
 import { getQuickNavigateHandler, inQuickOpenContext } from 'vs/workbench/browser/parts/quickopen/quickopen';
 import { IWorkspaceEditingService, IWorkspaceMigrationService } from 'vs/workbench/services/workspace/common/workspaceEditing';
 import { WorkspaceEditingService } from 'vs/workbench/services/workspace/node/workspaceEditingService';
+import { IWorkspaceSharingService } from 'vs/workbench/services/workspace/common/workspaceSharing';
+import { WorkspaceSharingService } from 'vs/workbench/services/workspace/node/workspaceSharingService';
 import URI from 'vs/base/common/uri';
 import { isWorkspaceIdentifier } from 'vs/platform/workspaces/common/workspaces';
 import { WorkspaceMigrationService } from 'vs/workbench/services/workspace/node/workspaceMigrationService';
@@ -652,6 +654,9 @@ export class Workbench implements IPartService {
 		// Workspace Migrating
 		this.workspaceMigrationService = this.instantiationService.createInstance(WorkspaceMigrationService);
 		serviceCollection.set(IWorkspaceMigrationService, this.workspaceMigrationService);
+
+		// Workspace Sharing
+		serviceCollection.set(IWorkspaceSharingService, new SyncDescriptor(WorkspaceSharingService));
 
 		// Quick open service (quick open controller)
 		this.quickOpen = this.instantiationService.createInstance(QuickOpenController);

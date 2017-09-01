@@ -145,6 +145,7 @@ export class Git {
 		return this.spawnPromiseTrim(context, ['ls-remote', '--get-url'])
 			.then(url => url.replace(/\.git$/, '').replace(/\/$/, ''))
 			.then(url => {
+				url = decodeURIComponent(url);
 				// Parse ssh protocol (e.g. user@company.com:foo/bar)
 				const sshMatch = url.match(/^(?:[^/@:]+@)?([^:/]+):([^/].*)$/);
 				if (sshMatch) {

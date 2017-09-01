@@ -43,7 +43,7 @@ import { IStorageService } from 'vs/platform/storage/common/storage';
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
 import { IContextKeyService, ContextKeyExpr, RawContextKey, IContextKey } from 'vs/platform/contextkey/common/contextkey';
 import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
-import { OpenWorkspaceAction, SaveWorkspaceAsAction, OpenWorkspaceConfigFileAction } from 'vs/workbench/browser/actions/workspaceActions';
+import { OpenWorkspaceAction, SaveWorkspaceAsAction, OpenWorkspaceConfigFileAction, ExportWorkspaceAction } from 'vs/workbench/browser/actions/workspaceActions';
 
 interface SearchInputEvent extends Event {
 	target: HTMLInputElement;
@@ -248,6 +248,7 @@ export class WorkspaceViewlet extends PersistentViewsViewlet implements IWorkspa
 			this.secondaryActions = [
 				this.instantiationService.createInstance(OpenWorkspaceAction, OpenWorkspaceAction.ID, OpenWorkspaceAction.LABEL),
 				this.instantiationService.createInstance(SaveWorkspaceAsAction, SaveWorkspaceAsAction.ID, SaveWorkspaceAsAction.LABEL),
+				this.instantiationService.createInstance(ExportWorkspaceAction, ExportWorkspaceAction.ID, ExportWorkspaceAction.LABEL),
 				this.instantiationService.createInstance(OpenWorkspaceConfigFileAction, OpenWorkspaceConfigFileAction.ID, OpenWorkspaceConfigFileAction.LABEL),
 			];
 		}

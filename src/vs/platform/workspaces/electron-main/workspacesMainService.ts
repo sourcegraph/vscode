@@ -5,7 +5,7 @@
 
 'use strict';
 
-import { IWorkspacesMainService, IWorkspaceIdentifier, IStoredWorkspace, WORKSPACE_EXTENSION, IWorkspaceSavedEvent, UNTITLED_WORKSPACE_NAME, IResolvedWorkspace } from 'vs/platform/workspaces/common/workspaces';
+import { IWorkspacesMainService, IWorkspaceIdentifier, IStoredWorkspace, WORKSPACE_EXTENSION, IWorkspaceSavedEvent, UNTITLED_WORKSPACE_NAME, IResolvedWorkspace, EXPORTED_WORKSPACE_EXTENSION } from 'vs/platform/workspaces/common/workspaces';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { isParent } from 'vs/platform/files/common/files';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
@@ -72,12 +72,22 @@ export class WorkspacesMainService implements IWorkspacesMainService {
 	}
 
 	private isWorkspacePath(path: string): boolean {
-		return this.isInsideWorkspacesHome(path) || extname(path) === `.${WORKSPACE_EXTENSION}`;
+		return this.isInsideWorkspacesHome(path) || extname(path) === `.${WORKSPACE_EXTENSION}` || extname(path) === `.${EXPORTED_WORKSPACE_EXTENSION}`;
 	}
 
 	private doResolveWorkspace(path: string, contents: string): IResolvedWorkspace {
 		try {
 			const workspace = this.doParseStoredWorkspace(path, contents);
+
+			// An exported workspace is imported, but not opened. So we return an Untitled workspace with its contents.
+			if (extname(path) === `.${EXPORTED_WORKSPACE_EXTENSION}`) {
+				const untitled = this.createUntitledWorkspace(workspace.folders.map(f => f.path));
+				this.doCreateWorkspaceSync(untitled.workspace, untitled.configParent, workspace);
+				return {
+					folders: workspace.folders,
+					...untitled.workspace,
+				};
+			}
 
 			// TODO@Ben migration
 			const legacyStoredWorkspace = (<any>workspace) as ILegacyStoredWorkspace;
@@ -120,8 +130,10 @@ export class WorkspacesMainService implements IWorkspacesMainService {
 			storedWorkspace.folders = storedWorkspace.folders.filter(folder => !!folder.path);
 		}
 
+		const hasRoots = Array.isArray(storedWorkspace.roots) && storedWorkspace.roots.length > 0;
+
 		// Validate
-		if (!Array.isArray(storedWorkspace.folders) || storedWorkspace.folders.length === 0) {
+		if (!Array.isArray(storedWorkspace.folders) || (storedWorkspace.folders.length === 0 && !hasRoots)) {
 			throw new Error(`${path} looks like an invalid workspace file.`);
 		}
 
@@ -143,6 +155,12 @@ export class WorkspacesMainService implements IWorkspacesMainService {
 	public createWorkspaceSync(folders: string[]): IWorkspaceIdentifier {
 		const { workspace, configParent, storedWorkspace } = this.createUntitledWorkspace(folders);
 
+		this.doCreateWorkspaceSync(workspace, configParent, storedWorkspace);
+
+		return workspace;
+	}
+
+	private doCreateWorkspaceSync(workspace: IWorkspaceIdentifier, configParent: string, storedWorkspace: any): void {
 		if (!existsSync(this.workspacesHome)) {
 			mkdirSync(this.workspacesHome);
 		}
@@ -150,8 +168,6 @@ export class WorkspacesMainService implements IWorkspacesMainService {
 		mkdirSync(configParent);
 
 		writeFileSync(workspace.configPath, JSON.stringify(storedWorkspace, null, '\t'));
-
-		return workspace;
 	}
 
 	private createUntitledWorkspace(folders: string[]): { workspace: IWorkspaceIdentifier, configParent: string, storedWorkspace: IStoredWorkspace } {

@@ -30,7 +30,7 @@ import { IWindowsMainService, IOpenConfiguration, IWindowsCountChangedEvent } fr
 import { IHistoryMainService } from 'vs/platform/history/common/history';
 import { IProcessEnvironment, isLinux, isMacintosh, isWindows } from 'vs/base/common/platform';
 import { TPromise } from 'vs/base/common/winjs.base';
-import { IWorkspacesMainService, IWorkspaceIdentifier, ISingleFolderWorkspaceIdentifier, WORKSPACE_FILTER, isSingleFolderWorkspaceIdentifier } from 'vs/platform/workspaces/common/workspaces';
+import { IWorkspacesMainService, IWorkspaceIdentifier, ISingleFolderWorkspaceIdentifier, isSingleFolderWorkspaceIdentifier, WORKSPACE_FILTER_OPEN, WORKSPACE_FILTER_SAVE } from 'vs/platform/workspaces/common/workspaces';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { mnemonicButtonLabel } from 'vs/base/common/labels';
 
@@ -1398,7 +1398,7 @@ export class WindowsManager implements IWindowsMainService {
 			dialogOptions: {
 				buttonLabel: mnemonicButtonLabel(localize({ key: 'openWorkspace', comment: ['&& denotes a mnemonic'] }, "&&Open")),
 				title: localize('openWorkspaceTitle', "Open Workspace"),
-				filters: WORKSPACE_FILTER,
+				filters: WORKSPACE_FILTER_OPEN,
 				properties: ['openFile'],
 				defaultPath
 			}
@@ -1499,7 +1499,7 @@ export class WindowsManager implements IWindowsMainService {
 				const target = dialog.showSaveDialog(e.window.win, {
 					buttonLabel: mnemonicButtonLabel(localize({ key: 'save', comment: ['&& denotes a mnemonic'] }, "&&Save")),
 					title: localize('saveWorkspace', "Save Workspace"),
-					filters: WORKSPACE_FILTER,
+					filters: WORKSPACE_FILTER_SAVE,
 					defaultPath: this.getWorkspaceDialogDefaultPath(workspace)
 				});
 
@@ -1751,7 +1751,7 @@ class FileDialog {
 					cli: this.environmentService.args,
 					pathsToOpen: paths,
 					forceNewWindow: options.forceNewWindow,
-					forceOpenWorkspaceAsFile: options.dialogOptions && !equals(options.dialogOptions.filters, WORKSPACE_FILTER)
+					forceOpenWorkspaceAsFile: options.dialogOptions && !equals(options.dialogOptions.filters, WORKSPACE_FILTER_OPEN)
 				});
 			}
 		});
