@@ -52,6 +52,8 @@ export class MainThreadWorkspace implements MainThreadWorkspaceShape {
 			const search = this._activeSearches[requestId];
 			search.cancel();
 		}
+
+		this._provider.forEach(([disposable]) => disposable.dispose());
 	}
 
 	// --- workspace ---
