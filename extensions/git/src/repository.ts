@@ -210,6 +210,7 @@ export enum Operation {
 	Tag = 1 << 18,
 	Stash = 1 << 19,
 	ExecuteCommand = 1 << 20,
+	AddWorktree = 1 << 21,
 }
 
 // function getOperationName(operation: Operation): string {
@@ -553,6 +554,10 @@ export class Repository implements Disposable {
 
 	async checkout(treeish: string): Promise<void> {
 		await this.run(Operation.Checkout, () => this.repository.checkout(treeish, []));
+	}
+
+	async addWorktree(worktreeDir: string, ref: string): Promise<void> {
+		await this.run(Operation.AddWorktree, () => this.repository.addWorktree(worktreeDir, ref));
 	}
 
 	async getCommit(ref: string): Promise<Commit> {
