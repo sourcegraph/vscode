@@ -2,6 +2,33 @@
   "name": "azure-account",
   "version": "0.1.0",
   "dependencies": {
+    "@types/form-data": {
+      "version": "2.2.0",
+      "from": "@types/form-data@*",
+      "resolved": "https://registry.npmjs.org/@types/form-data/-/form-data-2.2.0.tgz",
+      "dependencies": {
+        "@types/node": {
+          "version": "8.0.24",
+          "from": "@types/node@*",
+          "resolved": "https://registry.npmjs.org/@types/node/-/node-8.0.24.tgz"
+        }
+      }
+    },
+    "@types/node": {
+      "version": "6.0.40",
+      "from": "@types/node@6.0.40",
+      "resolved": "https://registry.npmjs.org/@types/node/-/node-6.0.40.tgz"
+    },
+    "@types/request": {
+      "version": "0.0.45",
+      "from": "@types/request@>=0.0.45 <0.0.46",
+      "resolved": "https://registry.npmjs.org/@types/request/-/request-0.0.45.tgz"
+    },
+    "@types/uuid": {
+      "version": "2.0.30",
+      "from": "@types/uuid@>=2.0.29 <3.0.0",
+      "resolved": "https://registry.npmjs.org/@types/uuid/-/uuid-2.0.30.tgz"
+    },
     "adal-node": {
       "version": "0.1.22",
       "from": "adal-node@>=0.1.22 <0.2.0",
