@@ -7,7 +7,7 @@
 import * as vscode from 'vscode';
 import { Repository } from './repository';
 import { GitRepository } from './git';
-import { repoExtension } from './main';
+import { toRelativePath } from './util';
 
 export interface ResolvedSCMRevision extends vscode.SCMRevision {
 	id: string; // narrows from "| undefined"
@@ -43,7 +43,7 @@ export function getResourceInfo(resource: vscode.Uri): IResourceInfo | undefined
 	if (!folder) {
 		return;
 	}
-	const path = repoExtension.toRelativePath(folder, resource);
+	const path = toRelativePath(folder, resource);
 	if (!path) {
 		return;
 	}
@@ -51,7 +51,7 @@ export function getResourceInfo(resource: vscode.Uri): IResourceInfo | undefined
 	return {
 		repo,
 		revision: repo.sourceControl.revision as ResolvedSCMRevision,
-		immutable: repoExtension.isRepoResource(resource),
+		immutable: false,
 		path,
 	};
 }
