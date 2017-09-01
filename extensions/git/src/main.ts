@@ -12,6 +12,7 @@ import { findGit, Git, IGit } from './git';
 import { Model } from './model';
 import { CommandCenter } from './commands';
 import { GitContentProvider } from './contentProvider';
+import { GitResourceResolver } from './resourceResolver';
 import { Askpass } from './askpass';
 import { toDisposable } from './util';
 import { IGitExtension } from './api';
@@ -55,6 +56,7 @@ async function init(context: ExtensionContext, disposables: Disposable[]): Promi
 	disposables.push(
 		new CommandCenter(git, model, outputChannel, telemetryReporter),
 		new GitContentProvider(model),
+		new GitResourceResolver(git, model),
 	);
 
 	await checkGitVersion(info);

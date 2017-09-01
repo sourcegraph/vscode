@@ -6,12 +6,9 @@
 'use strict';
 
 import * as vscode from 'vscode';
-import * as path from 'path';
-import * as os from 'os';
 import { GitRepository } from './git';
 import { isRepoResource, REPO_SCHEME, REPO_VERSION_SCHEME } from './repository';
 import { toRelativePath } from './util';
-import { gitExtension } from './main';
 import * as nls from 'vscode-nls';
 
 const localize = nls.loadMessageBundle();
@@ -47,7 +44,6 @@ export class Workspace implements vscode.Disposable {
 		this.toDispose.push(vscode.workspace.onDidChangeWorkspaceFolders(e => this.onDidChangeWorkspaceFolders(e)));
 
 		this.registerUnionFileSystem();
-		this.registerResourceResolver();
 
 		this.toDispose.push(vscode.commands.registerCommand(SWITCH_REVISION_COMMAND_ID, (resource: vscode.Uri, revision?: vscode.SCMRevision) => this.switchRevision(resource, revision)));
 
@@ -182,46 +178,6 @@ export class Workspace implements vscode.Disposable {
 				return this.getRepository(uri)!.fileSystem.resolveContents(uri);
 			},
 		}));
-	}
-
-	private registerResourceResolver(): void {
-		const provider: vscode.ResourceResolutionProvider = {
-			resolveResource: async (resource: vscode.Uri): Promise<vscode.Uri> => {
-				// For 'git' scheme, avoid conflict with builtin 'git' extension by only resolving URIs
-				// with a host (authority). The builtin 'git' extension does not construct or handle these.
-				if (resource.scheme === 'file' && !resource.authority) {
-					return resource;
-				}
-
-				// `git clone` doesn't actually understand the 'git+' prefix on the URI scheme.
-				if (resource.scheme.startsWith('git+')) {
-					resource = resource.with({ scheme: resource.scheme.replace(/^git\+/, '') });
-				}
-
-				// Clone repo, or use existing repo if it has already been cloned.
-				const parentPath = os.tmpdir();
-				try {
-					const path = await gitExtension.git.clone(resource.toString(), parentPath);
-					return vscode.Uri.file(path);
-				} catch (err) {
-					const folderName = decodeURI(resource.toString()).replace(/^.*\//, '').replace(/\.git$/, '') || 'repository'; // copied from git extension
-					const folderPath = path.join(parentPath, folderName);
-					return gitExtension.git.getRepositoryRoot(folderPath).then(repositoryRoot => {
-						return vscode.Uri.file(repositoryRoot);
-					});
-				}
-			},
-		};
-
-		const schemes = [
-			'git',
-			'git+https',
-			'git+ssh',
-			'git+http',
-		];
-		for (const scheme of schemes) {
-			this.toDispose.push(vscode.workspace.registerResourceResolutionProvider(scheme, provider));
-		}
 	}
 
 	private switchRevision(resource?: vscode.Uri, revision?: vscode.SCMRevision): void {
