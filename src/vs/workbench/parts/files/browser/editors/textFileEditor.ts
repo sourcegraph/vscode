@@ -32,8 +32,6 @@ import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { IEditorGroupService } from 'vs/workbench/services/group/common/groupService';
 import { IModeService } from 'vs/editor/common/services/modeService';
 import { ScrollType } from 'vs/editor/common/editorCommon';
-import { IEditorOptions } from 'vs/editor/common/config/editorOptions';
-import { Schemas } from 'vs/base/common/network';
 
 /**
  * An implementation of editor for file system resources.
@@ -215,15 +213,6 @@ export class TextFileEditor extends BaseTextEditor {
 		}, errors.onUnexpectedError);
 
 		return true; // in any case we handled it
-	}
-
-	protected getConfigurationOverrides(): IEditorOptions {
-		const options = super.getConfigurationOverrides();
-
-		// Make remote resources readonly.
-		options.readOnly = this.input && (this.input.getResource().scheme === Schemas.repo);
-
-		return options;
 	}
 
 	protected getAriaLabel(): string {

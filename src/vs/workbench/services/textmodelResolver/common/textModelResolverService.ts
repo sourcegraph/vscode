@@ -32,7 +32,7 @@ class ResourceModelCollection extends ReferenceCollection<TPromise<ITextEditorMo
 	public createReferencedObject(key: string): TPromise<ITextEditorModel> {
 		const resource = URI.parse(key);
 
-		if (resource.scheme === network.Schemas.file || resource.scheme === network.Schemas.repo) {
+		if (resource.scheme === network.Schemas.file) {
 			return this.textFileService.models.loadOrCreate(resource);
 		}
 

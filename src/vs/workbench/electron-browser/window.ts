@@ -334,6 +334,8 @@ export class ElectronWindow extends Themable {
 		if (request.filesToOpen.length > 0) {
 			// Check to see if the URI for this resource has a mapping a local
 			// repo stored. If so, open that file locally.
+			//
+			// TODO(sqs): repo mappings will be replaced with a service that does best-effort mapping
 			const repoMappings: { [key: string]: string } = this.configurationService.getConfiguration('repo')['mappings'] || {};
 			for (let f of request.filesToOpen) {
 				const fileToOpen = f as IWindowConfiguration;

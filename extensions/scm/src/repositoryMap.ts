@@ -35,15 +35,11 @@ export function getResourceInfo(resource: vscode.Uri): IResourceInfo | undefined
 	if (!repo) {
 		return;
 	}
-	if (!repo.sourceControl.revision || !repo.sourceControl.revision.id) {
+	if (!repo.sourceControl.revision || !repo.sourceControl.revision.id || !repo.sourceControl.rootFolder) {
 		return;
 	}
 
-	const folder = vscode.workspace.findContainingFolder(resource);
-	if (!folder) {
-		return;
-	}
-	const path = toRelativePath(folder, resource);
+	const path = toRelativePath(repo.sourceControl.rootFolder, resource);
 	if (!path) {
 		return;
 	}

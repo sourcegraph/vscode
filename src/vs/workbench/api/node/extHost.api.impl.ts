@@ -483,9 +483,6 @@ export function createApiFactory(
 			registerFolderCatalogProvider: proposedApiFunction(extension, (id, provider) => {
 				return extHostWorkspace.registerFolderCatalogProvider(id, provider);
 			}),
-			findContainingFolder: proposedApiFunction(extension, (resource) => {
-				return extHostWorkspace.findContainingFolder(resource);
-			}),
 		};
 
 		// namespace: scm

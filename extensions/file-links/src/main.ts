@@ -6,6 +6,7 @@
 
 import * as vscode from 'vscode';
 import * as nls from 'vscode-nls';
+import * as path from 'path';
 
 const localize = nls.loadMessageBundle();
 
@@ -22,7 +23,8 @@ export function activate(context: vscode.ExtensionContext) {
 				for (let remote of sourceControl.remoteResources) {
 					remote = normalizeRemoteURL(remote);
 					if (remote.authority === 'github.com') {
-						const { repo, path, revision } = parseGitHubRepo(remote, sourceControl);
+						const { repo, path, revision } = parseGitHubRepo(resource, remote, sourceControl);
+
 						return vscode.commands.executeCommand('vscode.open', vscode.Uri.parse(`https://${repo}/blob/${encodeURIComponent(revision)}/${path}`));
 					}
 				}
@@ -43,7 +45,7 @@ export function activate(context: vscode.ExtensionContext) {
 				for (let remote of sourceControl.remoteResources) {
 					remote = normalizeRemoteURL(remote);
 					if (remote.authority === 'github.com') {
-						const { repo, path, revision } = parseGitHubRepo(remote, sourceControl);
+						const { repo, path, revision } = parseGitHubRepo(resource, remote, sourceControl);
 						return vscode.commands.executeCommand('vscode.open', vscode.Uri.parse(`https://sourcegraph.com/${repo}@${encodeURIComponent(revision)}/-/blob/${path}`));
 					}
 				}
@@ -65,7 +67,7 @@ export function activate(context: vscode.ExtensionContext) {
 				return;
 			}
 
-			let rootFolder = vscode.workspace.findContainingFolder(resource);
+			let rootFolder = vscode.workspace.getWorkspaceFolder(resource);
 			if (!rootFolder) {
 				vscode.window.showErrorMessage(localize('noResourceInfo', "Unable to determine the root folder for {0}.", resource.toString()));
 				return;
@@ -90,13 +92,13 @@ function getSourceControl(resource: vscode.Uri | undefined): { resource: vscode.
 		return;
 	}
 
-	const folder = vscode.workspace.findContainingFolder(resource);
+	const folder = vscode.workspace.getWorkspaceFolder(resource);
 	if (!folder) {
 		vscode.window.showErrorMessage(localize('noContainingFolder', "Unable to find containing folder for current document."));
 		return;
 	}
 
-	const sourceControl = vscode.scm.getSourceControlForResource(folder);
+	const sourceControl = vscode.scm.getSourceControlForResource(folder.uri);
 	if (!sourceControl) {
 		vscode.window.showErrorMessage(localize('noActiveSourceControl', "Unable to determine immutable revision because no SCM repository was found."));
 		return;
@@ -116,13 +118,13 @@ function guessResource(): vscode.Uri | undefined {
 
 function normalizeRemoteURL(remote: vscode.Uri): vscode.Uri {
 	const host = remote.authority && remote.authority.includes('@') ? remote.authority.slice(remote.authority.indexOf('@') + 1) : remote.authority; // remove userinfo from URI
-	return remote.with({ authority: host });
+	return remote.with({ authority: host, path: remote.path.replace(/\.git$/, '') });
 }
 
-function parseGitHubRepo(resource: vscode.Uri, sourceControl: vscode.SourceControl): { repo: string, path: string, revision: string } {
+function parseGitHubRepo(resource: vscode.Uri, remote: vscode.Uri, sourceControl: vscode.SourceControl): { repo: string, path: string, revision: string } {
 	// GitHub repositories always have 2 path components after the hostname.
-	const repo = resource.authority + resource.path.split('/', 3).join('/');
-	const path = resource.path.split('/').slice(3).join('/');
-	const revision = sourceControl.revision && sourceControl.revision.rawSpecifier ? sourceControl.revision.rawSpecifier : 'HEAD';
-	return { repo, path, revision };
+	const repo = remote.authority + remote.path.split('/', 3).join('/');
+	const filePath = sourceControl.rootFolder ? path.relative(sourceControl.rootFolder.fsPath, resource.fsPath) : '';
+	const revision = sourceControl.revision && sourceControl.revision.id ? sourceControl.revision.id : 'HEAD';
+	return { repo, path: filePath, revision };
 }

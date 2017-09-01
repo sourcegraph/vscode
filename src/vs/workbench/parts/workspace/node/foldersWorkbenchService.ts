@@ -18,7 +18,6 @@ import URI from 'vs/base/common/uri';
 import { IFolder, ISearchQuery, ISearchComplete, ISearchStats, WorkspaceFolderState, FolderOperation, IFoldersWorkbenchService } from 'vs/workbench/parts/workspace/common/workspace';
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
 import { IEditorGroupService } from 'vs/workbench/services/group/common/groupService';
-import { IFolderContainmentService } from 'vs/platform/folder/common/folderContainment';
 import { IFolderCatalogService, ICatalogFolder, FolderGenericIconClass } from 'vs/platform/folders/common/folderCatalog';
 import { ISCMService, ISCMRepository } from 'vs/workbench/services/scm/common/scm';
 import { IProgressService2, IProgressOptions, ProgressLocation } from 'vs/platform/progress/common/progress';
@@ -199,7 +198,6 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 		@IMessageService private messageService: IMessageService,
 		@IWorkspaceContextService private contextService: IWorkspaceContextService,
 		@IEditorGroupService private editorGroupService: IEditorGroupService,
-		@IFolderContainmentService private folderContainmentService: IFolderContainmentService,
 		@IFolderCatalogService private folderCatalogService: IFolderCatalogService,
 		@ISCMService private scmService: ISCMService,
 		@IProgressService2 private progressService: IProgressService2,

@@ -12,8 +12,8 @@ import { Diff } from 'vs/workbench/services/codeComments/common/diff';
 import { ISCMService } from 'vs/workbench/services/scm/common/scm';
 import { Git } from 'vs/workbench/services/codeComments/browser/git';
 import URI from 'vs/base/common/uri';
+import { Schemas } from 'vs/base/common/network';
 import { startsWith } from 'vs/base/common/strings';
-import { isFileLikeResource } from 'vs/platform/files/common/files';
 import { IRemoteService, requestGraphQL, requestGraphQLMutation } from 'vs/platform/remote/node/remote';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { first, uniqueFilter } from 'vs/base/common/arrays';
@@ -270,7 +270,7 @@ export class CodeCommentsService implements ICodeCommentsService {
 	 * file:///Users/nick/dev/xsourcegraph/README.md -> github.com/sourcegraph/xsourcegraph/README.md
 	 */
 	private getDocumentId(file: URI): TPromise<DocumentId | undefined> {
-		if (!isFileLikeResource(file)) {
+		if (file.scheme !== Schemas.file) {
 			return TPromise.as(void 0);
 		}
 		return TPromise.join([
