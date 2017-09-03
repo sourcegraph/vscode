@@ -1019,6 +1019,11 @@ export class CommandCenter {
 		window.withProgress({ location: ProgressLocation.Window, title: localize('addingWorktree', "Adding git worktree...") }, () => promise);
 		await promise;
 
+		// Add new worktree to workspace.
+		if (workspace.workspaceFolders) {
+			await commands.executeCommand('_workbench.addRoots', [Uri.file(worktreePath)]);
+		}
+
 		this.telemetryReporter.sendTelemetryEvent('addWorktree', { outcome: 'success' });
 	}
 
