@@ -34,6 +34,7 @@ const extensions = [
 	'css',
 	'html',
 	'git',
+	'service-bitbucket-cloud',
 	'service-github',
 	'scm',
 	'file-links',

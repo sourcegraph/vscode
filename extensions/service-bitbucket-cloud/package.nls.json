@@ -1,0 +1,5 @@
+{
+	"config.includeInSearch": "Enable searching for repositories hosted on Bitbucket Cloud (Bitbucket.org)",
+	"config.username": "Bitbucket Cloud username",
+	"config.appPassword": "Bitbucket Cloud app password (must have permissions for Repositories: Read). Create one at https://bitbucket.org/account under 'Access management' > 'App passwords'."
+}

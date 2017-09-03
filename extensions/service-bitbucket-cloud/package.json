@@ -1,0 +1,52 @@
+{
+  "name": "service-bitbucket-cloud",
+  "displayName": "Bitbucket Cloud integration",
+  "description": "Provides access to Bitbucket Cloud repositories",
+  "categories": [
+    "Other"
+  ],
+  "main": "./out/main",
+  "version": "0.0.1",
+  "publisher": "sourcegraph",
+  "engines": {
+    "vscode": "*"
+  },
+  "activationEvents": [
+    "*"
+  ],
+  "enableProposedApi": true,
+  "contributes": {
+    "configuration": {
+      "type": "object",
+      "title": "Bitbucket Cloud",
+      "properties": {
+        "bitbucket.cloud.includeInSearch": {
+          "type": "boolean",
+          "default": false,
+          "description": "%config.includeInSearch%"
+        },
+        "bitbucket.cloud.username": {
+          "type": "string",
+          "description": "%config.username%"
+        },
+        "bitbucket.cloud.appPassword": {
+          "type": "string",
+          "description": "%config.appPassword%"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "gulp compile-extension:service-bitbucket-cloud",
+    "watch": "gulp watch-extension:service-bitbucket-cloud"
+  },
+  "dependencies": {
+    "isomorphic-fetch": "^2.2.1",
+    "vscode-nls": "^2.0.2"
+  },
+  "devDependencies": {
+    "@types/mocha": "^2.2.38",
+    "@types/node": "^7.0.12",
+    "vscode": "1.0.1"
+  }
+}
