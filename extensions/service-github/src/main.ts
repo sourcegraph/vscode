@@ -230,7 +230,7 @@ async function checkGitHubToken(): Promise<boolean> {
 	);
 	if (value === createTokenItem) {
 		await vscode.commands.executeCommand('vscode.open', vscode.Uri.parse('https://github.com/settings/tokens/new'));
-	} else if (value === cancelItem) {
+	} else if (!value || value === cancelItem) {
 		return false;
 	}
 
