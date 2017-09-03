@@ -23,6 +23,7 @@ class FakeSCMProvider implements ISCMProvider {
 	readonly revision?: any;
 	readonly onDidChangeCommitTemplate?: any;
 	readonly acceptInputCommand?: any;
+	readonly acceptSpecifierCommand?: any;
 	readonly statusBarCommands?: any;
 	readonly setRevisionCommand?: any;
 	readonly remoteResources?: any;
@@ -58,6 +59,7 @@ class FakeSCMService implements ISCMService {
 		return {
 			provider: this.fakeProvider,
 			input: undefined,
+			specifier: undefined,
 			onDidFocus: undefined,
 			focus: () => void 0,
 			dispose: () => void 0,

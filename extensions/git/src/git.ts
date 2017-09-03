@@ -28,6 +28,14 @@ export interface IFileStatus {
 	rename?: string;
 }
 
+export type DiffStatus = 'A' | 'C' | 'D' | 'M' | 'R' | 'T' | 'U' | 'X';
+
+export interface IFileDiff {
+	status: DiffStatus;
+	path: string;
+	rename?: string;
+}
+
 export interface Remote {
 	name: string;
 	url: string;
@@ -490,6 +498,78 @@ export class GitStatusParser {
 	}
 }
 
+export class GitDiffParser {
+
+	private static PREFIX_LENGTH = ':000000 000000 0000000000000000000000000000000000000000 0000000000000000000000000000000000000000 '.length;
+
+	private lastRaw = '';
+	private result: IFileDiff[] = [];
+
+	get diff(): IFileDiff[] {
+		return this.result;
+	}
+
+	update(raw: string): void {
+		let i = 0;
+		let nextI: number | undefined;
+
+		raw = this.lastRaw + raw;
+
+		while ((nextI = this.parseEntry(raw, i)) !== undefined) {
+			i = nextI;
+		}
+
+		this.lastRaw = raw.substr(i);
+	}
+
+	private parseEntry(raw: string, i: number): number | undefined {
+		if (i + GitDiffParser.PREFIX_LENGTH + 3 >= raw.length) {
+			return;
+		}
+
+		i += GitDiffParser.PREFIX_LENGTH;
+
+		let lastIndex: number;
+		const entry: IFileDiff = {
+			status: raw.charAt(i++) as DiffStatus,
+			path: '',
+			rename: undefined,
+		};
+
+		lastIndex = raw.indexOf('\0', i);
+		if (lastIndex === -1) {
+			return;
+		}
+		i = lastIndex + 1;
+
+		if (entry.status === 'R' || entry.status === 'C') {
+			lastIndex = raw.indexOf('\0', i);
+
+			if (lastIndex === -1) {
+				return;
+			}
+
+			entry.rename = raw.substring(i, lastIndex);
+			i = lastIndex + 1;
+		}
+
+		lastIndex = raw.indexOf('\0', i);
+
+		if (lastIndex === -1) {
+			return;
+		}
+
+		entry.path = raw.substring(i, lastIndex);
+
+		// If path ends with slash, it must be a nested git repo
+		if (entry.path[entry.path.length - 1] !== '/') {
+			this.result.push(entry);
+		}
+
+		return lastIndex + 1;
+	}
+}
+
 export class Repository {
 
 	constructor(
@@ -625,7 +705,7 @@ export class Repository {
 		const args = ['worktree', 'add', worktreeDir];
 
 		if (ref) {
-			args.push(ref);
+			args.push(ref.replace(/^refs\/heads\//, ''));
 		}
 
 		await this.run(args);
@@ -935,6 +1015,50 @@ export class Repository {
 		});
 	}
 
+	getDiff(args: string[], limit = 5000): Promise<{ diff: IFileDiff[]; didHitLimit: boolean; }> {
+		return new Promise<{ diff: IFileDiff[]; didHitLimit: boolean; }>((c, e) => {
+			const parser = new GitDiffParser();
+			const child = this.stream(['diff', '-z', '--raw', '--abbrev=40', '-M', '-C', ...args]);
+
+			const onExit = exitCode => {
+				if (exitCode !== 0) {
+					const stderr = stderrData.join('');
+					return e(new GitError({
+						message: 'Failed to execute git',
+						stderr,
+						exitCode,
+						gitErrorCode: getGitErrorCode(stderr),
+						gitCommand: 'diff-index'
+					}));
+				}
+
+				c({ diff: parser.diff, didHitLimit: false });
+			};
+
+			const onStdoutData = (raw: string) => {
+				parser.update(raw);
+
+				if (parser.diff.length > 5000) {
+					child.removeListener('exit', onExit);
+					child.stdout.removeListener('data', onStdoutData);
+					child.kill();
+
+					c({ diff: parser.diff.slice(0, 5000), didHitLimit: true });
+				}
+			};
+
+			child.stdout.setEncoding('utf8');
+			child.stdout.on('data', onStdoutData);
+
+			const stderrData: string[] = [];
+			child.stderr.setEncoding('utf8');
+			child.stderr.on('data', raw => stderrData.push(raw as string));
+
+			child.on('error', e);
+			child.on('exit', onExit);
+		});
+	}
+
 	async getHEAD(): Promise<Ref> {
 		try {
 			const result = await this.run(['symbolic-ref', '--short', 'HEAD']);
@@ -1074,5 +1198,10 @@ export class Repository {
 		}
 
 		return { hash: match[1], message: match[2] };
+	}
+
+	async revParse(args: string[]): Promise<string[]> {
+		const result = await this.run(['rev-parse', '--symbolic', ...args]);
+		return result.stdout.trim().split('\n');
 	}
 }

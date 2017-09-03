@@ -108,6 +108,79 @@ query {
 			});
 		},
 	}));
+
+	vscode.commands.registerCommand('github.pullRequests.quickopen', async (sourceControl: vscode.SourceControl) => {
+		const ok = await checkGitHubToken();
+		if (!ok) {
+			return;
+		}
+
+		if (!sourceControl) {
+			throw new Error(localize('noSourceControl', "Run this from the context menu of a repository in the SCM viewlet."));
+		}
+
+		type PullRequest = {
+			number: number;
+			title: string;
+			author: { login: string };
+			updatedAt: string;
+			baseRefName: string;
+			headRefName: string;
+		};
+
+		const sourcegraphSourcegraphRepositoryId = 'MDEwOlJlcG9zaXRvcnk2MDI0NTUxMQ=='; // TODO(sqs): un-hardcode
+		const pullRequests = requestGraphQL(`
+query($id: ID!) {
+	node(id: $id) {
+		id
+		... on Repository {
+			nameWithOwner
+			url
+			pushedAt
+			pullRequests(first: 15, orderBy: { field: UPDATED_AT, direction: DESC }, states: [OPEN]) {
+				nodes {
+					... on PullRequest {
+						number
+						title
+						author { login }
+						updatedAt
+						baseRefName
+						headRefName
+					}
+				}
+			}
+		}
+	}
+}`,
+			{ id: sourcegraphSourcegraphRepositoryId }).then<PullRequest[]>((data: any) => data.node.pullRequests.nodes, showErrorImmediately);
+
+		interface PullRequestItem extends vscode.QuickPickItem {
+			pullRequest: PullRequest;
+		}
+		const choice = await vscode.window.showQuickPick(pullRequests.then(pullRequests => pullRequests.map(pullRequest => {
+			return {
+				label: `$(git-pull-request) ${pullRequest.title} (#${pullRequest.number})`,
+				description: `${pullRequest.headRefName} — @${pullRequest.author.login}`,
+				pullRequest,
+			} as PullRequestItem;
+		})));
+
+		if (!choice) {
+			return;
+		}
+
+		// Set head revision.
+		const setRevisionCommand = sourceControl.setRevisionCommand;
+		if (!setRevisionCommand) {
+			return; // TODO
+		}
+		const setRevisionArgs = (setRevisionCommand.arguments || []).concat(choice.pullRequest.headRefName);
+		await vscode.commands.executeCommand(setRevisionCommand.command, ...setRevisionArgs);
+
+		// Set base revision.
+		sourceControl.specifierBox.value = `origin/${choice.pullRequest.baseRefName}...${choice.pullRequest.headRefName}`;
+		await vscode.commands.executeCommand('git.specifyComparisonWithInput', sourceControl);
+	});
 }
 
 /**

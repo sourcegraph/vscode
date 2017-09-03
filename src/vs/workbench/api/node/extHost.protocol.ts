@@ -335,6 +335,7 @@ export interface SCMProviderFeatures {
 	count?: number;
 	commitTemplate?: string;
 	acceptInputCommand?: modes.Command;
+	acceptSpecifierCommand?: modes.Command;
 	statusBarCommands?: modes.Command[];
 	setRevisionCommand?: modes.Command;
 	revision?: ISCMRevision;
@@ -355,6 +356,11 @@ export type SCMRawResource = [
 	boolean /*faded*/
 ];
 
+export enum InputHandle {
+	InputBox = 0,
+	SpecifierBox = 1,
+}
+
 export interface MainThreadSCMShape extends IDisposable {
 	$registerSourceControl(handle: number, id: string, label: string, rootFolder: URI): void;
 	$updateSourceControl(handle: number, features: SCMProviderFeatures): void;
@@ -366,7 +372,7 @@ export interface MainThreadSCMShape extends IDisposable {
 	$updateGroupResourceStates(sourceControlHandle: number, groupHandle: number, resources: SCMRawResource[]): void;
 	$unregisterGroup(sourceControlHandle: number, handle: number): void;
 
-	$setInputBoxValue(sourceControlHandle: number, value: string): void;
+	$setInputBoxValue(sourceControlHandle: number, inputHandle: InputHandle, value: string): void;
 }
 
 export type DebugSessionUUID = string;
@@ -549,7 +555,7 @@ export interface ExtHostTerminalServiceShape {
 export interface ExtHostSCMShape {
 	$executeCommand(sourceControlHandle: number, args: string[], options: ICommandOptions | undefined): TPromise<string>;
 	$provideOriginalResource(sourceControlHandle: number, uri: URI): TPromise<URI>;
-	$onInputBoxValueChange(sourceControlHandle: number, value: string): TPromise<void>;
+	$onInputBoxValueChange(sourceControlHandle: number, inputHandle: InputHandle, value: string): TPromise<void>;
 }
 
 export interface ExtHostTaskShape {

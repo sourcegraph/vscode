@@ -102,15 +102,18 @@
 	background-repeat: no-repeat;
 }
 
+.scm-viewlet .scm-specifier,
 .scm-viewlet .scm-editor {
 	padding: 5px 9px 5px 16px;
 }
 
+.scm-viewlet .scm-specifier,
 .scm-viewlet .scm-editor {
 	box-sizing: border-box;
 	padding: 5px 9px 5px 16px;
 }
 
+.scm-viewlet .scm-specifier > .monaco-inputbox,
 .scm-viewlet .scm-editor > .monaco-inputbox {
 	width: 100%;
 }

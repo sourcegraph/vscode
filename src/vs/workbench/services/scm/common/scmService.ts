@@ -34,6 +34,7 @@ class SCMRepository implements ISCMRepository {
 	readonly onDidFocus: Event<void> = this._onDidFocus.event;
 
 	readonly input: ISCMInput = new SCMInput();
+	readonly specifier: ISCMInput = new SCMInput();
 
 	constructor(
 		public readonly provider: ISCMProvider,
