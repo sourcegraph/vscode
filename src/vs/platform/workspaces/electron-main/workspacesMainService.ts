@@ -89,13 +89,6 @@ export class WorkspacesMainService implements IWorkspacesMainService {
 				};
 			}
 
-			// TODO@Ben migration
-			const legacyStoredWorkspace = (<any>workspace) as ILegacyStoredWorkspace;
-			if (legacyStoredWorkspace.folders.some(folder => typeof folder === 'string')) {
-				workspace.folders = legacyStoredWorkspace.folders.map(folder => ({ path: URI.parse(folder).fsPath }));
-				writeFileSync(path, JSON.stringify(workspace, null, '\t'));
-			}
-
 			// relative paths get resolved against the workspace location
 			workspace.folders.forEach(folder => {
 				if (!isAbsolute(folder.path)) {
@@ -123,6 +116,13 @@ export class WorkspacesMainService implements IWorkspacesMainService {
 			storedWorkspace = json.parse(contents); // use fault tolerant parser
 		} catch (error) {
 			throw new Error(`${path} cannot be parsed as JSON file (${error}).`);
+		}
+
+		// TODO@Ben migration
+		const legacyStoredWorkspace = (<any>storedWorkspace) as ILegacyStoredWorkspace;
+		if (legacyStoredWorkspace.folders.some(folder => typeof folder === 'string')) {
+			storedWorkspace.folders = legacyStoredWorkspace.folders.map(folder => ({ path: URI.parse(folder).fsPath }));
+			writeFileSync(path, JSON.stringify(storedWorkspace, null, '\t'));
 		}
 
 		// Filter out folders which do not have a path set

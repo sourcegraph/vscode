@@ -1,6 +1,6 @@
 {
   "name": "src-oss-dev",
-  "version": "1.16.0",
+  "version": "1.17.0",
   "electronVersion": "1.7.3",
   "distro": "HEAD",
   "author": {
@@ -117,7 +117,7 @@
     "sinon": "^1.17.2",
     "source-map": "^0.4.4",
     "tslint": "^4.3.1",
-    "typescript": "2.4.1",
+    "typescript": "2.5.2",
     "typescript-formatter": "4.0.1",
     "uglify-es": "^3.0.18",
     "underscore": "^1.8.2",
