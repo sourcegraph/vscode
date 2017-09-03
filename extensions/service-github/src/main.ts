@@ -23,7 +23,7 @@ query($id: ID!) {
 		}
 	}
 }`,
-				{ id: resource.path.replace(/^\/repository\//, '') },
+				{ id: resourceToId(resource) },
 			).then(({ node }) => {
 				if (!node) {
 					return showErrorImmediately(localize('notFound', "GitHub repository not found: {0}", resource.toString()));
@@ -62,7 +62,7 @@ query($id: ID!) {
 		}
 	}
 }`,
-				{ id: resource.path },
+				{ id: resourceToId(resource) },
 			).then(({ node }) => {
 				if (!node) {
 					return showErrorImmediately(localize('notFound', "GitHub repository not found: {0}", resource.toString()));
@@ -181,6 +181,10 @@ query($id: ID!) {
 		sourceControl.specifierBox.value = `origin/${choice.pullRequest.baseRefName}...${choice.pullRequest.headRefName}`;
 		await vscode.commands.executeCommand('git.specifyComparisonWithInput', sourceControl);
 	});
+}
+
+function resourceToId(resource: vscode.Uri): string {
+	return resource.path.replace(/^\/repository\//, '');
 }
 
 /**
