@@ -423,11 +423,9 @@ export function registerCommands(): void {
 		});
 	});
 
-	CommandsRegistry.registerCommand('_workbench.addRoots', function (accessor: ServicesAccessor, args: [URI[]]) {
+	CommandsRegistry.registerCommand('_workbench.addRoots', function (accessor: ServicesAccessor, rootsToAdd: URI[]) {
 		const workspaceEditingService = accessor.get(IWorkspaceEditingService);
 		const configurationService = accessor.get(IConfigurationService);
-
-		const [rootsToAdd] = args;
 
 		return workspaceEditingService.addRoots(rootsToAdd).then(() => {
 			// Wait for workspace to reload and detect its newly added root.

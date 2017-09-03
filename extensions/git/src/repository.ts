@@ -399,7 +399,7 @@ export class Repository implements Disposable {
 		this._sourceControl.setRevisionCommand = {
 			command: 'git.checkout',
 			title: localize('checkout', "Git Checkout"),
-			arguments: [Uri.file(repository.root)],
+			arguments: [this._sourceControl],
 		};
 
 		this._mergeGroup = this._sourceControl.createResourceGroup('merge', localize('merge changes', "Merge Changes"));

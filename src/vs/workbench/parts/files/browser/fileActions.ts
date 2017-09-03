@@ -26,7 +26,7 @@ import { VIEWLET_ID } from 'vs/workbench/parts/files/common/files';
 import labels = require('vs/base/common/labels');
 import { ITextFileService } from 'vs/workbench/services/textfile/common/textfiles';
 import { IFileService, IFileStat, FileChangeType } from 'vs/platform/files/common/files';
-import { toResource, IEditorIdentifier, EditorInput } from 'vs/workbench/common/editor';
+import { toResource, IEditorIdentifier, EditorInput, SideBySideEditorInput } from 'vs/workbench/common/editor';
 import { FileStat, Model, NewStatPlaceholder } from 'vs/workbench/parts/files/common/explorerModel';
 import { ExplorerView } from 'vs/workbench/parts/files/browser/views/explorerView';
 import { ExplorerViewlet } from 'vs/workbench/parts/files/browser/explorerViewlet';
@@ -2145,11 +2145,17 @@ export class ShowAllPathsAction extends Action {
 		const allEditors = arrays.flatten(model.groups.map(group => group.getEditors()));
 		console.group('Open file paths');
 		allEditors.forEach(editor => {
-			const resource = toResource(editor);
-			if (resource) {
-				console.log(resource.toString());
+			if (editor instanceof SideBySideEditorInput) {
+				const masterResource = toResource(editor.master);
+				const detailsResource = toResource(editor.details);
+				console.log(`master ${masterResource.toString()}, details ${detailsResource.toString()}`);
 			} else {
-				console.log('-');
+				const resource = toResource(editor);
+				if (resource) {
+					console.log(resource.toString());
+				} else {
+					console.log('unknown');
+				}
 			}
 		});
 		console.groupEnd();

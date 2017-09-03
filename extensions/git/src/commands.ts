@@ -974,7 +974,7 @@ export class CommandCenter {
 		let worktreePath: string;
 		if (typeof path === 'string') {
 			worktreePath = path;
-		} else if (typeof path !== 'string') {
+		} else {
 			const config = workspace.getConfiguration('git');
 			const value = config.get<string>('defaultCloneDirectory') || os.homedir();
 
@@ -1018,6 +1018,11 @@ export class CommandCenter {
 		window.withProgress({ location: ProgressLocation.SourceControl, title: localize('addingWorktree', "Adding git worktree...") }, () => promise);
 		window.withProgress({ location: ProgressLocation.Window, title: localize('addingWorktree', "Adding git worktree...") }, () => promise);
 		await promise;
+
+		// Add new worktree to workspace.
+		if (workspace.workspaceFolders) {
+			await commands.executeCommand('_workbench.addRoots', [Uri.file(worktreePath)]);
+		}
 
 		this.telemetryReporter.sendTelemetryEvent('addWorktree', { outcome: 'success' });
 	}
@@ -1378,6 +1383,7 @@ export class CommandCenter {
 
 				if (repository) {
 					repositoryPromise = Promise.resolve(repository);
+					args.shift();
 				} else if (this.model.repositories.length === 1) {
 					repositoryPromise = Promise.resolve(this.model.repositories[0]);
 				} else {
