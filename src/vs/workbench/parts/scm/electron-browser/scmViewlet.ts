@@ -42,7 +42,7 @@ import { attachListStyler, attachBadgeStyler, attachInputBoxStyler } from 'vs/pl
 import Severity from 'vs/base/common/severity';
 import { IExtensionService } from 'vs/platform/extensions/common/extensions';
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
-import { IStorageService } from 'vs/platform/storage/common/storage';
+import { IStorageService, StorageScope } from 'vs/platform/storage/common/storage';
 import { ViewLocation, ViewsRegistry, IViewDescriptor } from 'vs/workbench/parts/views/browser/viewsRegistry';
 import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
 import { ViewSizing } from 'vs/base/browser/ui/splitview/splitview';
@@ -53,6 +53,10 @@ import { domEvent } from 'vs/base/browser/event';
 import { StandardKeyboardEvent } from 'vs/base/browser/keyboardEvent';
 import { KeyMod, KeyCode } from 'vs/base/common/keyCodes';
 import { OpenRepositoriesView } from './views/openRepositoriesView';
+import { ILifecycleService } from 'vs/platform/lifecycle/common/lifecycle';
+import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
+import { IConfigurationRegistry, Extensions } from 'vs/platform/configuration/common/configurationRegistry';
+import { Registry } from 'vs/platform/registry/common/platform';
 
 // TODO@Joao
 // Need to subclass MenuItemActionItem in order to respect
@@ -262,9 +266,17 @@ class SourceControlViewDescriptor implements IViewDescriptor {
 	}
 }
 
+interface ISerializedSourceControlViewState {
+	specifierBox?: string;
+}
+
 class SourceControlView extends CollapsibleView {
 
+	private static UI_STATE_STORAGE_KEY = 'scm.uiState';
+
 	private cachedHeight: number | undefined;
+	private specifierBoxContainer: HTMLElement;
+	private specifierBox: InputBox;
 	private inputBoxContainer: HTMLElement;
 	private inputBox: InputBox;
 	private listContainer: HTMLElement;
@@ -285,12 +297,19 @@ class SourceControlView extends CollapsibleView {
 		@IMessageService protected messageService: IMessageService,
 		@IWorkbenchEditorService protected editorService: IWorkbenchEditorService,
 		@IEditorGroupService protected editorGroupService: IEditorGroupService,
+		@IStorageService private storageService: IStorageService,
+		@ILifecycleService private lifecycleService: ILifecycleService,
+		@IConfigurationService private configurationService: IConfigurationService,
 		@IInstantiationService protected instantiationService: IInstantiationService
 	) {
 		super(initialSize, { ...(options as IViewOptions), sizing: ViewSizing.Flexible }, keybindingService, contextMenuService);
 
 		this.menus = instantiationService.createInstance(SCMMenus, repository.provider);
 		this.menus.onDidChangeTitle(this.updateActions, this, this.disposables);
+
+		this.disposables.push(repository.provider.onDidChange(() => this.onChangeProvider()));
+		this.disposables.push(this.lifecycleService.onShutdown(reason => this.onShutdown()));
+		this.disposables.push(this.configurationService.onDidUpdateConfiguration(() => this.onConfigurationChanged()));
 	}
 
 	renderHeader(container: HTMLElement): void {
@@ -304,6 +323,30 @@ class SourceControlView extends CollapsibleView {
 		const focusTracker = trackFocus(container);
 		this.disposables.push(focusTracker.addFocusListener(() => this.repository.focus()));
 		this.disposables.push(focusTracker);
+
+		// Specifier
+		this.specifierBoxContainer = append(container, $('.scm-specifier'));
+
+		this.specifierBox = new InputBox(this.specifierBoxContainer, this.contextViewService, {
+			placeholder: localize('specifierPlaceholder', "Compare"),
+		});
+		this.disposables.push(attachInputBoxStyler(this.specifierBox, this.themeService));
+		this.disposables.push(this.specifierBox);
+
+		this.specifierBox.value = this.repository.specifier.value;
+		this.specifierBox.onDidChange(value => this.repository.specifier.value = value, null, this.disposables);
+		this.repository.specifier.onDidChange(value => this.specifierBox.value = value, null, this.disposables);
+
+		chain(domEvent(this.specifierBox.inputElement, 'keydown'))
+			.map(e => new StandardKeyboardEvent(e))
+			.filter(e => e.equals(KeyCode.Enter))
+			.on(this.onDidAcceptSpecifier, this, this.disposables);
+
+		chain(domEvent(this.specifierBox.inputElement, 'blur'))
+			.on(this.onDidAcceptSpecifier, this, this.disposables);
+
+		this.load();
+		this.updateSpecifierBox();
 
 		// Input
 		this.inputBoxContainer = append(container, $('.scm-editor'));
@@ -375,10 +418,12 @@ class SourceControlView extends CollapsibleView {
 
 		this.list.layout(height);
 		this.cachedHeight = height;
+		this.specifierBox.layout();
 		this.inputBox.layout();
 
 		const editorHeight = this.inputBox.height;
-		const listHeight = height - (editorHeight + 12 /* margin */);
+		const specifierHeight = this.specifierBoxContainer.hidden ? 0 : (this.specifierBox.height + 12 /* margin */);
+		const listHeight = height - (specifierHeight + editorHeight + 12 /* margin */);
 		this.listContainer.style.height = `${listHeight}px`;
 		this.list.layout(listHeight);
 
@@ -456,6 +501,31 @@ class SourceControlView extends CollapsibleView {
 			.filter(r => isSCMResource(r)) as ISCMResource[];
 	}
 
+	private updateSpecifierBox(): void {
+		const wasHidden = this.specifierBoxContainer.hidden;
+		const shouldHide = !this.repository.provider.acceptSpecifierCommand || !this.configurationService.getConfiguration<ISCMConfiguration>().scm.enableCompare;
+
+		this.specifierBoxContainer.hidden = shouldHide;
+
+		if (wasHidden && !shouldHide) {
+			this.onDidAcceptSpecifier();
+		}
+	}
+
+	private onDidAcceptSpecifier(): void {
+		this.repository.specifier.value = this.specifierBox.value;
+
+		if (!this.repository.provider.acceptSpecifierCommand) {
+			return;
+		}
+
+		const id = this.repository.provider.acceptSpecifierCommand.id;
+		const args = this.repository.provider.acceptSpecifierCommand.arguments;
+
+		this.commandService.executeCommand(id, ...args)
+			.done(undefined, onUnexpectedError);
+	}
+
 	private updateInputBox(): void {
 		if (typeof this.repository.provider.commitTemplate === 'undefined') {
 			return;
@@ -474,6 +544,48 @@ class SourceControlView extends CollapsibleView {
 
 		this.commandService.executeCommand(id, ...args)
 			.done(undefined, onUnexpectedError);
+	}
+
+	private onChangeProvider(): void {
+		this.updateSpecifierBox();
+	}
+
+	private save(): void {
+		const serialized = this.serialize();
+
+		if (serialized.specifierBox) {
+			this.storageService.store(SourceControlView.UI_STATE_STORAGE_KEY, JSON.stringify(serialized), StorageScope.WORKSPACE);
+		} else {
+			this.storageService.remove(SourceControlView.UI_STATE_STORAGE_KEY, StorageScope.WORKSPACE);
+		}
+	}
+
+	private serialize(): ISerializedSourceControlViewState {
+		return {
+			specifierBox: this.repository.specifier.value,
+		};
+	}
+
+	private load(): void {
+		const modelRaw = this.storageService.get(SourceControlView.UI_STATE_STORAGE_KEY, StorageScope.WORKSPACE);
+		if (modelRaw) {
+			try {
+				const serialized: ISerializedSourceControlViewState = JSON.parse(modelRaw);
+				if (serialized.specifierBox) {
+					this.specifierBox.value = serialized.specifierBox;
+				}
+			} catch (error) {
+				console.warn(`Ignoring invalid SCM viewlet state for source control ${this.repository.provider.id} - ${this.repository.provider.label}: ${error}`);
+			}
+		}
+	}
+
+	private onShutdown(): void {
+		this.save();
+	}
+
+	private onConfigurationChanged(): void {
+		this.updateSpecifierBox();
 	}
 
 	dispose(): void {
@@ -641,3 +753,24 @@ export class SCMViewlet extends PersistentViewsViewlet {
 		super.dispose();
 	}
 }
+
+interface ISCMConfiguration {
+	scm: {
+		enableCompare: string;
+	};
+}
+
+Registry.as<IConfigurationRegistry>(Extensions.Configuration)
+	.registerConfiguration({
+		id: 'scm',
+		order: 16,
+		title: localize('scmConfigurationTitle', "SCM"),
+		type: 'object',
+		properties: {
+			'scm.enableCompare': {
+				type: 'boolean',
+				description: localize('scm.enableCompare', "(Experimental) Enable the comparison specifier input in the SCM viewlet"),
+				default: false,
+			}
+		}
+	});

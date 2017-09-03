@@ -6,7 +6,7 @@
 'use strict';
 
 import { Uri, Command, CommandOptions, EventEmitter, Event, scm, SourceControl, SourceControlInputBox, SourceControlResourceGroup, SourceControlResourceState, SourceControlResourceDecorations, Disposable, ProgressLocation, window, workspace, WorkspaceEdit } from 'vscode';
-import { Repository as BaseRepository, Ref, Branch, Remote, Commit, GitErrorCodes, Stash } from './git';
+import { Repository as BaseRepository, Ref, Branch, Remote, Commit, GitErrorCodes, Stash, IFileDiff } from './git';
 import { anyEvent, filterEvent, eventToPromise, dispose, find } from './util';
 import { memoize, throttle, debounce } from './decorators';
 import { toGitUri } from './uri';
@@ -37,7 +37,10 @@ export enum Status {
 	INDEX_RENAMED,
 	INDEX_COPIED,
 
+	ADDED,
+	COPIED,
 	MODIFIED,
+	RENAMED,
 	DELETED,
 	UNTRACKED,
 	IGNORED,
@@ -52,6 +55,7 @@ export enum Status {
 }
 
 export enum ResourceGroupType {
+	Committed,
 	Merge,
 	Index,
 	WorkingTree
@@ -61,7 +65,7 @@ export class Resource implements SourceControlResourceState {
 
 	@memoize
 	get resourceUri(): Uri {
-		if (this.renameResourceUri && (this._type === Status.MODIFIED || this._type === Status.DELETED || this._type === Status.INDEX_RENAMED || this._type === Status.INDEX_COPIED)) {
+		if (this.renameResourceUri && (this._type === Status.MODIFIED || this._type === Status.DELETED || this._type === Status.RENAMED || this._type === Status.INDEX_RENAMED || this._type === Status.COPIED || this._type === Status.INDEX_COPIED)) {
 			return this.renameResourceUri;
 		}
 
@@ -109,10 +113,13 @@ export class Resource implements SourceControlResourceState {
 		switch (this.type) {
 			case Status.INDEX_MODIFIED: return Resource.Icons[theme].Modified;
 			case Status.MODIFIED: return Resource.Icons[theme].Modified;
+			case Status.ADDED: return Resource.Icons[theme].Added;
 			case Status.INDEX_ADDED: return Resource.Icons[theme].Added;
 			case Status.INDEX_DELETED: return Resource.Icons[theme].Deleted;
 			case Status.DELETED: return Resource.Icons[theme].Deleted;
+			case Status.RENAMED: return Resource.Icons[theme].Renamed;
 			case Status.INDEX_RENAMED: return Resource.Icons[theme].Renamed;
+			case Status.COPIED: return Resource.Icons[theme].Copied;
 			case Status.INDEX_COPIED: return Resource.Icons[theme].Copied;
 			case Status.UNTRACKED: return Resource.Icons[theme].Untracked;
 			case Status.IGNORED: return Resource.Icons[theme].Ignored;
@@ -131,10 +138,13 @@ export class Resource implements SourceControlResourceState {
 		switch (this.type) {
 			case Status.INDEX_MODIFIED: return localize('index modified', "Index Modified");
 			case Status.MODIFIED: return localize('modified', "Modified");
+			case Status.ADDED: return localize('added', "Added");
 			case Status.INDEX_ADDED: return localize('index added', "Index Added");
 			case Status.INDEX_DELETED: return localize('index deleted', "Index Deleted");
 			case Status.DELETED: return localize('deleted', "Deleted");
+			case Status.RENAMED: return localize('renamed', "Renamed");
 			case Status.INDEX_RENAMED: return localize('index renamed', "Index Renamed");
+			case Status.COPIED: return localize('copied', "Copied");
 			case Status.INDEX_COPIED: return localize('index copied', "Index Copied");
 			case Status.UNTRACKED: return localize('untracked', "Untracked");
 			case Status.IGNORED: return localize('ignored', "Ignored");
@@ -211,6 +221,7 @@ export enum Operation {
 	Stash = 1 << 19,
 	ExecuteCommand = 1 << 20,
 	AddWorktree = 1 << 21,
+	SpecifyComparison = 1 << 22,
 }
 
 // function getOperationName(operation: Operation): string {
@@ -320,6 +331,8 @@ export class Repository implements Disposable {
 
 	get inputBox(): SourceControlInputBox { return this._sourceControl.inputBox; }
 
+	get specifierBox(): SourceControlInputBox { return this._sourceControl.specifierBox; }
+
 	private _mergeGroup: SourceControlResourceGroup;
 	get mergeGroup(): GitResourceGroup { return this._mergeGroup as GitResourceGroup; }
 
@@ -328,6 +341,18 @@ export class Repository implements Disposable {
 
 	private _workingTreeGroup: SourceControlResourceGroup;
 	get workingTreeGroup(): GitResourceGroup { return this._workingTreeGroup as GitResourceGroup; }
+
+	private _committedGroup: SourceControlResourceGroup;
+	get committedGroup(): GitResourceGroup { return this._committedGroup as GitResourceGroup; }
+
+	private _compareLeft: string | undefined;
+	private _compareRight: string | undefined;
+	get compareLeft(): string | undefined {
+		return this._compareLeft;
+	}
+	get compareRight(): string | undefined {
+		return this._compareRight;
+	}
 
 	private _HEAD: Branch | undefined;
 	get HEAD(): Branch | undefined {
@@ -359,6 +384,7 @@ export class Repository implements Disposable {
 		this.mergeGroup.resourceStates = [];
 		this.indexGroup.resourceStates = [];
 		this.workingTreeGroup.resourceStates = [];
+		this.committedGroup.resourceStates = [];
 		this._sourceControl.count = 0;
 		this._sourceControl.revision = { rawSpecifier: 'HEAD' };
 	}
@@ -396,6 +422,12 @@ export class Repository implements Disposable {
 		this._sourceControl.commandExecutor = this;
 		this.disposables.push(this._sourceControl);
 
+		this._sourceControl.acceptSpecifierCommand = {
+			command: 'git.specifyComparisonWithInput',
+			title: localize('specifyComparison', "Specify Git Comparison Target (Diff Base or Working Tree Status)"),
+			arguments: [this._sourceControl],
+		};
+
 		this._sourceControl.setRevisionCommand = {
 			command: 'git.checkout',
 			title: localize('checkout', "Git Checkout"),
@@ -405,13 +437,16 @@ export class Repository implements Disposable {
 		this._mergeGroup = this._sourceControl.createResourceGroup('merge', localize('merge changes', "Merge Changes"));
 		this._indexGroup = this._sourceControl.createResourceGroup('index', localize('staged changes', "Staged Changes"));
 		this._workingTreeGroup = this._sourceControl.createResourceGroup('workingTree', localize('changes', "Changes"));
+		this._committedGroup = this._sourceControl.createResourceGroup('committed', localize('committed changes', "Committed Changes"));
 
 		this.mergeGroup.hideWhenEmpty = true;
 		this.indexGroup.hideWhenEmpty = true;
+		this.committedGroup.hideWhenEmpty = true;
 
 		this.disposables.push(this.mergeGroup);
 		this.disposables.push(this.indexGroup);
 		this.disposables.push(this.workingTreeGroup);
+		this.disposables.push(this.committedGroup);
 
 		this.disposables.push(new AutoFetcher(this));
 
@@ -554,6 +589,10 @@ export class Repository implements Disposable {
 
 	async checkout(treeish: string): Promise<void> {
 		await this.run(Operation.Checkout, () => this.repository.checkout(treeish, []));
+	}
+
+	async specifyComparison(revisionOrRangeSpecifier: string): Promise<void> {
+		await this.run(Operation.SpecifyComparison, () => this.updateModelState());
 	}
 
 	async addWorktree(worktreeDir: string, ref: string): Promise<void> {
@@ -719,7 +758,17 @@ export class Repository implements Disposable {
 
 	@throttle
 	private async updateModelState(): Promise<void> {
-		const { status, didHitLimit } = await this.repository.getStatus();
+		const { status, didHitLimit: statusDidHitLimit } = await this.repository.getStatus();
+
+		const specifierArgs = this.specifierBox.value ? this.specifierBox.value.split(/\s+/g) : undefined;
+		let diff: IFileDiff[] = [];
+		let diffDidHitLimit = false;
+		if (specifierArgs) {
+			({ diff, didHitLimit: diffDidHitLimit } = await this.repository.getDiff(specifierArgs));
+		}
+
+		const didHitLimit = statusDidHitLimit || diffDidHitLimit;
+
 		const config = workspace.getConfiguration('git');
 		const shouldIgnore = config.get<boolean>('ignoreLimitWarning') === true;
 
@@ -752,6 +801,22 @@ export class Repository implements Disposable {
 			}
 		} catch (err) {
 			// noop
+		}
+
+		// If a single revision is specified, then the other point of comparison is our working
+		// tree (and the right-side diff editor should be editable). If a range is specifed,
+		// then the other point of comparison is a revision and the right side is NOT editable.
+		this._compareLeft = undefined;
+		this._compareRight = undefined;
+		if (specifierArgs) {
+			const output = await this.repository.revParse(specifierArgs);
+			// TODO(sqs): handle more than 2 specifier args
+			if (output.length >= 2) {
+				this._compareLeft = output[1].replace(/^\^/, '');
+				this._compareRight = output[0];
+			} else {
+				this._compareLeft = output[0];
+			}
 		}
 
 		const [refs, remotes] = await Promise.all([this.repository.getRefs(), this.repository.getRemotes()]);
@@ -796,10 +861,29 @@ export class Repository implements Disposable {
 			}
 		});
 
+		const committed: Resource[] = [];
+
+		diff.forEach(raw => {
+			const uri = Uri.file(path.join(this.repository.root, raw.path));
+			const renameUri = raw.rename ? Uri.file(path.join(this.repository.root, raw.rename)) : undefined;
+
+			switch (raw.status) {
+				case 'A': committed.push(new Resource(ResourceGroupType.Committed, uri, Status.ADDED)); break;
+				case 'C': committed.push(new Resource(ResourceGroupType.Committed, renameUri!, Status.COPIED, uri)); break;
+				case 'D': committed.push(new Resource(ResourceGroupType.Committed, uri, Status.DELETED)); break;
+				case 'M': committed.push(new Resource(ResourceGroupType.Committed, uri, Status.MODIFIED)); break;
+				case 'R': committed.push(new Resource(ResourceGroupType.Committed, renameUri!, Status.RENAMED, uri)); break;
+				case 'T': committed.push(new Resource(ResourceGroupType.Committed, uri, Status.MODIFIED)); break;
+				case 'U': committed.push(new Resource(ResourceGroupType.Committed, uri, Status.BOTH_MODIFIED, renameUri)); break;
+				case 'X': committed.push(new Resource(ResourceGroupType.Committed, uri, Status.MODIFIED)); break;
+			}
+		});
+
 		// set resource groups
 		this.mergeGroup.resourceStates = merge;
 		this.indexGroup.resourceStates = index;
 		this.workingTreeGroup.resourceStates = workingTree;
+		this.committedGroup.resourceStates = committed;
 
 		// set count badge
 		const countBadge = workspace.getConfiguration('git').get<string>('countBadge');
