@@ -974,7 +974,7 @@ export class CommandCenter {
 		let worktreePath: string;
 		if (typeof path === 'string') {
 			worktreePath = path;
-		} else if (typeof path !== 'string') {
+		} else {
 			const config = workspace.getConfiguration('git');
 			const value = config.get<string>('defaultCloneDirectory') || os.homedir();
 
