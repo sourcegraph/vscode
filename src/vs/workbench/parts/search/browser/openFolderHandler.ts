@@ -152,26 +152,12 @@ export class MergedFolderQuickOpenModel extends QuickOpenModel {
  */
 export class FolderEntryGroup extends QuickOpenEntryGroup {
 	// Marker class
-
-	/**
-	 * See FolderEntry#prepareLabelForDisplay.
-	 */
-	public prepareLabelForDisplay(): void {
-		const entry = this.getEntry();
-		if (FolderEntry.isFolderEntry(entry)) {
-			entry.prepareLabelForDisplay();
-		}
-	}
 }
 
 /**
  * A quick open entry representing a folder from a folder catalog.
  */
 export class FolderEntry extends QuickOpenEntry {
-
-	static isFolderEntry(value: any): value is FolderEntry {
-		return value && value.prepareLabelForDisplay && value instanceof QuickOpenEntry;
-	}
 
 	private label: string;
 
@@ -186,16 +172,6 @@ export class FolderEntry extends QuickOpenEntry {
 	) {
 		super();
 		this.label = folder.displayPath;
-	}
-
-	/**
-	 * Replaces "/" characters in the label with a wider slash character "／" that looks
-	 * nicer. This breaks search matching and highlighting, so after calling this method,
-	 * this entry must be used only for presentation and not for further
-	 * filtering/highlighting.
-	 */
-	public prepareLabelForDisplay(): void {
-		this.label = this.label.replace(/\//g, '／');
 	}
 
 	public getLabel(): string {
@@ -405,9 +381,6 @@ export class OpenAnyFolderHandler extends QuickOpenHandler {
 					viewResults[0] = result.createGroup(viewResults[0] as FolderEntry);
 				}
 
-				// Prepare for display
-				viewResults.forEach(entry => entry.prepareLabelForDisplay());
-
 				model.addEntries(viewResults, result.handler);
 				return model;
 			};
@@ -453,8 +426,7 @@ export class OpenAnyFolderHandler extends QuickOpenHandler {
 		getLabel(entry: FolderEntry): string {
 			// Only return the final path component, so that it's weighted more heavily in
 			// scoring.
-			const label = entry.getLabel();
-			return label.slice(label.lastIndexOf('/') + 1);
+			return entry.getLabel();
 		},
 
 		getResourcePath(entry: FolderEntry): string {
