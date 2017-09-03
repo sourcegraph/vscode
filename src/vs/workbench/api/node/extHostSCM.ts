@@ -449,8 +449,6 @@ export class ExtHostSCM {
 	$onInputBoxValueChange(sourceControlHandle: number, inputHandle: InputHandle, value: string): TPromise<void> {
 		const sourceControl = this._sourceControls.get(sourceControlHandle);
 
-		console.log('$onInputBoxValueChange', InputHandle[inputHandle], value, sourceControl);
-
 		if (!sourceControl || !sourceControl.quickDiffProvider) {
 			return TPromise.as(null);
 		}
