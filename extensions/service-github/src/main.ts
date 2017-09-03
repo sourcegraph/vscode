@@ -239,8 +239,6 @@ async function checkGitHubToken(): Promise<boolean> {
 		ignoreFocusOut: true,
 	});
 	if (token) {
-		// TODO(sqs): There is currently an upstream bug that makes this add the setting to your workspace
-		// folder config, not your user settings.
 		await vscode.workspace.getConfiguration('github').update('token', token, vscode.ConfigurationTarget.Global);
 		return true;
 	}
