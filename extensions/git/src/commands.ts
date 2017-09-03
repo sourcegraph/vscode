@@ -1383,6 +1383,7 @@ export class CommandCenter {
 
 				if (repository) {
 					repositoryPromise = Promise.resolve(repository);
+					args.shift();
 				} else if (this.model.repositories.length === 1) {
 					repositoryPromise = Promise.resolve(this.model.repositories[0]);
 				} else {
