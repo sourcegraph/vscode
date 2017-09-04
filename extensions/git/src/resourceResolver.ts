@@ -69,7 +69,7 @@ export class GitResourceResolver {
 			await this.model.tryOpenRepository(folderPath);
 			const repository = this.model.getRepository(folderPath);
 			if (!repository) {
-				return Promise.reject(localize('notAGitRepository', "Directory exists but is not a valid Git repository: {0}", folderPath));
+				return Promise.reject(localize('notAGitRepository', "Directory is not a valid Git repository: {0}", folderPath));
 			}
 			return Uri.file(repository.root);
 		}

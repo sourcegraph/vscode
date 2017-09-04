@@ -23,7 +23,7 @@ query($id: ID!) {
 		}
 	}
 }`,
-				{ id: resource.path.replace(/^\/repository\//, '') },
+				{ id: resourceToId(resource) },
 			).then(({ node }) => {
 				if (!node) {
 					return showErrorImmediately(localize('notFound', "GitHub repository not found: {0}", resource.toString()));
@@ -62,7 +62,7 @@ query($id: ID!) {
 		}
 	}
 }`,
-				{ id: resource.path },
+				{ id: resourceToId(resource) },
 			).then(({ node }) => {
 				if (!node) {
 					return showErrorImmediately(localize('notFound', "GitHub repository not found: {0}", resource.toString()));
@@ -183,6 +183,10 @@ query($id: ID!) {
 	});
 }
 
+function resourceToId(resource: vscode.Uri): string {
+	return resource.path.replace(/^\/repository\//, '');
+}
+
 /**
  * Close quickopen and pass along the error so that the user sees it immediately instead
  * of only when they close the quickopen (which probably isn't showing any results because of
@@ -230,7 +234,7 @@ async function checkGitHubToken(): Promise<boolean> {
 	);
 	if (value === createTokenItem) {
 		await vscode.commands.executeCommand('vscode.open', vscode.Uri.parse('https://github.com/settings/tokens/new'));
-	} else if (value === cancelItem) {
+	} else if (!value || value === cancelItem) {
 		return false;
 	}
 
