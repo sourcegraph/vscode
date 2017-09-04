@@ -102,6 +102,10 @@ class BlameLineDecorator extends Disposable {
 	}
 
 	private onDidChangeSelection(event: vscode.TextEditorSelectionChangeEvent): void {
+		if (!this.shouldDecorate(event.textEditor)) {
+			return;
+		}
+
 		if (this.operation && !this.operation.token.isCancellationRequested) {
 			this.operation.cancel();
 		}
@@ -124,7 +128,7 @@ class BlameLineDecorator extends Disposable {
 	}
 
 	private onDidChangeTextDocument(event: vscode.TextDocumentChangeEvent): void {
-		if (!vscode.window.visibleTextEditors.some(editor => editor.document === event.document)) {
+		if (!this.shouldDecorate(event.document)) {
 			return;
 		}
 
@@ -133,6 +137,22 @@ class BlameLineDecorator extends Disposable {
 		}
 
 		this.debouncedUpdate();
+	}
+
+	/**
+	 * Returns whether this editor or document should be decorated with file blame
+	 * information.
+	 */
+	private shouldDecorate(editor: vscode.TextEditor): boolean;
+	private shouldDecorate(doc: vscode.TextDocument): boolean;
+	private shouldDecorate(arg: any): boolean {
+		if (arg.document) {
+			const editor = arg as vscode.TextEditor;
+			return vscode.window.visibleTextEditors.includes(editor) && !!vscode.scm.getSourceControlForResource(editor.document.uri);
+		}
+
+		const doc = arg as vscode.TextDocument;
+		return vscode.window.visibleTextEditors.some(editor => editor.document === doc) && !!vscode.scm.getSourceControlForResource(doc.uri);
 	}
 
 	private debouncedUpdate(): void {
@@ -188,15 +208,17 @@ class BlameLineDecorator extends Disposable {
 	}
 
 	private updateAndRender(token: vscode.CancellationToken): Thenable<void> {
-		return Promise.all(vscode.window.visibleTextEditors.map(editor => {
-			return this.computeDecorationsForEditor(editor, token).then(decorations => {
-				if (token && token.isCancellationRequested) {
-					return;
-				}
+		return Promise.all(vscode.window.visibleTextEditors
+			.filter(editor => this.shouldDecorate(editor))
+			.map(editor => {
+				return this.computeDecorationsForEditor(editor, token).then(decorations => {
+					if (token && token.isCancellationRequested) {
+						return;
+					}
 
-				this.setDecorations(editor, decorations);
-			});
-		})).then(() => { });
+					this.setDecorations(editor, decorations);
+				});
+			})).then(() => { });
 	}
 
 	private setDecorations(editor: vscode.TextEditor, decorations: Decoration[]): void {
