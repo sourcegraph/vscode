@@ -44,7 +44,7 @@ export function create(): vscode.Disposable {
 	});
 
 	vscode.window.onDidChangeTextEditorSelection(e => {
-		if (e.textEditor && e.textEditor === vscode.window.activeTextEditor && e.textEditor.viewColumn) {
+		if (e.textEditor && e.textEditor === vscode.window.activeTextEditor && e.textEditor.viewColumn && vscode.scm.getSourceControlForResource(e.textEditor.document.uri)) {
 			debouncedUpdate(e.textEditor.document, e.selections);
 		}
 	}, null, disposables);

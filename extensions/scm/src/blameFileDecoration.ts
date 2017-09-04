@@ -169,11 +169,11 @@ class BlameFileDecorator extends Disposable {
 	private shouldDecorate(arg: any): boolean {
 		if (arg.document) {
 			const editor = arg as vscode.TextEditor;
-			return vscode.window.visibleTextEditors.includes(editor) && editor.viewColumn !== undefined;
+			return vscode.window.visibleTextEditors.includes(editor) && !!vscode.scm.getSourceControlForResource(editor.document.uri);
 		}
 
 		const doc = arg as vscode.TextDocument;
-		return vscode.window.visibleTextEditors.some(editor => editor.document === doc && editor.viewColumn !== undefined);
+		return vscode.window.visibleTextEditors.some(editor => editor.document === doc) && !!vscode.scm.getSourceControlForResource(doc.uri);
 	}
 
 	private onDidChangeVisibleEditors(editors: vscode.TextEditor[]): void {
