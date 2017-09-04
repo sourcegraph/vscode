@@ -9,6 +9,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { workspace, Uri, Disposable } from 'vscode';
 import { Git } from './git';
+import { mkdirp } from './util';
 import { Model } from './model';
 import * as nls from 'vscode-nls';
 
@@ -57,15 +58,13 @@ export class GitResourceResolver {
 		}
 
 		// Repository doesn't exist (or we don't know about it), so clone it to a temporary location.
-		const host = resource.authority && resource.authority.includes('@') ? resource.authority.slice(resource.authority.indexOf('@') + 1) : resource.authority; // remove userinfo from URI
-		const parentPath = path.join(os.tmpdir(), path.dirname(path.join(host, resource.path)));
+		const folderPath = this.getFolderPath(resource);
+		await mkdirp(path.dirname(folderPath));
 		try {
-			const path = await this.git.clone(resource.toString(), parentPath);
-			return Uri.file(path);
+			await this.git.exec(path.dirname(folderPath), ['clone', resource.toString(), folderPath]);
+			return Uri.file(folderPath);
 		} catch (err) {
 			// The repository directory exists on disk, so try reusing it.
-			const folderName = decodeURI(resource.toString()).replace(/^.*\//, '').replace(/\.git$/, '') || 'repository'; // copied from git extension
-			const folderPath = path.join(parentPath, folderName);
 			await this.model.tryOpenRepository(folderPath);
 			const repository = this.model.getRepository(folderPath);
 			if (!repository) {
@@ -75,7 +74,28 @@ export class GitResourceResolver {
 		}
 	}
 
+	private getFolderPath(cloneUrl: Uri): string {
+		const host = cloneUrl.authority && cloneUrl.authority.includes('@') ? cloneUrl.authority.slice(cloneUrl.authority.indexOf('@') + 1) : cloneUrl.authority; // remove userinfo from URI
+		const folderRelativePath = path.join(host, cloneUrl.path.replace(/\.git$/, ''));
+		const homePath = os.homedir();
+		const separator = path.sep;
+
+		const pathTemplate = workspace.getConfiguration('folders').get<string>('path')!;
+		return replaceVariables(pathTemplate, { folderRelativePath, homePath, separator });
+	}
+
 	dispose(): void {
 		this.disposables.forEach(d => d.dispose());
 	}
+}
+
+function replaceVariables(value: string, vars: { [name: string]: string }): string {
+	const regexp = /\$\{(.*?)\}/g;
+	return value.replace(regexp, (match: string, name: string) => {
+		let newValue = vars[name];
+		if (typeof newValue === 'string') {
+			return newValue;
+		}
+		return match;
+	});
 }

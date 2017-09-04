@@ -40,6 +40,8 @@ import 'vs/workbench/parts/files/browser/explorerViewlet';
 import 'vs/workbench/parts/files/browser/fileActions.contribution';
 import 'vs/workbench/parts/files/browser/files.contribution';
 
+import 'vs/workbench/parts/folders/common/folders.contribution';
+
 import 'vs/workbench/parts/backup/common/backup.contribution';
 
 import 'vs/workbench/parts/codeComments/electron-browser/codeComments.contribution';
