@@ -109,6 +109,9 @@ export interface IDraftThreadComments extends IDisposable {
 	submit(): TPromise<IThreadComments>;
 }
 
+/**
+ * Model for comment threads on a file.
+ */
 export interface IThreadComments extends IDisposable {
 	readonly id: number;
 	readonly file: string;
@@ -141,6 +144,9 @@ export interface IThreadComments extends IDisposable {
 	submitDraftReply(): TPromise<void>;
 }
 
+/**
+ * Model for a single comment.
+ */
 export interface IComment {
 	id: number;
 	contents: string;
