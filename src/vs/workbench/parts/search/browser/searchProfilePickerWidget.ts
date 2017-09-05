@@ -24,7 +24,6 @@ export class SearchProfilePickerWidget extends Widget {
 
 	private static EDIT_TEXT = localize('searchProfilePicker.edit', "Edit search groups");
 
-	private container: HTMLElement;
 	private reposDidChange = this._register(new Emitter<void>());
 	private selectBox: SelectBox = this._register(new SelectBox([SearchProfilePickerWidget.EDIT_TEXT], 0));
 	private _profiles: ISearchProfile[] = [];
@@ -48,15 +47,17 @@ export class SearchProfilePickerWidget extends Widget {
 	}
 
 	public create(parent: Builder): void {
+		// Enable once we are using remote search again
+		/*
 		this._register(this.selectBox.onDidSelect(s => {
 			this.selected = s.selected;
 			this.telemetryService.publicLog('codeSearch.profilePicker.selected');
 		}));
 		parent.element('h4', { text: localize('searchProfilePicker.title', "repositories to search") });
 		parent.div({ class: 'search-profile-picker-widget' }, div => {
-			this.container = div.getHTMLElement();
-			this.selectBox.render(this.container);
+			this.selectBox.render(div.getHTMLElement());
 		});
+		*/
 	}
 
 	public get selected(): string {
