@@ -99,6 +99,11 @@ export class CodeCommentsDecorationRenderer extends Disposable implements IEdito
 		this.onDidChangeModel();
 	}
 
+	public dispose() {
+		this.disposeOnModelChange = dispose(this.disposeOnModelChange);
+		super.dispose();
+	}
+
 	public getId(): string {
 		return 'sg.codeComments.decorationRenderer';
 	}

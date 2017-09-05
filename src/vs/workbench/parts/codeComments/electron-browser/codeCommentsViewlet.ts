@@ -85,6 +85,11 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 		super(Constants.VIEWLET_ID, telemetryService, themeService);
 	}
 
+	public dispose(): void {
+		this.renderDisposables = dispose(this.renderDisposables);
+		super.dispose();
+	}
+
 	public getTitle(): string {
 		return this.title;
 	}
