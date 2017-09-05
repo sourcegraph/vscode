@@ -292,7 +292,7 @@ export interface MainThreadQuickOpenShape extends IDisposable {
 
 export interface MainThreadStatusBarShape extends IDisposable {
 	$setEntry(id: number, extensionId: string, text: string, tooltip: string, command: string, color: string | ThemeColor, alignment: MainThreadStatusBarAlignment, priority: number): void;
-	$dispose(id: number);
+	$dispose(id: number): void;
 }
 
 export interface MainThreadStorageShape extends IDisposable {
@@ -311,7 +311,7 @@ export interface MainThreadWorkspaceShape extends IDisposable {
 	$applyWorkspaceEdit(edits: IResourceEdit[]): TPromise<boolean>;
 
 	$registerFileSystemProvider(handle: number, scheme: string): void;
-	$unregisterFileSystemProvider(handle): void;
+	$unregisterFileSystemProvider(handle: number): void;
 	$onFileSystemChange(handle: number, resource: URI): void;
 	$updateSearchSession(session: number, data): void;
 	$finishSearchSession(session: number, err?: any): void;
@@ -403,7 +403,7 @@ export interface ExtHostCommandsShape {
 }
 
 export interface ExtHostConfigurationShape {
-	$acceptConfigurationChanged(data: IConfigurationData<any>);
+	$acceptConfigurationChanged(data: IConfigurationData<any>): void;
 }
 
 export interface ExtHostDiagnosticsShape {
@@ -488,7 +488,7 @@ export interface FileSystemEvents {
 	deleted: URI[];
 }
 export interface ExtHostFileSystemEventServiceShape {
-	$onFileEvent(events: FileSystemEvents);
+	$onFileEvent(events: FileSystemEvents): void;
 }
 
 export interface ObjectIdentifier {
