@@ -479,7 +479,6 @@ export class WorkspaceServiceImpl extends WorkspaceService {
 				required: ['folders'],
 				properties: {
 					'folders': {
-						minItems: 1,
 						uniqueItems: true,
 						description: nls.localize('workspaceConfig.folders.description', "List of folders to be loaded in the workspace. Must be a file path. e.g. `/root/folderA` or `./folderA` for a relative path that will be resolved against the location of the workspace file."),
 						items: {
