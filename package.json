@@ -20,7 +20,8 @@
     "gulp": "gulp --max_old_space_size=4096",
     "7z": "7z",
     "update-grammars": "node build/npm/update-all-grammars.js",
-    "graphql": "get-graphql-schema http://localhost:3080/.api/graphql --json | gql2ts -o src/typings/gqlschema.gen.d.ts"
+    "graphql": "get-graphql-schema http://localhost:3080/.api/graphql --json | gql2ts -o src/typings/gqlschema.gen.d.ts",
+    "smoketest": "node test/smoke/out/main.js"
   },
   "dependencies": {
     "applicationinsights": "0.17.1",
