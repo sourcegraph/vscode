@@ -69,7 +69,7 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 
 	private showRecentThreadsAction = new Action('workbench.codeCodeComments.action.showRecentThreads', 'Show recent threads', 'recentThreads', true, () => {
 		const modelUri = this.getActiveModelUri();
-		this.codeCommentsService.getModel(modelUri).selectedThread = undefined;
+		this.codeCommentsService.getFileComments(modelUri).selectedThread = undefined;
 		return TPromise.as(null);
 	});
 
@@ -145,7 +145,7 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 		}));
 		const modelUri = this.getModelUri(editor);
 		if (modelUri) {
-			const fileComments = this.codeCommentsService.getModel(modelUri);
+			const fileComments = this.codeCommentsService.getFileComments(modelUri);
 			this.activeEditorListeners.push(fileComments.onSelectedThreadDidChange(() => {
 				this.render(modelUri, {});
 			}));
@@ -200,7 +200,7 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 			this.renderCommentsNotAvailable();
 			return;
 		}
-		const selectedThread = this.codeCommentsService.getModel(modelUri).selectedThread;
+		const selectedThread = this.codeCommentsService.getFileComments(modelUri).selectedThread;
 		if (selectedThread) {
 			this.renderThreadView(modelUri, selectedThread);
 		} else {
@@ -234,7 +234,7 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 		this.updateTitleArea();
 		this.renderDisposables = dispose(this.renderDisposables);
 
-		const fileComments = this.codeCommentsService.getModel(modelUri);
+		const fileComments = this.codeCommentsService.getFileComments(modelUri);
 		if (options.refreshData) {
 			this.progressService.showWhile(fileComments.refreshThreads());
 		} else {
@@ -264,7 +264,7 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 				const recentComment = thread.mostRecentComment;
 				div.div({ class: 'thread' }, div => {
 					div.on('click', () => {
-						this.codeCommentsService.getModel(modelUri).selectedThread = thread;
+						this.codeCommentsService.getFileComments(modelUri).selectedThread = thread;
 					});
 					div.div({ class: 'leftRight' }, div => {
 						div.div({ class: 'left', title: recentComment.authorEmail }, div => {
@@ -333,7 +333,7 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 		this.renderDisposables = dispose(this.renderDisposables);
 
 		this.renderTitleAndActionsForThreadRange(editor.getSelection());
-		const fileComments = this.codeCommentsService.getModel(editor.getModel().uri);
+		const fileComments = this.codeCommentsService.getFileComments(editor.getModel().uri);
 		const draftThread = fileComments.createDraftThread(editor);
 
 		const createThreadView = this.instantiationService.createInstance(CreateThreadView, this.list, draftThread);
@@ -344,7 +344,7 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 	public viewThread(threadID: number, commentID: number): void {
 		const modelUri = this.getActiveModelUri();
 
-		const fileComments = this.codeCommentsService.getModel(modelUri);
+		const fileComments = this.codeCommentsService.getFileComments(modelUri);
 
 		const refreshThreads = fileComments.refreshThreads();
 		const selectedThread = fileComments.getThread(threadID);

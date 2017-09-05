@@ -138,7 +138,7 @@ export class CodeCommentsDecorationRenderer extends Disposable implements IEdito
 		this.disposeOnModelChange = dispose(this.disposeOnModelChange);
 		const model = this.getEditorModel();
 		if (model) {
-			this.fileComments = this.codeCommentsService.getModel(model.uri);
+			this.fileComments = this.codeCommentsService.getFileComments(model.uri);
 			// Any time an editors model changes, initiate a refresh of the data.
 			this.fileComments.refreshThreads();
 			this.disposeOnModelChange.push(this.fileComments.onSelectedThreadDidChange(() => {

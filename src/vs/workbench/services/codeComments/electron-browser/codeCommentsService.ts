@@ -85,7 +85,7 @@ export class CodeCommentsService implements ICodeCommentsService {
 	/**
 	 * See documentation on ICodeCommentsService.
 	 */
-	public getModel(file: URI): FileComments {
+	public getFileComments(file: URI): FileComments {
 		let model = this.models.get(file);
 		if (!model) {
 			model = this.instantiationService.createInstance(FileComments, file);

@@ -51,7 +51,7 @@ export class ThreadView extends Disposable {
 		@ITelemetryService private telemetryService: ITelemetryService,
 	) {
 		super();
-		this.fileComments = codeCommentsService.getModel(modelUri);
+		this.fileComments = codeCommentsService.getFileComments(modelUri);
 		this.telemetryService.publicLog('codeComments.viewThread', { codeComments: { commentCount: thread.comments.length } });
 		this._register(thread.onCommentsDidChange(() => {
 			this.render();

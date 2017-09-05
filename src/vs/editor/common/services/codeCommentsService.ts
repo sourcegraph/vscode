@@ -21,9 +21,8 @@ export interface ICodeCommentsService {
 
 	/**
 	 * Returns a model for the comments on a file.
-	 * TODO: rename to getFileComments
 	 */
-	getModel(file: URI): IFileComments;
+	getFileComments(file: URI): IFileComments;
 }
 
 /**
@@ -89,11 +88,24 @@ export interface IFileComments extends IDisposable {
  * Model for a new thread that the user has not submitted.
  */
 export interface IDraftThreadComments extends IDisposable {
+	/**
+	 * The content of the draft.
+	 */
 	content: string;
 
+	/**
+	 * Event that is fired when content changes.
+	 */
 	readonly onContentDidChange: Event<void>;
+
+	/**
+	 * Event that is fired after the draft is successfully submitted.
+	 */
 	readonly onDidSubmit: Event<IThreadComments>;
 
+	/**
+	 * Submit the draft.
+	 */
 	submit(): TPromise<IThreadComments>;
 }
 
@@ -101,12 +113,22 @@ export interface IThreadComments extends IDisposable {
 	readonly id: number;
 	readonly file: string;
 	readonly revision: string;
-	readonly range: Range; // TODO: IRange?
-	readonly displayRange?: Range;
+	readonly range: Range;
 	readonly createdAt: Date;
 	readonly comments: ReadonlyArray<IComment>;
 	readonly mostRecentComment: IComment;
 
+	/**
+	 * The range adjusted for the current state of the file.
+	 * It is undefined if the range can not be transformed to
+	 * the current state of the file or if the computation of
+	 * that transformation has not finished yet.
+	 */
+	readonly displayRange?: Range;
+
+	/**
+	 * The content of a pending reply to the thread.
+	 */
 	draftReply: string;
 
 	readonly onDraftReplyDidChange: Event<void>;
@@ -114,7 +136,7 @@ export interface IThreadComments extends IDisposable {
 	readonly onDisplayRangeDidChange: Event<void>;
 
 	/**
-	 * Adds a new comment to a thread.
+	 * Adds a new comment to a thread with the content of draftReply.
 	 */
 	submitDraftReply(): TPromise<void>;
 }
