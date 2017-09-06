@@ -88,8 +88,8 @@ function resolveShareable(resource: URI): TPromise<URI> {
 	}
 	return nfcall(cp.exec, 'git ls-remote --get-url', { cwd: resource.fsPath }).then(
 		(stdout: string) => {
-			const remoteRepo = getRemoteRepo(stdout.trim());
-			return remoteRepo === null ? resource : URI.parse('git://' + remoteRepo);
+			const remoteResource = parseGitURL(stdout.trim());
+			return remoteResource === null ? resource : remoteResource;
 		},
 		() => {
 			return resource;
@@ -97,18 +97,19 @@ function resolveShareable(resource: URI): TPromise<URI> {
 	);
 }
 
-function getRemoteRepo(url: string): string | null {
-	url = decodeURIComponent(url);
-	url = url.replace(/\.git$/, '').replace(/\/$/, '');
+/**
+ * Parses the URLs that git can return.
+ *
+ * Git doesn't always return well-formed URLs. For example it is common for
+ * git to return SCP strings instead of ssh URLs.
+ */
+export function parseGitURL(gitURL: string): URI | null {
+	gitURL = decodeURIComponent(gitURL);
 	// Parse ssh procotol (e.g. user@company.com:foo/bar)
-	const sshMatch = url.match(/^(?:[^/@:]+@)?([^:/]+):([^/].*)$/);
+	const sshMatch = gitURL.match(/^([^/@:]+@)?([^:/]+):([^/].*)$/);
 	if (sshMatch) {
-		return sshMatch[1] + '/' + sshMatch[2];
+		gitURL = 'ssh://' + (sshMatch[1] || '') + sshMatch[2] + '/' + sshMatch[3];
 	}
-	// We can just remove a prefix for these protocols.
-	const prefix = /^((https?)|(git)|(ssh)):\/\/([^/@]+@)?/;
-	if (!prefix.test(url)) {
-		return null;
-	}
-	return url.replace(prefix, '');
+	const uri = URI.parse(gitURL);
+	return uri.scheme !== '' ? uri.with({ scheme: 'git+' + uri.scheme }) : null;
 }
