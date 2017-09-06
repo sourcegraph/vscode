@@ -159,6 +159,9 @@ export class FileComments extends Disposable implements IFileComments {
 				}
 			}
 		}));
+
+		// TODO(Dan): temporary: set user name from git settings for comments and telemetry
+		this.git.getUserName();
 	}
 
 	public dispose() {
