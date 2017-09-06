@@ -362,6 +362,11 @@ export class FileRenderer implements IRenderer {
 				extraClasses.push('nonexistent-root');
 			}
 			templateData.label.setFile(stat.resource, { hidePath: true, fileKind: stat.isRoot ? FileKind.ROOT_FOLDER : stat.isDirectory ? FileKind.FOLDER : FileKind.FILE, extraClasses });
+
+			for (const className of extraClasses) {
+				templateData.container.classList.add(className);
+			}
+
 		}
 
 		// Input Box
