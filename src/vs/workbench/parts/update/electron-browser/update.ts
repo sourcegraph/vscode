@@ -380,10 +380,9 @@ export class UpdateContribution implements IGlobalActivity {
 
 		const updateNotificationMillis = this.storageService.getInteger('update/updateNotificationTime', StorageScope.GLOBAL, currentMillis);
 		const diffDays = (currentMillis - updateNotificationMillis) / (1000 * 60 * 60 * 24);
+		const minDiffDays = product.quality === 'insider' ? 1 : 5;
 
-		// PATCH(sourcegraph) While beta testing, always show update message.
-		// if 5 days have passed from stored date, show message service
-		if (diffDays > -1) {
+		if (diffDays > minDiffDays) {
 			this.showUpdateNotification(version);
 		}
 	}
