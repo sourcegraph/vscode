@@ -12,9 +12,13 @@
 }
 
 .monaco-workbench > .part.editor > .content .welcomePage {
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	font-size: 12px;
+	margin: 2em;
 	width: 90%;
 	max-width: 1200px;
-	font-size: 10px;
 }
 
 .monaco-workbench > .part.editor > .content .welcomePage .row {
@@ -22,167 +26,55 @@
 	flex-flow: row;
 }
 
-.monaco-workbench > .part.editor > .content .welcomePage .row * {
-	min-width: 0;
-	white-space: nowrap;
-	text-overflow: ellipsis;
-	overflow: hidden;
+.monaco-workbench > .part.editor > .content .welcomePage button {
+	cursor: pointer;
 }
-
-.monaco-workbench > .part.editor > .content .welcomePage p {
-	font-size: 1.3em;
-}
-
-.monaco-workbench > .part.editor > .content .welcomePage .keyboard {
-	font-family: "Lucida Grande", sans-serif;/* Keyboard shortcuts */
-}
-
-.monaco-workbench > .part.editor > .content .welcomePage a {
-	text-decoration: none;
-}
-
-.monaco-workbench > .part.editor > .content .welcomePage a:focus {
+.monaco-workbench > .part.editor > .content .welcomePage button:focus {
 	outline: 1px solid -webkit-focus-ring-color;
 	outline-offset: -1px;
 }
 
-.monaco-workbench > .part.editor > .content .welcomePage h1 {
-	padding: 0;
-	margin: 0;
-	border: none;
-	font-weight: normal;
-	font-size: 3.6em;
-	white-space: nowrap;
+.monaco-workbench > .part.editor > .content .welcomePage .button-label {
+	display: inline-block;
+	margin-left: 1em;
 }
-
-.monaco-workbench > .part.editor > .content .welcomePage .title {
-	margin-top: 1em;
-	margin-bottom: 1em;
-	flex: 1 100%;
-}
-
-.monaco-workbench > .part.editor > .content .welcomePage .subtitle {
-	margin-top: .8em;
-	font-size: 2.6em;
-	display: block;
-}
-
-.hc-black .monaco-workbench > .part.editor > .content .welcomePage .subtitle {
-	font-weight: 200;
-}
-
-.monaco-workbench > .part.editor > .content .welcomePage .splash,
-.monaco-workbench > .part.editor > .content .welcomePage .commands {
-	flex: 1 1 0;
-}
-
-.monaco-workbench > .part.editor > .content .welcomePage h2 {
-	font-weight: 200;
-	margin-top: 17px;
-	margin-bottom: 5px;
-	font-size: 1.9em;
-	line-height: initial;
-}
-
-.monaco-workbench > .part.editor > .content .welcomePage .splash .section {
-	margin-bottom: 5em;
-}
-
-.monaco-workbench > .part.editor > .content .welcomePage .splash ul {
-	margin: 0;
-	font-size: 1.3em;
-	list-style: none;
-	padding: 0;
-}
-
-.monaco-workbench > .part.editor > .content .welcomePage.emptyRecent .splash .recent .list {
-	display: none;
-}
-.monaco-workbench > .part.editor > .content .welcomePage .splash .recent .none {
-	display: none;
-}
-.monaco-workbench > .part.editor > .content .welcomePage.emptyRecent .splash .recent .none {
-	display: initial;
-}
-
-.monaco-workbench > .part.editor > .content .welcomePage .splash .recent li.moreRecent {
-	margin-top: 5px;
-}
-
-.monaco-workbench > .part.editor > .content .welcomePage .splash .recent li {
-	min-width: 0;
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-}
-.monaco-workbench > .part.editor > .content .welcomePage .splash .recent .path {
-	padding-left: 1em;
-}
-
-.monaco-workbench > .part.editor > .content .welcomePage .splash .title,
-.monaco-workbench > .part.editor > .content .welcomePage .splash .showOnStartup {
-	white-space: nowrap;
-}
-
-.monaco-workbench > .part.editor > .content .welcomePage .splash .showOnStartup input[type=checkbox] {
-	vertical-align: bottom;
+.monaco-workbench > .part.editor > .content .welcomePage .detail.button-label {
+	display: inline-block;
+	margin-left: 0.5em;
 }
 
 .monaco-workbench > .part.editor > .content .welcomePage .commands ul {
+	display: flex;
 	list-style: none;
 	padding: 0;
 }
 .monaco-workbench > .part.editor > .content .welcomePage .commands li {
-	margin: 7px 0px;
+	display: flex;
+	flex: 1 0 0;
 }
-.monaco-workbench > .part.editor > .content .welcomePage .commands li button {
-	margin: 1px;
-	padding: 12px 10px;
-	width: calc(100% - 2px);
-	height: 5em;
-	font-size: 1.3em;
-	text-align: left;
-	cursor: pointer;
-	white-space: nowrap;
-	font-family: inherit;
+.monaco-workbench > .part.editor > .content .welcomePage .commands.recent li {
+	flex: 0 0;
 }
-
-.monaco-workbench > .part.editor > .content .welcomePage .commands li button > span {
-	display: inline-block;
-	width:100%;
-}
-
-.monaco-workbench > .part.editor > .content .welcomePage .commands li button h3 {
-	font-weight: normal;
-	font-size: 1em;
-	margin: 0;
-	margin-bottom: .25em;
-}
-
-.monaco-workbench > .part.editor > .content .welcomePage .commands li button {
+.monaco-workbench > .part.editor > .content .welcomePage .commands button {
+	padding: 1em;
+	width: 100%;
 	border: none;
+	text-align: left;
+	border-radius: 2px;
 }
-
-.hc-black .monaco-workbench > .part.editor > .content .welcomePage .commands li button > h3 {
-	font-weight: bold;
+.monaco-workbench > .part.editor > .content .welcomePage .commands button h1 {
+	color: white;
+	font-size: 1em;
+	margin-top: 0;
+	margin-bottom: 0.5em;
 }
-
-.monaco-workbench > .part.editor > .content .welcomePage .commands li button:focus {
-	outline-style: solid;
-	outline-width: 1px;
+.monaco-workbench > .part.editor > .content .welcomePage .commands button ul {
+	display: block;
+	padding: 0;
 }
-
-.hc-black .monaco-workbench > .part.editor > .content .welcomePage .commands li button {
-	border-width: 1px;
-	border-style: solid;
+.monaco-workbench > .part.editor > .content .welcomePage .commands button ul li{
+	margin-left: 0;
 }
-
-.hc-black .monaco-workbench > .part.editor > .content .welcomePage .commands li button:hover {
-	outline-width: 1px;
-	outline-style: dashed;
-	outline-offset: -5px;
-}
-
 .monaco-workbench > .part.editor > .content .welcomePage .commands li button .enabledExtension {
 	display: none;
 }
@@ -193,35 +85,215 @@
 	display: inline;
 }
 
-.monaco-workbench > .part.editor > .content .welcomePageContainer.max-height-685px .title {
-	display: none;
+.hc-black .monaco-workbench > .part.editor > .content .welcomePage .commands li button {
+	border-width: 1px;
+	border-style: solid;
 }
 
-.file-icons-enabled .show-file-icons .vs_code_welcome_page-name-file-icon.file-icon::before {
-	content: ' ';
-	background-image: url('../../code-icon.svg');
+
+.monaco-workbench > .part.editor > .content .welcomePage .detail {
+	line-height: 1em;
 }
 
-.monaco-workbench > .part.editor > .content .welcomePage .mac-only,
-.monaco-workbench > .part.editor > .content .welcomePage .windows-only,
-.monaco-workbench > .part.editor > .content .welcomePage .linux-only {
+.monaco-workbench > .part.editor > .content .welcomePage .footer {
+	flex-flow: column;
+	justify-content: center;
+}
+.monaco-workbench > .part.editor > .content .welcomePage .footer li {
+	margin: 0.5em;
+	min-height: 12em;
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .footer .commands button {
+	display: flex;
+	flex-direction: column;
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage h1 {
+	font-weight: 500;
+}
+.monaco-workbench > .part.editor > .content .welcomePage h2 {
+	font-weight: 500;
+}
+.monaco-workbench > .part.editor > .content .welcomePage h3 {
+	margin: 0;
+	font-weight: 500;
+	line-height: 1.5em;
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .list {
+	display: flex;
+	flex-direction: column;
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .nav {
+	display: flex;
+}
+.monaco-workbench > .part.editor > .content .welcomePage .nav ul {
+	display: flex;
+	justify-content: space-between;
+	list-style: none;
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .nav a {
+	color: inherit;
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .nav li {
+	margin-right: 1em;
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .nav .login {
+	margin-left: 1em;
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .public-workspaces li {
+	display: flex;
+	margin-bottom: 0.5em;
+}
+.monaco-workbench > .part.editor > .content .welcomePage .public-workspaces li a {
+	margin-left: 0.5em;
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .section {
+	margin-bottom: 2em;
+}
+.monaco-workbench > .part.editor > .content .welcomePage .section button {
+	display: flex;
+}
+.monaco-workbench > .part.editor > .content .welcomePage .section ul {
+	list-style: none;
+	padding: 0;
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .splash {
+	display: flex;
+	flex-direction: column;
+	min-width: calc(50% - 0.5em);
+}
+.monaco-workbench > .part.editor > .content .welcomePage .splash.first {
+	padding-right: 1em;
+}
+.monaco-workbench > .part.editor > .content .welcomePage .splash.last {
+	padding-left: 1rem;
+}
+.monaco-workbench > .part.editor > .content .welcomePage .splash ul {
+	margin: 0;
+	list-style: none;
+	padding: 0;
+}
+.monaco-workbench > .part.editor > .content .welcomePage.emptyRecent .splash .recent .list {
 	display: none;
 }
-.monaco-workbench.mac > .part.editor > .content .welcomePage .mac-only {
+.monaco-workbench > .part.editor > .content .welcomePage .splash .recent .none {
+	display: none;
+}
+.monaco-workbench > .part.editor > .content .welcomePage.emptyRecent .splash .recent .none {
 	display: initial;
 }
-.monaco-workbench.windows > .part.editor > .content .welcomePage .windows-only {
+.monaco-workbench > .part.editor > .content .welcomePage .splash .recent li.moreRecent {
+	margin-top: 5px;
+}
+.monaco-workbench > .part.editor > .content .welcomePage .splash .recent .path {
+	padding-left: 1em;
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .start {
+	min-width: calc(50% - 0.5em);
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .start ul {
+	list-style: none;
+	padding: 0;
+}
+.monaco-workbench > .part.editor > .content .welcomePage .start li {
+	margin-right: 0.5em;
+	flex: none;
+}
+.monaco-workbench > .part.editor > .content .welcomePage .start li button {
+	padding: 1em;
+	border: none;
+	align-items: center;
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .showOnStartup {
+	margin: 0;
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .title {
+	display: flex;
+	justify-content: space-between;
+	margin-bottom: 2em;
+}
+
+
+/* Icons */
+.monaco-workbench > .part.editor > .content .welcomePage .btn-icon {
+	height: 2em;
+	width: 2em;
+	margin: auto;
+	align-self: center;
+}
+.monaco-workbench > .part.editor > .content .welcomePage .icon-container {
+	display: flex;
+	background: rgba(98, 136, 188, 0.3);
+	height: 3em;
+	width: 3em;
+	border-radius: 3em;
+	min-width: 33px;
+	align-items: center;
+	align-self: center;
+}
+.monaco-workbench > .part.editor > .content .welcomePage .friends-icon {
+	-webkit-mask: url(../../Friends.svg) center no-repeat;
+	background-color: #93A9C8;
+}
+.monaco-workbench > .part.editor > .content .welcomePage .folder-icon {
+	-webkit-mask: url(../../Folder.svg) center no-repeat;
+	background-color: #93A9C8;
+	height: 1.5em;
+	width: 1.5em;
+	display: inline-block;
+	align-self: center;
+}
+.monaco-workbench > .part.editor > .content .welcomePage .head-logo {
+	background: url(../../logo.svg) center no-repeat;
+	display: inline-block;
+	height: 32px;
+	width: 228px;
+}
+.monaco-workbench > .part.editor > .content .welcomePage .list-icon {
+	-webkit-mask: url(../../List.svg) center no-repeat;
+	background-color: #93A9C8;
+}
+.monaco-workbench > .part.editor > .content .welcomePage .repo-icon {
+	-webkit-mask: url(../../Repo.svg) center no-repeat;
+	background-color: #93A9C8;
+	height: 1.5em;
+	width: 1.5em;
+	display: inline-block;
+	align-self: flex-end;
+}
+.monaco-workbench > .part.editor > .content .welcomePage .commands li.mac-only,
+.monaco-workbench > .part.editor > .content .welcomePage  .commands li.windows-only,
+.monaco-workbench > .part.editor > .content .welcomePage  .commands li.linux-only {
+	display: none;
+}
+.monaco-workbench.mac > .part.editor > .content .welcomePage .commands li.mac-only {
 	display: initial;
 }
-.monaco-workbench.linux > .part.editor > .content .welcomePage .linux-only {
+.monaco-workbench.windows > .part.editor > .content .welcomePage .commands li.windows-only {
 	display: initial;
 }
-.monaco-workbench.mac > .part.editor > .content .welcomePage li.mac-only {
+.monaco-workbench.linux > .part.editor > .content .welcomePage  .commands li.linux-only {
+	display: initial;
+}
+.monaco-workbench.mac > .part.editor > .content .welcomePage .commands li.mac-only {
 	display: list-item;
 }
-.monaco-workbench.windows > .part.editor > .content .welcomePage li.windows-only {
+.monaco-workbench.windows > .part.editor > .content .welcomePage .commands li.windows-only {
 	display: list-item;
 }
-.monaco-workbench.linux > .part.editor > .content .welcomePage li.linux-only {
+.monaco-workbench.linux > .part.editor > .content .welcomePage .commands li.linux-only {
 	display: list-item;
 }

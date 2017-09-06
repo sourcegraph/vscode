@@ -95,7 +95,8 @@
 		"modal.buttonErrorBackground": "#FFAAAA",
 		"modal.buttonErrorForeground": "#000000",
 		"modal.inputBackground": "#FFFFFF",
-		"modal.inputForeground": "#000000"
+		"modal.inputForeground": "#000000",
+		"welcome.buttonBackground": "#233043"
 	},
 	"tokenColors": [
 		{

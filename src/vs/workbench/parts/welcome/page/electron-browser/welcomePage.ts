@@ -8,7 +8,6 @@ import 'vs/css!./welcomePage';
 import URI from 'vs/base/common/uri';
 import * as path from 'path';
 import * as arrays from 'vs/base/common/arrays';
-import product from 'vs/platform/node/product';
 import { WalkThroughInput } from 'vs/workbench/parts/welcome/walkThrough/node/walkThroughInput';
 import { IWorkbenchContribution } from 'vs/workbench/common/contributions';
 import { IPartService } from 'vs/workbench/services/part/common/partService';
@@ -19,6 +18,7 @@ import { onUnexpectedError, isPromiseCanceledError } from 'vs/base/common/errors
 import { IWindowService, IWindowsService } from 'vs/platform/windows/common/windows';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
+import { IWorkspaceEditingService } from 'vs/workbench/services/workspace/common/workspaceEditing';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { IConfigurationEditingService, ConfigurationTarget } from 'vs/workbench/services/configuration/common/configurationEditing';
 import { localize } from 'vs/nls';
@@ -37,7 +37,7 @@ import { IDisposable, dispose } from 'vs/base/common/lifecycle';
 import { tildify } from 'vs/base/common/labels';
 import { isLinux } from 'vs/base/common/platform';
 import { IThemeService, registerThemingParticipant } from 'vs/platform/theme/common/themeService';
-import { registerColor, focusBorder, textLinkForeground, textLinkActiveForeground, foreground, descriptionForeground, contrastBorder, activeContrastBorder } from 'vs/platform/theme/common/colorRegistry';
+import { registerColor, focusBorder, textLinkForeground, textLinkActiveForeground, foreground, descriptionForeground, contrastBorder, activeContrastBorder, welcomeButtonBackground } from 'vs/platform/theme/common/colorRegistry';
 import { getExtraColor } from 'vs/workbench/parts/welcome/walkThrough/node/walkThroughUtils';
 import { IExtensionsWorkbenchService } from 'vs/workbench/parts/extensions/common/extensions';
 import { IStorageService } from 'vs/platform/storage/common/storage';
@@ -128,7 +128,6 @@ const extensionPacks: ExtensionSuggestion[] = [
 	{ name: localize('welcomePage.python', "Python"), id: 'donjayamanne.python' },
 	// { name: localize('welcomePage.go', "Go"), id: 'lukehoban.go' },
 	{ name: localize('welcomePage.php', "PHP"), id: 'felixfbecker.php-pack' },
-	{ name: localize('welcomePage.azure', "Azure"), title: localize('welcomePage.showAzureExtensions', "Show Azure extensions"), id: 'workbench.extensions.action.showAzureExtensions', isCommand: true },
 	{ name: localize('welcomePage.docker', "Docker"), id: 'PeterJausovec.vscode-docker' },
 ];
 
@@ -136,6 +135,19 @@ const keymapExtensions: ExtensionSuggestion[] = [
 	{ name: localize('welcomePage.vim', "Vim"), id: 'vscodevim.vim', isKeymap: true },
 	{ name: localize('welcomePage.sublime', "Sublime"), id: 'ms-vscode.sublime-keybindings', isKeymap: true },
 	{ name: localize('welcomePage.atom', "Atom"), id: 'ms-vscode.atom-keybindings', isKeymap: true },
+];
+
+interface PublicWorkspace {
+	name: string;
+	cloneURL: string;
+}
+
+const publicWorkspaces: PublicWorkspace[] = [
+	{ name: localize("welcomePage.gorillaMux", "gorilla/mux"), cloneURL: localize("welcomePage.gorillaMuxURL", "https://github.com/gorilla/mux/"), },
+	{ name: localize("welcomePage.tslint", "palantir/tslint"), cloneURL: localize("welcomePage.tslintURL", "https://github.com/palantir/tslint/"), },
+	{ name: localize("welcomePage.jsTsLangserver", "sourcegraph/javascript-typescript-langserver"), cloneURL: localize("welcomePage.jsTsLangserverURL", "https://github.com/sourcegraph/javascript-typescript-langserver/"), },
+	{ name: localize("welcomePage.tornado", "tornadoweb/tornado"), cloneURL: localize("welcomePage.tornadoURL", "https://github.com/tornadoweb/tornado/"), },
+	{ name: localize("welcomePage.jsonIterator", "json-iterator/go"), cloneURL: localize("welcomePage.jsonIteratorURL", "https://github.com/json-iterator/go/"), },
 ];
 
 interface Strings {
@@ -185,6 +197,7 @@ class WelcomePage {
 		@IWindowService private windowService: IWindowService,
 		@IWindowsService private windowsService: IWindowsService,
 		@IWorkspaceContextService private contextService: IWorkspaceContextService,
+		@IWorkspaceEditingService private editingService: IWorkspaceEditingService,
 		@IConfigurationService private configurationService: IConfigurationService,
 		@IConfigurationEditingService private configurationEditingService: IConfigurationEditingService,
 		@IEnvironmentService private environmentService: IEnvironmentService,
@@ -224,6 +237,14 @@ class WelcomePage {
 	private onReady(container: HTMLElement, recentlyOpened: TPromise<{ files: string[]; workspaces: (IWorkspaceIdentifier | ISingleFolderWorkspaceIdentifier)[]; }>, installedExtensions: TPromise<IExtensionStatus[]>): void {
 		const enabled = isWelcomePageEnabled(this.configurationService);
 		const showOnStartup = <HTMLInputElement>container.querySelector('#showOnStartup');
+		const inactiveButtons = container.querySelectorAll('.sg-inactive');
+
+		for (let i = 0; i < inactiveButtons.length; i++) {
+			inactiveButtons[i].addEventListener('click', e => {
+				this.messageService.show(Severity.Warning, localize('welcomePage.featureInactive', 'This feature has not been implemented yet.'));
+			});
+		}
+
 		if (enabled) {
 			showOnStartup.setAttribute('checked', 'checked');
 		}
@@ -305,6 +326,8 @@ class WelcomePage {
 
 		this.addExtensionList(container, '.extensionPackList', extensionPacks, extensionPackStrings);
 		this.addExtensionList(container, '.keymapList', keymapExtensions, keymapStrings);
+		this.addPublicWorkspaceList(container, '.public-workspace-list', publicWorkspaces);
+
 
 		this.updateInstalledExtensions(container, installedExtensions);
 		this.disposables.push(this.instantiationService.invokeFunction(onExtensionChanged)(ids => {
@@ -316,17 +339,29 @@ class WelcomePage {
 				}
 			};
 		}));
+	}
 
-		if (this.experimentService.getExperiments().deployToAzureQuickLink) {
-			container.querySelector('.showInterfaceOverview').remove();
-		} else {
-			container.querySelector('.deployToAzure').remove();
-		}
+	private addPublicWorkspaceList(container: HTMLElement, listSelector: string, listItems: PublicWorkspace[]) {
+		const list = container.querySelector(listSelector);
+		if (list) {
+			listItems.forEach((workspace, i) => {
+				const li = document.createElement('li');
+				const repoIcon = document.createElement('div');
+				repoIcon.className = localize("welcomePage.repoIconClass", "repo-icon");
+				li.appendChild(repoIcon);
+				const a = document.createElement('a');
+				a.href = 'javascript:void(0)';
+				a.innerText = workspace.name;
+				li.appendChild(a);
+				list.appendChild(li);
 
-		if (product.quality !== 'stable') {
-			container.querySelector('.stable-only').remove();
-		} else {
-			container.querySelector('.insiders-only').remove();
+				a.addEventListener('click', e => {
+					const root = URI.parse(`git+${workspace.cloneURL}`);
+					this.editingService.addRoots([root]);
+					e.preventDefault();
+					e.stopPropagation();
+				});
+			});
 		}
 	}
 
@@ -539,9 +574,14 @@ registerThemingParticipant((theme, collector) => {
 	if (descriptionColor) {
 		collector.addRule(`.monaco-workbench > .part.editor > .content .welcomePage .detail { color: ${descriptionColor}; }`);
 	}
+	const welcomeButtonColor = theme.getColor(welcomeButtonBackground, false);
 	const buttonColor = getExtraColor(theme, buttonBackground, { dark: 'rgba(0, 0, 0, .2)', extra_dark: 'rgba(200, 235, 255, .042)', light: 'rgba(0,0,0,.04)', hc: 'black' });
-	if (buttonColor) {
+	if (welcomeButtonColor) {
+		collector.addRule(`.monaco-workbench > .part.editor > .content .welcomePage .start li button { background: ${welcomeButtonColor}; }`);
+		collector.addRule(`.monaco-workbench > .part.editor > .content .welcomePage .commands li button { background: ${welcomeButtonColor}; }`);
+	} else if (buttonColor) {
 		collector.addRule(`.monaco-workbench > .part.editor > .content .welcomePage .commands li button { background: ${buttonColor}; }`);
+		collector.addRule(`.monaco-workbench > .part.editor > .content .welcomePage .start li button { background: ${buttonColor}; }`);
 	}
 	const buttonHoverColor = getExtraColor(theme, buttonHoverBackground, { dark: 'rgba(200, 235, 255, .072)', extra_dark: 'rgba(200, 235, 255, .072)', light: 'rgba(0,0,0,.10)', hc: null });
 	if (buttonHoverColor) {

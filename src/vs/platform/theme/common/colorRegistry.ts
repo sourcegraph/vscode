@@ -204,6 +204,7 @@ export const pickerGroupBorder = registerColor('pickerGroup.border', { dark: '#3
 export const buttonForeground = registerColor('button.foreground', { dark: Color.white, light: Color.white, hc: Color.white }, nls.localize('buttonForeground', "Button foreground color."));
 export const buttonBackground = registerColor('button.background', { dark: '#0E639C', light: '#007ACC', hc: null }, nls.localize('buttonBackground', "Button background color."));
 export const buttonHoverBackground = registerColor('button.hoverBackground', { dark: lighten(buttonBackground, 0.2), light: darken(buttonBackground, 0.2), hc: null }, nls.localize('buttonHoverBackground', "Button background color when hovering."));
+export const welcomeButtonBackground = registerColor('welcome.buttonBackground', { dark: '#233043', light: '#007ACC', hc: null }, nls.localize('welcomeButtonBackground', "Welcome page button background color."));
 
 export const tagBackground = registerColor('tag.background', { dark: null, light: null, hc: null }, nls.localize('tagBackground', "Background color for tags."));
 export const tagForeground = registerColor('tag.foreground', { dark: Color.white.transparent(0.7), light: Color.black.transparent(0.7), hc: null }, nls.localize('tagForeground', "Foreground color for tags."));

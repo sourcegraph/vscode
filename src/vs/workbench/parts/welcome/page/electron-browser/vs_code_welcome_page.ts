@@ -13,64 +13,152 @@ export function used() {
 export default () => `
 <div class="welcomePageContainer">
 	<div class="welcomePage">
-		<div class="title">
-			<h1 class="caption">${escape(localize('welcomePage.sourcegraph', "Sourcegraph"))}</h1>
-		</div>
-		<div class="row">
-			<div class="splash">
-				<div class="section start">
-					<h2 class="caption">${escape(localize('welcomePage.start', "Start"))}</h2>
+		<div>
+			<div class="title">
+				<div class="head-logo"></div>
+				<div class="nav">
 					<ul>
-						<li><a href="command:workbench.action.files.newUntitledFile">${escape(localize('welcomePage.newFile', "New file"))}</a></li>
-						<li class="mac-only"><a href="command:workbench.action.files.openFileFolder">${escape(localize('welcomePage.openFolder', "Open folder..."))}</a></li>
-						<li class="windows-only linux-only"><a href="command:workbench.action.files.openFolder">${escape(localize('welcomePage.openFolder', "Open folder..."))}</a></li>
-						<li class="stable-only"><a href="command:git.clone">${escape(localize('welcomePage.cloneGitRepository', "Clone Git repository..."))}</a></li>
-						<li class="insiders-only"><a href="command:workbench.action.addRootFolder">${escape(localize('welcomePage.addWorkspaceFolder', "Add workspace folder..."))}</a></li>
+						<li><a href="https://about.sourcegraph.com/about">About</a></li>
+						<li><a href="https://about.sourcegraph.com/product">Product</a></li>
+						<li><a href="https://about.sourcegraph.com/blog">Blog</a></li>
+						<li><a href="https://about.sourcegraph.com/pricing">Pricing</a></li>
+						<li><a href="https://about.sourcegraph.com/jobs">Careers</a></li>
+					</ul>
+					<ul class="login">
+						<li><a class="sg-inactive">Sign in</a></li>
+						<li><a class="sg-inactive">Sign up</a></li>
 					</ul>
 				</div>
-				<div class="section recent">
-					<h2 class="caption">${escape(localize('welcomePage.recent', "Recent"))}</h2>
-					<ul class="list">
-						<!-- Filled programmatically -->
-						<li class="moreRecent"><a href="command:workbench.action.openRecent">${escape(localize('welcomePage.moreRecent', "More..."))}</a><span class="path detail if_shortcut" data-command="workbench.action.openRecent">(<span class="shortcut" data-command="workbench.action.openRecent"></span>)</span></li>
-					</ul>
-					<p class="none detail">${escape(localize('welcomePage.noRecentFolders', "No recent folders"))}</p>
-				</div>
-				<div class="section help">
-					<h2 class="caption">${escape(localize('welcomePage.help', "Help"))}</h2>
-					<ul>
-						<li class="keybindingsReferenceLink"><a href="command:workbench.action.keybindingsReference">${escape(localize('welcomePage.keybindingsCheatsheet', "Printable keyboard cheatsheet"))}</a></li>
-						<li><a href="command:workbench.action.openIntroductoryVideosUrl">${escape(localize('welcomePage.introductoryVideos', "Introductory videos"))}</a></li>
-						<li><a href="command:workbench.action.openTipsAndTricksUrl">${escape(localize('welcomePage.tipsAndTricks', "Tips and Tricks"))}</a></li>
-						<li><a href="command:workbench.action.openDocumentationUrl">${escape(localize('welcomePage.productDocumentation', "Product documentation"))}</a></li>
-					</ul>
-				</div>
-				<p class="showOnStartup"><input type="checkbox" id="showOnStartup"> <label class="caption" for="showOnStartup">${escape(localize('welcomePage.showOnStartup', "Show welcome page on startup"))}</label></p>
 			</div>
-			<div class="commands">
-				<div class="section customize">
-					<h2 class="caption">${escape(localize('welcomePage.customize', "Customize"))}</h2>
-					<ul>
-						<li class="showLanguageExtensions"><button role="group" data-href="command:workbench.extensions.action.showLanguageExtensions"><h3 class="caption">${escape(localize('welcomePage.installExtensionPacks', "Tools and languages"))}</h3> <span class="detail">${escape(localize('welcomePage.installExtensionPacksDescription', "Install support for {0} and {1}"))
+			<div class="row">
+				<div class="splash first">
+					<div class="section start commands">
+						<ul>
+							<li class="mac-only">
+								<button data-href="command:workbench.action.files.openFileFolder">
+									<div class="folder-icon"></div>
+									<span class="detail button-label">${escape(localize('welcomePage.openFolder', "Open local folder"))}</span>
+								</button>
+							</li>
+							<li class="windows-only linux-only">
+								<button data-href="command:workbench.action.files.openFolder">
+									<div class="folder-icon"></div>
+									<span class="detail button-label">${escape(localize('welcomePage.openFolder', "Open local folder"))}</span>
+								</button>
+							</li>
+							<li>
+								<button data-href="command:workbench.action.openRepo">
+									<div class="repo-icon"></div>
+									<span class="detail button-label">${escape(localize('welcomePage.cloneGitRepository', "Open remote repository..."))}
+								</button>
+							</li>
+						</ul>
+					</div>
+					<div class="section recent commands">
+						<h2 class="caption">${escape(localize('welcomePage.recent', "Recent workspaces and folders"))}</h2>
+
+						<ul class="list">
+							<!-- Filled programmatically -->
+							<li class="moreRecent"><a href="command:workbench.action.openRecent">${escape(localize('welcomePage.moreRecent', "More..."))}</a><span class="path detail if_shortcut" data-command="workbench.action.openRecent">(<span class="shortcut" data-command="workbench.action.openRecent"></span>)</span></li>
+						</ul>
+						<ul class="none detail">
+							<li>
+								<button>
+									<div class="icon-container">
+										<div class="btn-icon list-icon"></div>
+									</div>
+									<div class="button-label">
+										<h3 class="caption">${escape(localize('welcomePage.noRecentFolders', "Nothing recent"))}</h3>
+										<span class="detail">${escape(localize('welcomePage.openToGetStarted', "Open a local folder or remote repository to get started"))}</span>
+									</div>
+								</button>
+							</li>
+						</ul>
+					</div>
+					<div class="section public-workspaces">
+						<h2>Public workspaces</h2>
+						<p class="detail">Try Sourcegraph on these popular open-source projects</p>
+						<ul class="public-workspace-list">
+						</ul>
+					</div>
+				</div>
+				<div class="splash last">
+					<div class="section workspaces commands">
+						<h2>Team workspaces</h2>
+						<ul>
+							<li>
+								<button class="sg-inactive">
+									<div class="icon-container">
+										<div class="btn-icon friends-icon"></div>
+									</div>
+									<div class="button-label">
+										<h3 class="caption">${escape(localize('welcomePage.SignedOut', "Signed out"))}</h3>
+										<span class="detail">${escape(localize('welcomePage.SignInWorkspaces', "Sign in to Sourcegraph to see all of your team's shared workspaces"))}</span>
+									</div>
+								</button>
+							</li>
+						</ul>
+					</div>
+					<div class="section comments commands">
+						<h2>Recent team comments</h2>
+						<ul>
+							<li>
+								<button class="sg-inactive">
+									<div class="icon-container">
+										<div class="btn-icon friends-icon"></div>
+									</div>
+									<div class="button-label">
+										<h3 class="caption">${escape(localize('welcomePage.SignedOut', "Signed out"))}</h3>
+										<span class="detail">${escape(localize('welcomePage.SignInComments', "Sign in to Sourcegraph to see your team's recent comments"))}</span>
+									</div>
+								</button>
+							</li>
+						</ul>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="row footer">
+			<div><p class="showOnStartup"><input type="checkbox" id="showOnStartup"> <label class="caption" for="showOnStartup">${escape(localize('welcomePage.showOnStartup', "Show welcome page on startup"))}</label></p></div>
+			<div class="commands customize">
+				<ul>
+					<li class="showInteractivePlayground">
+						<button data-href="command:sg.modal.showOnboardingModal">
+							<h3 class="caption">${escape(localize('welcomePage.interactivePlayground', "Learn how to use Sourcegraph"))}</h3>
+							<span class="detail">${escape(localize('welcomePage.interactivePlaygroundDescription', "Try essential editor features out in a short walkthrough"))}</span>
+						</button>
+					</li>
+					<li class="showLanguageExtensions">
+						<button role="group" data-href="command:workbench.extensions.action.showLanguageExtensions">
+							<h3 class="caption">${escape(localize('welcomePage.installExtensionPacks', "Tools and languages"))}</h3>
+							<span class="detail">${escape(localize('welcomePage.installExtensionPacksDescription', "Install support for {0} and {1}"))
 		.replace('{0}', `<span class="extensionPackList"></span>`)
 		.replace('{1}', `<a href="command:workbench.extensions.action.showLanguageExtensions">${escape(localize('welcomePage.moreExtensions', "more"))}</a>`)}
-						</span></button></li>
-						<li class="showRecommendedKeymapExtensions"><button role="group" data-href="command:workbench.extensions.action.showRecommendedKeymapExtensions"><h3 class="caption">${escape(localize('welcomePage.installKeymapDescription', "Install keyboard shortcuts"))}</h3> <span class="detail">${escape(localize('welcomePage.installKeymapExtension', "Install the keyboard shortcuts of {0} and {1}"))
+							</span>
+						</button>
+					</li>
+					<li class="showRecommendedKeymapExtensions">
+						<button role="group" data-href="command:workbench.extensions.action.showRecommendedKeymapExtensions">
+							<h3 class="caption">${escape(localize('welcomePage.installKeymapDescription', "Install keyboard shortcuts"))}</h3>
+							<span class="detail">${escape(localize('welcomePage.installKeymapExtension', "Install the keyboard shortcuts of {0} and {1}"))
 		.replace('{0}', `<span class="keymapList"></span>`)
 		.replace('{1}', `<a href="command:workbench.extensions.action.showRecommendedKeymapExtensions">${escape(localize('welcomePage.others', "others"))}</a>`)}
-						</span></button></li>
-						<li class="selectTheme"><button data-href="command:workbench.action.selectTheme"><h3 class="caption">${escape(localize('welcomePage.colorTheme', "Color theme"))}</h3> <span class="detail">${escape(localize('welcomePage.colorThemeDescription', "Make the editor and your code look the way you love"))}</span></button></li>
-					</ul>
-				</div>
-				<div class="section learn">
-					<h2 class="caption">${escape(localize('welcomePage.learn', "Learn"))}</h2>
-					<ul>
-						<li class="showCommands"><button data-href="command:workbench.action.showCommands"><h3 class="caption">${escape(localize('welcomePage.showCommands', "Find and run all commands"))}</h3> <span class="detail">${escape(localize('welcomePage.showCommandsDescription', "Rapidly access and search commands from the Command Palette ({0})")).replace('{0}', '<span class="shortcut" data-command="workbench.action.showCommands"></span>')}</span></button></li>
-						<li class="showInterfaceOverview"><button data-href="command:workbench.action.showInterfaceOverview"><h3 class="caption">${escape(localize('welcomePage.interfaceOverview', "Interface overview"))}</h3> <span class="detail">${escape(localize('welcomePage.interfaceOverviewDescription', "Get a visual overlay highlighting the major components of the UI"))}</span></button></li>
-						<li class="deployToAzure"></li>
-						<li class="showInteractivePlayground"><button data-href="command:workbench.action.showInteractivePlayground"><h3 class="caption">${escape(localize('welcomePage.interactivePlayground', "Interactive playground"))}</h3> <span class="detail">${escape(localize('welcomePage.interactivePlaygroundDescription', "Try essential editor features out in a short walkthrough"))}</span></button></li>
-					</ul>
-				</div>
+							</span>
+						</button>
+					</li>
+					<li class="selectTheme">
+						<button data-href="command:workbench.action.selectTheme">
+							<h3 class="caption">${escape(localize('welcomePage.colorTheme', "Color theme"))}</h3>
+							<span class="detail">${escape(localize('welcomePage.colorThemeDescription', "Make the editor and your code look the way you love"))}</span>
+						</button>
+					</li>
+					<li class="showInteractivePlayground">
+						<button data-href="https://about.sourcegraph.com/integrations/browser">
+							<h3 class="caption">${escape(localize('welcomePage.getBrowserExtension', "Get Sourcegraph on GitHub"))}</h3>
+							<span class="detail">${escape(localize('welcomePage.getBrowserExtensionDescription', "Browse GitHub with code intelligence and code search"))}</span>
+						</button>
+					</li>
+				</ul>
 			</div>
 		</div>
 	</div>
