@@ -41,6 +41,10 @@
 	flex: 0 0 auto;
 }
 
+.explorer-viewlet .explorer-item.explorer-item-root .rootfolder-icon {
+	flex-shrink: 2;
+}
+
 .explorer-viewlet .explorer-item::before {
 	flex-shrink: 0; /* fix for https://github.com/Microsoft/vscode/issues/13787 */
 }
