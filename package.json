@@ -21,7 +21,7 @@
     "7z": "7z",
     "update-grammars": "node build/npm/update-all-grammars.js",
     "graphql": "get-graphql-schema http://localhost:3080/.api/graphql --json | gql2ts -o src/typings/gqlschema.gen.d.ts",
-    "smoketest": "node test/smoke/out/main.js"
+    "smoketest": "cd test/smoke ; mocha"
   },
   "dependencies": {
     "applicationinsights": "0.17.1",
@@ -34,7 +34,7 @@
     "http-proxy-agent": "0.2.7",
     "https-proxy-agent": "0.3.6",
     "iconv-lite": "0.4.15",
-    "jschardet": "^1.4.2",
+    "jschardet": "^1.5.1",
     "keytar": "^4.0.3",
     "minimist": "1.2.0",
     "native-keymap": "1.2.5",
