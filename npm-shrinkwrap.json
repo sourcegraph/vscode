@@ -2,25 +2,6 @@
   "name": "src-oss-dev",
   "version": "1.16.0",
   "dependencies": {
-    "@sourcegraph/icons": {
-      "version": "1.2.0",
-      "from": "@sourcegraph/icons@>=1.2.0 <2.0.0",
-      "resolved": "https://registry.npmjs.org/@sourcegraph/icons/-/icons-1.2.0.tgz",
-      "dependencies": {
-        "node-pty": {
-          "version": "0.7.0",
-          "from": "node-pty@0.7.0",
-          "resolved": "https://registry.npmjs.org/node-pty/-/node-pty-0.7.0.tgz",
-          "dependencies": {
-            "nan": {
-              "version": "2.7.0",
-              "from": "nan@2.7.0",
-              "resolved": "https://registry.npmjs.org/nan/-/nan-2.7.0.tgz"
-            }
-          }
-        }
-      }
-    },
     "agent-base": {
       "version": "1.0.2",
       "from": "agent-base@>=1.0.1 <1.1.0",
