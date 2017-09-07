@@ -12,7 +12,7 @@ import { chain } from 'vs/base/common/event';
 import { onUnexpectedError } from 'vs/base/common/errors';
 import { IDisposable, dispose } from 'vs/base/common/lifecycle';
 import { Builder } from 'vs/base/browser/builder';
-import { PersistentViewsViewlet, CollapsibleView, IViewletViewOptions, IView, IViewOptions } from 'vs/workbench/parts/views/browser/views';
+import { PersistentViewsViewlet, CollapsibleView, IViewletViewOptions, IView, IViewOptions } from 'vs/workbench/browser/parts/views/views';
 import { append, $, toggleClass, trackFocus } from 'vs/base/browser/dom';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { List } from 'vs/base/browser/ui/list/listWidget';
@@ -36,14 +36,13 @@ import { MenuItemActionItem } from 'vs/platform/actions/browser/menuItemActionIt
 import { SCMMenus } from './scmMenus';
 import { ActionBar, IActionItemProvider, Separator } from 'vs/base/browser/ui/actionbar/actionbar';
 import { IThemeService, LIGHT } from 'vs/platform/theme/common/themeService';
-import { comparePaths } from 'vs/base/common/comparers';
 import { isSCMResource } from './scmUtil';
 import { attachListStyler, attachBadgeStyler, attachInputBoxStyler } from 'vs/platform/theme/common/styler';
 import Severity from 'vs/base/common/severity';
 import { IExtensionService } from 'vs/platform/extensions/common/extensions';
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
 import { IStorageService, StorageScope } from 'vs/platform/storage/common/storage';
-import { ViewLocation, ViewsRegistry, IViewDescriptor } from 'vs/workbench/parts/views/browser/viewsRegistry';
+import { ViewLocation, ViewsRegistry, IViewDescriptor } from 'vs/workbench/browser/parts/views/viewsRegistry';
 import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
 import { ViewSizing } from 'vs/base/browser/ui/splitview/splitview';
 import { IExtensionsViewlet, VIEWLET_ID as EXTENSIONS_VIEWLET_ID } from 'vs/workbench/parts/extensions/common/extensions';
@@ -126,7 +125,7 @@ class ResourceGroupRenderer implements IRenderer<ISCMResourceGroup, ResourceGrou
 
 	renderElement(group: ISCMResourceGroup, index: number, template: ResourceGroupTemplate): void {
 		template.name.textContent = group.label;
-		template.count.setCount(group.resources.length);
+		template.count.setCount(group.resourceCollection.resources.length);
 		template.actionBar.clear();
 		template.actionBar.context = group;
 		template.actionBar.push(this.scmMenus.getResourceGroupActions(group), { icon: true, label: false });
@@ -234,10 +233,6 @@ class Delegate implements IDelegate<ISCMResourceGroup | ISCMResource> {
 	}
 }
 
-function resourceSorter(a: ISCMResource, b: ISCMResource): number {
-	return comparePaths(a.sourceUri.fsPath, b.sourceUri.fsPath);
-}
-
 class SourceControlViewDescriptor implements IViewDescriptor {
 
 	// This ID magic needs to happen in order to preserve
@@ -334,7 +329,6 @@ class SourceControlView extends CollapsibleView {
 		this.disposables.push(this.specifierBox);
 
 		this.specifierBox.value = this.repository.specifier.value;
-		this.specifierBox.onDidChange(value => this.repository.specifier.value = value, null, this.disposables);
 		this.repository.specifier.onDidChange(value => this.specifierBox.value = value, null, this.disposables);
 
 		chain(domEvent(this.specifierBox.inputElement, 'keydown'))
@@ -407,7 +401,7 @@ class SourceControlView extends CollapsibleView {
 		this.list.onContextMenu(this.onListContextMenu, this, this.disposables);
 		this.disposables.push(this.list);
 
-		this.repository.provider.onDidChange(this.updateList, this, this.disposables);
+		this.repository.provider.onDidChangeResources(this.updateList, this, this.disposables);
 		this.updateList();
 	}
 
@@ -436,6 +430,11 @@ class SourceControlView extends CollapsibleView {
 		}
 	}
 
+	setVisible(visible: boolean): TPromise<void> {
+		this.updateSpecifierBox();
+		return super.setVisible(visible);
+	}
+
 	getActions(): IAction[] {
 		return this.menus.getTitleActions();
 	}
@@ -458,18 +457,19 @@ class SourceControlView extends CollapsibleView {
 
 	private updateList(): void {
 		const elements = this.repository.provider.resources
-			.reduce<(ISCMResourceGroup | ISCMResource)[]>((r, g) => [...r, g, ...g.resources.sort(resourceSorter)], []);
+			.reduce<(ISCMResourceGroup | ISCMResource)[]>((r, g) => {
+				if (g.resourceCollection.resources.length === 0 && g.hideWhenEmpty) {
+					return r;
+				}
+
+				return [...r, g, ...g.resourceCollection.resources];
+			}, []);
 
 		this.list.splice(0, this.list.length, elements);
 	}
 
 	private open(e: ISCMResource): void {
-		if (!e.command) {
-			return;
-		}
-
-		this.commandService.executeCommand(e.command.id, ...e.command.arguments)
-			.done(undefined, onUnexpectedError);
+		e.open().done(undefined, onUnexpectedError);
 	}
 
 	private pin(): void {
@@ -501,13 +501,19 @@ class SourceControlView extends CollapsibleView {
 			.filter(r => isSCMResource(r)) as ISCMResource[];
 	}
 
+	private get showSpecifierBox(): boolean {
+		return this.repository.provider.acceptSpecifierCommand && this.configurationService.getConfiguration<ISCMConfiguration>().scm.enableCompare;
+	}
+
 	private updateSpecifierBox(): void {
 		const wasHidden = this.specifierBoxContainer.hidden;
-		const shouldHide = !this.repository.provider.acceptSpecifierCommand || !this.configurationService.getConfiguration<ISCMConfiguration>().scm.enableCompare;
+		const shouldHide = !this.showSpecifierBox;
 
 		this.specifierBoxContainer.hidden = shouldHide;
 
-		if (wasHidden && !shouldHide) {
+		const needsAccept = this.repository.specifier.value !== this.specifierBox.value;
+
+		if ((wasHidden && !shouldHide) || needsAccept) {
 			this.onDidAcceptSpecifier();
 		}
 	}
@@ -550,13 +556,17 @@ class SourceControlView extends CollapsibleView {
 		this.updateSpecifierBox();
 	}
 
+	private get storageKey(): string {
+		return `${SourceControlView.UI_STATE_STORAGE_KEY}:${this.repository.provider.rootFolder ? this.repository.provider.rootFolder.toString() : this.repository.provider.label}`;
+	}
+
 	private save(): void {
 		const serialized = this.serialize();
 
 		if (serialized.specifierBox) {
-			this.storageService.store(SourceControlView.UI_STATE_STORAGE_KEY, JSON.stringify(serialized), StorageScope.WORKSPACE);
+			this.storageService.store(this.storageKey, JSON.stringify(serialized), StorageScope.WORKSPACE);
 		} else {
-			this.storageService.remove(SourceControlView.UI_STATE_STORAGE_KEY, StorageScope.WORKSPACE);
+			this.storageService.remove(this.storageKey, StorageScope.WORKSPACE);
 		}
 	}
 
@@ -567,7 +577,7 @@ class SourceControlView extends CollapsibleView {
 	}
 
 	private load(): void {
-		const modelRaw = this.storageService.get(SourceControlView.UI_STATE_STORAGE_KEY, StorageScope.WORKSPACE);
+		const modelRaw = this.storageService.get(this.storageKey, StorageScope.WORKSPACE);
 		if (modelRaw) {
 			try {
 				const serialized: ISerializedSourceControlViewState = JSON.parse(modelRaw);
@@ -756,7 +766,7 @@ export class SCMViewlet extends PersistentViewsViewlet {
 
 interface ISCMConfiguration {
 	scm: {
-		enableCompare: string;
+		enableCompare: boolean;
 	};
 }
 
