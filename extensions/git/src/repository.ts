@@ -5,8 +5,8 @@
 
 'use strict';
 
-import { Uri, Command, CommandOptions, EventEmitter, Event, scm, SourceControl, SourceControlInputBox, SourceControlResourceGroup, SourceControlResourceState, SourceControlResourceDecorations, Disposable, ProgressLocation, window, workspace, WorkspaceEdit } from 'vscode';
-import { Repository as BaseRepository, Ref, Branch, Remote, Commit, GitErrorCodes, Stash, IFileDiff } from './git';
+import { Uri, Command, EventEmitter, Event, scm, SourceControl, SourceControlInputBox, CommandOptions, SourceControlResourceGroup, SourceControlResourceState, SourceControlResourceDecorations, Disposable, ProgressLocation, window, workspace, WorkspaceEdit } from 'vscode';
+import { Repository as BaseRepository, Ref, Branch, Remote, Commit, GitErrorCodes, Stash, RefType, IFileDiff } from './git';
 import { anyEvent, filterEvent, eventToPromise, dispose, find } from './util';
 import { memoize, throttle, debounce } from './decorators';
 import { toGitUri } from './uri';
@@ -987,6 +987,36 @@ export class Repository implements Disposable {
 
 			return;
 		}
+	}
+
+	get headLabel(): string {
+		const HEAD = this.HEAD;
+
+		if (!HEAD) {
+			return '';
+		}
+
+		const tag = this.refs.filter(iref => iref.type === RefType.Tag && iref.commit === HEAD.commit)[0];
+		const tagName = tag && tag.name;
+		const head = HEAD.name || tagName || (HEAD.commit || '').substr(0, 8);
+
+		return head
+			+ (this.workingTreeGroup.resourceStates.length > 0 ? '*' : '')
+			+ (this.indexGroup.resourceStates.length > 0 ? '+' : '')
+			+ (this.mergeGroup.resourceStates.length > 0 ? '!' : '');
+	}
+
+	get syncLabel(): string {
+		if (!this.HEAD
+			|| !this.HEAD.name
+			|| !this.HEAD.commit
+			|| !this.HEAD.upstream
+			|| !(this.HEAD.ahead || this.HEAD.behind)
+		) {
+			return '';
+		}
+
+		return `${this.HEAD.behind}↓ ${this.HEAD.ahead}↑`;
 	}
 
 	dispose(): void {

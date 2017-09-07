@@ -12,7 +12,7 @@ import URI from 'vs/base/common/uri';
 import product from 'vs/platform/node/product';
 import { IWindowsService, OpenContext, INativeOpenDialogOptions } from 'vs/platform/windows/common/windows';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
-import { shell, crashReporter, app } from 'electron';
+import { shell, crashReporter, app, Menu } from 'electron';
 import Event, { chain } from 'vs/base/common/event';
 import { fromEventEmitter } from 'vs/base/node/event';
 import { IURLService } from 'vs/platform/url/common/url';
@@ -196,6 +196,36 @@ export class WindowsService implements IWindowsService, IDisposable {
 		}
 
 		return TPromise.as(this.historyService.getRecentlyOpened());
+	}
+
+	showPreviousWindowTab(): TPromise<void> {
+		Menu.sendActionToFirstResponder('selectPreviousTab:');
+
+		return TPromise.as(void 0);
+	}
+
+	showNextWindowTab(): TPromise<void> {
+		Menu.sendActionToFirstResponder('selectNextTab:');
+
+		return TPromise.as(void 0);
+	}
+
+	moveWindowTabToNewWindow(): TPromise<void> {
+		Menu.sendActionToFirstResponder('moveTabToNewWindow:');
+
+		return TPromise.as(void 0);
+	}
+
+	mergeAllWindowTabs(): TPromise<void> {
+		Menu.sendActionToFirstResponder('mergeAllWindows:');
+
+		return TPromise.as(void 0);
+	}
+
+	toggleWindowTabsBar(): TPromise<void> {
+		Menu.sendActionToFirstResponder('toggleTabBar:');
+
+		return TPromise.as(void 0);
 	}
 
 	focusWindow(windowId: number): TPromise<void> {
