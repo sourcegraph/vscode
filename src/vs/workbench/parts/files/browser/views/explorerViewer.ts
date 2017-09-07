@@ -351,7 +351,7 @@ export class FileRenderer implements IRenderer {
 				templateData.actions2.push([removeAction], { label: false, icon: true });
 
 				templateData.actions1.domNode.style.display = 'block';
-				templateData.actions2.domNode.style.display = undefined;
+				templateData.actions2.domNode.style.display = '';
 			} else {
 				templateData.actions1.domNode.style.display = 'none';
 				templateData.actions2.domNode.style.display = 'none';
