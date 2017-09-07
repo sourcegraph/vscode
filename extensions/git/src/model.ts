@@ -119,7 +119,7 @@ export class Model {
 
 			children
 				.filter(child => child !== '.git')
-				.forEach(child => this.tryOpenRepository(path.join(root, child)));
+				.forEach(child => this.tryOpenRepository(path.join(root, child), true));
 		}
 	}
 
@@ -132,7 +132,7 @@ export class Model {
 	@debounce(500)
 	private eventuallyScanPossibleGitRepositories(): void {
 		for (const path of this.possibleGitRepositoryPaths) {
-			this.tryOpenRepository(path);
+			this.tryOpenRepository(path, true);
 		}
 
 		this.possibleGitRepositoryPaths.clear();
@@ -151,7 +151,7 @@ export class Model {
 			.map(folder => this.getOpenRepository(folder.uri))
 			.filter(r => !!r && !activeRepositories.has(r.repository)) as OpenRepository[];
 
-		possibleRepositoryFolders.forEach(p => this.tryOpenRepository(p.uri.fsPath));
+		possibleRepositoryFolders.forEach(p => this.tryOpenRepository(p.uri.fsPath, true));
 		openRepositoriesToDispose.forEach(r => r.dispose());
 	}
 
@@ -203,8 +203,8 @@ export class Model {
 	}
 
 	@sequentialize
-	async tryOpenRepository(path: string): Promise<void> {
-		if (this.getRepository(path)) {
+	async tryOpenRepository(path: string, preferExact?: boolean): Promise<void> {
+		if (this.getRepository(path, preferExact)) {
 			return;
 		}
 
@@ -214,7 +214,7 @@ export class Model {
 			// This can happen whenever `path` has the wrong case sensitivity in
 			// case insensitive file systems
 			// https://github.com/Microsoft/vscode/issues/33498
-			if (this.getRepository(repositoryRoot)) {
+			if (this.getRepository(repositoryRoot, preferExact)) {
 				return;
 			}
 
@@ -261,19 +261,19 @@ export class Model {
 
 	getRepository(sourceControl: SourceControl): Repository | undefined;
 	getRepository(resourceGroup: SourceControlResourceGroup): Repository | undefined;
-	getRepository(path: string): Repository | undefined;
-	getRepository(resource: Uri): Repository | undefined;
-	getRepository(hint: any): Repository | undefined {
-		const liveRepository = this.getOpenRepository(hint);
+	getRepository(path: string, exact?: boolean): Repository | undefined;
+	getRepository(resource: Uri, exact?: boolean): Repository | undefined;
+	getRepository(hint: any, exact?: boolean): Repository | undefined {
+		const liveRepository = this.getOpenRepository(hint, exact);
 		return liveRepository && liveRepository.repository;
 	}
 
 	private getOpenRepository(repository: Repository): OpenRepository | undefined;
 	private getOpenRepository(sourceControl: SourceControl): OpenRepository | undefined;
 	private getOpenRepository(resourceGroup: SourceControlResourceGroup): OpenRepository | undefined;
-	private getOpenRepository(path: string): OpenRepository | undefined;
-	private getOpenRepository(resource: Uri): OpenRepository | undefined;
-	private getOpenRepository(hint: any): OpenRepository | undefined {
+	private getOpenRepository(path: string, exact?: boolean): OpenRepository | undefined;
+	private getOpenRepository(resource: Uri, exact?: boolean): OpenRepository | undefined;
+	private getOpenRepository(hint: any, exact?: boolean): OpenRepository | undefined {
 		if (!hint) {
 			return undefined;
 		}
@@ -290,10 +290,16 @@ export class Model {
 			const resourcePath = hint.fsPath;
 
 			for (const liveRepository of this.openRepositories) {
-				const relativePath = path.relative(liveRepository.repository.root, resourcePath);
+				if (exact) {
+					if (liveRepository.repository.root === resourcePath) {
+						return liveRepository;
+					}
+				} else {
+					const relativePath = path.relative(liveRepository.repository.root, resourcePath);
 
-				if (!/^\.\./.test(relativePath)) {
-					return liveRepository;
+					if (!/^\.\./.test(relativePath)) {
+						return liveRepository;
+					}
 				}
 			}
 
