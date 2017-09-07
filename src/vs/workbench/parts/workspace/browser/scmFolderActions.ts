@@ -63,6 +63,11 @@ export abstract class FolderSCMRevisionAction extends Action {
 			repository = this.scmService.getRepositoryForResource(this._folder);
 		}
 
+		// Disable for resources underneath the repository root.
+		if (repository && repository.provider.rootFolder && repository.provider.rootFolder.toString() !== this._folder.toString()) {
+			repository = undefined;
+		}
+
 		if (this.repository === repository) {
 			return;
 		}
