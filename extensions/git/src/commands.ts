@@ -234,7 +234,7 @@ export class CommandCenter {
 			return;
 		}
 
-		if (repository.committedGroup.resourceStates.includes(resource)) {
+		if (repository.committedGroup.resourceStates.filter(r => r.resourceUri.toString() === resource.toString())) {
 			if (resource.type === Status.ADDED) {
 				return;
 			}
@@ -261,7 +261,7 @@ export class CommandCenter {
 			return;
 		}
 
-		if (repository.committedGroup.resourceStates.includes(resource)) {
+		if (repository.committedGroup.resourceStates.filter(r => r.resourceUri.toString() === resource.toString())) {
 			if (resource.type === Status.DELETED) {
 				return;
 			}
