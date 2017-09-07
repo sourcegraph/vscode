@@ -123,7 +123,7 @@ export class OpenRepositoriesModel implements IOpenRepositoriesModel, IDisposabl
 		if (typeof repository.provider.count === 'number') {
 			return repository.provider.count;
 		}
-		return repository.provider.resources.reduce((r, g) => r + g.resources.length, 0);
+		return repository.provider.resources.reduce((r, g) => r + g.provider.resources.length, 0);
 	}
 
 	public dispose(): void {

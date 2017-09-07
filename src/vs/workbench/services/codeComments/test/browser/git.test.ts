@@ -17,6 +17,7 @@ class FakeSCMProvider implements ISCMProvider {
 	readonly contextValue = 'git';
 	readonly rootFolder: any;
 	readonly resources: any;
+	readonly onDidChangeResources: any;
 	readonly onDidChange: any;
 	readonly count?: any;
 	readonly commitTemplate?: any;

@@ -13,10 +13,12 @@ import { CommandPallette } from './commandPallette';
 import { Search } from '../search/search';
 import { Editor } from '../editor/editor';
 import { SCM } from '../git/scm';
+import { Debug } from '../debug/debug';
 import { StatusBar } from '../statusbar/statusbar';
 import { Problems } from '../problems/problems';
 import { SettingsEditor } from '../preferences/settings';
 import { KeybindingsEditor } from '../preferences/keybindings';
+import { Terminal } from '../terminal/terminal';
 
 export class Workbench {
 
@@ -28,10 +30,12 @@ export class Workbench {
 	readonly extensions: Extensions;
 	readonly editor: Editor;
 	readonly scm: SCM;
+	readonly debug: Debug;
 	readonly statusbar: StatusBar;
 	readonly problems: Problems;
 	readonly settingsEditor: SettingsEditor;
 	readonly keybindingsEditor: KeybindingsEditor;
+	readonly terminal: Terminal;
 
 	constructor(private spectron: SpectronApplication) {
 		this.explorer = new Explorer(spectron);
@@ -42,10 +46,12 @@ export class Workbench {
 		this.extensions = new Extensions(spectron);
 		this.editor = new Editor(spectron);
 		this.scm = new SCM(spectron);
+		this.debug = new Debug(spectron);
 		this.statusbar = new StatusBar(spectron);
 		this.problems = new Problems(spectron);
 		this.settingsEditor = new SettingsEditor(spectron);
 		this.keybindingsEditor = new KeybindingsEditor(spectron);
+		this.terminal = new Terminal(spectron);
 	}
 
 	public async saveOpenedFile(): Promise<any> {

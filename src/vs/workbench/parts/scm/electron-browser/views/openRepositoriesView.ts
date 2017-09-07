@@ -15,7 +15,7 @@ import { Tree } from 'vs/base/parts/tree/browser/treeImpl';
 import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
-import { CollapsibleView, IViewletViewOptions, IViewOptions } from 'vs/workbench/parts/views/browser/views';
+import { CollapsibleView, IViewletViewOptions, IViewOptions } from 'vs/workbench/browser/parts/views/views';
 import { VIEWLET_ID, SCMViewletActiveRepositoryContext } from 'vs/workbench/parts/scm/common/scm';
 import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
 import { Renderer, DataSource, Controller, AccessibilityProvider, ActionProvider } from 'vs/workbench/parts/scm/electron-browser/views/openRepositoriesViewer';
