@@ -803,19 +803,40 @@ export class Repository implements Disposable {
 			// noop
 		}
 
+		// Determine the comparison revision range.
+		//
 		// If a single revision is specified, then the other point of comparison is our working
 		// tree (and the right-side diff editor should be editable). If a range is specifed,
 		// then the other point of comparison is a revision and the right side is NOT editable.
 		this._compareLeft = undefined;
 		this._compareRight = undefined;
 		if (specifierArgs) {
-			const output = await this.repository.revParse(specifierArgs);
-			// TODO(sqs): handle more than 2 specifier args
-			if (output.length >= 2) {
-				this._compareLeft = output[1].replace(/^\^/, '');
-				this._compareRight = output[0];
+			// The specifier input can contain any args to `git diff`, but we only want to consider
+			// args that refer to revisions.
+			//
+			// Ignore args that are not valid revs. Also ignore '--' arg and anything following it.
+			let revisionArgs: string[] = [];
+			for (const arg of specifierArgs) {
+				if (arg === '--') {
+					break;
+				}
+				if (arg.startsWith('-')) {
+					continue;
+				}
+				try {
+					const parsed = await this.repository.revParse(['--verify', arg + '^{commit}']);
+					revisionArgs.push(parsed[0]);
+				} catch (err) {
+					// `git diff` ignores invalid revisions like FOO in `git diff master FOO`, so
+					// we'll match that behavior and also ignore invalid revisions.
+				}
+			}
+
+			if (revisionArgs.length >= 2) {
+				this._compareLeft = revisionArgs[1].replace(/^\^/, '');
+				this._compareRight = revisionArgs[0];
 			} else {
-				this._compareLeft = output[0];
+				this._compareLeft = revisionArgs[0] || 'HEAD';
 			}
 		}
 
