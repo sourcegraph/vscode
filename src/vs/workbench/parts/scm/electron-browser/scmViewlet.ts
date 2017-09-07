@@ -329,7 +329,6 @@ class SourceControlView extends CollapsibleView {
 		this.disposables.push(this.specifierBox);
 
 		this.specifierBox.value = this.repository.specifier.value;
-		this.specifierBox.onDidChange(value => this.repository.specifier.value = value, null, this.disposables);
 		this.repository.specifier.onDidChange(value => this.specifierBox.value = value, null, this.disposables);
 
 		chain(domEvent(this.specifierBox.inputElement, 'keydown'))
@@ -431,6 +430,11 @@ class SourceControlView extends CollapsibleView {
 		}
 	}
 
+	setVisible(visible: boolean): TPromise<void> {
+		this.updateSpecifierBox();
+		return super.setVisible(visible);
+	}
+
 	getActions(): IAction[] {
 		return this.menus.getTitleActions();
 	}
@@ -497,13 +501,19 @@ class SourceControlView extends CollapsibleView {
 			.filter(r => isSCMResource(r)) as ISCMResource[];
 	}
 
+	private get showSpecifierBox(): boolean {
+		return this.repository.provider.acceptSpecifierCommand && this.configurationService.getConfiguration<ISCMConfiguration>().scm.enableCompare;
+	}
+
 	private updateSpecifierBox(): void {
 		const wasHidden = this.specifierBoxContainer.hidden;
-		const shouldHide = !this.repository.provider.acceptSpecifierCommand || !this.configurationService.getConfiguration<ISCMConfiguration>().scm.enableCompare;
+		const shouldHide = !this.showSpecifierBox;
 
 		this.specifierBoxContainer.hidden = shouldHide;
 
-		if (wasHidden && !shouldHide) {
+		const needsAccept = this.repository.specifier.value !== this.specifierBox.value;
+
+		if ((wasHidden && !shouldHide) || needsAccept) {
 			this.onDidAcceptSpecifier();
 		}
 	}
@@ -546,13 +556,17 @@ class SourceControlView extends CollapsibleView {
 		this.updateSpecifierBox();
 	}
 
+	private get storageKey(): string {
+		return `${SourceControlView.UI_STATE_STORAGE_KEY}:${this.repository.provider.rootFolder ? this.repository.provider.rootFolder.toString() : this.repository.provider.label}`;
+	}
+
 	private save(): void {
 		const serialized = this.serialize();
 
 		if (serialized.specifierBox) {
-			this.storageService.store(SourceControlView.UI_STATE_STORAGE_KEY, JSON.stringify(serialized), StorageScope.WORKSPACE);
+			this.storageService.store(this.storageKey, JSON.stringify(serialized), StorageScope.WORKSPACE);
 		} else {
-			this.storageService.remove(SourceControlView.UI_STATE_STORAGE_KEY, StorageScope.WORKSPACE);
+			this.storageService.remove(this.storageKey, StorageScope.WORKSPACE);
 		}
 	}
 
@@ -563,7 +577,7 @@ class SourceControlView extends CollapsibleView {
 	}
 
 	private load(): void {
-		const modelRaw = this.storageService.get(SourceControlView.UI_STATE_STORAGE_KEY, StorageScope.WORKSPACE);
+		const modelRaw = this.storageService.get(this.storageKey, StorageScope.WORKSPACE);
 		if (modelRaw) {
 			try {
 				const serialized: ISerializedSourceControlViewState = JSON.parse(modelRaw);
@@ -752,7 +766,7 @@ export class SCMViewlet extends PersistentViewsViewlet {
 
 interface ISCMConfiguration {
 	scm: {
-		enableCompare: string;
+		enableCompare: boolean;
 	};
 }
 
