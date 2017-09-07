@@ -45,7 +45,13 @@ export function activate(context: vscode.ExtensionContext): void {
 
 			let url = `/repositories?role=member&pagelen=50`;
 			if (query) {
-				const queryValue = `full_name ~ ${JSON.stringify(query)}`;
+				// Workaround for https://bitbucket.org/site/master/issues/14768/repositories-query-20-api-returns-error.
+				let queryValue: string;
+				if (query.includes('/')) {
+					queryValue = `full_name ~ ${JSON.stringify(query)}`;
+				} else {
+					queryValue = `name ~ ${JSON.stringify(query)} OR parent.owner.username ~ ${JSON.stringify(query)}`;
+				}
 				url += `&q=${encodeURIComponent(queryValue)}`;
 			}
 
