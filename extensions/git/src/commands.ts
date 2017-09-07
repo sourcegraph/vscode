@@ -234,7 +234,8 @@ export class CommandCenter {
 			return;
 		}
 
-		if (repository.committedGroup.resourceStates.filter(r => r.resourceUri.toString() === resource.toString())) {
+		const uriString = resource.resourceUri.toString();
+		if (repository.committedGroup.resourceStates.find(r => r.resourceUri.toString() === uriString)) {
 			if (resource.type === Status.ADDED) {
 				return;
 			}
@@ -261,7 +262,9 @@ export class CommandCenter {
 			return;
 		}
 
-		if (repository.committedGroup.resourceStates.filter(r => r.resourceUri.toString() === resource.toString())) {
+		const uriString = resource.resourceUri.toString();
+
+		if (repository.committedGroup.resourceStates.find(r => r.resourceUri.toString() === uriString)) {
 			if (resource.type === Status.DELETED) {
 				return;
 			}
@@ -286,7 +289,6 @@ export class CommandCenter {
 			case Status.MODIFIED:
 			case Status.UNTRACKED:
 			case Status.IGNORED:
-				const uriString = resource.resourceUri.toString();
 				const [indexStatus] = repository.indexGroup.resourceStates.filter(r => r.resourceUri.toString() === uriString);
 
 				if (indexStatus && indexStatus.renameResourceUri) {
