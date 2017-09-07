@@ -56,27 +56,27 @@ export function activate(context: vscode.ExtensionContext) {
 	);
 	context.subscriptions.push(
 		vscode.commands.registerCommand('file-links.addResourceRoot', (arg?: vscode.Uri) => {
+			if (!vscode.workspace.workspaceFolders) {
+				vscode.window.showErrorMessage(localize('nonMultiRootWorkspace', "Must be in a multi-root workspace."));
+				return;
+			}
+
 			const args = getSourceControl(arg);
 			if (!args) {
 				return;
 			}
 			const { resource, sourceControl } = args;
 
-			if (!vscode.workspace.workspaceFolders) {
-				vscode.window.showErrorMessage(localize('nonMultiRootWorkspace', "Must be in a multi-root workspace to add root for {0}.", resource.toString()));
+
+			if (!sourceControl.rootFolder) {
+				vscode.window.showErrorMessage(localize('noRootFolder', "Unable to determine the repository's root folder."));
 				return;
 			}
 
-			let rootFolder = vscode.workspace.getWorkspaceFolder(resource);
-			if (!rootFolder) {
-				vscode.window.showErrorMessage(localize('noResourceInfo', "Unable to determine the root folder for {0}.", resource.toString()));
-				return;
-			}
-
-			vscode.commands.executeCommand('_workbench.addRoots', [rootFolder]).then(
+			vscode.commands.executeCommand('_workbench.addRoots', [sourceControl.rootFolder]).then(
 				() => void 0,
 				err => {
-					vscode.window.showErrorMessage(localize('addRootsFailed', "Adding root folder {0} failed: {1}.", rootFolder!.toString(), err));
+					vscode.window.showErrorMessage(localize('addRootsFailed', "Adding root folder {0} failed: {1}.", sourceControl!.toString(), err));
 				},
 			);
 		}),
@@ -88,19 +88,13 @@ function getSourceControl(resource: vscode.Uri | undefined): { resource: vscode.
 		resource = guessResource();
 	}
 	if (!resource) {
-		vscode.window.showErrorMessage(localize('noActiveDocument', "Open a document to go an immutable revision."));
+		vscode.window.showErrorMessage(localize('noActiveDocument', "Open a document before running this action."));
 		return;
 	}
 
-	const folder = vscode.workspace.getWorkspaceFolder(resource);
-	if (!folder) {
-		vscode.window.showErrorMessage(localize('noContainingFolder', "Unable to find containing folder for current document."));
-		return;
-	}
-
-	const sourceControl = vscode.scm.getSourceControlForResource(folder.uri);
+	const sourceControl = vscode.scm.getSourceControlForResource(resource);
 	if (!sourceControl) {
-		vscode.window.showErrorMessage(localize('noActiveSourceControl', "Unable to determine immutable revision because no SCM repository was found."));
+		vscode.window.showErrorMessage(localize('noActiveSourceControl', "Unable to determine the repository containing {0}", path.basename(resource.path)));
 		return;
 	}
 	return { resource, sourceControl };

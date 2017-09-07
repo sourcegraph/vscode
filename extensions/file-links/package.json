@@ -14,7 +14,8 @@
   "enableProposedApi": true,
   "activationEvents": [
     "onCommand:file-links.goToSourcegraph",
-    "onCommand:file-links.goToGitHub"
+    "onCommand:file-links.goToGitHub",
+    "onCommand:file-links.addResourceRoot"
   ],
   "contributes": {
     "commands": [
