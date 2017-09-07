@@ -116,7 +116,12 @@ query {
 		}
 
 		if (!sourceControl) {
-			throw new Error(localize('noSourceControl', "Run this from the context menu of a repository in the SCM viewlet."));
+			throw new Error(localize('noSourceControl', "Run this from the context menu of a repository in the Source Control viewlet."));
+		}
+
+		const setRevisionCommand = sourceControl.setRevisionCommand;
+		if (!setRevisionCommand) {
+			throw new Error(localize('unableToSetRevision', "The repository does not support switching revisions."));
 		}
 
 		type PullRequest = {
@@ -126,54 +131,67 @@ query {
 			updatedAt: string;
 			baseRefName: string;
 			headRefName: string;
+			isCrossRepository: boolean;
 		};
 
-		const sourcegraphSourcegraphRepositoryId = 'MDEwOlJlcG9zaXRvcnk2MDI0NTUxMQ=='; // TODO(sqs): un-hardcode
+		if (!sourceControl.remoteResources) {
+			throw new Error(localize('noRemotes', "Unable to determine remote repository for the selected local repository."));
+		}
+
+		// TODO(sqs): handle multiple remotes (merge, or disambiguate?).
+
+		const firstGitHubRemote = sourceControl.remoteResources.find(r => r.authority === 'github.com' || r.authority === 'git@github.com');
+		if (!firstGitHubRemote) {
+			throw new Error(localize('notAGitHubRepository', "The repository does not have any github.com Git remote URLs."));
+		}
+		const parts = parseGitHubRepositoryFullName(firstGitHubRemote);
+		if (!parts) {
+			throw new Error(localize('unableToParse', "Unable to determine GitHub repository name from remote: {0}", firstGitHubRemote.toString()));
+		}
+
 		const pullRequests = requestGraphQL(`
-query($id: ID!) {
-	node(id: $id) {
-		id
-		... on Repository {
-			nameWithOwner
-			url
-			pushedAt
-			pullRequests(first: 15, orderBy: { field: UPDATED_AT, direction: DESC }, states: [OPEN]) {
-				nodes {
-					... on PullRequest {
-						number
-						title
-						author { login }
-						updatedAt
-						baseRefName
-						headRefName
-					}
+query($owner: String!, $name: String!) {
+	repository(owner: $owner, name: $name) {
+		nameWithOwner
+		url
+		pushedAt
+		pullRequests(first: 50, orderBy: { field: UPDATED_AT, direction: DESC }, states: [OPEN]) {
+			nodes {
+				... on PullRequest {
+					number
+					title
+					author { login }
+					updatedAt
+					baseRefName
+					headRefName
+					isCrossRepository
 				}
 			}
 		}
 	}
-}`,
-			{ id: sourcegraphSourcegraphRepositoryId }).then<PullRequest[]>((data: any) => data.node.pullRequests.nodes, showErrorImmediately);
+}
+`,
+			{ owner: parts.owner, name: parts.name }).then<PullRequest[]>((data: any) => data.repository.pullRequests.nodes, showErrorImmediately);
 
 		interface PullRequestItem extends vscode.QuickPickItem {
 			pullRequest: PullRequest;
 		}
-		const choice = await vscode.window.showQuickPick(pullRequests.then(pullRequests => pullRequests.map(pullRequest => {
-			return {
-				label: `$(git-pull-request) ${pullRequest.title} (#${pullRequest.number})`,
-				description: `${pullRequest.headRefName} — @${pullRequest.author.login}`,
-				pullRequest,
-			} as PullRequestItem;
-		})));
+		const choice = await vscode.window.showQuickPick(pullRequests.then(pullRequests => pullRequests
+			.filter(pullRequest => !pullRequest.isCrossRepository) // TODO(sqs): support cross-repo PRs
+			.map(pullRequest => {
+				return {
+					label: `$(git-pull-request) ${pullRequest.title}`,
+					description: `#${pullRequest.number}`,
+					detail: `${pullRequest.headRefName} — @${pullRequest.author.login}`,
+					pullRequest,
+				} as PullRequestItem;
+			})));
 
 		if (!choice) {
 			return;
 		}
 
 		// Set head revision.
-		const setRevisionCommand = sourceControl.setRevisionCommand;
-		if (!setRevisionCommand) {
-			return; // TODO
-		}
 		const setRevisionArgs = (setRevisionCommand.arguments || []).concat(choice.pullRequest.headRefName);
 		await vscode.commands.executeCommand(setRevisionCommand.command, ...setRevisionArgs);
 
@@ -181,6 +199,14 @@ query($id: ID!) {
 		sourceControl.specifierBox.value = `origin/${choice.pullRequest.baseRefName}...${choice.pullRequest.headRefName}`;
 		await vscode.commands.executeCommand('git.specifyComparisonWithInput', sourceControl);
 	});
+}
+
+function parseGitHubRepositoryFullName(cloneUrl: vscode.Uri): { owner: string, name: string } | undefined {
+	const parts = cloneUrl.path.slice(1).replace(/\.git$/, '').split('/');
+	if (parts.length === 2) {
+		return { owner: parts[0], name: parts[1] };
+	}
+	return undefined;
 }
 
 function resourceToId(resource: vscode.Uri): string {
