@@ -307,7 +307,9 @@ export class CommandCenter {
 		const basename = path.basename(resource.resourceUri.fsPath);
 
 		const repository = this.model.getRepository(resource.resourceUri);
-		if (repository && repository.committedGroup.resourceStates.includes(resource)) {
+		const uriString = resource.resourceUri.toString();
+
+		if (repository && repository.committedGroup.resourceStates.find(r => r.resourceUri.toString() === uriString)) {
 			if (resource.type === Status.ADDED) {
 				return `${basename} (${repository.compareRight || 'Working Tree'})`;
 			} else if (resource.type === Status.DELETED) {
