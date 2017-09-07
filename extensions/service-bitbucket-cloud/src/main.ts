@@ -82,17 +82,25 @@ function resourceToApiPath(resource: vscode.Uri): string {
  * the error).
  */
 function showErrorImmediately<T>(error: string): T | Thenable<T> {
-	return vscode.commands.executeCommand('workbench.action.closeMessages').then(() => {
+	return vscode.commands.executeCommand('workbench.action.closeMessages').then(async () => {
 		const resetAppPassword: vscode.MessageItem = { title: localize('resetAppPassword', "Reset App Password") };
-		const cancelItem: vscode.MessageItem = { title: localize('cancel', "Cancel"), isCloseAffordance: true };
-		vscode.window.showErrorMessage(error, resetAppPassword, cancelItem)
+		const disableItem: vscode.MessageItem = { title: localize('disable', "Disable Bitbucket integration"), isCloseAffordance: true };
+		await vscode.window.showErrorMessage(error, resetAppPassword, disableItem)
 			.then(async (value) => {
-				if (value === resetAppPassword) {
+				const unsetAppPassword = async () => {
 					const hasAuth = vscode.workspace.getConfiguration('bitbucket.cloud').get<string>('appPassword');
 					if (hasAuth) {
 						await vscode.workspace.getConfiguration('bitbucket.cloud').update('appPassword', undefined, vscode.ConfigurationTarget.Global);
 					}
-					checkBitbucketAppPassword(); // will walk the user through recreating the app password
+				};
+				if (value === resetAppPassword) {
+					await unsetAppPassword();
+					await checkBitbucketAppPassword(); // will walk the user through recreating the app password
+				} else if (!value || value === disableItem) {
+					// TODO(sqs): If the user is temporarily offline, it's annoying to completely remove their
+					// credentials. Figure out a better way to handle this.
+					await unsetAppPassword();
+					await vscode.workspace.getConfiguration('bitbucket.cloud').update('includeInSearch', undefined, vscode.ConfigurationTarget.Global);
 				}
 			});
 
@@ -138,7 +146,6 @@ async function checkBitbucketAppPassword(): Promise<boolean> {
 	} else {
 		return false;
 	}
-	console.log('USERNAME', username);
 
 	const appPassword = await vscode.window.showInputBox({
 		prompt: localize('appPasswordPrompt', "Bitbucket app password"),

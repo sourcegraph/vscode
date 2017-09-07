@@ -28,9 +28,15 @@ export function fetchFromBitbucket<T>(url: string): Thenable<T> {
 	})
 		.then(resp => {
 			if (resp.status < 200 || resp.status > 299) {
-				return resp.json().then((err: { error: { message: string } }) =>
-					Promise.reject(localize('apiError', "Error from Bitbucket: {0}", err.error ? err.error.message : resp.statusText)));
+				return resp.json().then(
+					(err: { error: { message: string } }) => createError(err && err.error ? err.error.message : resp.statusText),
+					err => createError(err),
+				);
 			}
 			return resp.json();
 		});
+}
+
+function createError(error: string): Thenable<string> {
+	return Promise.reject(localize('apiError', "Error from Bitbucket: {0}", error));
 }
