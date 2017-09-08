@@ -198,7 +198,9 @@ export class CodeCommentsController extends Disposable implements IEditorContrib
 	private disposeOnModelChange(): void {
 		this.toDisposeOnModelChange = dispose(this.toDisposeOnModelChange);
 		this.openThreadWidgets.forEach(w => w.dispose());
+		this.openThreadWidgets.clear();
 		this.openDraftThreadWidgets.forEach(w => w.dispose());
+		this.openDraftThreadWidgets.clear();
 	}
 
 	public getId(): string {
@@ -306,7 +308,6 @@ export class CodeCommentsController extends Disposable implements IEditorContrib
 			const thread = this.fileComments.getThread(threadId);
 			if (thread) {
 				this.showThreadWidget(thread, false);
-				continue;
 			}
 		}
 
