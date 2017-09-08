@@ -87,7 +87,7 @@ export class CodeCommentsController extends Disposable implements IEditorContrib
 		this._register(themeService.onThemeChange(t => this.onThemeChange()));
 		this.onThemeChange();
 
-		const gutterIconPath = URI.parse(require.toUrl('./media/comment.svg')).fsPath;
+		const gutterIconPath = URI.parse(require.toUrl('./../browser/media/comment.svg')).fsPath;
 		codeEditorService.registerDecorationType(GUTTER_ICON_DECORATION_KEY, {
 			gutterIconPath: gutterIconPath,
 			gutterIconSize: 'contain',
