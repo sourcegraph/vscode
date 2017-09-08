@@ -93,7 +93,7 @@ class Folder implements IFolder {
 	}
 
 	get cloneUrl(): URI | undefined {
-		return this.catalog ? this.catalog.cloneUrl : undefined;
+		return this.catalog ? this.catalog.cloneUrl : this.resource;
 	}
 
 	get description(): string | undefined {
@@ -360,8 +360,10 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 		}));
 	}
 
-	public addFoldersAsWorkspaceRootFolders(folders: IFolder[]): TPromise<void> {
-		const allPromise = this.workspaceEditingService.addRoots(folders.map(folder => folder.resource))
+	public addFoldersAsWorkspaceRootFolders(anyFolders: (IFolder | URI)[]): TPromise<void> {
+		const folders = anyFolders.map(folder => folder instanceof URI ? new Folder(this, this.stateProvider, folder) : folder);
+
+		const allPromise = this.workspaceEditingService.addRoots(folders.map(folder => folder instanceof URI ? folder : folder.resource))
 			.then(() => this.configurationService.reloadConfiguration());
 
 		return TPromise.join(folders.map(folder => {

@@ -18,7 +18,7 @@ import { CloseEditorAction, KeybindingsReferenceAction, OpenDocumentationUrlActi
 import { MessagesVisibleContext } from 'vs/workbench/electron-browser/workbench';
 import { IJSONSchema } from 'vs/base/common/jsonSchema';
 import { registerCommands } from 'vs/workbench/electron-browser/commands';
-import { AddRootFolderAction, AddRootFolderResourceAction, OpenWorkspaceAction, SaveWorkspaceAsAction, OpenWorkspaceConfigFileAction, ExportWorkspaceAction } from 'vs/workbench/browser/actions/workspaceActions';
+import { AddRootFolderAction, OpenWorkspaceAction, SaveWorkspaceAsAction, OpenWorkspaceConfigFileAction, ExportWorkspaceAction } from 'vs/workbench/browser/actions/workspaceActions';
 import { ContextKeyExpr } from 'vs/platform/contextkey/common/contextkey';
 import { inQuickOpenContext, getQuickNavigateHandler } from 'vs/workbench/browser/parts/quickopen/quickopen';
 import { KeybindingsRegistry } from 'vs/platform/keybinding/common/keybindingsRegistry';
@@ -88,7 +88,6 @@ workbenchActionsRegistry.registerWorkbenchAction(new SyncActionDescriptor(Decrea
 if (product.quality !== 'stable') {
 	const workspacesCategory = nls.localize('workspaces', "Workspaces");
 	workbenchActionsRegistry.registerWorkbenchAction(new SyncActionDescriptor(AddRootFolderAction, AddRootFolderAction.ID, AddRootFolderAction.LABEL), 'Workspaces: Add Folder to Workspace...', workspacesCategory);
-	workbenchActionsRegistry.registerWorkbenchAction(new SyncActionDescriptor(AddRootFolderResourceAction, AddRootFolderResourceAction.ID, AddRootFolderResourceAction.LABEL), 'Workspaces: Add Folder to Workspace by URI...', workspacesCategory);
 	workbenchActionsRegistry.registerWorkbenchAction(new SyncActionDescriptor(OpenWorkspaceAction, OpenWorkspaceAction.ID, OpenWorkspaceAction.LABEL), 'Workspaces: Open Workspace...', workspacesCategory);
 	workbenchActionsRegistry.registerWorkbenchAction(new SyncActionDescriptor(SaveWorkspaceAsAction, SaveWorkspaceAsAction.ID, SaveWorkspaceAsAction.LABEL), 'Workspaces: Save Workspace As...', workspacesCategory);
 	workbenchActionsRegistry.registerWorkbenchAction(new SyncActionDescriptor(ExportWorkspaceAction, ExportWorkspaceAction.ID, ExportWorkspaceAction.LABEL), 'Workspaces: Export Workspace...', workspacesCategory);
