@@ -149,6 +149,7 @@ const configurationValueWhitelist = [
 	'files.autoSave',
 	'files.hotExit',
 	'files.associations',
+	'workbench.navBar.visible',
 	'workbench.statusBar.visible',
 	'files.trimTrailingWhitespace',
 	'git.confirmSync',

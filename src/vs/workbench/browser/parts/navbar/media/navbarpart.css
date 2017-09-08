@@ -1,0 +1,89 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Sourcegraph. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.monaco-workbench > .part.navbar {
+	box-sizing: border-box;
+	width: 100%;
+	font-size: 12px;
+	overflow: hidden;
+	flex-shrink: 0;
+	/* align-items: ;
+	justify-content: center; */
+	-webkit-user-select: none;
+	-webkit-app-region: drag;
+	zoom: 1; /* prevent zooming */
+	/* line-height: 30px; */
+	height: 30px;
+	display: flex;
+}
+
+.monaco-workbench > .part.navbar > .location {
+	flex: 1 0 auto;
+	display: flex;
+	-webkit-app-region: no-drag;
+	padding-right: 3px;
+}
+
+.monaco-workbench > .part.navbar > .location > .location-input {
+	flex: 1 1 auto;
+	align-self: center;
+	padding-top: 1px;
+}
+
+.monaco-workbench > .part.navbar > .location > .location-input .monaco-inputbox {
+	width: 100%;
+}
+
+.monaco-workbench > .part.navbar > .location > .location-input .monaco-inputbox:not(.synthetic-focus) input {
+	opacity: 0.9;
+}
+
+.monaco-workbench > .part.navbar > .location > .actions {
+	flex: 0 0 auto;
+}
+
+.monaco-workbench > .part.navbar > .location > .actions.navigation {
+	padding-left: 3px;
+}
+
+.monaco-workbench > .part.navbar > .location > .actions.location {
+	padding-left: 7px;
+}
+
+.monaco-workbench > .part.navbar > .location > .actions .action-label {
+	display: block;
+	height: 30px;
+	line-height: 30px;
+	min-width: 20px;
+	background-size: 14px;
+	background-position: center center;
+	background-repeat: no-repeat;
+}
+
+.hc-black .monaco-workbench > .part.navbar > .location > .actions .action-label {
+	line-height: initial;
+}
+
+.monaco-workbench > .part.navbar > .location > .actions.navigation .action-label .label {
+	display: none;
+}
+
+.monaco-workbench > .part.navbar .navigate-backwards-action {
+	background: url('../../../../../editor/contrib/find/browser/images/previous.svg') center center no-repeat;
+}
+
+.vs-dark .monaco-workbench > .part.navbar .navigate-backwards-action,
+.hc-black .monaco-workbench > .part.navbar .navigate-backwards-action {
+	background: url('../../../../../editor/contrib/find/browser/images/previous-inverse.svg') center center no-repeat;
+}
+
+.monaco-workbench > .part.navbar .navigate-forward-action {
+	background: url('../../../../../editor/contrib/find/browser/images/next.svg') center center no-repeat;
+}
+
+.vs-dark .monaco-workbench > .part.navbar .navigate-forward-action,
+.hc-black .monaco-workbench > .part.navbar .navigate-forward-action {
+	background: url('../../../../../editor/contrib/find/browser/images/next-inverse.svg') center center no-repeat;
+}

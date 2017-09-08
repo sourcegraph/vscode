@@ -113,6 +113,7 @@ export class WorkbenchEditorService implements IWorkbenchEditorService {
 		if (resourceInput.resource instanceof URI) {
 			const schema = resourceInput.resource.scheme;
 			if (schema === network.Schemas.http || schema === network.Schemas.https) {
+				console.log('AAA', resourceInput.resource.toString(true));
 				window.open(resourceInput.resource.toString(true));
 
 				return TPromise.as<IEditor>(null);

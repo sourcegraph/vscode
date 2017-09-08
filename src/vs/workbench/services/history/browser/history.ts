@@ -12,7 +12,7 @@ import { IEditor } from 'vs/editor/common/editorCommon';
 import { IEditor as IBaseEditor, IEditorInput, ITextEditorOptions, IResourceInput, ITextEditorSelection } from 'vs/platform/editor/common/editor';
 import { EditorInput, IEditorCloseEvent, IEditorRegistry, Extensions, toResource, IEditorGroup } from 'vs/workbench/common/editor';
 import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
-import { IHistoryService } from 'vs/workbench/services/history/common/history';
+import { IHistoryService, IStackEntry } from 'vs/workbench/services/history/common/history';
 import { FileChangesEvent, IFileService, FileChangeType } from 'vs/platform/files/common/files';
 import { Selection } from 'vs/editor/common/core/selection';
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
@@ -20,7 +20,7 @@ import { IDisposable, dispose } from 'vs/base/common/lifecycle';
 import { IStorageService, StorageScope } from 'vs/platform/storage/common/storage';
 import { ILifecycleService } from 'vs/platform/lifecycle/common/lifecycle';
 import { Registry } from 'vs/platform/registry/common/platform';
-import { once } from 'vs/base/common/event';
+import Event, { once, Emitter } from 'vs/base/common/event';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { IEditorGroupService } from 'vs/workbench/services/group/common/groupService';
 import { IWindowsService } from 'vs/platform/windows/common/windows';
@@ -132,12 +132,6 @@ export abstract class BaseHistoryService {
 	}
 }
 
-interface IStackEntry {
-	input: IEditorInput | IResourceInput;
-	selection?: ITextEditorSelection;
-	timestamp: number;
-}
-
 interface IRecentlyClosedFile {
 	resource: URI;
 	index: number;
@@ -164,6 +158,9 @@ export class HistoryService extends BaseHistoryService implements IHistoryServic
 	private loaded: boolean;
 	private registry: IEditorRegistry;
 	private resourceFilter: ResourceGlobMatcher;
+
+	private _onDidChange = new Emitter<void>();
+	public get onDidChange(): Event<void> { return this._onDidChange.event; }
 
 	constructor(
 		@IWorkbenchEditorService editorService: IWorkbenchEditorService,
@@ -192,6 +189,7 @@ export class HistoryService extends BaseHistoryService implements IHistoryServic
 	private setIndex(value: number): void {
 		this.lastIndex = this.index;
 		this.index = value;
+		this._onDidChange.fire();
 	}
 
 	private getExcludes(root?: URI): IExpression {
@@ -248,6 +246,11 @@ export class HistoryService extends BaseHistoryService implements IHistoryServic
 		}
 	}
 
+	public go(offset: number): void {
+		this.setIndex(this.index + offset);
+		this.navigate();
+	}
+
 	public forward(acrossEditors?: boolean): void {
 		if (this.stack.length > this.index + 1) {
 			if (acrossEditors) {
@@ -290,6 +293,13 @@ export class HistoryService extends BaseHistoryService implements IHistoryServic
 		}
 	}
 
+	public canNavigate(): { back: boolean, forward: boolean } {
+		return {
+			back: this.index > 0,
+			forward: this.index + 1 < this.stack.length,
+		};
+	}
+
 	public last(): void {
 		if (this.lastIndex === -1) {
 			this.back();
@@ -329,6 +339,7 @@ export class HistoryService extends BaseHistoryService implements IHistoryServic
 		this.stack.splice(0);
 		this.history = [];
 		this.recentlyClosedFiles = [];
+		this._onDidChange.fire();
 	}
 
 	private navigate(acrossEditors?: boolean): void {
@@ -429,12 +440,14 @@ export class HistoryService extends BaseHistoryService implements IHistoryServic
 		this.ensureHistoryLoaded();
 
 		this.history = this.history.filter(e => this.include(e));
+		this._onDidChange.fire();
 	}
 
 	private removeFromHistory(arg1: IEditorInput | IResourceInput | FileChangesEvent): void {
 		this.ensureHistoryLoaded();
 
 		this.history = this.history.filter(e => !this.matches(arg1, e));
+		this._onDidChange.fire();
 	}
 
 	private handleEditorEventInStack(editor: IBaseEditor, event?: ICursorPositionChangedEvent): void {
@@ -562,6 +575,8 @@ export class HistoryService extends BaseHistoryService implements IHistoryServic
 				this.removeFromStack(input);
 			});
 		}
+
+		this._onDidChange.fire();
 	}
 
 	private preferResourceInput(input: IEditorInput): IEditorInput | IResourceInput {
@@ -589,6 +604,7 @@ export class HistoryService extends BaseHistoryService implements IHistoryServic
 		this.stack = this.stack.filter(e => !this.matches(arg1, e.input));
 		this.index = this.stack.length - 1; // reset index
 		this.lastIndex = -1;
+		this._onDidChange.fire();
 	}
 
 	private removeFromRecentlyClosedFiles(arg1: IEditorInput | IResourceInput | FileChangesEvent): void {
@@ -668,6 +684,10 @@ export class HistoryService extends BaseHistoryService implements IHistoryServic
 		return this.history.slice(0);
 	}
 
+	public getStack(): { stack: IStackEntry[], index: number } {
+		return { stack: this.stack, index: this.index };
+	}
+
 	private ensureHistoryLoaded(): void {
 		if (!this.loaded) {
 			this.loadHistory();
@@ -708,6 +728,7 @@ export class HistoryService extends BaseHistoryService implements IHistoryServic
 
 			return void 0;
 		}).filter(input => !!input);
+		this._onDidChange.fire();
 	}
 
 	public getLastActiveWorkspaceRoot(): URI {

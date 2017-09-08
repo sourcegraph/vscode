@@ -322,6 +322,38 @@ export const TITLE_BAR_BORDER = registerColor('titleBar.border', {
 	hc: null
 }, nls.localize('titleBarBorder', "Title bar border color. Note that this color is currently only supported on macOS."));
 
+// < --- Nav Bar --- >
+
+export const NAV_BAR_ACTIVE_FOREGROUND = registerColor('navBar.activeForeground', {
+	dark: TITLE_BAR_ACTIVE_FOREGROUND,
+	light: TITLE_BAR_ACTIVE_FOREGROUND,
+	hc: TITLE_BAR_ACTIVE_FOREGROUND
+}, nls.localize('navBarActiveForeground', "Nav bar foreground when the window is active."));
+
+export const NAV_BAR_INACTIVE_FOREGROUND = registerColor('navBar.inactiveForeground', {
+	dark: TITLE_BAR_INACTIVE_FOREGROUND,
+	light: TITLE_BAR_INACTIVE_FOREGROUND,
+	hc: TITLE_BAR_INACTIVE_FOREGROUND
+}, nls.localize('navBarInactiveForeground', "Nav bar foreground when the window is inactive."));
+
+export const NAV_BAR_ACTIVE_BACKGROUND = registerColor('navBar.activeBackground', {
+	dark: TITLE_BAR_ACTIVE_BACKGROUND,
+	light: TITLE_BAR_ACTIVE_BACKGROUND,
+	hc: TITLE_BAR_ACTIVE_BACKGROUND
+}, nls.localize('navBarActiveBackground', "Nav bar background when the window is active."));
+
+export const NAV_BAR_INACTIVE_BACKGROUND = registerColor('navBar.inactiveBackground', {
+	dark: TITLE_BAR_INACTIVE_BACKGROUND,
+	light: TITLE_BAR_INACTIVE_BACKGROUND,
+	hc: TITLE_BAR_INACTIVE_BACKGROUND
+}, nls.localize('navBarInactiveBackground', "Nav bar background when the window is inactive."));
+
+export const NAV_BAR_BORDER = registerColor('navBar.border', {
+	dark: TITLE_BAR_BORDER,
+	light: TITLE_BAR_BORDER,
+	hc: TITLE_BAR_BORDER
+}, nls.localize('navBarBorder', "Nav bar border color."));
+
 // < --- Notifications --- >
 
 export const NOTIFICATIONS_FOREGROUND = registerColor('notification.foreground', {
