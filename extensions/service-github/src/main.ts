@@ -72,7 +72,7 @@ query($query: String!) {
 		}
 	}
 }`,
-					{ query }).then((data: any) => data.search.nodes, showErrorImmediately);
+					{ query: `${query} fork:true` }).then((data: any) => data.search.nodes, showErrorImmediately);
 			} else {
 				request = requestGraphQL(`
 query {
