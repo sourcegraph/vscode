@@ -374,6 +374,8 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 
 			// Monitor the progress of the entire operation (addRoots, reloadConfiguration, and SCM ready).
 			this.monitorFolderOperation(folder, FolderOperation.Adding, folderPromise);
+
+			return folderPromise;
 		})) as TPromise<any>;
 	}
 

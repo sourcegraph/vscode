@@ -8,8 +8,10 @@
 import * as os from 'os';
 import * as path from 'path';
 import { workspace, Uri, Disposable } from 'vscode';
-import { Git } from './git';
+import { Git, IGitErrorData } from './git';
+import { CommandCenter } from './commands';
 import { mkdirp } from './util';
+import * as fs from 'fs';
 import { Model } from './model';
 import * as nls from 'vscode-nls';
 
@@ -29,6 +31,7 @@ export class GitResourceResolver {
 	constructor(
 		private git: Git,
 		private model: Model,
+		private commands: CommandCenter,
 	) {
 		for (const scheme of GitResourceResolver.SCHEMES) {
 			this.disposables.push(workspace.registerResourceResolutionProvider(scheme, this));
@@ -63,14 +66,20 @@ export class GitResourceResolver {
 		try {
 			await this.git.exec(path.dirname(folderPath), ['clone', resource.toString(), folderPath]);
 			return Uri.file(folderPath);
-		} catch (err) {
-			// The repository directory exists on disk, so try reusing it.
-			await this.model.tryOpenRepository(folderPath);
-			const repository = this.model.getRepository(folderPath);
-			if (!repository) {
-				return Promise.reject(localize('notAGitRepository', "Directory is not a valid Git repository: {0}", folderPath));
+		} catch (anyErr) {
+			const err = anyErr as IGitErrorData;
+			if (fs.existsSync(folderPath)) {
+				// The repository directory exists on disk, so try reusing it.
+				await this.model.tryOpenRepository(folderPath, true);
+				const repository = this.model.getRepository(folderPath, true);
+				if (!repository) {
+					throw new Error(localize('notAGitRepository', "Directory is not a valid Git repository: {0}", folderPath));
+				}
+				return Uri.file(repository.root);
+			} else {
+				this.commands.showOutput();
+				throw new Error(localize('cloneFailed', "Cloning failed: {0} (see output for details)", err.message));
 			}
-			return Uri.file(repository.root);
 		}
 	}
 
