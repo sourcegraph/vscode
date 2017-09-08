@@ -51,7 +51,13 @@ export class ThreadCommentsWidget extends BaseThreadCommentsWidget {
 			this.renderComments();
 		});
 
-		this.commentInput = this.instantiationService.createInstance(CommentInput, this.threadCommentsElement, localize('reply', "Reply..."), this.threadComments.draftReply);
+		this.commentInput = this.instantiationService.createInstance(
+			CommentInput,
+			this.threadCommentsElement,
+			localize('reply', "Reply..."),
+			this.threadComments.draftReply,
+			localize('archiveCommentThread', "Archive"),
+		);
 		this._register(this.commentInput);
 		this._register(this.commentInput.onDidChangeContent(content => {
 			this.threadComments.draftReply = content;
@@ -59,7 +65,10 @@ export class ThreadCommentsWidget extends BaseThreadCommentsWidget {
 		this._register(this.commentInput.onDidChangeHeight(() => {
 			this.layout();
 		}));
-		this._register(this.commentInput.onSubmit(e => this.submitReply()));
+		this._register(this.commentInput.onDidClickSubmitButton(e => this.submitReply()));
+		this._register(this.commentInput.onDidClickSecondaryButton(() => {
+			// TODO(nick): archive
+		}));
 
 		this._register(this.threadComments.onDidChangeComments(() => {
 			this.renderComments();

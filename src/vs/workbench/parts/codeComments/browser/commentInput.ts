@@ -16,7 +16,6 @@ import { StandardKeyboardEvent } from 'vs/base/browser/keyboardEvent';
 import { domEvent } from 'vs/base/browser/event';
 import { KeyCode, KeyMod } from 'vs/base/common/keyCodes';
 import { Button } from 'vs/base/browser/ui/button/button';
-import { isMacintosh } from 'vs/base/common/platform';
 import { IMessageService, Severity } from 'vs/platform/message/common/message';
 
 export interface SubmitEvent {
@@ -28,16 +27,21 @@ export interface SubmitEvent {
  */
 export class CommentInput extends Disposable {
 
-	private onSubmitEmitter = this.disposable(new Emitter<SubmitEvent>());
-	public readonly onSubmit: Event<SubmitEvent> = this.onSubmitEmitter.event;
-
 	private inputBox: InputBox;
+
 	private submitButton: Button;
+	private didClickSubmitButton = this.disposable(new Emitter<SubmitEvent>());
+	public readonly onDidClickSubmitButton: Event<SubmitEvent> = this.didClickSubmitButton.event;
+
+	private secondaryButton: Button;
+	private didClickSecondaryButton = this.disposable(new Emitter<void>());
+	public readonly onDidClickSecondaryButton: Event<void> = this.didClickSecondaryButton.event;
 
 	constructor(
 		parent: HTMLElement,
 		placeholder: string,
 		content: string,
+		secondaryButtonLabel: string,
 		@IContextViewService private contextViewService: IContextViewService,
 		@IThemeService private themeService: IThemeService,
 		@IMessageService private messageService: IMessageService,
@@ -65,8 +69,14 @@ export class CommentInput extends Disposable {
 					div.text(localize('submitHint', "Markdown supported. \"+email@domain.com\" to mention someone."));
 				});
 
+				this.secondaryButton = new Button(div.getContainer());
+				this.secondaryButton.label = secondaryButtonLabel;
+				attachButtonStyler(this.secondaryButton, this.themeService);
+				this.disposable(this.secondaryButton);
+				this.disposable(this.secondaryButton.addListener('click', () => this.didClickSecondaryButton.fire()));
+
 				this.submitButton = new Button(div.getContainer());
-				this.submitButton.label = localize('commitMessage', "Submit ({0})", isMacintosh ? 'Cmd+Enter' : 'Ctrl+Enter');
+				this.submitButton.label = localize('submitComment', "Submit");
 				attachButtonStyler(this.submitButton, this.themeService);
 				this.disposable(this.submitButton);
 				this.disposable(this.submitButton.addListener('click', () => this.handleSubmit()));
@@ -101,7 +111,7 @@ export class CommentInput extends Disposable {
 	}
 
 	private handleSubmit(): void {
-		this.onSubmitEmitter.fire({ content: this.inputBox.value });
+		this.didClickSubmitButton.fire({ content: this.inputBox.value });
 	}
 
 	public focus(): void {

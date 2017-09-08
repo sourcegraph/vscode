@@ -37,11 +37,18 @@ export class DraftThreadCommentsWidget extends BaseThreadCommentsWidget {
 	protected _fillContainer(containerElement: HTMLElement): void {
 		super._fillContainer(containerElement);
 
-		this.commentInput = this.instantiationService.createInstance(CommentInput, this.threadCommentsElement, localize('leaveComment', "Leave a comment..."), this.draftThread.content);
+		this.commentInput = this.instantiationService.createInstance(
+			CommentInput,
+			this.threadCommentsElement,
+			localize('leaveComment', "Leave a comment..."),
+			this.draftThread.content,
+			localize('cancelDraft', "Cancel"),
+		);
 		this._register(this.commentInput);
 		this._register(this.commentInput.onDidChangeContent(content => this.draftThread.content = content));
 		this._register(this.commentInput.onDidChangeHeight(() => this.layout()));
-		this._register(this.commentInput.onSubmit(() => this.createThread()));
+		this._register(this.commentInput.onDidClickSubmitButton(() => this.createThread()));
+		this._register(this.commentInput.onDidClickSecondaryButton(() => this.draftThread.dispose()));
 
 		this._register(this.draftThread.onDidChangeContent(() => this.commentInput.value = this.draftThread.content));
 		this._register(this.draftThread.onDidChangeSubmitting(() => {

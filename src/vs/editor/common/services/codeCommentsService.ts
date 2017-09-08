@@ -113,6 +113,8 @@ export interface IDraftThreadComments extends IDisposable {
 	 */
 	readonly onDidSubmit: Event<IThreadComments>;
 
+	readonly onWillDispose: Event<void>;
+
 	/**
 	 * Submit the draft.
 	 */

@@ -169,13 +169,12 @@ export class CodeCommentsController extends Disposable implements IEditorContrib
 			return;
 		}
 		const draftThreadWidget = this.instantiationService.createInstance(DraftThreadCommentsWidget, this.editor, draftThread);
-		const disposable = draftThread.onDidSubmit(thread => {
-			this.hideDraftThreadWidget(draftThread, draftThreadWidget);
-			this.showThreadWidget(thread, true);
-		});
-		draftThreadWidget.onWillDispose(() => {
-			disposable.dispose();
-		});
+		const disposables: IDisposable[] = [];
+
+		draftThread.onDidSubmit(thread => this.showThreadWidget(thread, true), this, disposables);
+		draftThread.onWillDispose(() => this.hideDraftThreadWidget(draftThread, draftThreadWidget), this, disposables);
+		draftThreadWidget.onWillDispose(() => dispose(disposables));
+
 		this.openDraftThreadWidgets.set(draftThread.id, draftThreadWidget);
 		draftThreadWidget.expand(reveal);
 

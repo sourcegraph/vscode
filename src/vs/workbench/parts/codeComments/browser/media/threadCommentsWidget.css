@@ -62,15 +62,19 @@
 
 .thread-comments .submit {
 	display: flex;
-	justify-content: space-between;
 	align-items: flex-start;
 	margin-top: 8px;
+}
+
+.thread-comments .hint {
+	flex-grow: 1;
 }
 
 .thread-comments .submit .monaco-button {
 	flex-grow: 0;
 	flex-shrink: 0;
 	width: initial;
-	padding: 4px 12px;
-	border-radius: 4px;
+	padding: 8px 16px;
+	border-radius: 2px;
+	margin-left: 8px
 }
