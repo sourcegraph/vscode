@@ -9,7 +9,7 @@ import { Registry } from 'vs/platform/registry/common/platform';
 import { localize } from 'vs/nls';
 import * as Constants from 'vs/workbench/parts/codeComments/common/constants';
 import { ViewletRegistry, Extensions as ViewletExtensions, ViewletDescriptor } from 'vs/workbench/browser/viewlet';
-import { IWorkbenchActionRegistry, Extensions as ActionExtensions } from 'vs/workbench/common/actionRegistry';
+import { IWorkbenchActionRegistry, Extensions as ActionExtensions } from 'vs/workbench/common/actions';
 import 'vs/workbench/parts/codeComments/browser/codeCommentsDecorationRenderer';
 import { registerSingleton } from 'vs/platform/instantiation/common/extensions';
 import { ICodeCommentsService } from 'vs/editor/common/services/codeCommentsService';

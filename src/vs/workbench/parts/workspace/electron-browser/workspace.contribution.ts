@@ -12,7 +12,7 @@ import { SyncActionDescriptor } from 'vs/platform/actions/common/actions';
 import { registerSingleton } from 'vs/platform/instantiation/common/extensions';
 import { Registry } from 'vs/platform/registry/common/platform';
 import { IConfigurationRegistry, Extensions as ConfigurationExtensions } from 'vs/platform/configuration/common/configurationRegistry';
-import { IWorkbenchActionRegistry, Extensions as ActionExtensions } from 'vs/workbench/common/actionRegistry';
+import { IWorkbenchActionRegistry, Extensions as ActionExtensions } from 'vs/workbench/common/actions';
 import { VIEWLET_ID, IFoldersWorkbenchService } from 'vs/workbench/parts/workspace/common/workspace';
 import { OpenWorkspaceViewletAction } from 'vs/workbench/parts/workspace/browser/folderActions';
 import { IKeybindings } from 'vs/platform/keybinding/common/keybindingsRegistry';
