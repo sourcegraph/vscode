@@ -53,10 +53,11 @@ async function init(context: ExtensionContext, disposables: Disposable[]): Promi
 	git.onOutput.addListener('log', onOutput);
 	disposables.push(toDisposable(() => git.onOutput.removeListener('log', onOutput)));
 
+	const commandCenter = new CommandCenter(git, model, outputChannel, telemetryReporter);
 	disposables.push(
-		new CommandCenter(git, model, outputChannel, telemetryReporter),
+		commandCenter,
 		new GitContentProvider(model),
-		new GitResourceResolver(git, model),
+		new GitResourceResolver(git, model, commandCenter),
 	);
 
 	await checkGitVersion(info);

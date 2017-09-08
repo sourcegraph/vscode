@@ -32,6 +32,51 @@ import { FolderSCMSwitchRevisionAction } from './scmFolderActions';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 import { IWindowService } from 'vs/platform/windows/common/windows';
 import { mnemonicButtonLabel } from 'vs/base/common/labels';
+import { IStorageService, StorageScope } from 'vs/platform/storage/common/storage';
+import { IQuickOpenService } from 'vs/platform/quickOpen/common/quickOpen';
+
+/**
+ * For developer convenience. Shows a quickopen input field and adds the root folder
+ * with the URI from user input.
+ */
+export class AddRootFolderResourceAction extends Action {
+
+	public static ID = 'workbench.action.addRootFolderResource';
+	public static LABEL = localize('openResource', "Add Folder to Workspace by URI");
+
+	private static LAST_VALUE_STORAGE_KEY = 'addRootFolderResource.last';
+
+	constructor(
+		id: string,
+		label: string,
+		@IQuickOpenService private quickOpenService: IQuickOpenService,
+		@IStorageService private storageService: IStorageService,
+		@IFoldersWorkbenchService private foldersWorkbenchService: IFoldersWorkbenchService,
+		@IViewletService private viewletService: IViewletService
+	) {
+		super(id, label);
+	}
+
+	public run(): TPromise<any> {
+		const lastValue = this.storageService.get(AddRootFolderResourceAction.LAST_VALUE_STORAGE_KEY, StorageScope.GLOBAL);
+
+		return this.quickOpenService.input({
+			prompt: localize('openResourcePrompt', "Enter Folder URI"),
+			value: lastValue,
+		})
+			.then(value => {
+				if (!value) {
+					return undefined;
+				}
+
+				this.storageService.store(AddRootFolderResourceAction.LAST_VALUE_STORAGE_KEY, value, StorageScope.GLOBAL);
+
+				return this.foldersWorkbenchService.addFoldersAsWorkspaceRootFolders([URI.parse(value)]).then(() => {
+					return this.viewletService.openViewlet(this.viewletService.getDefaultViewletId(), true);
+				});
+			});
+	}
+}
 
 export class AddWorkspaceFolderAction extends Action {
 

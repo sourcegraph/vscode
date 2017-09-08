@@ -14,7 +14,7 @@ import { Registry } from 'vs/platform/registry/common/platform';
 import { IConfigurationRegistry, Extensions as ConfigurationExtensions } from 'vs/platform/configuration/common/configurationRegistry';
 import { IWorkbenchActionRegistry, Extensions as ActionExtensions } from 'vs/workbench/common/actions';
 import { VIEWLET_ID, IFoldersWorkbenchService } from 'vs/workbench/parts/workspace/common/workspace';
-import { OpenWorkspaceViewletAction } from 'vs/workbench/parts/workspace/browser/folderActions';
+import { OpenWorkspaceViewletAction, AddRootFolderResourceAction } from 'vs/workbench/parts/workspace/browser/folderActions';
 import { IKeybindings } from 'vs/platform/keybinding/common/keybindingsRegistry';
 import { KeyMod, KeyCode } from 'vs/base/common/keyCodes';
 import { FoldersWorkbenchService } from 'vs/workbench/parts/workspace/node/foldersWorkbenchService';
@@ -44,6 +44,9 @@ actionRegistry.registerWorkbenchAction(
 	'View: Show Workspace',
 	nls.localize('view', "View")
 );
+
+const workspacesCategory = nls.localize('workspaces', "Workspaces");
+actionRegistry.registerWorkbenchAction(new SyncActionDescriptor(AddRootFolderResourceAction, AddRootFolderResourceAction.ID, AddRootFolderResourceAction.LABEL), 'Workspaces: Add Folder to Workspace by URI...', workspacesCategory);
 
 // Configuration
 const configurationRegistry = Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration);
