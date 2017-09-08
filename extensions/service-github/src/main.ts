@@ -15,26 +15,12 @@ const GITHUB_SCHEME = 'github';
 export function activate(context: vscode.ExtensionContext): void {
 	context.subscriptions.push(vscode.workspace.registerResourceResolutionProvider(GITHUB_SCHEME, {
 		resolveResource(resource: vscode.Uri): Thenable<vscode.Uri> {
-			return requestGraphQL(`
-query($id: ID!) {
-	node(id: $id) {
-		... on Repository {
-			nameWithOwner
-		}
-	}
-}`,
-				{ id: resourceToId(resource) },
-			).then(({ node }) => {
-				if (!node) {
-					return showErrorImmediately(localize('notFound', "GitHub repository not found: {0}", resource.toString()));
-				}
-				return vscode.Uri.parse(`git+ssh://git@github.com/${node.nameWithOwner}.git`);
-			});
+			const data = resourceToNameAndOwner(resource);
+			return Promise.resolve(vscode.Uri.parse(`git+ssh://git@github.com/${data.owner}/${data.name}.git`));
 		},
 	}));
 
 	const repoFields = [
-		'id',
 		'name',
 		'nameWithOwner',
 		'description',
@@ -55,14 +41,12 @@ query($id: ID!) {
 	context.subscriptions.push(vscode.workspace.registerFolderCatalogProvider(vscode.Uri.parse('github://github.com'), {
 		resolveFolder(resource: vscode.Uri): Thenable<vscode.CatalogFolder> {
 			return requestGraphQL(`
-query($id: ID!) {
-	node(id: $id) {
-		... on Repository {
-			${repoFields}
-		}
+query($owner: String!, $name: String!) {
+	repository(owner: $owner, name: $name) {
+		${repoFields}
 	}
 }`,
-				{ id: resourceToId(resource) },
+				resourceToNameAndOwner(resource),
 			).then(({ node }) => {
 				if (!node) {
 					return showErrorImmediately(localize('notFound', "GitHub repository not found: {0}", resource.toString()));
@@ -209,8 +193,9 @@ function parseGitHubRepositoryFullName(cloneUrl: vscode.Uri): { owner: string, n
 	return undefined;
 }
 
-function resourceToId(resource: vscode.Uri): string {
-	return resource.path.replace(/^\/repository\//, '');
+function resourceToNameAndOwner(resource: vscode.Uri): { owner: string, name: string } {
+	const parts = resource.path.replace(/^\/repository\//, '').split('/');
+	return { owner: parts[0], name: parts[1] };
 }
 
 /**
@@ -276,7 +261,6 @@ async function checkGitHubToken(): Promise<boolean> {
 }
 
 function toCatalogFolder(repo: {
-	id: string,
 	name: string,
 	nameWithOwner: string,
 	description?: string,
@@ -296,7 +280,7 @@ function toCatalogFolder(repo: {
 }): vscode.CatalogFolder {
 	return {
 		// These URIs are resolved by the resource resolver we register above.
-		resource: new vscode.Uri().with({ scheme: GITHUB_SCHEME, authority: 'github.com', path: `/repository/${repo.id}` }),
+		resource: new vscode.Uri().with({ scheme: GITHUB_SCHEME, authority: 'github.com', path: `/repository/${repo.nameWithOwner}` }),
 
 		displayPath: repo.nameWithOwner,
 		displayName: repo.name,

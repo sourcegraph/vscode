@@ -94,10 +94,7 @@ declare module 'vscode' {
 		 * For repositories on a remote code host, this should be a URI that is a child
 		 * of the registered provider's root URI. For example, a GitHub folder catalog
 		 * provider's root URI might be github://github.com and a repository's resource URI
-		 * would then be of the form github://github.com/repository/M6A8DY3daz8q4f==
-		 * (where the last path component is the repository's ID obtained from GitHub's GraphQL
-		 * API). It is better to use unique, stable IDs (such as in that example) than names,
-		 * which change when repositories are renamed.
+		 * would then be of the form github://github.com/repository/foo/bar
 		 */
 		resource: Uri;
 
