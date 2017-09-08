@@ -8,7 +8,7 @@ import { ClearAllModalsAction, ShowOnboardingModalAction } from 'vs/workbench/pa
 import { Registry } from 'vs/platform/registry/common/platform';
 import { localize } from 'vs/nls';
 import { SyncActionDescriptor } from 'vs/platform/actions/common/actions';
-import { IWorkbenchActionRegistry, Extensions } from 'vs/workbench/common/actionRegistry';
+import { IWorkbenchActionRegistry, Extensions } from 'vs/workbench/common/actions';
 import { ModalIdentifiers } from 'vs/workbench/parts/modal/modal';
 import { IPartService } from 'vs/workbench/services/part/common/partService';
 import { ServicesAccessor } from 'vs/platform/instantiation/common/instantiation';
