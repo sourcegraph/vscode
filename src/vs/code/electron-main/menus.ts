@@ -38,6 +38,9 @@ interface IConfiguration extends IFilesConfiguration {
 		sideBar: {
 			location: 'left' | 'right';
 		},
+		navBar: {
+			visible: boolean;
+		},
 		statusBar: {
 			visible: boolean;
 		},
@@ -63,6 +66,7 @@ export class CodeMenu {
 
 	private currentAutoSaveSetting: string;
 	private currentMultiCursorModifierSetting: string;
+	private currentNavbarVisible: boolean;
 	private currentSidebarLocation: 'left' | 'right';
 	private currentStatusbarVisible: boolean;
 	private currentActivityBarVisible: boolean;
@@ -158,6 +162,15 @@ export class CodeMenu {
 		const newMultiCursorModifierSetting = config && config.editor && config.editor.multiCursorModifier;
 		if (newMultiCursorModifierSetting !== this.currentMultiCursorModifierSetting) {
 			this.currentMultiCursorModifierSetting = newMultiCursorModifierSetting;
+			updateMenu = true;
+		}
+
+		let newNavbarVisible = config && config.workbench && config.workbench.navBar && config.workbench.navBar.visible;
+		if (typeof newNavbarVisible !== 'boolean') {
+			newNavbarVisible = true;
+		}
+		if (newNavbarVisible !== this.currentNavbarVisible) {
+			this.currentNavbarVisible = newNavbarVisible;
 			updateMenu = true;
 		}
 
@@ -710,6 +723,14 @@ export class CodeMenu {
 		const toggleEditorLayout = this.createMenuItem(nls.localize({ key: 'miToggleEditorLayout', comment: ['&& denotes a mnemonic'] }, "Toggle Editor Group &&Layout"), 'workbench.action.toggleEditorGroupLayout');
 		const toggleSidebar = this.createMenuItem(nls.localize({ key: 'miToggleSidebar', comment: ['&& denotes a mnemonic'] }, "&&Toggle Side Bar"), 'workbench.action.toggleSidebarVisibility');
 
+		let navBarLabel: string;
+		if (this.currentNavbarVisible) {
+			navBarLabel = nls.localize({ key: 'miHideNavbar', comment: ['&& denotes a mnemonic'] }, "&&Hide Nav Bar");
+		} else {
+			navBarLabel = nls.localize({ key: 'miShowNavbar', comment: ['&& denotes a mnemonic'] }, "&&Show Nav Bar");
+		}
+		const toggleNavbar = this.createMenuItem(navBarLabel, 'workbench.action.toggleNavbarVisibility');
+
 		let moveSideBarLabel: string;
 		if (this.currentSidebarLocation !== 'right') {
 			moveSideBarLabel = nls.localize({ key: 'miMoveSidebarRight', comment: ['&& denotes a mnemonic'] }, "&&Move Side Bar Right");
@@ -767,6 +788,7 @@ export class CodeMenu {
 			__separator__(),
 			splitEditor,
 			toggleEditorLayout,
+			toggleNavbar,
 			moveSidebar,
 			toggleSidebar,
 			togglePanel,

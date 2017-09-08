@@ -43,7 +43,7 @@ import { parseArgs } from 'vs/platform/environment/node/argv';
 import { EnvironmentService } from 'vs/platform/environment/node/environmentService';
 import { IModeService } from 'vs/editor/common/services/modeService';
 import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
-import { IHistoryService } from 'vs/workbench/services/history/common/history';
+import { IHistoryService, IStackEntry } from 'vs/workbench/services/history/common/history';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { TestConfigurationService } from 'vs/platform/configuration/test/common/testConfigurationService';
 import { IWindowsService, IWindowService, INativeOpenDialogOptions } from 'vs/platform/windows/common/windows';
@@ -247,8 +247,13 @@ export class TestHistoryService implements IHistoryService {
 
 	public _serviceBrand: any;
 
+	private _onDidChange: Emitter<void>;
+
 	constructor(private root?: URI) {
+		this._onDidChange = new Emitter<void>();
 	}
+
+	public get onDidChange(): Event<void> { return this._onDidChange.event; }
 
 	public reopenLastClosedEditor(): void {
 	}
@@ -256,10 +261,17 @@ export class TestHistoryService implements IHistoryService {
 	public add(input: IEditorInput, selection?: ITextEditorSelection): void {
 	}
 
+	public go(offset: number): void {
+	}
+
 	public forward(acrossEditors?: boolean): void {
 	}
 
 	public back(acrossEditors?: boolean): void {
+	}
+
+	public canNavigate(): { back: boolean, forward: boolean } {
+		return { back: true, forward: true };
 	}
 
 	public last(): void {
@@ -273,6 +285,10 @@ export class TestHistoryService implements IHistoryService {
 
 	public getHistory(): (IEditorInput | IResourceInput)[] {
 		return [];
+	}
+
+	public getStack(): { stack: IStackEntry[], index: number } {
+		return { stack: [], index: 0 };
 	}
 
 	public getLastActiveWorkspaceRoot(): URI {

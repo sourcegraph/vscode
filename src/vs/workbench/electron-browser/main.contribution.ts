@@ -182,6 +182,11 @@ let workbenchProperties: { [path: string]: IJSONSchema; } = {
 		'description': nls.localize('openDefaultSettings', "Controls if opening settings also opens an editor showing all default settings."),
 		'default': true
 	},
+	'workbench.navBar.visible': {
+		'type': 'boolean',
+		default: false,
+		description: nls.localize('navBarVisible', "Controls the visibility of the navigation bar in the workbench.")
+	},
 	'workbench.sideBar.location': {
 		'type': 'string',
 		'enum': ['left', 'right'],
@@ -399,6 +404,11 @@ configurationRegistry.registerConfiguration({
 			'type': 'boolean',
 			'default': true,
 			'description': nls.localize('zenMode.fullScreen', "Controls if turning on Zen Mode also puts the workbench into full screen mode.")
+		},
+		'zenMode.hideNavBar': {
+			'type': 'boolean',
+			'default': true,
+			'description': nls.localize('zenMode.hideNavBar', "Controls if turning on Zen Mode also hides the navigation bar at the top of the workbench.")
 		},
 		'zenMode.hideTabs': {
 			'type': 'boolean',

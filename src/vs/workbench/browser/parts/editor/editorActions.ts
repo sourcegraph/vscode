@@ -1090,7 +1090,7 @@ export class NavigateForwardAction extends Action {
 	public static LABEL = nls.localize('navigateNext', "Go Forward");
 
 	constructor(id: string, label: string, @IHistoryService private historyService: IHistoryService) {
-		super(id, label);
+		super(id, label, 'navigate-forward-action');
 	}
 
 	public run(): TPromise<any> {
@@ -1106,7 +1106,7 @@ export class NavigateBackwardsAction extends Action {
 	public static LABEL = nls.localize('navigatePrevious', "Go Back");
 
 	constructor(id: string, label: string, @IHistoryService private historyService: IHistoryService) {
-		super(id, label);
+		super(id, label, 'navigate-backwards-action');
 	}
 
 	public run(): TPromise<any> {

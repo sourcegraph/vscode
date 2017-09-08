@@ -34,6 +34,7 @@ import { SidebarPart } from 'vs/workbench/browser/parts/sidebar/sidebarPart';
 import { PanelPart } from 'vs/workbench/browser/parts/panel/panelPart';
 import { StatusbarPart } from 'vs/workbench/browser/parts/statusbar/statusbarPart';
 import { TitlebarPart } from 'vs/workbench/browser/parts/titlebar/titlebarPart';
+import { NavbarPart } from 'vs/workbench/browser/parts/navbar/navbarPart';
 import { WorkbenchLayout } from 'vs/workbench/browser/layout';
 import { IActionBarRegistry, Extensions as ActionBarExtensions } from 'vs/workbench/browser/actions';
 import { PanelRegistry, Extensions as PanelExtensions } from 'vs/workbench/browser/panel';
@@ -66,6 +67,7 @@ import { IConfigurationResolverService } from 'vs/workbench/services/configurati
 import { ConfigurationResolverService } from 'vs/workbench/services/configurationResolver/node/configurationResolverService';
 import { IPanelService } from 'vs/workbench/services/panel/common/panelService';
 import { ITitleService } from 'vs/workbench/services/title/common/titleService';
+import { INavService } from 'vs/workbench/services/nav/common/navService';
 import { WorkbenchMessageService } from 'vs/workbench/services/message/browser/messageService';
 import { IWorkbenchEditorService, IResourceInputType } from 'vs/workbench/services/editor/common/editorService';
 import { IQuickOpenService } from 'vs/platform/quickOpen/common/quickOpen';
@@ -121,6 +123,7 @@ interface WorkbenchParams {
 
 interface IZenModeSettings {
 	fullScreen: boolean;
+	hideNavBar: boolean;
 	hideTabs: boolean;
 	hideActivityBar: boolean;
 	hideStatusBar: boolean;
@@ -144,6 +147,7 @@ export interface IWorkbenchCallbacks {
 const Identifiers = {
 	WORKBENCH_CONTAINER: 'workbench.main.container',
 	TITLEBAR_PART: 'workbench.parts.titlebar',
+	NAVBAR_PART: 'workbench.parts.navbar',
 	ACTIVITYBAR_PART: 'workbench.parts.activitybar',
 	SIDEBAR_PART: 'workbench.parts.sidebar',
 	PANEL_PART: 'workbench.parts.panel',
@@ -162,6 +166,7 @@ export class Workbench implements IPartService {
 	private static panelHiddenSettingKey = 'workbench.panel.hidden';
 	private static zenModeActiveSettingKey = 'workbench.zenmode.active';
 
+	private static navbarVisibleConfigurationKey = 'workbench.navBar.visible';
 	private static sidebarPositionConfigurationKey = 'workbench.sideBar.location';
 	private static statusbarVisibleConfigurationKey = 'workbench.statusBar.visible';
 	private static activityBarVisibleConfigurationKey = 'workbench.activityBar.visible';
@@ -190,6 +195,7 @@ export class Workbench implements IPartService {
 	private configurationEditingService: IConfigurationEditingService;
 	private workspaceMigrationService: WorkspaceMigrationService;
 	private titlebarPart: TitlebarPart;
+	private navbarPart: NavbarPart;
 	private activitybarPart: ActivitybarPart;
 	private sidebarPart: SidebarPart;
 	private panelPart: PanelPart;
@@ -203,6 +209,7 @@ export class Workbench implements IPartService {
 	private callbacks: IWorkbenchCallbacks;
 	private creationPromise: TPromise<boolean>;
 	private creationPromiseComplete: ValueCallback;
+	private navBarHidden: boolean;
 	private sideBarHidden: boolean;
 	private statusBarHidden: boolean;
 	private activityBarHidden: boolean;
@@ -218,6 +225,7 @@ export class Workbench implements IPartService {
 	private zenMode: {
 		active: boolean;
 		transitionedToFullScreen: boolean;
+		wasNavBarVisible: boolean;
 		wasSideBarVisible: boolean;
 		wasPanelVisible: boolean;
 	};
@@ -617,6 +625,12 @@ export class Workbench implements IPartService {
 		// SCM Service
 		serviceCollection.set(ISCMService, new SyncDescriptor(SCMService));
 
+		// Nav bar
+		this.navbarPart = this.instantiationService.createInstance(NavbarPart, Identifiers.NAVBAR_PART);
+		this.toDispose.push(this.navbarPart);
+		this.toShutdown.push(this.navbarPart);
+		serviceCollection.set(INavService, this.navbarPart);
+
 		// Text Model Resolver Service
 		serviceCollection.set(ITextModelService, new SyncDescriptor(TextModelResolverService));
 
@@ -674,6 +688,10 @@ export class Workbench implements IPartService {
 			this.panelHidden = true; // we hide panel part if there is no default panel
 		}
 
+		// Navbar visibility
+		const navBarVisible = this.configurationService.lookup<string>(Workbench.navbarVisibleConfigurationKey).value;
+		this.navBarHidden = !navBarVisible;
+
 		// Sidebar position
 		const sideBarPosition = this.configurationService.lookup<string>(Workbench.sidebarPositionConfigurationKey).value;
 		this.sideBarPosition = (sideBarPosition === 'right') ? Position.RIGHT : Position.LEFT;
@@ -693,6 +711,7 @@ export class Workbench implements IPartService {
 		this.zenMode = {
 			active: false,
 			transitionedToFullScreen: false,
+			wasNavBarVisible: false,
 			wasSideBarVisible: false,
 			wasPanelVisible: false
 		};
@@ -732,6 +751,9 @@ export class Workbench implements IPartService {
 			case Parts.TITLEBAR_PART:
 				container = this.titlebarPart.getContainer();
 				break;
+			case Parts.NAVBAR_PART:
+				container = this.navbarPart.getContainer();
+				break;
 			case Parts.ACTIVITYBAR_PART:
 				container = this.activitybarPart.getContainer();
 				break;
@@ -758,6 +780,8 @@ export class Workbench implements IPartService {
 		switch (part) {
 			case Parts.TITLEBAR_PART:
 				return this.getCustomTitleBarStyle() && !browser.isFullscreen();
+			case Parts.NAVBAR_PART:
+				return !this.navBarHidden;
 			case Parts.SIDEBAR_PART:
 				return !this.sideBarHidden;
 			case Parts.PANEL_PART:
@@ -806,6 +830,16 @@ export class Workbench implements IPartService {
 		}
 
 		return null;
+	}
+
+	private setNavBarHidden(hidden: boolean, skipLayout?: boolean): void {
+		this.navBarHidden = hidden;
+
+
+		// Layout
+		if (!skipLayout) {
+			this.workbenchLayout.layout();
+		}
 	}
 
 	private setStatusBarHidden(hidden: boolean, skipLayout?: boolean): void {
@@ -1112,6 +1146,11 @@ export class Workbench implements IPartService {
 		}
 
 		if (!this.zenMode.active) {
+			const newNavbarHiddenValue = !this.configurationService.lookup<boolean>(Workbench.navbarVisibleConfigurationKey).value;
+			if (newNavbarHiddenValue !== this.navBarHidden) {
+				this.setNavBarHidden(newNavbarHiddenValue, skipLayout);
+			}
+
 			const newStatusbarHiddenValue = !this.configurationService.lookup<boolean>(Workbench.statusbarVisibleConfigurationKey).value;
 			if (newStatusbarHiddenValue !== this.statusBarHidden) {
 				this.setStatusBarHidden(newStatusbarHiddenValue, skipLayout);
@@ -1130,6 +1169,7 @@ export class Workbench implements IPartService {
 			this.workbench,								// Workbench Container
 			{
 				titlebar: this.titlebarPart,			// Title Bar
+				navbar: this.navbarPart,				// Nav Bar
 				activitybar: this.activitybarPart,		// Activity Bar
 				editor: this.editorPart,				// Editor
 				sidebar: this.sidebarPart,				// Sidebar
@@ -1175,6 +1215,7 @@ export class Workbench implements IPartService {
 
 		// Create Parts
 		this.createTitlebarPart();
+		this.createNavbarPart();
 		this.createActivityBarPart();
 		this.createSidebarPart();
 		this.createEditorPart();
@@ -1194,6 +1235,16 @@ export class Workbench implements IPartService {
 		});
 
 		this.titlebarPart.create(titlebarContainer);
+	}
+
+	private createNavbarPart(): void {
+		const navbarContainer = $(this.workbench).div({
+			'class': ['part', 'navbar'],
+			id: Identifiers.NAVBAR_PART,
+			role: 'navigation'
+		});
+
+		this.navbarPart.create(navbarContainer);
 	}
 
 	private createActivityBarPart(): void {
@@ -1314,11 +1365,15 @@ export class Workbench implements IPartService {
 			const config = this.configurationService.getConfiguration<IZenModeSettings>('zenMode');
 			toggleFullScreen = !browser.isFullscreen() && config.fullScreen;
 			this.zenMode.transitionedToFullScreen = toggleFullScreen;
+			this.zenMode.wasNavBarVisible = this.isVisible(Parts.NAVBAR_PART);
 			this.zenMode.wasSideBarVisible = this.isVisible(Parts.SIDEBAR_PART);
 			this.zenMode.wasPanelVisible = this.isVisible(Parts.PANEL_PART);
 			this.setPanelHidden(true, true).done(undefined, errors.onUnexpectedError);
 			this.setSideBarHidden(true, true).done(undefined, errors.onUnexpectedError);
 
+			if (config.hideNavBar) {
+				this.setNavBarHidden(true, true);
+			}
 			if (config.hideActivityBar) {
 				this.setActivityBarHidden(true, true);
 			}
@@ -1329,6 +1384,9 @@ export class Workbench implements IPartService {
 				this.editorPart.hideTabs(true);
 			}
 		} else {
+			if (this.zenMode.wasNavBarVisible) {
+				this.setNavBarHidden(false, true);
+			}
 			if (this.zenMode.wasPanelVisible) {
 				this.setPanelHidden(false, true).done(undefined, errors.onUnexpectedError);
 			}
