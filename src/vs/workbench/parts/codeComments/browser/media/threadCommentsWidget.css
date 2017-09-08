@@ -1,0 +1,76 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Sourcegraph. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.thread-comments p,
+.thread-comments h1,
+.thread-comments h2,
+.thread-comments h3,
+.thread-comments h4,
+.thread-comments h5,
+.thread-comments h6 {
+	margin: 0.5em 0;
+}
+
+.thread-comments {
+	overflow: hidden; /* This forces child margins to increase the size of .thread-comments */
+}
+
+.thread-comments .comments {
+	overflow: hidden; /* This forces child margins to increase the size of .comments */
+}
+
+.thread-comments .comment {
+	margin: 16px;
+}
+
+.thread-comments .header {
+	display: flex;
+}
+
+.thread-comments .author {
+	flex-grow: 1;
+}
+
+.thread-comments .timeAgo {
+	flex-shrink: 0;
+}
+
+.thread-comments .content {
+	user-select: initial;
+}
+
+.thread-comments .content .code {
+	padding: 8px;
+	white-space: pre-wrap;
+}
+
+.thread-comments .border {
+	border-top: 1px solid;
+}
+
+.thread-comments .commentInput {
+	margin: 16px 16px 8px 16px;
+}
+
+.thread-comments .monaco-inputbox > .wrapper > .input,
+.thread-comments .monaco-inputbox > .wrapper > .mirror {
+	min-height: 90px;
+	padding: 8px 12px;
+}
+
+.thread-comments .submit {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	margin-top: 8px;
+}
+
+.thread-comments .submit .monaco-button {
+	flex-grow: 0;
+	flex-shrink: 0;
+	width: initial;
+	padding: 4px 12px;
+	border-radius: 4px;
+}

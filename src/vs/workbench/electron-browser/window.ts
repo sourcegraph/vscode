@@ -22,6 +22,7 @@ import { IAction, Action } from 'vs/base/common/actions';
 import { IPartService } from 'vs/workbench/services/part/common/partService';
 import { AutoSaveConfiguration } from 'vs/platform/files/common/files';
 import { toResource } from 'vs/workbench/common/editor';
+import { isCommonCodeEditor } from 'vs/editor/common/editorCommon';
 import { IWorkbenchEditorService, IResourceInputType } from 'vs/workbench/services/editor/common/editorService';
 import { IEditorGroupService } from 'vs/workbench/services/group/common/groupService';
 import { IMessageService } from 'vs/platform/message/common/message';
@@ -41,15 +42,12 @@ import { Position, IResourceInput, IUntitledResourceInput, IEditor } from 'vs/pl
 import { IExtensionService } from 'vs/platform/extensions/common/extensions';
 import { KeyboardMapperFactory } from 'vs/workbench/services/keybinding/electron-browser/keybindingService';
 import { Themable } from 'vs/workbench/common/theme';
-// tslint:disable-line:import-patterns
-import { VIEWLET_ID as CODE_COMMENTS_VIEWLET_ID } from 'vs/workbench/parts/codeComments/common/constants';
-// tslint:disable-line:import-patterns
-import { ICodeCommentsViewlet } from 'vs/workbench/parts/codeComments/common/codeComments';
 import { ipcRenderer as ipc, webFrame } from 'electron';
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
 import { IWorkspaceEditingService } from 'vs/workbench/services/workspace/common/workspaceEditing';
 import { parseSelection } from 'vs/base/common/urlRoutes';
 import { IResourceResolverService } from 'vs/platform/resourceResolver/common/resourceResolver';
+// import { CodeCommentsController } from 'vs/workbench/parts/codeComments/electron-browser/codeCommentsController';
 
 const TextInputActions: IAction[] = [
 	new Action('undo', nls.localize('undo', "Undo"), null, true, () => document.execCommand('undo') && TPromise.as(true)),
@@ -329,8 +327,6 @@ export class ElectronWindow extends Themable {
 	}
 
 	private onOpenFiles(request: IOpenFileRequest): void {
-		let viewThreadInput: ViewThreadInput;
-
 		if (request.filesToOpen.length > 0) {
 			// Check to see if the URI for this resource has a mapping a local
 			// repo stored. If so, open that file locally.
@@ -347,11 +343,6 @@ export class ElectronWindow extends Themable {
 					const fsPath = repoMappings[uri];
 					fileToOpen.filePath = `file://${path.join(fsPath, file)}`;
 					fileToOpen.folderPath = `file://${fsPath}`;
-					const q = querystring.parse(fileURI.query);
-					viewThreadInput = { threadID: parseInt(q['threadID']) };
-					if (q['commentID']) {
-						viewThreadInput.commentID = parseInt(q['commentID']);
-					}
 				}
 			}
 		}
@@ -372,17 +363,7 @@ export class ElectronWindow extends Themable {
 		}
 
 		if (inputs.length) {
-			this.openResources(inputs, diffMode)
-				.then(() => {
-					if (viewThreadInput) {
-						this.viewletService.openViewlet(CODE_COMMENTS_VIEWLET_ID, true)
-							.then(viewlet => viewlet as ICodeCommentsViewlet)
-							.then(viewlet => {
-								viewlet.viewThread(viewThreadInput.threadID, viewThreadInput.commentID);
-							});
-					}
-				})
-				.done(null, errors.onUnexpectedError);
+			this.openResources(inputs, diffMode).done(null, errors.onUnexpectedError);
 		}
 	}
 
@@ -445,7 +426,7 @@ export class ElectronWindow extends Themable {
 	 *     revision=encodeURIComponent(revision)&
 	 *     path=encodeURIComponent(path)&
 	 *     selection=1:2-3:4&selection=5:6-7-8&
-	 *     thread=123&comment=456&
+	 *     thread=123
 	 */
 	private async onHandleUris(uriStringsToHandle: string[]): Promise<void> {
 		const urisToHandle = uriStringsToHandle.map(s => URI.parse(s))
@@ -460,6 +441,7 @@ export class ElectronWindow extends Themable {
 				revision?: string;
 				path?: string;
 				selection?: string | string[];
+				thread?: string;
 			};
 
 			// Without this, a %2B in the querystring will be decoded into a
@@ -467,28 +449,39 @@ export class ElectronWindow extends Themable {
 			if (uri.query && uri.query.indexOf('+') !== -1) {
 				uri = uri.with({ query: uri.query.replace(/\+/g, '%2B') });
 			}
-			const query = querystring.parse(uri.query);
+			const query = querystring.parse<HandledURI>(uri.query);
+			if (!query.repo) {
+				continue;
+			}
+			await this.extensionService.onReady(); // extensions register resource resolvers
+			await TPromise.timeout(1000); // HACK(sqs): wait for git extension to register resource resolver
+			const resource = URI.parse(`${query.vcs}+${query.repo}`);
+			const root = await this.resourceResolverService.resolveResource(resource);
+			if (root === resource) {
+				continue;
+			}
+			await this.workspaceEditingService.addRoots([root]);
 
-			let root: URI;
-			if (query.repo) {
-				await this.extensionService.onReady(); // extensions register resource resolvers
-				await TPromise.timeout(1000); // HACK(sqs): wait for git extension to register resource resolver
-				root = await this.resourceResolverService.resolveResource(URI.parse(query.repo));
-				await this.workspaceEditingService.addRoots([root]);
-			}
 			// TODO(sqs): handle revision, need to avoid clobbering git state if != current revision
-			if (root && query.path) {
-				const inputPath: IPath = { filePath: path.join(root.fsPath, query.path) };
-				if (query.selection) {
-					// TODO(sqs): handle multiple selections
-					const selection = parseSelection(types.isArray(query.selection) ? query.selection[0] : query.selection);
-					if (selection) {
-						inputPath.lineNumber = selection.startLineNumber;
-						inputPath.columnNumber = selection.startColumn;
-					}
-				}
-				await this.openResources(this.toInputs([inputPath], false), false);
+			if (!query.path) {
+				continue;
 			}
+			const inputPath: IPath = { filePath: path.join(root.fsPath, query.path) };
+			if (query.selection) {
+				// TODO(sqs): handle multiple selections
+				const selection = parseSelection(types.isArray(query.selection) ? query.selection[0] : query.selection);
+				if (selection) {
+					inputPath.lineNumber = selection.startLineNumber;
+					inputPath.columnNumber = selection.startColumn;
+				}
+			}
+			const editor = await this.openResources(this.toInputs([inputPath], false), false);
+			const threadId = parseInt(query.thread, 10);
+			// TODO(nick): the returned editor is a TextFileEditor so isCommonCodeEditor is always false.
+			if (!isCommonCodeEditor(editor) || !threadId) {
+				continue;
+			}
+			// CodeCommentsController.get(editor).restoreViewState({ openThreadIds: [threadId] });
 		}
 	}
 

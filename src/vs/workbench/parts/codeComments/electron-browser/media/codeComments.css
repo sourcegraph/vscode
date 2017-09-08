@@ -7,3 +7,52 @@
 	-webkit-mask: url('comment.svg') no-repeat 50% 50%;
 	-webkit-mask-size: 22px;
 }
+
+.codeComments {
+	word-wrap: break-word;
+	display: flex;
+	flex-direction: column;
+}
+
+.codeComments .empty {
+	padding: 16px;
+}
+
+.codeComments .leftRight {
+	display: flex;
+}
+
+.codeComments .left {
+	flex-grow: 1;
+}
+
+.codeComments .right {
+	flex-shrink: 0;
+}
+
+.codeComments .thread .content {
+	white-space: pre-wrap;
+	margin-top: 8px;
+}
+
+.codeComments .thread .content .code {
+	padding: 8px;
+}
+
+.codeComments .thread .content {
+	cursor: pointer;
+}
+
+.codeComments .thread {
+	padding: 16px;
+	border-top: 1px solid;
+}
+
+.codeComments .scrollContainer {
+	flex-grow: 0;
+	flex-shrink: 1;
+}
+
+.codeComments .scrollContainer .list {
+	position: relative;
+}

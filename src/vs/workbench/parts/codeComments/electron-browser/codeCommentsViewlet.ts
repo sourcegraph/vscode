@@ -17,29 +17,26 @@ import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import * as Constants from 'vs/workbench/parts/codeComments/common/constants';
 import { IThemeService, registerThemingParticipant } from 'vs/platform/theme/common/themeService';
 import { ICommonCodeEditor, isCommonCodeEditor } from 'vs/editor/common/editorCommon';
-import { ICodeCommentsService, IThreadComments } from 'vs/editor/common/services/codeCommentsService';
+import { ICodeCommentsService } from 'vs/editor/common/services/codeCommentsService';
 import URI from 'vs/base/common/uri';
 import * as date from 'date-fns';
 import { IProgressService } from 'vs/platform/progress/common/progress';
 import { ScrollableElement } from 'vs/base/browser/ui/scrollbar/scrollableElement';
 import { ScrollbarVisibility } from 'vs/base/common/scrollable';
-import { Range } from 'vs/editor/common/core/range';
-import { Action, IAction } from 'vs/base/common/actions';
+import { IAction } from 'vs/base/common/actions';
 import { basename } from 'vs/base/common/paths';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
-import { ThreadView } from 'vs/workbench/parts/codeComments/electron-browser/threadView';
-import { CreateThreadView } from 'vs/workbench/parts/codeComments/browser/createThreadView';
-import { ICodeCommentsViewlet } from 'vs/workbench/parts/codeComments/common/codeComments';
 import { TAB_ACTIVE_FOREGROUND, TAB_INACTIVE_FOREGROUND } from 'vs/workbench/common/theme';
 import { listHoverBackground } from 'vs/platform/theme/common/colorRegistry';
 import { renderComment } from 'vs/workbench/parts/codeComments/browser/renderComment';
+import { CodeCommentsController } from 'vs/workbench/parts/codeComments/electron-browser/codeCommentsController';
 
 /**
  * Renders code comments in a viewlet.
  * The idea design has comments rendered in a right panel, but that requires
  * a bit more integration work so for v1 we are implementing it as a viewlet.
  */
-export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet {
+export class CodeCommentsViewlet extends Viewlet {
 
 	/**
 	 * These are disposed when the active editor changes.
@@ -67,12 +64,6 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 	 */
 	private recentThreadsView = true;
 
-	private showRecentThreadsAction = new Action('workbench.codeCodeComments.action.showRecentThreads', 'Show recent threads', 'recentThreads', true, () => {
-		const modelUri = this.getActiveModelUri();
-		this.codeCommentsService.getFileComments(modelUri).selectedThread = undefined;
-		return TPromise.as(null);
-	});
-
 	constructor(
 		@ITelemetryService telemetryService: ITelemetryService,
 		@IThemeService themeService: IThemeService,
@@ -86,6 +77,7 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 	}
 
 	public dispose(): void {
+		this.activeEditorListeners = dispose(this.activeEditorListeners);
 		this.renderDisposables = dispose(this.renderDisposables);
 		super.dispose();
 	}
@@ -151,10 +143,7 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 		const modelUri = this.getModelUri(editor);
 		if (modelUri) {
 			const fileComments = this.codeCommentsService.getFileComments(modelUri);
-			this.activeEditorListeners.push(fileComments.onSelectedThreadDidChange(() => {
-				this.render(modelUri, {});
-			}));
-			this.activeEditorListeners.push(fileComments.onThreadsDidChange(() => {
+			this.activeEditorListeners.push(fileComments.onDidChangeThreads(() => {
 				if (this.recentThreadsView) {
 					this.render(modelUri, {});
 				}
@@ -186,14 +175,6 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 		return model.uri;
 	}
 
-	private getActiveModelUri(): URI | undefined {
-		const activeEditor = this.getActiveCodeEditor();
-		if (!activeEditor) {
-			return undefined;
-		}
-		return this.getModelUri(activeEditor);
-	}
-
 	/**
 	 * Renders the list of threads for a file.
 	 * Will use cached thread data unless refreshData is true.
@@ -205,12 +186,7 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 			this.renderCommentsNotAvailable();
 			return;
 		}
-		const selectedThread = this.codeCommentsService.getFileComments(modelUri).selectedThread;
-		if (selectedThread) {
-			this.renderThreadView(modelUri, selectedThread);
-		} else {
-			this.renderRecentThreadsView(modelUri, options);
-		}
+		this.renderRecentThreadsView(modelUri, options);
 	}
 
 	private renderCommentsNotAvailable(): void {
@@ -269,7 +245,7 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 				const recentComment = thread.mostRecentComment;
 				div.div({ class: 'thread' }, div => {
 					div.on('click', () => {
-						this.codeCommentsService.getFileComments(modelUri).selectedThread = thread;
+						CodeCommentsController.get(this.getActiveCodeEditor()).showThreadWidget(thread, true);
 					});
 					div.div({ class: 'leftRight' }, div => {
 						div.div({ class: 'left', title: recentComment.authorEmail }, div => {
@@ -291,33 +267,6 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 		this.updateScrollbar();
 	}
 
-	/**
-	 * Renders comments for a single thread.
-	 */
-	private renderThreadView(modelUri: URI, thread: IThreadComments): void {
-		this.recentThreadsView = false;
-		this.renderDisposables = dispose(this.renderDisposables);
-
-		this.renderTitleAndActionsForThreadRange(thread.range);
-
-		const threadView = this.instantiationService.createInstance(ThreadView, this.list, modelUri, thread);
-		this.renderDisposables.push(threadView);
-		this.renderDisposables.push(threadView.onHeightChange(() => this.updateScrollbar()));
-
-		this.updateScrollbar();
-	}
-
-	private renderTitleAndActionsForThreadRange(range: Range): void {
-		if (Range.spansMultipleLines(range)) {
-			this.title = localize('conversationOnLines', "Lines {0} {1}", range.startLineNumber, range.endLineNumber);
-		} else {
-			this.title = localize('conversationOnLine', "Line {0}", range.startLineNumber);
-		}
-		this.actions = [this.showRecentThreadsAction];
-		this.updateTitleArea();
-
-	}
-
 	private updateScrollbar(): void {
 		const scrollContainer = this.scrollbar.getDomNode();
 		this.scrollbar.setScrollDimensions({
@@ -332,54 +281,20 @@ export class CodeCommentsViewlet extends Viewlet implements ICodeCommentsViewlet
 	public layout(dimension: Dimension): void {
 		this.updateScrollbar();
 	}
-
-	public createThread(editor: ICommonCodeEditor): void {
-		this.recentThreadsView = false;
-		this.renderDisposables = dispose(this.renderDisposables);
-
-		this.renderTitleAndActionsForThreadRange(editor.getSelection());
-		const fileComments = this.codeCommentsService.getFileComments(editor.getModel().uri);
-		const draftThread = fileComments.createDraftThread(editor);
-
-		const createThreadView = this.instantiationService.createInstance(CreateThreadView, this.list, draftThread);
-		this.renderDisposables.push(createThreadView);
-		this.renderDisposables.push(createThreadView.onHeightChange(() => this.updateScrollbar()));
-	}
-
-	public viewThread(threadID: number, commentID: number): void {
-		const modelUri = this.getActiveModelUri();
-
-		const fileComments = this.codeCommentsService.getFileComments(modelUri);
-
-		const refreshThreads = fileComments.refreshThreads();
-		const selectedThread = fileComments.getThread(threadID);
-		if (selectedThread) {
-			fileComments.selectedThread = selectedThread;
-		} else {
-			refreshThreads.then(() => {
-				const selectedThread = fileComments.getThread(threadID);
-				fileComments.selectedThread = selectedThread;
-			});
-		}
-		// TODO(nick): scroll to and/or highlight comment?
-	}
 }
 
 registerThemingParticipant((theme, collector) => {
 	const contentColor = theme.getColor(TAB_ACTIVE_FOREGROUND);
 	if (contentColor) {
-		collector.addRule(`.codeComments .comment .content { color: ${contentColor}; }`);
 		collector.addRule(`.codeComments .thread .content { color: ${contentColor}; }`);
 	}
 	const headerColor = theme.getColor(TAB_INACTIVE_FOREGROUND);
 	if (headerColor) {
-		collector.addRule(`.codeComments .comment .leftRight { color: ${headerColor}; }`);
 		collector.addRule(`.codeComments .thread .leftRight { color: ${headerColor}; }`);
-		collector.addRule(`.codeComments .create .hint { color: ${headerColor}; }`);
 	}
 	const listHoverColor = theme.getColor(listHoverBackground);
 	if (listHoverColor) {
-		collector.addRule(`.codeComments .thread, .codeComments .comment, .codeComments .create { border-color: ${listHoverColor}; }`);
+		collector.addRule(`.codeComments .thread { border-color: ${listHoverColor}; }`);
 		collector.addRule(`.codeComments .thread:hover { background-color: ${listHoverColor}; }`);
 	}
 });

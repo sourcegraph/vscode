@@ -31,16 +31,6 @@ export interface ICodeCommentsService {
 export interface IFileComments extends IDisposable {
 
 	/**
-	 * The comment thread that the user has selected to look at.
-	 */
-	selectedThread: IThreadComments | undefined;
-
-	/**
-	 * Event that is fired when selectedThread changes.
-	 */
-	readonly onSelectedThreadDidChange: Event<void>;
-
-	/**
 	 * A promise that resolves when comments
 	 * are done refreshing on the file.
 	 */
@@ -55,7 +45,7 @@ export interface IFileComments extends IDisposable {
 	/**
 	 * Event that is fired when threads change.
 	 */
-	readonly onThreadsDidChange: Event<void>;
+	readonly onDidChangeThreads: Event<void>;
 
 	/**
 	 * Returns all draft threads on the file in the order that they were created.
@@ -65,12 +55,17 @@ export interface IFileComments extends IDisposable {
 	/**
 	 * Event that is fired when draft threads change.
 	 */
-	readonly onDraftThreadsDidChange: Event<void>;
+	readonly onDidChangeDraftThreads: Event<void>;
 
 	/**
 	 * Returns the thread on the file with a matching id.
 	 */
 	getThread(id: number): IThreadComments | undefined;
+
+	/**
+	 * Returns the draft thread on the file with a matching id.
+	 */
+	getDraftThread(id: number): IDraftThreadComments | undefined;
 
 	/**
 	 * Creates a new thread and comment on the file at the given range.
@@ -79,7 +74,7 @@ export interface IFileComments extends IDisposable {
 
 	/**
 	 * Refreshes threads from the network.
-	 * onThreadsDidChange will fire after the threads load.
+	 * onDidChangeThreads will fire after the threads load.
 	 */
 	refreshThreads(): TPromise<void>;
 }
@@ -88,15 +83,30 @@ export interface IFileComments extends IDisposable {
  * Model for a new thread that the user has not submitted.
  */
 export interface IDraftThreadComments extends IDisposable {
-	/**
-	 * The content of the draft.
-	 */
-	content: string;
 
 	/**
-	 * Event that is fired when content changes.
+	 * A client-local idendifier for the new thread.
 	 */
-	readonly onContentDidChange: Event<void>;
+	id: number;
+
+	/**
+	 * The content of the draft.
+	 * It will be parsed as markdown.
+	 */
+	content: string;
+	readonly onDidChangeContent: Event<void>;
+
+	/**
+	 * The range that the draft should be displayed at.
+	 */
+	readonly displayRange: Range;
+	readonly onDidChangeDisplayRange: Event<void>;
+
+	/**
+	 * True if the draft is being submitted.
+	 */
+	readonly submitting: boolean;
+	readonly onDidChangeSubmitting: Event<void>;
 
 	/**
 	 * Event that is fired after the draft is successfully submitted.
@@ -113,12 +123,41 @@ export interface IDraftThreadComments extends IDisposable {
  * Model for comment threads on a file.
  */
 export interface IThreadComments extends IDisposable {
+	/**
+	 * Auto increment id for the thread.
+	 */
 	readonly id: number;
+
+	/**
+	 * The relative path of the file inside of the repo.
+	 */
 	readonly file: string;
+
+	/**
+	 * An absolute revision that the comment is attached to.
+	 * (e.g. SHA-1 for Git).
+	 */
 	readonly revision: string;
+
+	/**
+	 * The range that the comment is attached to on the file at the revision.
+	 */
 	readonly range: Range;
+
+	/**
+	 * The date the thread was created.
+	 */
 	readonly createdAt: Date;
+
+	/**
+	 * The comments in the thread.
+	 */
 	readonly comments: ReadonlyArray<IComment>;
+	readonly onDidChangeComments: Event<void>;
+
+	/**
+	 * The most recent comment in the thread.
+	 */
 	readonly mostRecentComment: IComment;
 
 	/**
@@ -128,15 +167,19 @@ export interface IThreadComments extends IDisposable {
 	 * that transformation has not finished yet.
 	 */
 	readonly displayRange?: Range;
+	readonly onDidChangeDisplayRange: Event<void>;
 
 	/**
 	 * The content of a pending reply to the thread.
 	 */
 	draftReply: string;
+	readonly onDidChangeDraftReply: Event<void>;
 
-	readonly onDraftReplyDidChange: Event<void>;
-	readonly onCommentsDidChange: Event<void>;
-	readonly onDisplayRangeDidChange: Event<void>;
+	/**
+	 * True if the draftReply is being submitted.
+	 */
+	readonly submittingDraftReply: boolean;
+	readonly onDidChangeSubmittingDraftReply: Event<void>;
 
 	/**
 	 * Adds a new comment to a thread with the content of draftReply.

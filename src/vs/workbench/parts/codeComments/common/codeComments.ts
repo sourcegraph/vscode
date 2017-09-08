@@ -4,22 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 'use strict';
 
-import { IViewlet } from 'vs/workbench/common/viewlet';
 import { ITelemetryData } from 'vs/platform/telemetry/common/telemetry';
 import { IThreadComments } from 'vs/editor/common/services/codeCommentsService';
-import { ICommonCodeEditor } from 'vs/editor/common/editorCommon';
-
-export interface ICodeCommentsViewlet extends IViewlet {
-	/**
-	 * Renders a UI to create a new comment thread on the line or selection of the current editor.
-	 */
-	createThread(editor: ICommonCodeEditor): void;
-
-	/**
-	 * Renders a UI to display the specified thread and comment.
-	 */
-	viewThread(threadID: number, commentID?: number): void;
-}
 
 /**
  * Copied from sourcegraph/sourcegraph/cmd/frontend/internal/graphqlbackend/comments.go

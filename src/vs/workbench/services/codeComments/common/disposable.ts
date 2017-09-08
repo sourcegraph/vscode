@@ -13,12 +13,12 @@ export class Disposable implements IDisposable {
 	 */
 	protected disposables: IDisposable[] = [];
 
-	private disposeEmitter = this.disposable(new Emitter<void>());
+	private willDispose = this.disposable(new Emitter<void>());
 
 	/**
 	 * Event that is fired when this object is disposed.
 	 */
-	public onDispose: Event<void> = this.disposeEmitter.event;
+	public onWillDispose: Event<void> = this.willDispose.event;
 
 	/**
 	 * Registers a disposable to be disposed when this object's dispose method is called.
@@ -29,7 +29,7 @@ export class Disposable implements IDisposable {
 	}
 
 	public dispose() {
-		this.disposeEmitter.fire();
+		this.willDispose.fire();
 		this.disposables = dispose(this.disposables);
 	}
 }

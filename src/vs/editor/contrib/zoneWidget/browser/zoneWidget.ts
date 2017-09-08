@@ -208,6 +208,7 @@ export abstract class ZoneWidget extends Widget implements IHorizontalSashLayout
 		}
 
 		this.editor.deltaDecorations(this._positionMarkerId, []);
+		super.dispose();
 	}
 
 	public create(): void {
@@ -277,13 +278,13 @@ export abstract class ZoneWidget extends Widget implements IHorizontalSashLayout
 
 	protected _isShowing: boolean = false;
 
-	public show(rangeOrPos: IRange | IPosition, heightInLines: number): void {
+	public show(rangeOrPos: IRange | IPosition, heightInLines: number, reveal = true): void {
 		const range = Range.isIRange(rangeOrPos)
 			? rangeOrPos
 			: new Range(rangeOrPos.lineNumber, rangeOrPos.column, rangeOrPos.lineNumber, rangeOrPos.column);
 
 		this._isShowing = true;
-		this._showImpl(range, heightInLines);
+		this._showImpl(range, heightInLines, reveal);
 		this._isShowing = false;
 		this._positionMarkerId = this.editor.deltaDecorations(this._positionMarkerId, [{ range, options: ModelDecorationOptions.EMPTY }]);
 	}
@@ -304,7 +305,7 @@ export abstract class ZoneWidget extends Widget implements IHorizontalSashLayout
 		}
 	}
 
-	private _decoratingElementsHeight(): number {
+	protected _decoratingElementsHeight(): number {
 		let lineHeight = this.editor.getConfiguration().lineHeight;
 		let result = 0;
 
@@ -321,7 +322,7 @@ export abstract class ZoneWidget extends Widget implements IHorizontalSashLayout
 		return result;
 	}
 
-	private _showImpl(where: IRange, heightInLines: number): void {
+	private _showImpl(where: IRange, heightInLines: number, reveal: boolean): void {
 		const position = {
 			lineNumber: where.startLineNumber,
 			column: where.startColumn
@@ -338,7 +339,8 @@ export abstract class ZoneWidget extends Widget implements IHorizontalSashLayout
 		// adjust heightInLines to viewport
 		const maxHeightInLines = (this.editor.getLayoutInfo().height / lineHeight) * .8;
 		if (heightInLines >= maxHeightInLines) {
-			heightInLines = maxHeightInLines;
+			// Disable max for code comments.
+			// heightInLines = maxHeightInLines;
 		}
 
 		let arrowHeight = 0;
@@ -393,11 +395,14 @@ export abstract class ZoneWidget extends Widget implements IHorizontalSashLayout
 
 		this._doLayout(containerHeight, width);
 
-		this.editor.setSelection(where);
+		if (reveal) {
+			this.editor.setSelection(where);
 
-		// Reveal the line above or below the zone widget, to get the zone widget in the viewport
-		const revealLineNumber = Math.min(this.editor.getModel().getLineCount(), Math.max(1, where.endLineNumber + 1));
-		this.editor.revealLine(revealLineNumber, ScrollType.Smooth);
+			// Reveal the line above and below the zone widget, to get the zone widget in the viewport
+			const endLineNumber = Math.min(this.editor.getModel().getLineCount(), Math.max(1, where.endLineNumber + 1));
+			this.editor.revealLineInCenterIfOutsideViewport(where.endLineNumber, ScrollType.Immediate);
+			this.editor.revealLine(endLineNumber, ScrollType.Immediate);
+		}
 	}
 
 	protected setCssClass(className: string, classToReplace?: string): void {

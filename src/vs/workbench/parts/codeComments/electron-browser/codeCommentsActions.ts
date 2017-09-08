@@ -12,7 +12,8 @@ import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/edi
 import { TPromise } from 'vs/base/common/winjs.base';
 import { ICommonCodeEditor } from 'vs/editor/common/editorCommon';
 import { ServicesAccessor, editorAction, EditorAction } from 'vs/editor/common/editorCommonExtensions';
-import { ICodeCommentsViewlet } from 'vs/workbench/parts/codeComments/common/codeComments';
+import { ICodeCommentsService } from 'vs/editor/common/services/codeCommentsService';
+import { CodeCommentsController } from 'vs/workbench/parts/codeComments/electron-browser/codeCommentsController';
 
 /**
  * Action to open the code comments viewlet.
@@ -54,9 +55,12 @@ export class CreateCodeCommentAction extends EditorAction {
 	}
 
 	public run(accessor: ServicesAccessor, editor: ICommonCodeEditor): TPromise<any> {
-		const viewletService = accessor.get(IViewletService);
-		return viewletService.openViewlet(VIEWLET_ID, true)
-			.then(viewlet => viewlet as ICodeCommentsViewlet)
-			.then(viewlet => viewlet.createThread(editor));
+		const codeCommentsService = accessor.get(ICodeCommentsService);
+		const model = editor.getModel();
+		// TODO(nick): use markers?
+		const fileComments = codeCommentsService.getFileComments(model.uri);
+		const draftThread = fileComments.createDraftThread(editor);
+		CodeCommentsController.get(editor).showDraftThreadWidget(draftThread, true);
+		return TPromise.wrap(true);
 	}
 }

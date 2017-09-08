@@ -101,20 +101,9 @@ export class CodeCommentsService implements ICodeCommentsService {
 export class FileComments extends Disposable implements IFileComments {
 	private model: IModel;
 
-	private _selectedThread: ThreadComments | undefined;
-	private selectedThreadDidChangeEmitter = this.disposable(new Emitter<void>());
-	public readonly onSelectedThreadDidChange = this.selectedThreadDidChangeEmitter.event;
-	public set selectedThread(thread: ThreadComments | undefined) {
-		this._selectedThread = thread;
-		this.selectedThreadDidChangeEmitter.fire();
-	}
-	public get selectedThread(): ThreadComments | undefined {
-		return this._selectedThread;
-	}
-
 	private _threads: ThreadComments[] = [];
-	private threadsDidChangeEmitter = this.disposable(new Emitter<void>());
-	public readonly onThreadsDidChange = this.threadsDidChangeEmitter.event;
+	private didChangeThreads = this.disposable(new Emitter<void>());
+	public readonly onDidChangeThreads = this.didChangeThreads.event;
 	public get threads(): ThreadComments[] {
 		return this._threads;
 	}
@@ -123,10 +112,13 @@ export class FileComments extends Disposable implements IFileComments {
 	}
 
 	private _draftThreads: DraftThreadComments[] = [];
-	private draftThreadsDidChangeEmitter = this.disposable(new Emitter<void>());
-	public readonly onDraftThreadsDidChange = this.draftThreadsDidChangeEmitter.event;
+	private didChangeDraftThreads = this.disposable(new Emitter<void>());
+	public readonly onDidChangeDraftThreads = this.didChangeDraftThreads.event;
 	public get draftThreads(): DraftThreadComments[] {
 		return this._draftThreads;
+	}
+	public getDraftThread(id: number): DraftThreadComments | undefined {
+		return first(this.draftThreads, thread => thread.id === id);
 	}
 
 	private git: Git;
@@ -178,29 +170,24 @@ export class FileComments extends Disposable implements IFileComments {
 			throw new Error('mismatch models');
 		}
 		const draft = this.instantiationService.createInstance(DraftThreadComments, editor, this.git);
-		const disposable = draft.onDidSubmit(thread => {
-			this.deleteDraftThread(draft);
+		draft.onDidSubmit(thread => {
+			draft.dispose();
 			// Although we are updating this._threads here, we don't fire
 			// threadsDidChange until the display ranges have updated.
 			this._threads.unshift(thread);
-			this.updateDisplayRanges().then(() => this.selectedThread = thread);
+			this.updateDisplayRanges();
 		});
-		draft.onDispose(() => {
-			disposable.dispose();
-			this.deleteDraftThread(draft);
+		draft.onWillDispose(() => {
+			const idx = this._draftThreads.indexOf(draft);
+			if (idx < 0) {
+				return;
+			}
+			this._draftThreads.splice(idx, 1);
+			this.didChangeDraftThreads.fire();
 		});
 		this._draftThreads.push(draft);
-		this.draftThreadsDidChangeEmitter.fire();
+		this.didChangeDraftThreads.fire();
 		return draft;
-	}
-
-	private deleteDraftThread(draft: DraftThreadComments) {
-		const idx = this._draftThreads.indexOf(draft);
-		if (idx < 0) {
-			return;
-		}
-		this._draftThreads.splice(idx, 1);
-		this.draftThreadsDidChangeEmitter.fire();
 	}
 
 	private refreshingThreads: TPromise<void> | undefined;
@@ -248,10 +235,23 @@ export class FileComments extends Disposable implements IFileComments {
 					});
 			})
 			.then(data => {
+				const oldThreads = this._threads.reduce((threads, thread) => {
+					threads.set(thread.id, thread);
+					return threads;
+				}, new Map<number, ThreadComments>());
+
 				// Although we are updating this._threads here, we don't fire
 				// threadsDidChange until the display ranges have updated.
 				this._threads = data.threads
-					.map(thread => this.instantiationService.createInstance(ThreadComments, thread, this.git))
+					.map(thread => {
+						const oldThread = oldThreads.get(thread.id);
+						if (oldThread) {
+							// Reuse the existing thread so we save client state like draft replies and event listeners.
+							oldThread.comments = thread.comments.map(c => new Comment(c));
+							return oldThread;
+						}
+						return this.instantiationService.createInstance(ThreadComments, thread, this.git);
+					})
 					.sort((left: ThreadComments, right: ThreadComments) => {
 						// Most recent comment timestamp descending.
 						return right.mostRecentComment.createdAt.getTime() - left.mostRecentComment.createdAt.getTime();
@@ -332,8 +332,8 @@ export class FileComments extends Disposable implements IFileComments {
 						thread.displayRange = diff.transformRange(thread.range);
 					}
 				}
-				this.threadsDidChangeEmitter.fire();
-				return TPromise.wrap(undefined);
+				this.didChangeThreads.fire();
+				return TPromise.wrap<void>(undefined);
 			});
 		this.updatingDisplayRanges = updatingDisplayRanges;
 		updatingDisplayRanges.done(() => {
@@ -343,7 +343,6 @@ export class FileComments extends Disposable implements IFileComments {
 		});
 		return updatingDisplayRanges;
 	}
-
 }
 
 export class ThreadComments extends Disposable implements IThreadComments {
@@ -353,18 +352,36 @@ export class ThreadComments extends Disposable implements IThreadComments {
 	public readonly range: Range;
 	public readonly createdAt: Date;
 
-	private commentsDidChangeEmitter = this.disposable(new Emitter<void>());
-	public readonly onCommentsDidChange = this.commentsDidChangeEmitter.event;
+	private didChangeComments = this.disposable(new Emitter<void>());
+	public readonly onDidChangeComments = this.didChangeComments.event;
 
-	private draftReplyDidChangeEmitter = this.disposable(new Emitter<void>());
-	public readonly onDraftReplyDidChange = this.draftReplyDidChangeEmitter.event;
+	private didChangeDraftReply = this.disposable(new Emitter<void>());
+	public readonly onDidChangeDraftReply = this.didChangeDraftReply.event;
 
-	private displayRangeDidChangeEmitter = this.disposable(new Emitter<void>());
-	public readonly onDisplayRangeDidChange = this.displayRangeDidChangeEmitter.event;
+	private didChangeSubmittingDraftReply = this.disposable(new Emitter<void>());
+	public readonly onDidChangeSubmittingDraftReply = this.didChangeSubmittingDraftReply.event;
 
-	private _comments: ReadonlyArray<Comment>;
-	public get comments(): ReadonlyArray<Comment> {
+	private didChangeDisplayRange = this.disposable(new Emitter<void>());
+	public readonly onDidChangeDisplayRange = this.didChangeDisplayRange.event;
+
+	private _submittingDraftReply = false;
+	public get submittingDraftReply() {
+		return this._submittingDraftReply;
+	}
+	public set submittingDraftReply(submitting: boolean) {
+		if (this._submittingDraftReply !== submitting) {
+			this._submittingDraftReply = submitting;
+			this.didChangeSubmittingDraftReply.fire();
+		}
+	}
+
+	private _comments: Comment[];
+	public get comments(): Comment[] {
 		return this._comments;
+	}
+	public set comments(comments: Comment[]) {
+		this._comments = comments;
+		this.didChangeComments.fire();
 	}
 
 	private _draftReply: string;
@@ -374,7 +391,7 @@ export class ThreadComments extends Disposable implements IThreadComments {
 	public set draftReply(draftReply: string) {
 		if (this._draftReply !== draftReply) {
 			this._draftReply = draftReply;
-			this.draftReplyDidChangeEmitter.fire();
+			this.didChangeDraftReply.fire();
 		}
 	}
 
@@ -385,7 +402,7 @@ export class ThreadComments extends Disposable implements IThreadComments {
 	public set displayRange(displayRange: Range | undefined) {
 		if (this._displayRange !== displayRange) {
 			this._displayRange = displayRange;
-			this.displayRangeDidChangeEmitter.fire();
+			this.didChangeDisplayRange.fire();
 		}
 	}
 
@@ -442,13 +459,16 @@ export class ThreadComments extends Disposable implements IThreadComments {
 			})
 			.then(response => {
 				this.draftReply = '';
-				this._comments = response.addCommentToThread.comments.map(c => new Comment(c));
-				this.commentsDidChangeEmitter.fire();
+				this.comments = response.addCommentToThread.comments.map(c => new Comment(c));
 			});
 	}
 }
 
 export class DraftThreadComments extends Disposable implements IDraftThreadComments {
+	private static NEXT_ID = 1;
+
+	public readonly id = DraftThreadComments.NEXT_ID++;
+
 	private _content: string = '';
 	public get content(): string {
 		return this._content;
@@ -456,15 +476,34 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 	public set content(content: string) {
 		if (this._content !== content) {
 			this._content = content;
-			this.contentDidChangeEmitter.fire();
+			this.didChangeContent.fire();
 		}
 	}
 
-	private contentDidChangeEmitter = this.disposable(new Emitter<void>());
-	public readonly onContentDidChange = this.contentDidChangeEmitter.event;
+	// TODO(nick): display range should continue to update if content changes
+	// while comment is being written.
+	private _displayRange: Range;
+	public get displayRange(): Range {
+		return this._displayRange;
+	}
+	public set displayRange(displayRange: Range) {
+		if (this._displayRange !== displayRange) {
+			this._displayRange = displayRange;
+			this.didChangeDisplayRange.fire();
+		}
+	}
 
-	private didSubmitEmitter = this.disposable(new Emitter<ThreadComments>());
-	public readonly onDidSubmit = this.didSubmitEmitter.event;
+	private didChangeContent = this.disposable(new Emitter<void>());
+	public readonly onDidChangeContent = this.didChangeContent.event;
+
+	private didSubmit = this.disposable(new Emitter<ThreadComments>());
+	public readonly onDidSubmit = this.didSubmit.event;
+
+	private didChangeSubmitting = this.disposable(new Emitter<void>());
+	public readonly onDidChangeSubmitting = this.didChangeSubmitting.event;
+
+	private didChangeDisplayRange = this.disposable(new Emitter<void>());
+	public readonly onDidChangeDisplayRange = this.didChangeDisplayRange.event;
 
 	private submitData: TPromise<{
 		remoteURI: string,
@@ -489,6 +528,7 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 		super();
 
 		this.ensureNonEmptySelection(editor);
+		this.displayRange = editor.getSelection();
 
 		const model = editor.getModel();
 		const remoteURI = git.getRemoteRepo();
@@ -508,8 +548,8 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 				const modifiedLines = model.getLinesContent();
 				// Compute reverse diff.
 				const diff = new Diff(modifiedLines, originalLines);
-				const displayRange = editor.getSelection();
-				return diff.transformRange(displayRange);
+				this.displayRange = editor.getSelection();
+				return diff.transformRange(this.displayRange);
 			});
 
 		this.submitData = this.join([remoteURI, accessToken, file, revision, authorName, authorEmail, range])
@@ -535,12 +575,25 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 		return TPromise.join<any>(promises) as TPromise<[T1, T2, T3, T4, T5, T6, T7]>;
 	}
 
+	private submittingPromise: TPromise<IThreadComments> | undefined;
+
+	public get submitting(): boolean {
+		return !!this.submittingPromise;
+	}
+
 	public submit(): TPromise<IThreadComments> {
+		if (this.submittingPromise) {
+			return this.submittingPromise;
+		}
 		const contents = this.content;
 		if (!contents.length) {
 			return TPromise.wrapError(new Error(localize('emptyCommentError', "Comment can not be empty.")));
 		}
-		return this.submitData
+		const clearSubmittingPromise = () => {
+			this.submittingPromise = undefined;
+			this.didChangeSubmitting.fire();
+		};
+		const promise = this.submitData
 			.then(data => {
 				return requestGraphQLMutation<{ createThread: GQL.IThread }>(this.remoteService, `mutation {
 					createThread(
@@ -562,9 +615,13 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 			})
 			.then(response => {
 				const thread = this.instantiationService.createInstance(ThreadComments, response.createThread, this.git);
-				this.didSubmitEmitter.fire(thread);
+				this.didSubmit.fire(thread);
 				return thread;
 			});
+		this.submittingPromise = promise;
+		this.didChangeSubmitting.fire();
+		promise.done(clearSubmittingPromise, clearSubmittingPromise);
+		return promise;
 	};
 
 	/**
@@ -591,7 +648,7 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 			// because that is more natural and we don't care about including the newline
 			// character in the comment range.
 			const line = selection.endLineNumber - 1;
-			const endColumn = editor.getModel().getLineContent(line).length + 1;
+			const endColumn = editor.getModel().getLineMaxColumn(line);
 			const trimmedSelection = selection.setEndPosition(selection.endLineNumber - 1, endColumn);
 			// Only use the trimmedSelection if it isn't empty.
 			// If the trimmed selection is empty it means that the user
