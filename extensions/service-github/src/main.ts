@@ -47,11 +47,11 @@ query($owner: String!, $name: String!) {
 	}
 }`,
 				resourceToNameAndOwner(resource),
-			).then(({ node }) => {
-				if (!node) {
+			).then(({ repository }) => {
+				if (!repository) {
 					return showErrorImmediately(localize('notFound', "GitHub repository not found: {0}", resource.toString()));
 				}
-				return toCatalogFolder(node);
+				return toCatalogFolder(repository);
 			});
 		},
 		async search(query: string): Promise<vscode.CatalogFolder[]> {
