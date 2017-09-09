@@ -24,6 +24,7 @@
     "smoketest": "cd test/smoke ; mocha"
   },
   "dependencies": {
+    "@sourcegraph/icons": "^1.2.0",
     "applicationinsights": "0.17.1",
     "chokidar": "bpasero/chokidar#vscode",
     "date-fns": "^1.28.5",

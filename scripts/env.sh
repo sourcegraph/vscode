@@ -4,3 +4,4 @@ export npm_config_target=$(node -p "require('./package.json').electronVersion")
 export npm_config_runtime=electron
 export npm_config_cache="$HOME/.npm-electron"
 mkdir -p "$npm_config_cache"
+echo "//registry.npmjs.org/:_authToken=\${NPM_TOKEN}" > .npmrc
