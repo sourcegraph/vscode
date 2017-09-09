@@ -8,7 +8,6 @@
 import 'vs/css!./media/navbarpart';
 import nls = require('vs/nls');
 import URI from 'vs/base/common/uri';
-import * as errors from 'vs/base/common/errors';
 import { IWindowService, IWindowsService } from 'vs/platform/windows/common/windows';
 import { IContextMenuService, IContextViewService } from 'vs/platform/contextview/browser/contextView';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
@@ -30,6 +29,7 @@ import { Widget } from 'vs/base/browser/ui/widget';
 import { KeyCode } from 'vs/base/common/keyCodes';
 import { IKeyboardEvent } from 'vs/base/browser/keyboardEvent';
 import { FocusLocationBarAction } from 'vs/workbench/browser/parts/navbar/navbarActions';
+import { INavService } from 'vs/workbench/services/nav/common/nav';
 
 export class LocationBarInput extends Widget {
 
@@ -53,6 +53,7 @@ export class LocationBarInput extends Widget {
 		@IThemeService private themeService: IThemeService,
 		@ITelemetryService protected telemetryService: ITelemetryService,
 		@IMessageService protected messageService: IMessageService,
+		@INavService private navService: INavService,
 		@IPartService private partService: IPartService
 	) {
 		super();
@@ -94,11 +95,7 @@ export class LocationBarInput extends Widget {
 
 	private onEnter(e: IKeyboardEvent): void {
 		e.preventDefault();
-		// TODO(sqs): pasting in about.sourcegraph.com URLs is broken because URI.toString(true)
-		// over-encodes the ? in a URI fragment.
-		const resource = URI.parse(this.inputBox.value);
-		this.editorService.openEditor({ resource })
-			.done(null, errors.onUnexpectedError);
+		this.navService.handle(URI.parse(this.inputBox.value));
 	}
 
 	public create(container: HTMLElement): void {

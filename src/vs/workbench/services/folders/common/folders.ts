@@ -101,8 +101,9 @@ export interface IFoldersWorkbenchService {
 
 	/**
 	 * Adds the folders as workspace root folders, waiting for them to be resolved fully.
+	 * The resolved URIs of the inputs are returned.
 	 */
-	addFoldersAsWorkspaceRootFolders(folders: (IFolder | URI)[]): TPromise<void>;
+	addFoldersAsWorkspaceRootFolders(folders: (IFolder | URI)[]): TPromise<URI[]>;
 
 	/**
 	 * Removes the folders as workspace root folders.

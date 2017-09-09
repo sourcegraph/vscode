@@ -11,6 +11,7 @@ import { TPromise } from 'vs/base/common/winjs.base';
 import * as paths from 'vs/base/common/paths';
 import types = require('vs/base/common/types');
 import { Disposable } from 'vs/base/common/lifecycle';
+import product from 'vs/platform/node/product';
 import Event, { Emitter } from 'vs/base/common/event';
 import { INavService } from 'vs/workbench/services/nav/common/nav';
 import { IEditorInput, IResourceInput } from 'vs/platform/editor/common/editor';
@@ -32,8 +33,8 @@ export class NavService extends Disposable implements INavService {
 
 	private location: URI | undefined;
 
-	private _onDidNavigate = new Emitter<URI>();
-	public get onDidNavigate(): Event<URI> { return this._onDidNavigate.event; }
+	private _onDidNavigate = new Emitter<URI | undefined>();
+	public get onDidNavigate(): Event<URI | undefined> { return this._onDidNavigate.event; }
 
 	constructor(
 		@IWorkbenchEditorService private editorService: IWorkbenchEditorService,
@@ -59,6 +60,11 @@ export class NavService extends Disposable implements INavService {
 	}
 
 	private async doHandle(location: URI): Promise<void> {
+		// Extract the non-shareable URI from a shareable about.sourcegraph.com URL.
+		if (location.scheme === 'https' && location.authority === 'about.sourcegraph.com' && location.path.indexOf('/open-native') === 0) {
+			location = URI.parse(`${product.urlProtocol}:${decodeURIComponent(location.fragment)}`);
+		}
+
 		type HandledURI = {
 			repo?: string;
 			vcs?: 'git';
@@ -80,11 +86,7 @@ export class NavService extends Disposable implements INavService {
 		await this.extensionService.onReady(); // extensions register resource resolvers
 		await TPromise.timeout(1000); // HACK(sqs): wait for git extension to register resource resolver
 		const resource = URI.parse(`${query.vcs}+${query.repo}`);
-		const root = await this.resourceResolverService.resolveResource(resource);
-		if (root === resource) {
-			return;
-		}
-		await this.foldersWorkbenchService.addFoldersAsWorkspaceRootFolders([root]);
+		const [root] = await this.foldersWorkbenchService.addFoldersAsWorkspaceRootFolders([resource]);
 
 		// TODO(sqs): handle revision, need to avoid clobbering git state if != current revision
 		if (!query.path) {
@@ -166,6 +168,10 @@ export class NavService extends Disposable implements INavService {
 			const input = this.editorService.createInput(entry.input as (IEditorInput & IResourceInputType));
 			// TODO(sqs): support generating URLs to diff views, not just to their master resource
 			this.location = toResource(input, { filter: 'file', supportSideBySide: true });
+		} else {
+			this.location = undefined;
 		}
+
+		this._onDidNavigate.fire(this.location);
 	}
 }

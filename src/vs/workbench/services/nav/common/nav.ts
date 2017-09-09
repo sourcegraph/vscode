@@ -19,7 +19,7 @@ export interface INavService {
 	 * An event that is fired after the current location changes. The payload
 	 * is the URI of the new location.
 	 */
-	onDidNavigate: Event<URI>;
+	onDidNavigate: Event<URI | undefined>;
 
 	/**
 	 * Handles URIs referring to remote resources, of the form:
