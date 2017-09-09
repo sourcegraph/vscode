@@ -7,8 +7,6 @@
 
 import nls = require('vs/nls');
 import platform = require('vs/base/common/platform');
-import * as path from 'path';
-import * as querystring from 'querystring';
 import URI from 'vs/base/common/uri';
 import { Schemas } from 'vs/base/common/network';
 import errors = require('vs/base/common/errors');
@@ -22,7 +20,6 @@ import { IAction, Action } from 'vs/base/common/actions';
 import { IPartService } from 'vs/workbench/services/part/common/partService';
 import { AutoSaveConfiguration } from 'vs/platform/files/common/files';
 import { toResource } from 'vs/workbench/common/editor';
-import { isCommonCodeEditor } from 'vs/editor/common/editorCommon';
 import { IWorkbenchEditorService, IResourceInputType } from 'vs/workbench/services/editor/common/editorService';
 import { IEditorGroupService } from 'vs/workbench/services/group/common/groupService';
 import { IMessageService } from 'vs/platform/message/common/message';
@@ -45,9 +42,8 @@ import { Themable } from 'vs/workbench/common/theme';
 import { ipcRenderer as ipc, webFrame } from 'electron';
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
 import { IWorkspaceEditingService } from 'vs/workbench/services/workspace/common/workspaceEditing';
-import { parseSelection } from 'vs/base/common/urlRoutes';
 import { IResourceResolverService } from 'vs/platform/resourceResolver/common/resourceResolver';
-// import { CodeCommentsController } from 'vs/workbench/parts/codeComments/electron-browser/codeCommentsController';
+import { INavService } from 'vs/workbench/services/nav/common/nav';
 
 const TextInputActions: IAction[] = [
 	new Action('undo', nls.localize('undo', "Undo"), null, true, () => document.execCommand('undo') && TPromise.as(true)),
@@ -90,6 +86,7 @@ export class ElectronWindow extends Themable {
 		@ITelemetryService private telemetryService: ITelemetryService,
 		@IWorkspaceContextService private contextService: IWorkspaceContextService,
 		@IResourceResolverService private resourceResolverService: IResourceResolverService,
+		@INavService private navService: INavService,
 		@IWorkspaceEditingService private workspaceEditingService: IWorkspaceEditingService
 	) {
 		super(themeService);
@@ -397,72 +394,11 @@ export class ElectronWindow extends Themable {
 		});
 	}
 
-	/**
-	 * Handles URIs referring to remote resources, of the form:
-	 *
-	 *   code:open?
-	 *     repo=encodeURIComponent(cloneURL)&
-	 *     vcs=git&
-	 *     revision=encodeURIComponent(revision)&
-	 *     path=encodeURIComponent(path)&
-	 *     selection=1:2-3:4&selection=5:6-7-8&
-	 *     thread=123
-	 */
-	private async onHandleUris(uriStringsToHandle: string[]): Promise<void> {
+	private onHandleUris(uriStringsToHandle: string[]): TPromise<void> {
 		const urisToHandle = uriStringsToHandle.map(s => URI.parse(s))
 			.filter(uri => uri.path === 'open');
 
-		// TODO(sqs): handle when window is not multi-root
-
-		for (let uri of urisToHandle) {
-			type HandledURI = {
-				repo?: string;
-				vcs?: 'git';
-				revision?: string;
-				path?: string;
-				selection?: string | string[];
-				thread?: string;
-			};
-
-			// Without this, a %2B in the querystring will be decoded into a
-			// space. We want it to be decoded into a '+'.
-			if (uri.query && uri.query.indexOf('+') !== -1) {
-				uri = uri.with({ query: uri.query.replace(/\+/g, '%2B') });
-			}
-			const query = querystring.parse<HandledURI>(uri.query);
-			if (!query.repo) {
-				continue;
-			}
-			await this.extensionService.onReady(); // extensions register resource resolvers
-			await TPromise.timeout(1000); // HACK(sqs): wait for git extension to register resource resolver
-			const resource = URI.parse(`${query.vcs}+${query.repo}`);
-			const root = await this.resourceResolverService.resolveResource(resource);
-			if (root === resource) {
-				continue;
-			}
-			await this.workspaceEditingService.addRoots([root]);
-
-			// TODO(sqs): handle revision, need to avoid clobbering git state if != current revision
-			if (!query.path) {
-				continue;
-			}
-			const inputPath: IPath = { filePath: path.join(root.fsPath, query.path) };
-			if (query.selection) {
-				// TODO(sqs): handle multiple selections
-				const selection = parseSelection(types.isArray(query.selection) ? query.selection[0] : query.selection);
-				if (selection) {
-					inputPath.lineNumber = selection.startLineNumber;
-					inputPath.columnNumber = selection.startColumn;
-				}
-			}
-			const editor = await this.openResources(this.toInputs([inputPath], false), false);
-			const threadId = parseInt(query.thread, 10);
-			// TODO(nick): the returned editor is a TextFileEditor so isCommonCodeEditor is always false.
-			if (!isCommonCodeEditor(editor) || !threadId) {
-				continue;
-			}
-			// CodeCommentsController.get(editor).restoreViewState({ openThreadIds: [threadId] });
-		}
+		return TPromise.join(urisToHandle.map(uri => this.navService.handle(uri))) as TPromise<any>;
 	}
 
 	private toggleAutoSave(): void {

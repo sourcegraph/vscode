@@ -6,15 +6,18 @@
 
 import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
 
-export const INavService = createDecorator<INavService>('navService');
+export const INavBarService = createDecorator<INavBarService>('navBarService');
 
-export interface INavService {
+/**
+ * The navbar is displayed at the top of the window. It displays the application
+ * state and exposes navigation actions.
+ */
+export interface INavBarService {
 
 	_serviceBrand: any;
 
-	getLocation(): string;
-
-	getShareableLocation(): string;
-
+	/**
+	 * Focuses the navbar's location bar input.
+	 */
 	focusLocationBar(): void;
 }

@@ -67,7 +67,9 @@ import { IConfigurationResolverService } from 'vs/workbench/services/configurati
 import { ConfigurationResolverService } from 'vs/workbench/services/configurationResolver/node/configurationResolverService';
 import { IPanelService } from 'vs/workbench/services/panel/common/panelService';
 import { ITitleService } from 'vs/workbench/services/title/common/titleService';
-import { INavService } from 'vs/workbench/services/nav/common/navService';
+import { INavService } from 'vs/workbench/services/nav/common/nav';
+import { NavService } from 'vs/workbench/services/nav/electron-browser/navService';
+import { INavBarService } from 'vs/workbench/services/nav/common/navBar';
 import { WorkbenchMessageService } from 'vs/workbench/services/message/browser/messageService';
 import { IWorkbenchEditorService, IResourceInputType } from 'vs/workbench/services/editor/common/editorService';
 import { IQuickOpenService } from 'vs/platform/quickOpen/common/quickOpen';
@@ -625,11 +627,14 @@ export class Workbench implements IPartService {
 		// SCM Service
 		serviceCollection.set(ISCMService, new SyncDescriptor(SCMService));
 
+		// Nav Service
+		serviceCollection.set(INavService, new SyncDescriptor(NavService));
+
 		// Nav bar
 		this.navbarPart = this.instantiationService.createInstance(NavbarPart, Identifiers.NAVBAR_PART);
 		this.toDispose.push(this.navbarPart);
 		this.toShutdown.push(this.navbarPart);
-		serviceCollection.set(INavService, this.navbarPart);
+		serviceCollection.set(INavBarService, this.navbarPart);
 
 		// Text Model Resolver Service
 		serviceCollection.set(ITextModelService, new SyncDescriptor(TextModelResolverService));
