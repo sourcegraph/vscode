@@ -1,5 +1,5 @@
 /*---------------------------------------------------------------------------------------------
- *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Copyright (c) Sourcegraph. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
@@ -10,40 +10,29 @@ import nls = require('vs/nls');
 import errors = require('vs/base/common/errors');
 import { Builder, $ } from 'vs/base/browser/builder';
 import * as DOM from 'vs/base/browser/dom';
-import * as paths from 'vs/base/common/paths';
 import { Part } from 'vs/workbench/browser/part';
 import { RunOnceScheduler } from 'vs/base/common/async';
 import { IAction, Action } from 'vs/base/common/actions';
 import { prepareActions } from 'vs/workbench/browser/actions';
 import { EventType as BaseEventType } from 'vs/base/common/events';
-import { INavService } from 'vs/workbench/services/nav/common/navService';
-import { IWindowService, IWindowsService } from 'vs/platform/windows/common/windows';
-import { IContextMenuService, IContextViewService } from 'vs/platform/contextview/browser/contextView';
-import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
-import { IIntegrityService } from 'vs/platform/integrity/common/integrity';
-import { IEditorInput } from 'vs/platform/editor/common/editor';
-import { IWorkbenchEditorService, IResourceInputType } from 'vs/workbench/services/editor/common/editorService';
-import { IEditorGroupService } from 'vs/workbench/services/group/common/groupService';
+import { INavBarService } from 'vs/workbench/services/nav/common/navBar';
+import { INavService } from 'vs/workbench/services/nav/common/nav';
+import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
 import { IMessageService, Severity } from 'vs/platform/message/common/message';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { ResolvedKeybinding } from 'vs/base/common/keyCodes';
-import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 import { IHistoryService } from 'vs/workbench/services/history/common/history';
-import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { NAV_BAR_ACTIVE_BACKGROUND, NAV_BAR_ACTIVE_FOREGROUND, NAV_BAR_INACTIVE_FOREGROUND, NAV_BAR_INACTIVE_BACKGROUND, NAV_BAR_BORDER } from 'vs/workbench/common/theme';
-import { IPartService } from 'vs/workbench/services/part/common/partService';
 import { NavigateBackwardsAction, NavigateForwardAction } from 'vs/workbench/browser/parts/editor/editorActions';
 import { ToolBar } from 'vs/base/browser/ui/toolbar/toolbar';
 import { IActionItem, ActionItem, ActionsOrientation } from 'vs/base/browser/ui/actionbar/actionbar';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { CopyLocationAction, ShareLocationAction, LocationHistoryActionItem } from 'vs/workbench/browser/parts/navbar/navbarActions';
 import { LocationBarInput } from 'vs/workbench/browser/parts/navbar/locationBarInput';
-import { toResource } from 'vs/workbench/common/editor';
-import { ISCMService } from 'vs/workbench/services/scm/common/scm';
 
-export class NavbarPart extends Part implements INavService {
+export class NavbarPart extends Part implements INavBarService {
 
 	public _serviceBrand: any;
 
@@ -67,23 +56,13 @@ export class NavbarPart extends Part implements INavService {
 	constructor(
 		id: string,
 		@IContextMenuService private contextMenuService: IContextMenuService,
-		@IContextViewService protected contextViewService: IContextViewService,
-		@IWindowService private windowService: IWindowService,
-		@IInstantiationService protected instantiationService: IInstantiationService,
-		@IConfigurationService private configurationService: IConfigurationService,
-		@IWindowsService private windowsService: IWindowsService,
-		@IWorkbenchEditorService private editorService: IWorkbenchEditorService,
-		@IEditorGroupService private editorGroupService: IEditorGroupService,
+		@IInstantiationService private instantiationService: IInstantiationService,
 		@IHistoryService private historyService: IHistoryService,
-		@IKeybindingService protected keybindingService: IKeybindingService,
-		@IIntegrityService private integrityService: IIntegrityService,
-		@IEnvironmentService private environmentService: IEnvironmentService,
-		@ISCMService private scmService: ISCMService,
-		@IWorkspaceContextService private contextService: IWorkspaceContextService,
+		@IKeybindingService private keybindingService: IKeybindingService,
 		@IThemeService themeService: IThemeService,
-		@ITelemetryService protected telemetryService: ITelemetryService,
-		@IMessageService protected messageService: IMessageService,
-		@IPartService private partService: IPartService
+		@ITelemetryService private telemetryService: ITelemetryService,
+		@IMessageService private messageService: IMessageService,
+		@INavService private navService: INavService,
 	) {
 		super(id, { hasTitle: false }, themeService);
 
@@ -106,7 +85,7 @@ export class NavbarPart extends Part implements INavService {
 		this._register(DOM.addDisposableListener(window, DOM.EventType.BLUR, () => this.onBlur()));
 		this._register(DOM.addDisposableListener(window, DOM.EventType.FOCUS, () => this.onFocus()));
 
-		this._register(this.historyService.onDidChange(this.onHistoryChange, this));
+		this._register(this.navService.onDidNavigate(this.onDidNavigate, this));
 		this.updateNavigationEnablement();
 	}
 
@@ -144,45 +123,6 @@ export class NavbarPart extends Part implements INavService {
 		this.refresh(true /* instant */);
 
 		return this.navContainer;
-	}
-
-	public getLocation(): string {
-		return this.locationBarInput.value.trim();
-	}
-
-	public getShareableLocation(): string {
-		const { stack, index } = this.historyService.getStack();
-		const entry = stack[index];
-
-		// TODO(sqs): support diffs
-		const input = this.editorService.createInput(entry.input as (IEditorInput & IResourceInputType));
-		const resource = toResource(input, { filter: 'file', supportSideBySide: true });
-		if (!resource) {
-			throw new Error(nls.localize('noResource', "Unable to determine the file or resource."));
-		}
-
-		const repository = this.scmService.getRepositoryForResource(resource);
-		if (!repository || !repository.provider.remoteResources || repository.provider.remoteResources.length === 0) {
-			throw new Error(nls.localize('noRepository', "Unable to determine the repository, which is necessary to make a shareable URL."));
-		}
-
-		let selection: string | undefined = undefined;
-		if (entry.selection) {
-			selection = `${entry.selection.startLineNumber}:${entry.selection.startColumn}`;
-			if (entry.selection.endLineNumber) {
-				selection += `-${entry.selection.endLineNumber}:${entry.selection.endColumn}`;
-			}
-		}
-
-		const query = [
-			`repo=${encodeURIComponent(repository.provider.remoteResources[0].toString())}`,
-			'vcs=git',
-			repository.provider.revision ? `revision=${encodeURIComponent(repository.provider.revision.specifier)}` : undefined,
-			`path=${encodeURIComponent(paths.relative(repository.provider.rootFolder.fsPath, resource.fsPath))}`,
-			selection ? `selection=${selection}` : undefined,
-		].filter(v => !!v);
-		// const uri = URI.from({ scheme: product.urlProtocol, path: 'open', query })
-		return 'https://about.sourcegraph.com/open-native#open?' + query.join('&');
 	}
 
 	public focusLocationBar(): void {
@@ -301,7 +241,7 @@ export class NavbarPart extends Part implements INavService {
 		}
 	}
 
-	protected actionItemProvider(action: Action): IActionItem {
+	private actionItemProvider(action: Action): IActionItem {
 		return this.instantiationService.createInstance(LocationHistoryActionItem, action);
 	}
 
@@ -318,7 +258,7 @@ export class NavbarPart extends Part implements INavService {
 		return null;
 	}
 
-	private onHistoryChange(): void {
+	private onDidNavigate(): void {
 		this.updateNavigationEnablement();
 		this.updateLocationInput();
 	}
@@ -338,21 +278,11 @@ export class NavbarPart extends Part implements INavService {
 			return;
 		}
 
-		const { stack, index } = this.historyService.getStack();
-		const entry = stack[index];
-
-		let value: string | undefined = undefined;
-		if (entry) {
-			const input = this.editorService.createInput(entry.input as (IEditorInput & IResourceInputType));
-			// TODO(sqs): support generating URLs to diff views, not just to their master resource
-			const resource = toResource(input, { filter: 'file', supportSideBySide: true });
-			if (!resource) {
-				this.locationBarInput.value = '';
-				return;
-			}
-			value = resource.toString();
+		const location = this.navService.getLocation();
+		if (location) {
+			this.locationBarInput.value = location.toString(true);
+		} else {
+			this.locationBarInput.value = '';
 		}
-
-		this.locationBarInput.value = value || '';
 	}
 }

@@ -179,6 +179,10 @@
 			"project": "vscode-workbench"
 		},
 		{
+			"name": "vs/workbench/services/folders",
+			"project": "vscode-workbench"
+		},
+		{
 			"name": "vs/workbench/services/keybinding",
 			"project": "vscode-workbench"
 		},
@@ -188,6 +192,10 @@
 		},
 		{
 			"name": "vs/workbench/services/mode",
+			"project": "vscode-workbench"
+		},
+		{
+			"name": "vs/workbench/services/nav",
 			"project": "vscode-workbench"
 		},
 		{

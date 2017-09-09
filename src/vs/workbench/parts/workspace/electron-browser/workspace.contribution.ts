@@ -9,18 +9,13 @@ import 'vs/css!./media/workspace';
 import { ViewletRegistry, Extensions as ViewletExtensions, ViewletDescriptor } from 'vs/workbench/browser/viewlet';
 import nls = require('vs/nls');
 import { SyncActionDescriptor } from 'vs/platform/actions/common/actions';
-import { registerSingleton } from 'vs/platform/instantiation/common/extensions';
 import { Registry } from 'vs/platform/registry/common/platform';
 import { IConfigurationRegistry, Extensions as ConfigurationExtensions } from 'vs/platform/configuration/common/configurationRegistry';
 import { IWorkbenchActionRegistry, Extensions as ActionExtensions } from 'vs/workbench/common/actions';
-import { VIEWLET_ID, IFoldersWorkbenchService } from 'vs/workbench/parts/workspace/common/workspace';
+import { VIEWLET_ID } from 'vs/workbench/parts/workspace/common/workspace';
 import { OpenWorkspaceViewletAction, AddRootFolderResourceAction } from 'vs/workbench/parts/workspace/browser/folderActions';
 import { IKeybindings } from 'vs/platform/keybinding/common/keybindingsRegistry';
 import { KeyMod, KeyCode } from 'vs/base/common/keyCodes';
-import { FoldersWorkbenchService } from 'vs/workbench/parts/workspace/node/foldersWorkbenchService';
-
-// Singletons
-registerSingleton(IFoldersWorkbenchService, FoldersWorkbenchService);
 
 // Register Viewlet
 Registry.as<ViewletRegistry>(ViewletExtensions.Viewlets).registerViewlet(new ViewletDescriptor(

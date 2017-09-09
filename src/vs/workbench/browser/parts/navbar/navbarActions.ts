@@ -20,7 +20,8 @@ import { NavigateBackwardsAction, NavigateForwardAction, ClearEditorHistoryActio
 import { IHistoryService, IStackEntry } from 'vs/workbench/services/history/common/history';
 import { IEditorInput } from 'vs/platform/editor/common/editor';
 import { IWorkbenchEditorService, IResourceInputType } from 'vs/workbench/services/editor/common/editorService';
-import { INavService } from 'vs/workbench/services/nav/common/navService';
+import { INavBarService } from 'vs/workbench/services/nav/common/navBar';
+import { INavService } from 'vs/workbench/services/nav/common/nav';
 import { IClipboardService } from 'vs/platform/clipboard/common/clipboardService';
 
 export class FocusLocationBarAction extends Action {
@@ -31,13 +32,13 @@ export class FocusLocationBarAction extends Action {
 	constructor(
 		id: string,
 		label: string,
-		@INavService private navService: INavService,
+		@INavBarService private navBarService: INavBarService,
 	) {
 		super(id, label);
 	}
 
 	public run(): TPromise<any> {
-		this.navService.focusLocationBar();
+		this.navBarService.focusLocationBar();
 
 		return TPromise.as(null);
 	}
@@ -58,7 +59,10 @@ export class CopyLocationAction extends Action {
 	}
 
 	public run(): TPromise<any> {
-		this.clipboardService.writeText(this.navService.getLocation());
+		const location = this.navService.getLocation();
+		if (location) {
+			this.clipboardService.writeText(location.toString(true));
+		}
 
 		return TPromise.as(null);
 	}
@@ -79,7 +83,8 @@ export class ShareLocationAction extends Action {
 	}
 
 	public run(): TPromise<any> {
-		this.clipboardService.writeText(this.navService.getShareableLocation());
+		const location = this.navService.getShareableLocation();
+		this.clipboardService.writeText(location);
 
 		return TPromise.as(null);
 	}

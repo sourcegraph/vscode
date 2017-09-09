@@ -12,7 +12,7 @@ import { TPromise } from 'vs/base/common/winjs.base';
 import { Action } from 'vs/base/common/actions';
 import { any } from 'vs/base/common/event';
 import { IDisposable, dispose } from 'vs/base/common/lifecycle';
-import { IFolder } from 'vs/workbench/parts/workspace/common/workspace';
+import { IFolder } from 'vs/workbench/services/folders/common/folders';
 import { ISCMService, ISCMRepository, ISCMRevision, setSCMProviderRevision } from 'vs/workbench/services/scm/common/scm';
 import { ICommandService } from 'vs/platform/commands/common/commands';
 

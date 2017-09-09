@@ -22,7 +22,8 @@ import { append, $, addStandardDisposableListener, EventType, addClass, removeCl
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { IExtensionService } from 'vs/platform/extensions/common/extensions';
-import { IWorkspaceViewlet, VIEWLET_ID, IFoldersWorkbenchService } from '../common/workspace';
+import { IFoldersWorkbenchService } from 'vs/workbench/services/folders/common/folders';
+import { VIEWLET_ID, IWorkspaceViewlet } from 'vs/workbench/parts/workspace/common/workspace';
 import {
 	ClearWorkspaceViewletInputAction, AddLocalWorkspaceFolderAction
 } from 'vs/workbench/parts/workspace/browser/folderActions';
