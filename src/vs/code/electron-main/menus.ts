@@ -167,7 +167,7 @@ export class CodeMenu {
 
 		let newNavbarVisible = config && config.workbench && config.workbench.navBar && config.workbench.navBar.visible;
 		if (typeof newNavbarVisible !== 'boolean') {
-			newNavbarVisible = true;
+			newNavbarVisible = false;
 		}
 		if (newNavbarVisible !== this.currentNavbarVisible) {
 			this.currentNavbarVisible = newNavbarVisible;
