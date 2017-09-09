@@ -63,6 +63,7 @@ import { IOutputService } from 'vs/workbench/parts/output/common/output';
 import { getOutOfWorkspaceEditorResources } from 'vs/workbench/parts/search/common/search';
 import { PreferencesEditor } from 'vs/workbench/parts/preferences/browser/preferencesEditor';
 import { SimpleFileResourceDragAndDrop } from 'vs/base/parts/tree/browser/treeDnd';
+import { CheckboxInputWidget } from 'vs/workbench/parts/search/browser/checkboxWidget';
 
 export class SearchViewlet extends Viewlet {
 
@@ -189,6 +190,20 @@ export class SearchViewlet extends Viewlet {
 						this.toggleQueryDetails();
 					}
 				});
+
+			//dependencies includes list
+			builder.div({ 'class': 'checkbox-include' }, (builder) => {
+				const label = nls.localize('searchScope.includesExternalDependencies', "include external dependencies");
+				const notFoundMessage = nls.localize('searchScope.filterbyDependencies', "&#x26a0; filter by dependencies is unsupported for this workspace");
+				new CheckboxInputWidget(builder.getContainer(), this.telemetryService, { id: 'external-dependencies', label: label, notFoundMessage: notFoundMessage });
+			});
+
+			//dependents includes list
+			builder.div({ 'class': 'checkbox-include' }, (builder) => {
+				const label = nls.localize('searchScope.includesExternalDependents', "include external dependents");
+				const notFoundMessage = nls.localize('searchScope.filterbyDependents', "&#x26a0; filter by dependents is unsupported for this workspace");
+				new CheckboxInputWidget(builder.getContainer(), this.telemetryService, { id: 'external-dependents', label: label, notFoundMessage: notFoundMessage });
+			});
 
 			//folder includes list
 			builder.div({ 'class': 'file-types' }, (builder) => {
@@ -1010,8 +1025,8 @@ export class SearchViewlet extends Viewlet {
 	}
 
 	/**
-	 * Subclasses can override this modify the query options before they are used.
-	 */
+	* Subclasses can override this modify the query options before they are used.
+	*/
 	protected onQueryChangedCreate(contentPattern: IPatternInfo, folderResources: URI[], options: IQueryOptions): void { }
 
 	private onQueryTriggered(query: ISearchQuery, excludePatternText: string, includePatternText: string): void {
@@ -1491,7 +1506,7 @@ registerThemingParticipant((theme: ITheme, collector: ICssStyleCollector) => {
 	const activeContrastBorderColor = theme.getColor(activeContrastBorder);
 	if (activeContrastBorderColor) {
 		collector.addRule(`
-			.monaco-workbench .search-viewlet .findInFileMatch { border: 1px dashed ${activeContrastBorderColor}; }
+		.monaco-workbench .search-viewlet .findInFileMatch { border: 1px dashed ${activeContrastBorderColor}; }
 		`);
 	}
 });
