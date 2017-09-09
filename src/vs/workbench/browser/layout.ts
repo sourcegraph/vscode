@@ -449,6 +449,15 @@ export class WorkbenchLayout implements IVerticalSashLayoutProvider, IHorizontal
 			this.titlebar.getContainer().show();
 		}
 
+		// Nav Bar Part
+		this.navbar.getContainer().size(null, this.navbarHeight);
+		this.navbar.getContainer().position(this.titlebarHeight, 0, null, 0);
+		if (isNavbarHidden) {
+			this.navbar.getContainer().hide();
+		} else {
+			this.navbar.getContainer().show();
+		}
+
 		// Editor Part and Panel part
 		this.editor.getContainer().size(editorSize.width, editorSize.height);
 		this.panel.getContainer().size(panelDimension.width, panelDimension.height);

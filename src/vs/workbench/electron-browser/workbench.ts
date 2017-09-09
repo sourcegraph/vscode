@@ -813,6 +813,10 @@ export class Workbench implements IPartService {
 			offset = 22 / browser.getZoomFactor(); // adjust the position based on title bar size and zoom factor
 		}
 
+		if (this.isVisible(Parts.NAVBAR_PART)) {
+			offset += 30;
+		}
+
 		return offset;
 	}
 
