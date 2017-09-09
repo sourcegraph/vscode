@@ -26,7 +26,7 @@ import { IMessageService, Severity } from 'vs/platform/message/common/message';
 import { KeyMod } from 'vs/base/common/keyCodes';
 import { IWorkspacesService } from 'vs/platform/workspaces/common/workspaces';
 import { IResourceResolverService } from 'vs/platform/resourceResolver/common/resourceResolver';
-import { IFolder, IFoldersWorkbenchService, ISearchStats, ISearchQuery } from 'vs/workbench/parts/workspace/common/workspace';
+import { IFolder, IFoldersWorkbenchService, ISearchStats, ISearchQuery } from 'vs/workbench/services/folders/common/folders';
 import { IProgressService2, ProgressLocation } from 'vs/platform/progress/common/progress';
 import { AddAndExploreWorkspaceFolderAction } from 'vs/workbench/parts/workspace/browser/folderActions';
 

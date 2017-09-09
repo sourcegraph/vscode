@@ -20,7 +20,7 @@ import { append, $, toggleClass } from 'vs/base/browser/dom';
 import { PagedList } from 'vs/base/browser/ui/list/listPaging';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { Delegate, Renderer } from 'vs/workbench/parts/workspace/browser/foldersList';
-import { IFolder, IFoldersWorkbenchService, WorkspaceFolderState } from 'vs/workbench/parts/workspace/common/workspace';
+import { IFolder, IFoldersWorkbenchService, WorkspaceFolderState } from 'vs/workbench/services/folders/common/folders';
 import { IFolderAction, AddWorkspaceFolderAction, RemoveWorkspaceFoldersAction, ExploreWorkspaceFolderAction, AddAndExploreWorkspaceFolderAction } from 'vs/workbench/parts/workspace/browser/folderActions';
 import { IListService } from 'vs/platform/list/browser/listService';
 import { IThemeService } from 'vs/platform/theme/common/themeService';

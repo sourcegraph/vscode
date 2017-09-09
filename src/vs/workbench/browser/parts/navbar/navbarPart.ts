@@ -17,29 +17,20 @@ import { prepareActions } from 'vs/workbench/browser/actions';
 import { EventType as BaseEventType } from 'vs/base/common/events';
 import { INavBarService } from 'vs/workbench/services/nav/common/navBar';
 import { INavService } from 'vs/workbench/services/nav/common/nav';
-import { IWindowService, IWindowsService } from 'vs/platform/windows/common/windows';
-import { IContextMenuService, IContextViewService } from 'vs/platform/contextview/browser/contextView';
-import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
-import { IIntegrityService } from 'vs/platform/integrity/common/integrity';
-import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
-import { IEditorGroupService } from 'vs/workbench/services/group/common/groupService';
+import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
 import { IMessageService, Severity } from 'vs/platform/message/common/message';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { ResolvedKeybinding } from 'vs/base/common/keyCodes';
-import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 import { IHistoryService } from 'vs/workbench/services/history/common/history';
-import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { NAV_BAR_ACTIVE_BACKGROUND, NAV_BAR_ACTIVE_FOREGROUND, NAV_BAR_INACTIVE_FOREGROUND, NAV_BAR_INACTIVE_BACKGROUND, NAV_BAR_BORDER } from 'vs/workbench/common/theme';
-import { IPartService } from 'vs/workbench/services/part/common/partService';
 import { NavigateBackwardsAction, NavigateForwardAction } from 'vs/workbench/browser/parts/editor/editorActions';
 import { ToolBar } from 'vs/base/browser/ui/toolbar/toolbar';
 import { IActionItem, ActionItem, ActionsOrientation } from 'vs/base/browser/ui/actionbar/actionbar';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { CopyLocationAction, ShareLocationAction, LocationHistoryActionItem } from 'vs/workbench/browser/parts/navbar/navbarActions';
 import { LocationBarInput } from 'vs/workbench/browser/parts/navbar/locationBarInput';
-import { ISCMService } from 'vs/workbench/services/scm/common/scm';
 
 export class NavbarPart extends Part implements INavBarService {
 
@@ -65,24 +56,13 @@ export class NavbarPart extends Part implements INavBarService {
 	constructor(
 		id: string,
 		@IContextMenuService private contextMenuService: IContextMenuService,
-		@IContextViewService private contextViewService: IContextViewService,
-		@IWindowService private windowService: IWindowService,
 		@IInstantiationService private instantiationService: IInstantiationService,
-		@IConfigurationService private configurationService: IConfigurationService,
-		@IWindowsService private windowsService: IWindowsService,
-		@IWorkbenchEditorService private editorService: IWorkbenchEditorService,
-		@IEditorGroupService private editorGroupService: IEditorGroupService,
 		@IHistoryService private historyService: IHistoryService,
 		@IKeybindingService private keybindingService: IKeybindingService,
-		@IIntegrityService private integrityService: IIntegrityService,
-		@IEnvironmentService private environmentService: IEnvironmentService,
-		@ISCMService private scmService: ISCMService,
-		@IWorkspaceContextService private contextService: IWorkspaceContextService,
 		@IThemeService themeService: IThemeService,
 		@ITelemetryService private telemetryService: ITelemetryService,
 		@IMessageService private messageService: IMessageService,
 		@INavService private navService: INavService,
-		@IPartService private partService: IPartService
 	) {
 		super(id, { hasTitle: false }, themeService);
 

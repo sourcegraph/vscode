@@ -16,7 +16,7 @@ import { IDelegate } from 'vs/base/browser/ui/list/list';
 import { IPagedRenderer } from 'vs/base/browser/ui/list/listPaging';
 import { once } from 'vs/base/common/event';
 import { domEvent } from 'vs/base/browser/event';
-import { IFolder, WorkspaceFolderState } from 'vs/workbench/parts/workspace/common/workspace';
+import { IFolder, WorkspaceFolderState } from 'vs/workbench/services/folders/common/folders';
 import { AddWorkspaceFolderAction, RemoveWorkspaceFolderAction, ManageWorkspaceFolderAction } from 'vs/workbench/parts/workspace/browser/folderActions';
 import { FolderSCMRevisionLabelAction } from 'vs/workbench/parts/workspace/browser/scmFolderActions';
 import { EventType } from 'vs/base/common/events';

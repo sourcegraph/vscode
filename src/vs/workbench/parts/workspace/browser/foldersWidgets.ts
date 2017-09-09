@@ -8,7 +8,7 @@
 import 'vs/css!./media/foldersWidgets';
 import { isUndefinedOrNull } from 'vs/base/common/types';
 import { IDisposable, dispose } from 'vs/base/common/lifecycle';
-import { IFolder, IFoldersWorkbenchService } from '../common/workspace';
+import { IFolder, IFoldersWorkbenchService } from 'vs/workbench/services/folders/common/folders';
 import { append, $, addClass, toggleClass } from 'vs/base/browser/dom';
 import * as platform from 'vs/base/common/platform';
 import * as paths from 'vs/base/common/paths';

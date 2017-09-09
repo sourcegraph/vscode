@@ -112,6 +112,8 @@ import { ModalPart } from 'vs/workbench/parts/modal/modalPart';
 import { SourcegraphTelemetryService } from 'vs/platform/telemetry/common/sourcegraphTelemetryService';
 import { IFolderCatalogService } from 'vs/platform/folders/common/folderCatalog';
 import { FolderCatalogService } from 'vs/workbench/services/folders/common/folderCatalogService';
+import { IFoldersWorkbenchService } from 'vs/workbench/services/folders/common/folders';
+import { FoldersWorkbenchService } from 'vs/workbench/services/folders/node/foldersWorkbenchService';
 
 export const MessagesVisibleContext = new RawContextKey<boolean>('globalMessageVisible', false);
 export const EditorsVisibleContext = new RawContextKey<boolean>('editorIsOpen', false);
@@ -611,8 +613,11 @@ export class Workbench implements IPartService {
 		serviceCollection.set(IFileService, fileService);
 		this.toDispose.push(fileService.onFileChanges(e => this.configurationService.handleWorkspaceFileEvents(e)));
 
-		// Folder Search Service
+		// Folder Catalog Service
 		serviceCollection.set(IFolderCatalogService, new SyncDescriptor(FolderCatalogService));
+
+		// Folders Service
+		serviceCollection.set(IFoldersWorkbenchService, new SyncDescriptor(FoldersWorkbenchService));
 
 		// History
 		serviceCollection.set(IHistoryService, new SyncDescriptor(HistoryService));
@@ -626,15 +631,6 @@ export class Workbench implements IPartService {
 
 		// SCM Service
 		serviceCollection.set(ISCMService, new SyncDescriptor(SCMService));
-
-		// Nav Service
-		serviceCollection.set(INavService, new SyncDescriptor(NavService));
-
-		// Nav bar
-		this.navbarPart = this.instantiationService.createInstance(NavbarPart, Identifiers.NAVBAR_PART);
-		this.toDispose.push(this.navbarPart);
-		this.toShutdown.push(this.navbarPart);
-		serviceCollection.set(INavBarService, this.navbarPart);
 
 		// Text Model Resolver Service
 		serviceCollection.set(ITextModelService, new SyncDescriptor(TextModelResolverService));
@@ -668,6 +664,15 @@ export class Workbench implements IPartService {
 		this.toDispose.push(this.quickOpen);
 		this.toShutdown.push(this.quickOpen);
 		serviceCollection.set(IQuickOpenService, this.quickOpen);
+
+		// Nav Service
+		serviceCollection.set(INavService, new SyncDescriptor(NavService));
+
+		// Nav bar
+		this.navbarPart = this.instantiationService.createInstance(NavbarPart, Identifiers.NAVBAR_PART);
+		this.toDispose.push(this.navbarPart);
+		this.toShutdown.push(this.navbarPart);
+		serviceCollection.set(INavBarService, this.navbarPart);
 
 		// Contributed services
 		const contributedServices = getServices();

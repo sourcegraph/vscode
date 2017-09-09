@@ -13,21 +13,13 @@ import types = require('vs/base/common/types');
 import { Disposable } from 'vs/base/common/lifecycle';
 import Event, { Emitter } from 'vs/base/common/event';
 import { INavService } from 'vs/workbench/services/nav/common/nav';
-import { IWindowService, IWindowsService } from 'vs/platform/windows/common/windows';
-import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { IEditorInput, IResourceInput } from 'vs/platform/editor/common/editor';
 import { IWorkbenchEditorService, IResourceInputType } from 'vs/workbench/services/editor/common/editorService';
-import { IEditorGroupService } from 'vs/workbench/services/group/common/groupService';
-import { IMessageService } from 'vs/platform/message/common/message';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IResourceResolverService } from 'vs/platform/resourceResolver/common/resourceResolver';
-// tslint:disable-next-line:import-patterns
-import { IFoldersWorkbenchService } from 'vs/workbench/parts/workspace/common/workspace';
+import { IFoldersWorkbenchService } from 'vs/workbench/services/folders/common/folders';
 import { IExtensionService } from 'vs/platform/extensions/common/extensions';
-import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 import { IHistoryService } from 'vs/workbench/services/history/common/history';
-import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
-import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { toResource } from 'vs/workbench/common/editor';
 import { ISCMService } from 'vs/workbench/services/scm/common/scm';
 import * as querystring from 'querystring';
@@ -44,19 +36,10 @@ export class NavService extends Disposable implements INavService {
 	public get onDidNavigate(): Event<URI> { return this._onDidNavigate.event; }
 
 	constructor(
-		id: string,
-		@IWindowService private windowService: IWindowService,
-		@IInstantiationService private instantiationService: IInstantiationService,
-		@IConfigurationService private configurationService: IConfigurationService,
-		@IWindowsService private windowsService: IWindowsService,
 		@IWorkbenchEditorService private editorService: IWorkbenchEditorService,
-		@IEditorGroupService private editorGroupService: IEditorGroupService,
 		@IHistoryService private historyService: IHistoryService,
-		@IEnvironmentService private environmentService: IEnvironmentService,
 		@ISCMService private scmService: ISCMService,
-		@IWorkspaceContextService private contextService: IWorkspaceContextService,
 		@ITelemetryService private telemetryService: ITelemetryService,
-		@IMessageService private messageService: IMessageService,
 		@IExtensionService private extensionService: IExtensionService,
 		@IResourceResolverService private resourceResolverService: IResourceResolverService,
 		@IFoldersWorkbenchService private foldersWorkbenchService: IFoldersWorkbenchService,
@@ -71,6 +54,7 @@ export class NavService extends Disposable implements INavService {
 	}
 
 	public handle(location: URI): TPromise<void> {
+		// TODO(sqs): telemetry
 		return TPromise.wrap(this.doHandle(location));
 	}
 
