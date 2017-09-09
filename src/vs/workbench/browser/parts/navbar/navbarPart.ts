@@ -346,6 +346,10 @@ export class NavbarPart extends Part implements INavService {
 			const input = this.editorService.createInput(entry.input as (IEditorInput & IResourceInputType));
 			// TODO(sqs): support generating URLs to diff views, not just to their master resource
 			const resource = toResource(input, { filter: 'file', supportSideBySide: true });
+			if (!resource) {
+				this.locationBarInput.value = '';
+				return;
+			}
 			value = resource.toString();
 		}
 
