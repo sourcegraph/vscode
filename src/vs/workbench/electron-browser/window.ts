@@ -28,7 +28,7 @@ import { IEditorGroupService } from 'vs/workbench/services/group/common/groupSer
 import { IMessageService } from 'vs/platform/message/common/message';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IWorkspaceConfigurationService } from 'vs/workbench/services/configuration/common/configuration';
-import { IWindowsService, IWindowService, IWindowSettings, IPath, IOpenFileRequest, IWindowConfiguration, IWindowsConfiguration, IAddFoldersRequest } from 'vs/platform/windows/common/windows';
+import { IWindowsService, IWindowService, IWindowSettings, IPath, IOpenFileRequest, IWindowsConfiguration, IAddFoldersRequest } from 'vs/platform/windows/common/windows';
 import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
@@ -327,26 +327,6 @@ export class ElectronWindow extends Themable {
 	}
 
 	private onOpenFiles(request: IOpenFileRequest): void {
-		if (request.filesToOpen.length > 0) {
-			// Check to see if the URI for this resource has a mapping a local
-			// repo stored. If so, open that file locally.
-			//
-			// TODO(sqs): repo mappings will be replaced with a service that does best-effort mapping
-			const repoMappings: { [key: string]: string } = this.configurationService.getConfiguration('repo')['mappings'] || {};
-			for (let f of request.filesToOpen) {
-				const fileToOpen = f as IWindowConfiguration;
-				const folder = URI.parse(fileToOpen.folderPath).with({ query: '' }).toString();
-				const fileURI = URI.parse(fileToOpen.filePath);
-				const file = fileURI.with({ query: '' }).toString().replace(folder, '');
-				const uri = folder.replace('repo://', '');
-				if (repoMappings[uri]) {
-					const fsPath = repoMappings[uri];
-					fileToOpen.filePath = `file://${path.join(fsPath, file)}`;
-					fileToOpen.folderPath = `file://${fsPath}`;
-				}
-			}
-		}
-
 		let inputs: IResourceInputType[] = [];
 		let diffMode = (request.filesToDiff.length === 2);
 
