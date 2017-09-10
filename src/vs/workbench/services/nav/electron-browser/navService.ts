@@ -24,8 +24,10 @@ import { IHistoryService } from 'vs/workbench/services/history/common/history';
 import { toResource } from 'vs/workbench/common/editor';
 import { ISCMService } from 'vs/workbench/services/scm/common/scm';
 import * as querystring from 'querystring';
-import { parseSelection } from 'vs/base/common/urlRoutes';
+import { parseSelection, formatSelection } from 'vs/base/common/urlRoutes';
 import { isCommonCodeEditor } from 'vs/editor/common/editorCommon';
+import { getCodeEditor } from 'vs/editor/common/services/codeEditorService';
+import { ISelection } from 'vs/editor/common/core/selection';
 
 export class NavService extends Disposable implements INavService {
 
@@ -98,20 +100,44 @@ export class NavService extends Disposable implements INavService {
 			resource: URI.file(paths.join(root.fsPath, query.path)),
 			options: { pinned: true },
 		};
+
+		let selections: ISelection[];
 		if (query.selection) {
-			// TODO(sqs): handle multiple selections
-			const selection = parseSelection(types.isArray(query.selection) ? query.selection[0] : query.selection);
-			if (selection) {
+			let selectionStrings: string[];
+			if (types.isArray(query.selection)) {
+				selectionStrings = query.selection;
+			} else {
+				selectionStrings = query.selection.split(',');
+			}
+
+			const ranges = selectionStrings.filter(s => !!s).map(parseSelection);
+			if (ranges.length) {
+				// Immediately open the first selection (after openEditor resolves, we'll
+				// set the other selections if there's more than 1).
 				input.options.selection = {
-					startLineNumber: selection.startLineNumber,
-					startColumn: selection.startColumn,
-					endLineNumber: selection.endLineNumber,
-					endColumn: selection.endColumn,
+					startLineNumber: ranges[0].startLineNumber,
+					startColumn: ranges[0].startColumn,
+					endLineNumber: ranges[0].endLineNumber,
+					endColumn: ranges[0].endColumn,
 				};
 			}
+
+			selections = ranges.map(sel => ({
+				selectionStartLineNumber: sel.startLineNumber,
+				selectionStartColumn: sel.startColumn,
+				positionLineNumber: sel.endLineNumber,
+				positionColumn: sel.endColumn,
+			} as ISelection));
 		}
 
 		const editor = await this.editorService.openEditor(input);
+
+		if (selections.length > 1) {
+			const control = getCodeEditor(editor);
+			if (control) {
+				control.setSelections(selections);
+			}
+		}
 
 		const threadId = parseInt(query.thread, 10);
 		// TODO(nick): the returned editor is a TextFileEditor so isCommonCodeEditor is always false.
@@ -141,14 +167,13 @@ export class NavService extends Disposable implements INavService {
 			throw new Error(nls.localize('noRepository', "Unable to determine the repository, which is necessary to make a shareable URL."));
 		}
 
+		// Get the selection directly from the editor because the history service only records
+		// positions, not selections.
 		let selection: string | undefined = undefined;
-		if (entry.selection) {
-			selection = `${entry.selection.startLineNumber}:${entry.selection.startColumn}`;
-			if (entry.selection.endLineNumber) {
-				selection += `-${entry.selection.endLineNumber}:${entry.selection.endColumn}`;
-			}
+		const control = getCodeEditor(this.editorService.getActiveEditor());
+		if (control) {
+			selection = control.getSelections().map(formatSelection).filter(s => !!s).join(',');
 		}
-
 		const query = [
 			`repo=${encodeURIComponent(repository.provider.remoteResources[0].toString())}`,
 			'vcs=git',
