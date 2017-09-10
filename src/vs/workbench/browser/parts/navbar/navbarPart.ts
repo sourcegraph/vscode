@@ -27,9 +27,10 @@ import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { NAV_BAR_ACTIVE_BACKGROUND, NAV_BAR_ACTIVE_FOREGROUND, NAV_BAR_INACTIVE_FOREGROUND, NAV_BAR_INACTIVE_BACKGROUND, NAV_BAR_BORDER } from 'vs/workbench/common/theme';
 import { NavigateBackwardsAction, NavigateForwardAction } from 'vs/workbench/browser/parts/editor/editorActions';
 import { ToolBar } from 'vs/base/browser/ui/toolbar/toolbar';
-import { IActionItem, ActionItem, ActionsOrientation } from 'vs/base/browser/ui/actionbar/actionbar';
+import { IActionItem, ActionItem, ActionsOrientation, Separator } from 'vs/base/browser/ui/actionbar/actionbar';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { CopyLocationAction, ShareLocationAction, LocationHistoryActionItem } from 'vs/workbench/browser/parts/navbar/navbarActions';
+import { HideNavbarAction } from 'vs/workbench/browser/actions/toggleNavbarVisibility';
 import { LocationBarInput } from 'vs/workbench/browser/parts/navbar/locationBarInput';
 
 export class NavbarPart extends Part implements INavBarService {
@@ -40,6 +41,7 @@ export class NavbarPart extends Part implements INavBarService {
 	private navigateForwardAction: NavigateForwardAction;
 	private copyLocationAction: CopyLocationAction;
 	private shareLocationAction: ShareLocationAction;
+	private hideNavbarAction: HideNavbarAction;
 
 	private navigationActionsToolbar: ToolBar; // before the locationBarInput
 	private locationActionsToolbar: ToolBar; // after the locationBarInput
@@ -77,6 +79,7 @@ export class NavbarPart extends Part implements INavBarService {
 		this.navigateForwardAction = this.instantiationService.createInstance(NavigateForwardAction, NavigateForwardAction.ID, NavigateForwardAction.LABEL);
 		this.copyLocationAction = this.instantiationService.createInstance(CopyLocationAction, CopyLocationAction.ID, CopyLocationAction.LABEL);
 		this.shareLocationAction = this.instantiationService.createInstance(ShareLocationAction, ShareLocationAction.ID, ShareLocationAction.LABEL);
+		this.hideNavbarAction = this.instantiationService.createInstance(HideNavbarAction, HideNavbarAction.ID, HideNavbarAction.LABEL);
 
 		this.updateNavigationEnablement();
 	}
@@ -222,6 +225,8 @@ export class NavbarPart extends Part implements INavBarService {
 		]);
 		const secondaryActions: IAction[] = prepareActions([
 			this.copyLocationAction,
+			new Separator(),
+			this.hideNavbarAction,
 		]);
 		this.locationActionsToolbar.setActions(primaryActions, secondaryActions)();
 

@@ -13,7 +13,7 @@ import { IWorkbenchActionRegistry, Extensions } from 'vs/workbench/common/action
 import { IConfigurationEditingService, ConfigurationTarget } from 'vs/workbench/services/configuration/common/configurationEditing';
 import { IPartService, Parts } from 'vs/workbench/services/part/common/partService';
 
-export class ToggleNavbarVisibilityAction extends Action {
+export abstract class NavbarVisibilityAction extends Action {
 
 	public static ID = 'workbench.action.toggleNavbarVisibility';
 	public static LABEL = nls.localize('toggleNavbar', "Toggle Nav Bar Visibility");
@@ -31,13 +31,34 @@ export class ToggleNavbarVisibilityAction extends Action {
 		this.enabled = !!this.partService;
 	}
 
+	protected getVisibility(): boolean {
+		return this.partService.isVisible(Parts.NAVBAR_PART);
+	}
+
+	protected setVisibility(newVisibilityValue: boolean): TPromise<void> {
+		return this.configurationEditingService.writeConfiguration(ConfigurationTarget.USER, { key: NavbarVisibilityAction.navbarVisibleKey, value: newVisibilityValue });
+	}
+
+	public abstract run(): TPromise<any>;
+}
+
+export class HideNavbarAction extends NavbarVisibilityAction {
+
+	public static ID = 'workbench.action.hideNavbar';
+	public static LABEL = nls.localize('hideNavbar', "Hide Nav Bar");
+
 	public run(): TPromise<any> {
-		const visibility = this.partService.isVisible(Parts.NAVBAR_PART);
-		const newVisibilityValue = !visibility;
+		return this.setVisibility(false);
+	}
+}
 
-		this.configurationEditingService.writeConfiguration(ConfigurationTarget.USER, { key: ToggleNavbarVisibilityAction.navbarVisibleKey, value: newVisibilityValue });
+export class ToggleNavbarVisibilityAction extends NavbarVisibilityAction {
 
-		return TPromise.as(null);
+	public static ID = 'workbench.action.toggleNavbarVisibility';
+	public static LABEL = nls.localize('toggleNavbar', "Toggle Nav Bar Visibility");
+
+	public run(): TPromise<any> {
+		return this.setVisibility(!this.getVisibility());
 	}
 }
 
