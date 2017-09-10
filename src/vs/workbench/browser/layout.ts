@@ -546,7 +546,7 @@ export class WorkbenchLayout implements IVerticalSashLayoutProvider, IHorizontal
 
 	public getHorizontalSashTop(sash: Sash): number {
 		// Horizontal sash should be a bit lower than the editor area, thus add 2px #5524
-		return 2 + (this.partService.isVisible(Parts.PANEL_PART) ? this.sidebarHeight - this.panelHeight + this.titlebarHeight : this.sidebarHeight + this.titlebarHeight + this.navbarHeight);
+		return 2 + (this.partService.isVisible(Parts.PANEL_PART) ? this.sidebarHeight - this.panelHeight + this.titlebarHeight + this.navbarHeight : this.sidebarHeight + this.titlebarHeight + this.navbarHeight);
 	}
 
 	public getHorizontalSashLeft(sash: Sash): number {
