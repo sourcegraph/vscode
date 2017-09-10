@@ -92,7 +92,7 @@ export class ShareLocationAction extends Action {
 		@INavService private navService: INavService,
 		@IClipboardService private clipboardService: IClipboardService,
 	) {
-		super(id, label);
+		super(id, label, 'share-location-action');
 	}
 
 	public run(): TPromise<any> {
