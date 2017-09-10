@@ -2478,7 +2478,7 @@ declare module 'vscode' {
 		 * The human-readable doc-comment of this signature. Will be shown
 		 * in the UI but can be omitted.
 		 */
-		documentation?: string;
+		documentation?: string | MarkdownString;
 
 		/**
 		 * Creates a new parameter information object.
@@ -2486,7 +2486,7 @@ declare module 'vscode' {
 		 * @param label A label string.
 		 * @param documentation A doc string.
 		 */
-		constructor(label: string, documentation?: string);
+		constructor(label: string, documentation?: string | MarkdownString);
 	}
 
 	/**
@@ -2506,7 +2506,7 @@ declare module 'vscode' {
 		 * The human-readable doc-comment of this signature. Will be shown
 		 * in the UI but can be omitted.
 		 */
-		documentation?: string;
+		documentation?: string | MarkdownString;
 
 		/**
 		 * The parameters of this signature.
@@ -2519,7 +2519,7 @@ declare module 'vscode' {
 		 * @param label A label string.
 		 * @param documentation A doc string.
 		 */
-		constructor(label: string, documentation?: string);
+		constructor(label: string, documentation?: string | MarkdownString);
 	}
 
 	/**
@@ -2633,7 +2633,7 @@ declare module 'vscode' {
 		/**
 		 * A human-readable string that represents a doc-comment.
 		 */
-		documentation?: string;
+		documentation?: string | MarkdownString;
 
 		/**
 		 * A string that should be used when comparing this item

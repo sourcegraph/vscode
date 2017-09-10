@@ -174,7 +174,8 @@ class LanguageProvider {
 	private readonly currentDiagnostics: DiagnosticCollection;
 	private readonly bufferSyncSupport: BufferSyncSupport;
 
-	private typingsStatus: TypingsStatus;
+	private readonly typingsStatus: TypingsStatus;
+	private readonly ataProgressReporter: AtaProgressReporter;
 	private toUpdateOnConfigurationChanged: ({ updateConfiguration: () => void })[] = [];
 
 	private _validate: boolean = true;
@@ -196,7 +197,7 @@ class LanguageProvider {
 		this.currentDiagnostics = languages.createDiagnosticCollection(description.id);
 
 		this.typingsStatus = new TypingsStatus(client);
-		new AtaProgressReporter(client);
+		this.ataProgressReporter = new AtaProgressReporter(client);
 
 		workspace.onDidChangeConfiguration(this.configurationChanged, this, this.disposables);
 		this.configurationChanged();
@@ -225,6 +226,7 @@ class LanguageProvider {
 		}
 
 		this.typingsStatus.dispose();
+		this.ataProgressReporter.dispose();
 		this.currentDiagnostics.dispose();
 		this.bufferSyncSupport.dispose();
 	}
@@ -631,8 +633,6 @@ class TypeScriptServiceClientHost implements ITypescriptServiceClientHost {
 			return;
 		}
 
-		// TODO: restore opening trigger file?
-		//     body.triggerFile ? this.findLanguage(body.triggerFile)
 		(this.findLanguage(body.configFile)).then(language => {
 			if (!language) {
 				return;

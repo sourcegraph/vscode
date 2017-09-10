@@ -37,15 +37,19 @@ describe('Debug', () => {
 		fs.symlinkSync(debug2Path, path.join(EXTENSIONS_DIR, 'vscode-node-debug2'));
 	}
 
-	before(() => app.start());
+	before(() => app.start('Debug'));
 	after(() => app.stop());
+	beforeEach(function () { app.screenCapturer.testName = this.currentTest.title; });
 
 	it('configure launch json', async function () {
-
 		await app.workbench.debug.openDebugViewlet();
 		await app.workbench.openFile('app.js');
 		await app.workbench.debug.configure();
 		const content = await app.workbench.editor.getEditorVisibleText();
+
+		// TODO@isidor: sometimes on the linux build agent,
+		// you get the contents of app.js here, so everything
+		// blows up
 		const json = JSON.parse(stripJsonComments(content));
 
 		assert.equal(json.configurations[0].request, 'launch');
@@ -64,7 +68,15 @@ describe('Debug', () => {
 
 	it('start debugging', async function () {
 		await app.workbench.debug.startDebugging();
-		setTimeout(() => http.get(`http://localhost:3000`).on('error', e => void 0), 400);
+
+		await new Promise(c => {
+			setTimeout(() => {
+				http.get(`http://localhost:3000`)
+					.on('error', e => void 0);
+				c();
+			}, 400);
+		});
+
 		await app.workbench.debug.waitForStackFrame(sf => sf.name === 'index.js' && sf.lineNumber === 6);
 	});
 
@@ -87,9 +99,18 @@ describe('Debug', () => {
 		await app.workbench.debug.waitForStackFrame(sf => sf.name === 'index.js' && sf.lineNumber === 7);
 	});
 
+
 	it('continue', async function () {
 		await app.workbench.debug.continue();
-		setTimeout(() => http.get(`http://localhost:3000`).on('error', e => void 0), 400);
+
+		await new Promise(c => {
+			setTimeout(() => {
+				http.get(`http://localhost:3000`)
+					.on('error', e => void 0);
+				c();
+			}, 400);
+		});
+
 		await app.workbench.debug.waitForStackFrame(sf => sf.name === 'index.js' && sf.lineNumber === 6);
 	});
 

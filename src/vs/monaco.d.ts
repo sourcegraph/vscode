@@ -4459,7 +4459,7 @@ declare module monaco.languages {
 		 * The human-readable doc-comment of this signature. Will be shown
 		 * in the UI but can be omitted.
 		 */
-		documentation?: string;
+		documentation?: string | IMarkdownString;
 	}
 
 	/**
@@ -4477,7 +4477,7 @@ declare module monaco.languages {
 		 * The human-readable doc-comment of this signature. Will be shown
 		 * in the UI but can be omitted.
 		 */
-		documentation?: string;
+		documentation?: string | IMarkdownString;
 		/**
 		 * The parameters of this signature.
 		 */
@@ -4819,11 +4819,12 @@ declare module monaco.languages {
 	}
 
 	/**
-	 * A color formatter.
+	 * Represents a color format
 	 */
-	export interface IColorFormatter {
-		readonly supportsTransparency: boolean;
-		format(color: IColor): string;
+	export enum ColorFormat {
+		RGB = 0,
+		HEX = 1,
+		HSL = 2,
 	}
 
 	/**
@@ -4838,10 +4839,6 @@ declare module monaco.languages {
 		 * The color represented in this range.
 		 */
 		color: IColor;
-		/**
-		 * The available formats for this specific color.
-		 */
-		formatters: IColorFormatter[];
 	}
 
 	/**
@@ -4852,6 +4849,10 @@ declare module monaco.languages {
 		 * Provides the color ranges for a specific model.
 		 */
 		provideColorRanges(model: editor.IReadOnlyModel, token: CancellationToken): IColorRange[] | Thenable<IColorRange[]>;
+		/**
+		 * Provide the string representation for a color.
+		 */
+		resolveColor(color: IColor, colorFormat: ColorFormat, token: CancellationToken): string | Thenable<string>;
 	}
 
 	export interface IResourceEdit {

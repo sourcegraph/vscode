@@ -1800,6 +1800,10 @@ class FileDialog {
 			options.dialogOptions.properties = ['multiSelections', options.pickFolders ? 'openDirectory' : 'openFile', 'createDirectory'];
 		}
 
+		if (isMacintosh) {
+			options.dialogOptions.properties.push('treatPackageAsDirectory'); // always drill into .app files
+		}
+
 		// Show Dialog
 		const focusedWindow = this.windowsMainService.getWindowById(options.windowId) || this.windowsMainService.getFocusedWindow();
 		dialog.showOpenDialog(focusedWindow && focusedWindow.win, options.dialogOptions, paths => {

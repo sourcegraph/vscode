@@ -18,7 +18,7 @@ import { ExtHostCommands, CommandsConverter } from 'vs/workbench/api/node/extHos
 import { ExtHostDiagnostics } from 'vs/workbench/api/node/extHostDiagnostics';
 import { IWorkspaceSymbolProvider } from 'vs/workbench/parts/search/common/search';
 import { asWinJsPromise } from 'vs/base/common/async';
-import { MainContext, MainThreadTelemetryShape, MainThreadLanguageFeaturesShape, ExtHostLanguageFeaturesShape, ObjectIdentifier, IRawColorInfo, IRawColorFormatMap, IMainContext, IExtHostSuggestResult, IExtHostSuggestion } from './extHost.protocol';
+import { MainContext, MainThreadTelemetryShape, MainThreadLanguageFeaturesShape, ExtHostLanguageFeaturesShape, ObjectIdentifier, IRawColorInfo, IMainContext, IExtHostSuggestResult, IExtHostSuggestion } from './extHost.protocol';
 import { regExpLeadsToEndlessLoop } from 'vs/base/common/strings';
 import { IPosition } from 'vs/editor/common/core/position';
 import { IRange } from 'vs/editor/common/core/range';
@@ -476,6 +476,10 @@ class RenameAdapter {
 
 class SuggestAdapter {
 
+	static supportsResolving(provider: vscode.CompletionItemProvider): boolean {
+		return typeof provider.resolveCompletionItem === 'function';
+	}
+
 	private _documents: ExtHostDocuments;
 	private _commands: CommandsConverter;
 	private _provider: vscode.CompletionItemProvider;
@@ -707,8 +711,6 @@ class LinkProviderAdapter {
 
 class ColorProviderAdapter {
 
-	private static _colorFormatHandlePool: number = 0;
-
 	constructor(
 		private _proxy: MainThreadLanguageFeaturesShape,
 		private _documents: ExtHostDocuments,
@@ -723,38 +725,19 @@ class ColorProviderAdapter {
 				return [];
 			}
 
-			const newRawColorFormats: IRawColorFormatMap = [];
-			const getFormatId = (format: string) => {
-				let id = this._colorFormatCache.get(format);
-
-				if (typeof id !== 'number') {
-					id = ColorProviderAdapter._colorFormatHandlePool++;
-					this._colorFormatCache.set(format, id);
-					newRawColorFormats.push([id, format]);
-				}
-
-				return id;
-			};
-
 			const colorInfos: IRawColorInfo[] = colors.map(ci => {
-				const availableFormats = ci.availableFormats.map(format => {
-					if (typeof format === 'string') {
-						return getFormatId(format);
-					} else {
-						return [getFormatId(format.opaque), getFormatId(format.transparent)] as [number, number];
-					}
-				});
-
 				return {
 					color: [ci.color.red, ci.color.green, ci.color.blue, ci.color.alpha] as [number, number, number, number],
-					availableFormats: availableFormats,
 					range: TypeConverters.fromRange(ci.range)
 				};
 			});
 
-			this._proxy.$registerColorFormats(newRawColorFormats);
 			return colorInfos;
 		});
+	}
+
+	resolveColor(color: modes.IColor, colorFormat: modes.ColorFormat): TPromise<string> {
+		return asWinJsPromise(token => this._provider.resolveDocumentColor(color, colorFormat));
 	}
 }
 
@@ -1012,7 +995,7 @@ export class ExtHostLanguageFeatures implements ExtHostLanguageFeaturesShape {
 	registerCompletionItemProvider(selector: vscode.DocumentSelector, provider: vscode.CompletionItemProvider, triggerCharacters: string[]): vscode.Disposable {
 		const handle = this._nextHandle();
 		this._adapter.set(handle, new SuggestAdapter(this._documents, this._commands.converter, provider));
-		this._proxy.$registerSuggestSupport(handle, selector, triggerCharacters);
+		this._proxy.$registerSuggestSupport(handle, selector, triggerCharacters, SuggestAdapter.supportsResolving(provider));
 		return this._createDisposable(handle);
 	}
 
@@ -1067,6 +1050,10 @@ export class ExtHostLanguageFeatures implements ExtHostLanguageFeaturesShape {
 
 	$provideDocumentColors(handle: number, resource: URI): TPromise<IRawColorInfo[]> {
 		return this._withAdapter(handle, ColorProviderAdapter, adapter => adapter.provideColors(resource));
+	}
+
+	$resolveDocumentColor(handle: number, color: modes.IColor, colorFormat: modes.ColorFormat): TPromise<string> {
+		return this._withAdapter(handle, ColorProviderAdapter, adapter => adapter.resolveColor(color, colorFormat));
 	}
 
 	// --- configuration
