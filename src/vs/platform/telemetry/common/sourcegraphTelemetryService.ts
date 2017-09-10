@@ -6,7 +6,7 @@
 'use strict';
 
 import { ITelemetryService, ITelemetryData } from 'vs/platform/telemetry/common/telemetry';
-import { optional } from 'vs/platform/instantiation/common/instantiation';
+import { optional, ServicesAccessor } from 'vs/platform/instantiation/common/instantiation';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { cloneAndChange } from 'vs/base/common/objects';
@@ -19,6 +19,7 @@ import { IFileEditorInput } from 'vs/workbench/common/editor';
 // tslint:disable-next-line
 import { EditorPart } from 'vs/workbench/browser/parts/editor/editorPart';
 import { IAuthConfiguration } from 'vs/workbench/services/codeComments/browser/git';
+import { CommandsRegistry } from 'vs/platform/commands/common/commands';
 
 const CLEANUP_INDICATOR_STRING = '$DATA_REMOVED';
 
@@ -119,3 +120,7 @@ function isIFileEditorInput(object: IEditorInput): object is IFileEditorInput {
 		&& 'setForceOpenAsBinary' in object && typeof object['setForceOpenAsBinary'] === 'function';
 }
 
+CommandsRegistry.registerCommand('_telemetry.publicLog', function (accessor: ServicesAccessor, eventName: string, data?: ITelemetryData) {
+	const telemetryService = accessor.get(ITelemetryService);
+	telemetryService.publicLog(eventName, data);
+});
