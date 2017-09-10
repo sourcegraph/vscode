@@ -25,6 +25,7 @@ import { INavService } from 'vs/workbench/services/nav/common/nav';
 import { IClipboardService } from 'vs/platform/clipboard/common/clipboardService';
 import { IConfigurationEditingService, ConfigurationTarget } from 'vs/workbench/services/configuration/common/configurationEditing';
 import { IPartService, Parts } from 'vs/workbench/services/part/common/partService';
+import { NavbarPart } from 'vs/workbench/browser/parts/navbar/navbarPart';
 
 export class FocusLocationBarAction extends Action {
 
@@ -90,6 +91,7 @@ export class ShareLocationAction extends Action {
 		id: string,
 		label: string,
 		@INavService private navService: INavService,
+		@INavBarService private navBarService: INavBarService,
 		@IClipboardService private clipboardService: IClipboardService,
 	) {
 		super(id, label, 'share-location-action');
@@ -98,6 +100,11 @@ export class ShareLocationAction extends Action {
 	public run(): TPromise<any> {
 		const location = this.navService.getShareableLocation();
 		this.clipboardService.writeText(location);
+
+		const navbarPart = this.navBarService as NavbarPart;
+		if (navbarPart.locationBarInput) {
+			navbarPart.locationBarInput.showMessage(nls.localize('copiedShareableLocation', "Copied shareable link to current file and position."));
+		}
 
 		return TPromise.as(null);
 	}

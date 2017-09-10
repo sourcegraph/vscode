@@ -8,6 +8,7 @@
 import 'vs/css!./media/navbarpart';
 import nls = require('vs/nls');
 import URI from 'vs/base/common/uri';
+import { TPromise } from 'vs/base/common/winjs.base';
 import { IWindowService, IWindowsService } from 'vs/platform/windows/common/windows';
 import { IContextMenuService, IContextViewService } from 'vs/platform/contextview/browser/contextView';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
@@ -24,7 +25,7 @@ import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { IPartService } from 'vs/workbench/services/part/common/partService';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { attachInputBoxStyler } from 'vs/platform/theme/common/styler';
-import { InputBox } from 'vs/base/browser/ui/inputbox/inputBox';
+import { InputBox, MessageType } from 'vs/base/browser/ui/inputbox/inputBox';
 import { Widget } from 'vs/base/browser/ui/widget';
 import { KeyCode } from 'vs/base/common/keyCodes';
 import { IKeyboardEvent } from 'vs/base/browser/keyboardEvent';
@@ -121,6 +122,15 @@ export class LocationBarInput extends Widget {
 
 	get value(): string {
 		return this.inputBox.value;
+	}
+
+	public showMessage(text: string, duration: number = 2000): void {
+		this.inputBox.showMessage({
+			content: text,
+			formatContent: false,
+			type: MessageType.INFO,
+		}, true);
+		TPromise.timeout(duration).then(() => this.inputBox.hideMessage());
 	}
 
 	private getKeybindingLabel(id: string): string {

@@ -33,7 +33,11 @@ import { CopyLocationAction, ShareLocationAction, LocationHistoryActionItem } fr
 import { HideNavbarAction } from 'vs/workbench/browser/actions/toggleNavbarVisibility';
 import { LocationBarInput } from 'vs/workbench/browser/parts/navbar/locationBarInput';
 
-export class NavbarPart extends Part implements INavBarService {
+export interface INavBarPart {
+	readonly locationBarInput: LocationBarInput;
+}
+
+export class NavbarPart extends Part implements INavBarService, INavBarPart {
 
 	public _serviceBrand: any;
 
@@ -45,7 +49,8 @@ export class NavbarPart extends Part implements INavBarService {
 
 	private navigationActionsToolbar: ToolBar; // before the locationBarInput
 	private locationActionsToolbar: ToolBar; // after the locationBarInput
-	private locationBarInput: LocationBarInput;
+	private _locationBarInput: LocationBarInput;
+	public get locationBarInput(): LocationBarInput { return this._locationBarInput; }
 
 	private scheduler: RunOnceScheduler;
 	private refreshScheduled: boolean;
@@ -117,8 +122,8 @@ export class NavbarPart extends Part implements INavBarService {
 
 		// Location input
 		const locationBarInputContainer = $(this.locationContainer).div({ class: 'location-input' });
-		this.locationBarInput = this.instantiationService.createInstance(LocationBarInput, locationBarInputContainer.getHTMLElement());
-		this._register(this.locationBarInput);
+		this._locationBarInput = this.instantiationService.createInstance(LocationBarInput, locationBarInputContainer.getHTMLElement());
+		this._register(this._locationBarInput);
 
 		// Location actions toolbar (after the location bar input)
 		const locationActionsContainer = $(this.locationContainer).div({ class: 'actions location' });
@@ -130,8 +135,8 @@ export class NavbarPart extends Part implements INavBarService {
 	}
 
 	public focusLocationBar(): void {
-		if (this.locationBarInput) {
-			this.locationBarInput.focus();
+		if (this._locationBarInput) {
+			this._locationBarInput.focus();
 		}
 	}
 
@@ -281,15 +286,15 @@ export class NavbarPart extends Part implements INavBarService {
 	}
 
 	private updateLocationInput(): void {
-		if (!this.locationBarInput) {
+		if (!this._locationBarInput) {
 			return;
 		}
 
 		const location = this.navService.getLocation();
 		if (location) {
-			this.locationBarInput.value = location.toString(true);
+			this._locationBarInput.value = location.toString(true);
 		} else {
-			this.locationBarInput.value = '';
+			this._locationBarInput.value = '';
 		}
 	}
 }
