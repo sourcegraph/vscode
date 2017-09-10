@@ -25,5 +25,6 @@ mkdir -p $ELECTRON_GYP_HOME
 npm_config_disturl=https://atom.io/download/electron \
 npm_config_target=$ELECTRON_VERSION \
 npm_config_runtime=electron \
+npm_config_userconfig="$HOME/.npmrc" \
 HOME=$ELECTRON_GYP_HOME \
 npm $*
