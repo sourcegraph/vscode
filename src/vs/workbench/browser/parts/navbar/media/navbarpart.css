@@ -9,12 +9,9 @@
 	font-size: 12px;
 	overflow: hidden;
 	flex-shrink: 0;
-	/* align-items: ;
-	justify-content: center; */
 	-webkit-user-select: none;
 	-webkit-app-region: drag;
 	zoom: 1; /* prevent zooming */
-	/* line-height: 30px; */
 	height: 30px;
 	display: flex;
 }
