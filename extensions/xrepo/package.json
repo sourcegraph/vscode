@@ -32,19 +32,6 @@
     "keybindings": []
   },
   "scripts": {
-    "vscode:prepublish": "tsc -p ./",
-    "compile": "tsc -watch -p ./",
-    "postinstall": "node ./node_modules/vscode/bin/install",
-    "test": "node ./node_modules/vscode/bin/test"
-  },
-  "devDependencies": {
-    "typescript": "^2.0.3",
-    "vscode": "^1.0.0",
-    "mocha": "^2.3.3",
-    "@types/mocha": "^2.2.32"
-  },
-  "dependencies": {
-    "typescript": "^2.5.2",
-    "vscode-languageclient": "3.4.0-next.16"
+    "vscode:prepublish": "tsc -p ./"
   }
 }
