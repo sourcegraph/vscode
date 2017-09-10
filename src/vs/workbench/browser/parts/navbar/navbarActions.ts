@@ -23,24 +23,37 @@ import { IWorkbenchEditorService, IResourceInputType } from 'vs/workbench/servic
 import { INavBarService } from 'vs/workbench/services/nav/common/navBar';
 import { INavService } from 'vs/workbench/services/nav/common/nav';
 import { IClipboardService } from 'vs/platform/clipboard/common/clipboardService';
+import { IConfigurationEditingService, ConfigurationTarget } from 'vs/workbench/services/configuration/common/configurationEditing';
+import { IPartService, Parts } from 'vs/workbench/services/part/common/partService';
 
 export class FocusLocationBarAction extends Action {
 
 	public static ID = 'workbench.action.focusLocationBar';
 	public static LABEL = nls.localize('focusLocationBar', "Focus on Location Bar");
 
+	private static navbarVisibleKey = 'workbench.navBar.visible';
+
 	constructor(
 		id: string,
 		label: string,
+		@IPartService private partService: IPartService,
 		@INavBarService private navBarService: INavBarService,
+		@IConfigurationEditingService private configurationEditingService: IConfigurationEditingService
 	) {
 		super(id, label);
 	}
 
 	public run(): TPromise<any> {
-		this.navBarService.focusLocationBar();
+		let p: TPromise<any>;
 
-		return TPromise.as(null);
+		const visible = this.partService.isVisible(Parts.NAVBAR_PART);
+		if (!visible) {
+			p = this.configurationEditingService.writeConfiguration(ConfigurationTarget.USER, { key: FocusLocationBarAction.navbarVisibleKey, value: true });
+		} else {
+			p = TPromise.as(void 0);
+		}
+
+		return p.then(() => this.navBarService.focusLocationBar());
 	}
 }
 

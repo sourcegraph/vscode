@@ -846,7 +846,7 @@ export class Workbench implements IPartService {
 		return null;
 	}
 
-	private setNavBarHidden(hidden: boolean, skipLayout?: boolean): void {
+	public setNavBarHidden(hidden: boolean, skipLayout?: boolean): void {
 		this.navBarHidden = hidden;
 
 
