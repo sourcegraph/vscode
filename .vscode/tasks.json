@@ -67,6 +67,13 @@
 			"type": "gulp",
 			"task": "hygiene",
 			"problemMatcher": []
+		},
+		{
+			"type": "shell",
+			"taskName": "Initialize dev environment",
+			"identifier": "initializeDevEnvironment",
+			"command": "./scripts/npm.sh install --arch=x64",
+			"creates": "node_modules"
 		}
 	]
 }
