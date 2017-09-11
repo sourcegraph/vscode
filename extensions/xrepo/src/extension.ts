@@ -45,10 +45,14 @@ async function ensureDevEnvironmentInitializedCmd(workspaceFolder?: vscode.Works
 		}
 		workspaceFolder = vscode.workspace.getWorkspaceFolder(vscode.window.activeTextEditor.document.uri);
 	}
-	return ensureDevEnvironmentInitialized(workspaceFolder!);
+	await ensureDevEnvironmentInitialized(workspaceFolder!);
 }
 
-async function ensureDevEnvironmentInitialized(workspaceFolder: vscode.WorkspaceFolder) {
+/**
+ * ensureDevEnvironmentInitialized ensures that the development environment in @param workspaceFolder is initialized. Returns true
+ * if and only if initialization process was actually run.
+ */
+async function ensureDevEnvironmentInitialized(workspaceFolder: vscode.WorkspaceFolder): Promise<boolean> {
 	const task = getDevEnvironmentInitializedTask(workspaceFolder);
 	if (!task) {
 		const choice = await vscode.window.showWarningMessage(localize('KEY-No initializeDevEnvironment task was found.', "No initializeDevEnvironment task was found."), localize('KEY-Add', "Add"));
@@ -70,22 +74,28 @@ async function ensureDevEnvironmentInitialized(workspaceFolder: vscode.Workspace
 				await vscode.window.showTextDocument(doc);
 			}
 		}
-		return;
+		return false;
 	}
 
 	if (!task.creates) {
 		const run = await vscode.window.showWarningMessage(localize('KEY-Found initializeDevEnvironment task. Run it?', "Found initializeDevEnvironment task. Run it?"), localize('KEY-Run', "Run"));
 		if (run !== localize('KEY-Run', "Run")) {
-			return;
+			return false;
 		}
 	} else {
 		const creates = path.join(workspaceFolder.uri.fsPath, task.creates);
 		if (fs.existsSync(creates)) {
-			return;
+			return false;
 		}
 	}
 
-	return runTask(workspaceFolder, task);
+	vscode.window.showInformationMessage(localize('KEY-Initializing dev environment.', "Initializing dev environment."));
+	await runTask(workspaceFolder, task).then(() => {
+		vscode.window.showInformationMessage(localize('KEY-Finished initializing dev environment.', "Finished initializing dev environment."));
+	}, (err) => {
+		vscode.window.showErrorMessage(localize('KEY-Failed to initialize dev environment: ', "Failed to initialize dev environment: ") + err);
+	});
+	return true;
 }
 
 /**
@@ -94,15 +104,9 @@ async function ensureDevEnvironmentInitialized(workspaceFolder: vscode.Workspace
  * Note: we are not using the runTask command, because that appears only to support one workspace root currently.
  */
 function runTask(workspaceFolder: vscode.WorkspaceFolder, task: BaseTaskConfig): Promise<void> {
-	vscode.window.showInformationMessage(localize('KEY-Initializing dev environment.', "Initializing dev environment."));
-	const promise = task.type === 'shell' ?
+	return task.type === 'shell' ?
 		new Promise((resolve, reject) => cp.exec(task.command, { cwd: workspaceFolder.uri.fsPath }, (err, stdout, stderr) => err ? reject(err) : resolve())) :
 		new Promise((resolve, reject) => cp.execFile(task.command, task.args, { cwd: workspaceFolder.uri.fsPath }, (err, stdout, stderr) => err ? reject(err) : resolve()));
-	return promise.then(() => {
-		vscode.window.showInformationMessage(localize('KEY-Finished initializing dev environment.', "Finished initializing dev environment."));
-	}, (err) => {
-		vscode.window.showErrorMessage(localize('KEY-Failed to initialize dev environment: ', "Failed to initialize dev environment: ") + err);
-	});
 }
 
 function getDevEnvironmentInitializedTask(workspaceFolder: vscode.WorkspaceFolder): BaseTaskConfig | null {
