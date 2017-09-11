@@ -13,6 +13,7 @@ import { IDisposable } from 'vs/base/common/lifecycle';
 import { ICommonCodeEditor } from 'vs/editor/common/editorCommon';
 
 export const ID = 'codeCommentsService';
+export const EDITOR_CONTRIBUTION_ID = 'editor.contrib.codeComments';
 
 export const ICodeCommentsService = createDecorator<ICodeCommentsService>(ID);
 

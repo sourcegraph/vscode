@@ -7,7 +7,7 @@
 import { ICodeEditorService } from 'vs/editor/common/services/codeEditorService';
 import { ICommonCodeEditor, IModel, OverviewRulerLane, IDecorationOptions, IEditorContribution } from 'vs/editor/common/editorCommon';
 import { IDisposable, Disposable, dispose } from 'vs/base/common/lifecycle';
-import { ICodeCommentsService, IThreadComments, IFileComments, IDraftThreadComments } from 'vs/editor/common/services/codeCommentsService';
+import { ICodeCommentsService, IThreadComments, IFileComments, IDraftThreadComments, EDITOR_CONTRIBUTION_ID } from 'vs/editor/common/services/codeCommentsService';
 import URI from 'vs/base/common/uri';
 import { Schemas } from 'vs/base/common/network';
 import * as colors from 'vs/platform/theme/common/colorRegistry';
@@ -37,10 +37,9 @@ const GUTTER_ICON_DECORATION_KEY = 'codeCommentGutterIcon';
  */
 @editorContribution
 export class CodeCommentsController extends Disposable implements IEditorContribution {
-	private static readonly ID = 'editor.contrib.codeCommentsController';
 
 	public static get(editor: ICommonCodeEditor): CodeCommentsController {
-		return editor.getContribution<CodeCommentsController>(CodeCommentsController.ID);
+		return editor.getContribution<CodeCommentsController>(EDITOR_CONTRIBUTION_ID);
 	}
 
 	/**
@@ -214,7 +213,7 @@ export class CodeCommentsController extends Disposable implements IEditorContrib
 	}
 
 	public getId(): string {
-		return CodeCommentsController.ID;
+		return EDITOR_CONTRIBUTION_ID;
 	}
 
 	private onThemeChange(): void {
@@ -323,21 +322,24 @@ export class CodeCommentsController extends Disposable implements IEditorContrib
 	}
 
 	public restoreViewState(state?: ViewState): void {
-		const openThreadIds = (state && state.openThreadIds) || [];
-		for (const threadId of openThreadIds) {
-			const thread = this.fileComments.getThread(threadId);
-			if (thread) {
-				this.showThreadWidget(thread, false);
+		this.fileComments.refreshThreads().then(() => {
+			const openThreadIds = (state && state.openThreadIds) || [];
+			for (const threadId of openThreadIds) {
+				const thread = this.fileComments.getThread(threadId);
+				if (thread) {
+					const reveal = thread.id === state.revealThreadId;
+					this.showThreadWidget(thread, reveal);
+				}
 			}
-		}
 
-		const openDraftThreadIds = (state && state.openDraftThreadIds) || [];
-		for (const threadId of openDraftThreadIds) {
-			const thread = this.fileComments.getDraftThread(threadId);
-			if (thread) {
-				this.showDraftThreadWidget(thread, false);
+			const openDraftThreadIds = (state && state.openDraftThreadIds) || [];
+			for (const threadId of openDraftThreadIds) {
+				const thread = this.fileComments.getDraftThread(threadId);
+				if (thread) {
+					this.showDraftThreadWidget(thread, false);
+				}
 			}
-		}
+		});
 	}
 }
 
@@ -360,4 +362,5 @@ function index<K, V>(values: V[], getKey: (value: V) => K): Map<K, V[]> {
 export interface ViewState {
 	openThreadIds?: number[];
 	openDraftThreadIds?: number[];
+	revealThreadId?: number;
 }

@@ -25,9 +25,9 @@ import { toResource } from 'vs/workbench/common/editor';
 import { ISCMService } from 'vs/workbench/services/scm/common/scm';
 import * as querystring from 'querystring';
 import { parseSelection, formatSelection } from 'vs/base/common/urlRoutes';
-import { isCommonCodeEditor } from 'vs/editor/common/editorCommon';
 import { getCodeEditor } from 'vs/editor/common/services/codeEditorService';
 import { ISelection } from 'vs/editor/common/core/selection';
+import { EDITOR_CONTRIBUTION_ID as CODE_COMMENTS_CONTRIBUTION_ID } from 'vs/editor/common/services/codeCommentsService';
 
 export class NavService extends Disposable implements INavService {
 
@@ -131,20 +131,20 @@ export class NavService extends Disposable implements INavService {
 		}
 
 		const editor = await this.editorService.openEditor(input);
+		const control = getCodeEditor(editor);
+		if (!control) {
+			return;
+		}
 
 		if (selections.length > 1) {
-			const control = getCodeEditor(editor);
-			if (control) {
-				control.setSelections(selections);
-			}
+			control.setSelections(selections);
 		}
 
 		const threadId = parseInt(query.thread, 10);
-		// TODO(nick): the returned editor is a TextFileEditor so isCommonCodeEditor is always false.
-		if (!isCommonCodeEditor(editor) || !threadId) {
-			return;
+		if (threadId) {
+			const codeCommentsContribution = control.getContribution(CODE_COMMENTS_CONTRIBUTION_ID);
+			codeCommentsContribution.restoreViewState({ openThreadIds: [threadId], revealThreadId: threadId });
 		}
-		// CodeCommentsController.get(editor).restoreViewState({ openThreadIds: [threadId] });
 	}
 
 	public getLocation(): URI {
