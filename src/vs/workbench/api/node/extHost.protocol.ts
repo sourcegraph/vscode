@@ -491,6 +491,7 @@ export interface ExtHostWorkspaceShape {
 	$cancelSearch(handle: number, session: number): void;
 	$resolveResource(handle: number, resource: URI): TPromise<URI>;
 	$resolveFolder(handle: number, resource: URI): TPromise<ICatalogFolder>;
+	$resolveLocalFolderResource(handle: number, path: string): TPromise<URI | null>;
 	$searchFolders(handle: number, query: string): TPromise<ICatalogFolder[]>;
 }
 

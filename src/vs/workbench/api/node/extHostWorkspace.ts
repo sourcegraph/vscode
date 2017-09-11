@@ -302,6 +302,11 @@ export class ExtHostWorkspace implements ExtHostWorkspaceShape {
 		return asWinJsPromise(token => provider.resolveFolder(resource) as TPromise<ICatalogFolder>);
 	}
 
+	$resolveLocalFolderResource(handle: number, path: string): TPromise<URI | null> {
+		const provider = this._folderCatalogProvider.get(handle);
+		return asWinJsPromise(token => provider.resolveLocalFolderResource(path) as TPromise<URI | null>);
+	}
+
 	$searchFolders(handle: number, query: string): TPromise<ICatalogFolder[]> {
 		const provider = this._folderCatalogProvider.get(handle);
 		return asWinJsPromise(token => provider.search(query, token) as TPromise<ICatalogFolder[]>);

@@ -7,6 +7,7 @@
 import * as vscode from 'vscode';
 import { requestGraphQL } from './util';
 import * as nls from 'vscode-nls';
+import * as cp from 'child_process';
 
 const localize = nls.loadMessageBundle();
 
@@ -52,6 +53,18 @@ query($owner: String!, $name: String!) {
 					return showErrorImmediately(localize('notFound', "GitHub repository not found: {0}", resource.toString()));
 				}
 				return toCatalogFolder(repository);
+			});
+		},
+		resolveLocalFolderResource(path: string): Thenable<vscode.Uri | null> {
+			return new Promise<string>((resolve, reject) => {
+				cp.exec('git ls-remote --get-url', { cwd: path }, (error, stdout, stderr) => resolve(stdout));
+			}).then(gitURL => {
+				gitURL = decodeURIComponent(gitURL.trim()).replace(/\.git$/, '');
+				const match = gitURL.match(/github.com\/([^/]+\/[^/]+)/);
+				if (match) {
+					return vscode.Uri.parse('github://github.com/repository/' + match[1]);
+				}
+				return null;
 			});
 		},
 		async search(query: string): Promise<vscode.CatalogFolder[]> {

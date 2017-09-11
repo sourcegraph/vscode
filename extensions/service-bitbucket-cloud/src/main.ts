@@ -33,6 +33,9 @@ export function activate(context: vscode.ExtensionContext): void {
 			);
 
 		},
+		resolveLocalFolderResource(path: string): Thenable<vscode.Uri | null> {
+			return Promise.resolve(null);
+		},
 		async search(query: string): Promise<vscode.CatalogFolder[]> {
 			if (!vscode.workspace.getConfiguration('bitbucket.cloud').get<boolean>('includeInSearch')) {
 				return [];

@@ -212,6 +212,11 @@ declare module 'vscode' {
 		resolveFolder(resource: Uri): Thenable<CatalogFolder>;
 
 		/**
+		 * Gets the FolderCatalog resource URI for the local FS path (typically an on-disk clone).
+		 */
+		resolveLocalFolderResource(path: string): Thenable<Uri | null>;
+
+		/**
 		 * Searches for folders, typically repositories on a remote code host.
 		 */
 		search(query: string, token: CancellationToken): Thenable<CatalogFolder[]>;

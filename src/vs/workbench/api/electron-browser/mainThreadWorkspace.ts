@@ -230,6 +230,9 @@ export class MainThreadWorkspace implements MainThreadWorkspaceShape {
 			resolveFolder: resource => {
 				return this._proxy.$resolveFolder(handle, resource);
 			},
+			resolveLocalFolderResource: path => {
+				return this._proxy.$resolveLocalFolderResource(handle, path);
+			},
 			search: query => {
 				return this._proxy.$searchFolders(handle, query);
 			},

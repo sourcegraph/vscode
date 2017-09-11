@@ -57,6 +57,11 @@ export interface IFolderCatalogProvider {
 	resolveFolder(resource: URI): TPromise<ICatalogFolder | null>;
 
 	/**
+	 * Gets the FolderCatalog resource URI for the local FS path (typically an on-disk clone).
+	 */
+	resolveLocalFolderResource(path: string): TPromise<URI | null>;
+
+	/**
 	 * Searches for folders, typically repositories on a remote code host.
 	 */
 	search(query: string): TPromise<ICatalogFolder[]>;
@@ -87,6 +92,14 @@ export interface IFolderCatalogService {
 	resolveFolder(resource: URI): TPromise<ICatalogFolder>;
 
 	/**
+	 * Gets the FolderCatalog resource URIs for the local FS path (typically an on-disk clone).
+	 * An example of this is the github extension looking at the git remotes for path, and
+	 * returning a github URI if it finds one. It can return 0 or more URIs, since a repository
+	 * can have more than one remote.
+	 */
+	resolveLocalFolderResources(path: string): TPromise<URI[]>;
+
+	/**
 	 * Searches for folders, typically repositories on a remote code host, across all
 	 * registered folder catalog providers.
 	 */
@@ -102,6 +115,9 @@ export const NullFolderCatalogService: IFolderCatalogService = {
 		throw new Error('not implemented');
 	},
 	resolveFolder(resource: URI): TPromise<ICatalogFolder> {
+		throw new Error('not implemented');
+	},
+	resolveLocalFolderResources(path: string): TPromise<URI[]> {
 		throw new Error('not implemented');
 	},
 	search(query: string): TPromise<ICatalogFolder[]> {

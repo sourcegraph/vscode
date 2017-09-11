@@ -21,6 +21,7 @@ import * as arrays from 'vs/base/common/arrays';
 import { IJSONEditingService } from 'vs/workbench/services/configuration/common/jsonEditing';
 import { IExtensionService } from 'vs/platform/extensions/common/extensions';
 import { localize } from 'vs/nls';
+import { IFolderCatalogService } from 'vs/platform/folders/common/folderCatalog';
 
 export class WorkspaceSharingService implements IWorkspaceSharingService {
 
@@ -33,6 +34,7 @@ export class WorkspaceSharingService implements IWorkspaceSharingService {
 		@IEnvironmentService private environmentService: IEnvironmentService,
 		@IJSONEditingService private jsonEditingService: IJSONEditingService,
 		@IExtensionService private extensionService: IExtensionService,
+		@IFolderCatalogService private folderCatalogService: IFolderCatalogService,
 	) {
 		// Import after activation of extensions that supply resource resolvers.
 		this.extensionService.onReady().then(() =>
@@ -42,7 +44,18 @@ export class WorkspaceSharingService implements IWorkspaceSharingService {
 
 	public export(target: URI): TPromise<void> {
 		const roots = this.contextService.getWorkspace().roots;
-		return TPromise.join(roots.map(resolveShareable)).then(uris => {
+
+		return TPromise.join(roots.map(root => {
+			// For each root try and resolve it via the FolderCatalogService, since they will provide
+			// the most useful links for cloning. If that fails, we use resolveShareableFallback which
+			// just returns the git clone URL.
+			if (root.scheme !== Schemas.file) {
+				return TPromise.as(root);
+			}
+			return this.folderCatalogService.resolveLocalFolderResources(root.fsPath).then(uris => {
+				return uris.length > 0 ? TPromise.as(uris[0]) : resolveCloneURI(root);
+			});
+		})).then(uris => {
 			const storedWorkspace: IStoredWorkspace = {
 				folders: [],
 				roots: uris.map(u => u.toString()),
@@ -81,8 +94,11 @@ export class WorkspaceSharingService implements IWorkspaceSharingService {
 	}
 }
 
-// TODO(keegancsmith) re-use code comments code
-function resolveShareable(resource: URI): TPromise<URI> {
+/**
+ * Tries to find a cloneable URI for resource. If it fails, it will return URI.
+ * This is a fallback for finding a shareable URI for a path.
+ */
+function resolveCloneURI(resource: URI): TPromise<URI> {
 	if (resource.scheme !== Schemas.file) {
 		return TPromise.as(resource);
 	}

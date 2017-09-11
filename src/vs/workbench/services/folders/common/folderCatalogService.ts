@@ -58,6 +58,27 @@ export class FolderCatalogService implements IFolderCatalogService {
 		return provider.resolveFolder(resource);
 	}
 
+	public resolveLocalFolderResources(path: string): TPromise<URI[]> {
+		// Return the first provider to resolve a non-null ICatalogFolder.
+		return TPromise.join(this.providers.map(({ root, provider }) => {
+			return provider.resolveLocalFolderResource(path).then(resource => {
+				const resources: URI[] = [];
+				if (resource) {
+					resources.push(resource);
+				}
+				resources.forEach(resource => {
+					// Ensure resource is underneath the provider's root (to detect defective providers).
+					if (this.getProviderForResource(resource) !== provider) {
+						throw new Error(`folder catalog provider resolved local folder resource ${resource.toString()} that is not underneath the provider's root ${root.toString()}`);
+					}
+				});
+				return resources;
+			});
+		})).then(urisUnflattened => {
+			return flatten(urisUnflattened);
+		});
+	}
+
 	public search(query: string): TPromise<ICatalogFolder[]> {
 		return TPromise.join(
 			this.providers.map(({ root, provider }) =>
