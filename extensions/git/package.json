@@ -733,6 +733,13 @@
           "group": "2_git@3",
           "when": "config.git.enabled && gitOpenRepositoryCount != 0 && isInDiffEditor && resourceScheme != merge-conflict.conflict-diff"
         }
+      ],
+      "explorer/context": [
+        {
+          "command": "git.addTempWorktree",
+          "group": "2_git",
+          "when": "config.git.enabled && resourceScheme == file"
+        }
       ]
     },
     "configuration": {
