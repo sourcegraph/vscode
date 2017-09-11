@@ -7,7 +7,7 @@
 	align-items: center;
 	display: flex;
 	justify-content: center;
-	min-width: 100%;
+	min-width: 800px;
 	min-height: 100%;
 }
 
@@ -24,6 +24,7 @@
 .monaco-workbench > .part.editor > .content .welcomePage .row {
 	display: flex;
 	flex-flow: row;
+	overflow: auto;
 }
 
 .monaco-workbench > .part.editor > .content .welcomePage button {
@@ -170,12 +171,14 @@
 	display: flex;
 	flex-direction: column;
 	min-width: calc(50% - 0.5em);
+	flex-shrink: 0;
 }
 .monaco-workbench > .part.editor > .content .welcomePage .splash.first {
+	flex-shrink: 0;
 	padding-right: 1em;
 }
 .monaco-workbench > .part.editor > .content .welcomePage .splash.last {
-	padding-left: 1rem;
+	padding-left: 1em;
 }
 .monaco-workbench > .part.editor > .content .welcomePage .splash ul {
 	margin: 0;
@@ -261,6 +264,7 @@
 	display: inline-block;
 	height: 32px;
 	width: 228px;
+	flex-shrink: 0;
 }
 .monaco-workbench > .part.editor > .content .welcomePage .list-icon {
 	-webkit-mask: url(../../List.svg) center no-repeat;
