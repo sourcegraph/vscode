@@ -27,11 +27,8 @@ async function goToSourceFile(): Promise<any> {
 const initializeDevEnvironmentTaskId = 'initializeDevEnvironment';
 
 async function onWorkspaceFolderAdded(e: vscode.WorkspaceFoldersChangeEvent) {
-	setTimeout(async () => { // timeout appears necessary to wait for config to load
-		for (const added of e.added) {
-			await ensureDevEnvironmentInitialized(added);
-		}
-	}, 0);
+	// timeout appears necessary to wait for config to load
+	setTimeout(() => e.added.forEach(added => ensureDevEnvironmentInitialized(added)), 0);
 }
 
 function getTasksFilePath(workspaceFolder: vscode.WorkspaceFolder): string {
