@@ -5,6 +5,8 @@
 'use strict';
 
 import { localize } from 'vs/nls';
+import 'vs/css!./media/home.contribution';
+import { HomeContribution } from 'vs/workbench/parts/welcome/page/electron-browser/home';
 import { IWorkbenchContributionsRegistry, Extensions as WorkbenchExtensions } from 'vs/workbench/common/contributions';
 import { Registry } from 'vs/platform/registry/common/platform';
 import { WelcomePageContribution, WelcomePageAction, WelcomeInputFactory } from 'vs/workbench/parts/welcome/page/electron-browser/welcomePage';
@@ -12,6 +14,7 @@ import { IWorkbenchActionRegistry, Extensions as ActionExtensions } from 'vs/wor
 import { SyncActionDescriptor } from 'vs/platform/actions/common/actions';
 import { IConfigurationRegistry, Extensions as ConfigurationExtensions } from 'vs/platform/configuration/common/configurationRegistry';
 import { IEditorRegistry, Extensions as EditorExtensions } from 'vs/workbench/common/editor';
+import { IGlobalActivityRegistry, GlobalActivityExtensions } from 'vs/workbench/common/activity';
 
 Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration)
 	.registerConfiguration({
@@ -40,3 +43,6 @@ Registry.as<IWorkbenchActionRegistry>(ActionExtensions.WorkbenchActions)
 	.registerWorkbenchAction(new SyncActionDescriptor(WelcomePageAction, WelcomePageAction.ID, WelcomePageAction.LABEL), 'Help: Welcome', localize('help', "Help"));
 
 Registry.as<IEditorRegistry>(EditorExtensions.Editors).registerEditorInputFactory(WelcomeInputFactory.ID, WelcomeInputFactory);
+
+Registry.as<IGlobalActivityRegistry>(GlobalActivityExtensions)
+	.registerActivity(HomeContribution);

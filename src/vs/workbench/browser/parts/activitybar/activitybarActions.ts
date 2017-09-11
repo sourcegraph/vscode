@@ -11,7 +11,7 @@ import DOM = require('vs/base/browser/dom');
 import { TPromise } from 'vs/base/common/winjs.base';
 import { Builder, $ } from 'vs/base/browser/builder';
 import { DelayedDragHandler } from 'vs/base/browser/dnd';
-import { Action } from 'vs/base/common/actions';
+import { Action, IAction } from 'vs/base/common/actions';
 import { BaseActionItem, Separator, IBaseActionItemOptions } from 'vs/base/browser/ui/actionbar/actionbar';
 import { IActivityBarService, ProgressBadge, TextBadge, NumberBadge, IconBadge, IBadge } from 'vs/workbench/services/activity/common/activityBarService';
 import Event, { Emitter } from 'vs/base/common/event';
@@ -698,6 +698,47 @@ export class GlobalActivityActionItem extends ActivityActionItem {
 			getActions: () => TPromise.as(actions),
 			onHide: () => dispose(actions)
 		});
+	}
+}
+
+
+export class ActivityRunActionItem extends ActivityActionItem {
+
+	constructor(
+		action: GlobalActivityAction,
+		@IThemeService themeService: IThemeService,
+		@IContextMenuService protected contextMenuService: IContextMenuService
+	) {
+		super(action, { draggable: false }, themeService);
+	}
+
+	public render(container: HTMLElement): void {
+		super.render(container);
+
+		this.$container.on(DOM.EventType.MOUSE_DOWN, (e: MouseEvent) => {
+			DOM.EventHelper.stop(e, true);
+			const action = this.getActivityAction();
+			action.run();
+		});
+
+		this.$container.on(DOM.EventType.KEY_UP, (e: KeyboardEvent) => {
+			let event = new StandardKeyboardEvent(e);
+			if (event.equals(KeyCode.Enter) || event.equals(KeyCode.Space)) {
+				DOM.EventHelper.stop(e, true);
+				const action = this.getActivityAction();
+				action.run();
+			}
+		});
+	}
+
+	private getActivityAction(): IAction {
+		const globalAction = this._action as GlobalActivityAction;
+		const activity = globalAction.activity as IGlobalActivity;
+		const actions = activity.getActions();
+		if (actions.length !== 1) {
+			throw new Error('ActivityRunActionItem getActions must return 1 action item.');
+		}
+		return actions[0];
 	}
 }
 

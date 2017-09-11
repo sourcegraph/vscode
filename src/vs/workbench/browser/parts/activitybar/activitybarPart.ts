@@ -19,7 +19,7 @@ import { GlobalActivityExtensions, IGlobalActivityRegistry } from 'vs/workbench/
 import { Registry } from 'vs/platform/registry/common/platform';
 import { Part } from 'vs/workbench/browser/part';
 import { IViewlet } from 'vs/workbench/common/viewlet';
-import { ToggleViewletPinnedAction, ViewletActivityAction, ActivityAction, GlobalActivityActionItem, ViewletActionItem, ViewletOverflowActivityAction, ViewletOverflowActivityActionItem, GlobalActivityAction, IViewletActivity } from 'vs/workbench/browser/parts/activitybar/activitybarActions';
+import { ToggleViewletPinnedAction, ViewletActivityAction, ActivityAction, ActivityRunActionItem, GlobalActivityActionItem, ViewletActionItem, ViewletOverflowActivityAction, ViewletOverflowActivityActionItem, GlobalActivityAction, IViewletActivity } from 'vs/workbench/browser/parts/activitybar/activitybarActions';
 import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
 import { IActivityBarService, IBadge } from 'vs/workbench/services/activity/common/activityBarService';
 import { IPartService, Position as SideBarPosition } from 'vs/workbench/services/part/common/partService';
@@ -293,7 +293,12 @@ export class ActivitybarPart extends Part implements IActivityBarService {
 			.map(a => new GlobalActivityAction(a));
 
 		this.globalActionBar = new ActionBar(container, {
-			actionItemProvider: a => this.instantiationService.createInstance(GlobalActivityActionItem, a),
+			actionItemProvider: a => {
+				if (a.id === 'vs.home') {
+					return this.instantiationService.createInstance(ActivityRunActionItem, a);
+				}
+				return this.instantiationService.createInstance(GlobalActivityActionItem, a);
+			},
 			orientation: ActionsOrientation.VERTICAL,
 			ariaLabel: nls.localize('globalActions', "Global Actions"),
 			animated: false
