@@ -25,11 +25,11 @@ suite('Workbench - WorkspaceSharingService', () => {
 		);
 		check(
 			'git@github.com:foo/bar.git',
-			'git+ssh://git%40github.com/foo/bar.git',
+			'git+ssh://git@github.com/foo/bar.git',
 		);
 		check(
 			'git%40github.com:foo/bar.git',
-			'git+ssh://git%40github.com/foo/bar.git',
+			'git+ssh://git@github.com/foo/bar.git',
 		);
 	});
 
