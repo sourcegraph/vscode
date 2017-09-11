@@ -173,8 +173,9 @@ export class FileComments extends Disposable implements IFileComments {
 	 * See documentation on IFileComments.
 	 */
 	public createDraftThread(editor: ICommonCodeEditor): DraftThreadComments {
-		if (editor.getModel() !== this.model) {
-			throw new Error('mismatch models');
+		const model = editor.getModel();
+		if (model.uri.toString() !== this.model.uri.toString()) {
+			throw new Error(`mismatch models: ${model.uri}, ${this.model.uri}`);
 		}
 		const draft = this.instantiationService.createInstance(DraftThreadComments, editor, this.git);
 		draft.onDidSubmit(thread => {
