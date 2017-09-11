@@ -70,7 +70,15 @@ async function ensureDevEnvironmentInitialized(workspaceFolder: vscode.Workspace
 		}
 	}
 
-	// Note: we are not using the runTask command, because that appears to support only one workspace root currently.
+	return runTask(workspaceFolder, task);
+}
+
+/**
+ * runTask runs the dev initialization task in the given @param workspaceFolder.
+ *
+ * Note: we are not using the runTask command, because that appears only to support one workspace root currently.
+ */
+function runTask(workspaceFolder: vscode.WorkspaceFolder, task: BaseTaskConfig): Promise<void> {
 	vscode.window.showInformationMessage(localize('KEY-Initializing dev environment.', "Initializing dev environment."));
 	const promise = task.type === 'shell' ?
 		new Promise((resolve, reject) => cp.exec(task.command, { cwd: workspaceFolder.uri.fsPath }, (err, stdout, stderr) => err ? reject(err) : resolve())) :
@@ -82,7 +90,7 @@ async function ensureDevEnvironmentInitialized(workspaceFolder: vscode.Workspace
 	});
 }
 
-function getDevEnvironmentInitializedTask(workspaceFolder: vscode.WorkspaceFolder): TaskConfig | null {
+function getDevEnvironmentInitializedTask(workspaceFolder: vscode.WorkspaceFolder): BaseTaskConfig | null {
 	const config = vscode.workspace.getConfiguration('tasks', workspaceFolder.uri);
 	if (!config.has('tasks')) {
 		return null;
@@ -90,10 +98,35 @@ function getDevEnvironmentInitializedTask(workspaceFolder: vscode.WorkspaceFolde
 	const tasks = config.get('tasks') as Array<TaskConfig>;
 	for (const task of tasks) {
 		if (task.identifier === initializeDevEnvironmentTaskId) {
-			return task;
+			return toEffectiveTaskConfig(task);
 		}
 	}
 	return null;
+}
+
+/**
+ * Converts the raw task config to an effective task config by squashing OS-specific fields.
+ */
+function toEffectiveTaskConfig(raw: TaskConfig): BaseTaskConfig {
+	const effective: BaseTaskConfig = Object.assign({}, raw);
+	switch (process.platform) {
+		case 'darwin':
+			if (raw.windows) {
+				Object.assign(effective, raw.windows);
+			}
+			break;
+		case 'linux':
+			if (raw.linux) {
+				Object.assign(effective, raw.linux);
+			}
+			break;
+		case 'win32':
+			if (raw.windows) {
+				Object.assign(effective, raw.windows);
+			}
+			break;
+	}
+	return effective;
 }
 
 interface TaskConfig extends BaseTaskConfig {
