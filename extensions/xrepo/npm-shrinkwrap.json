@@ -1,4 +1,11 @@
 {
   "name": "xrepo",
-  "version": "0.0.0"
+  "version": "0.0.0",
+  "dependencies": {
+    "vscode-nls": {
+      "version": "2.0.2",
+      "from": "vscode-nls@2.0.2",
+      "resolved": "https://registry.npmjs.org/vscode-nls/-/vscode-nls-2.0.2.tgz"
+    }
+  }
 }
