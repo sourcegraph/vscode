@@ -14,6 +14,7 @@ import { getTotalHeight } from 'vs/base/browser/dom';
 import { peekViewBorder, peekViewResultsBackground } from 'vs/editor/contrib/referenceSearch/browser/referencesWidget';
 import { Color } from 'vs/base/common/color';
 import Event, { Emitter } from 'vs/base/common/event';
+import { textLinkActiveForeground, textLinkForeground } from 'vs/platform/theme/common/colorRegistry';
 
 /**
  * Base class for thead widgets.
@@ -70,6 +71,16 @@ export class BaseThreadCommentsWidget extends ZoneWidget {
 }
 
 registerThemingParticipant((theme, collector) => {
+	const linkColor = theme.getColor(textLinkForeground);
+	if (linkColor) {
+		collector.addRule(`.thread-comments .comment .content a { color: ${linkColor}; }`);
+	}
+	const activeLinkColor = theme.getColor(textLinkActiveForeground);
+	if (activeLinkColor) {
+		console.log('hihihi');
+		collector.addRule(`.thread-comments .comment .content a:hover { color: ${activeLinkColor}; }`);
+		collector.addRule(`.thread-comments .comment .content a:active { color: ${activeLinkColor}; }`);
+	}
 	const borderColor = theme.getColor(peekViewBorder);
 	if (borderColor) {
 		collector.addRule(`.thread-comments .border { border-color: ${borderColor}; }`);
