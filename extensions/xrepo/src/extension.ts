@@ -9,6 +9,9 @@ import * as cp from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
 import { mkdirp } from './util';
+import * as nls from 'vscode-nls';
+
+const localize = nls.loadMessageBundle();
 
 export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.commands.registerCommand('xrepo.goToSource', goToSourceFile));
@@ -33,8 +36,8 @@ async function onWorkspaceFolderAdded(e: vscode.WorkspaceFoldersChangeEvent) {
 async function ensureDevEnvironmentInitialized(workspaceFolder: vscode.WorkspaceFolder) {
 	const task = getDevEnvironmentInitializedTask(workspaceFolder);
 	if (!task) {
-		const choice = await vscode.window.showWarningMessage(nls.localize('KEY-No initializeDevEnvironment task was found.', "No initializeDevEnvironment task was found."), nls.localize('KEY-Add', "Add"));
-		if (choice === nls.localize('KEY-Add', "Add")) {
+		const choice = await vscode.window.showWarningMessage(localize('KEY-No initializeDevEnvironment task was found.', "No initializeDevEnvironment task was found."), localize('KEY-Add', "Add"));
+		if (choice === localize('KEY-Add', "Add")) {
 			const tasksPath = path.join(workspaceFolder.uri.fsPath, '.vscode', 'tasks.json');
 			if (!fs.existsSync(tasksPath)) {
 				await mkdirp(path.dirname(tasksPath));
@@ -56,8 +59,8 @@ async function ensureDevEnvironmentInitialized(workspaceFolder: vscode.Workspace
 	}
 
 	if (!task.creates) {
-		const run = await vscode.window.showWarningMessage(nls.localize('KEY-Found initializeDevEnvironment task. Run it?', "Found initializeDevEnvironment task. Run it?"), nls.localize('KEY-Run', "Run"));
-		if (run !== nls.localize('KEY-Run', "Run")) {
+		const run = await vscode.window.showWarningMessage(localize('KEY-Found initializeDevEnvironment task. Run it?', "Found initializeDevEnvironment task. Run it?"), localize('KEY-Run', "Run"));
+		if (run !== localize('KEY-Run', "Run")) {
 			return;
 		}
 	} else {
@@ -68,14 +71,14 @@ async function ensureDevEnvironmentInitialized(workspaceFolder: vscode.Workspace
 	}
 
 	// Note: we are not using the runTask command, because that appears to support only one workspace root currently.
-	vscode.window.showInformationMessage(nls.localize('KEY-Initializing dev environment.', "Initializing dev environment."));
+	vscode.window.showInformationMessage(localize('KEY-Initializing dev environment.', "Initializing dev environment."));
 	const promise = task.type === 'shell' ?
 		new Promise((resolve, reject) => cp.exec(task.command, { cwd: workspaceFolder.uri.fsPath }, (err, stdout, stderr) => err ? reject(err) : resolve())) :
 		new Promise((resolve, reject) => cp.execFile(task.command, task.args, { cwd: workspaceFolder.uri.fsPath }, (err, stdout, stderr) => err ? reject(err) : resolve()));
 	return promise.then(() => {
-		vscode.window.showInformationMessage(nls.localize('KEY-Finished initializing dev environment.', "Finished initializing dev environment."));
+		vscode.window.showInformationMessage(localize('KEY-Finished initializing dev environment.', "Finished initializing dev environment."));
 	}, (err) => {
-		vscode.window.showErrorMessage(nls.localize('KEY-Failed to initialize dev environment: ', "Failed to initialize dev environment: ") + err);
+		vscode.window.showErrorMessage(localize('KEY-Failed to initialize dev environment: ', "Failed to initialize dev environment: ") + err);
 	});
 }
 

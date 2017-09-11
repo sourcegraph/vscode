@@ -33,5 +33,8 @@
   },
   "scripts": {
     "vscode:prepublish": "tsc -p ./"
+  },
+  "dependencies": {
+    "vscode-nls": "^2.0.2"
   }
 }
