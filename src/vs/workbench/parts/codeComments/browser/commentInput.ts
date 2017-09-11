@@ -76,7 +76,7 @@ export class CommentInput extends Disposable {
 				this.disposable(this.secondaryButton.addListener('click', () => this.didClickSecondaryButton.fire()));
 
 				this.submitButton = new Button(div.getContainer());
-				this.submitButton.label = localize('submitComment', "Submit");
+				this.submitButton.label = localize('submitComment', "Comment");
 				attachButtonStyler(this.submitButton, this.themeService);
 				this.disposable(this.submitButton);
 				this.disposable(this.submitButton.addListener('click', () => this.handleSubmit()));
