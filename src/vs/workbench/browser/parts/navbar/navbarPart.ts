@@ -15,13 +15,16 @@ import { RunOnceScheduler } from 'vs/base/common/async';
 import { IAction, Action } from 'vs/base/common/actions';
 import { prepareActions } from 'vs/workbench/browser/actions';
 import { EventType as BaseEventType } from 'vs/base/common/events';
+import { chain } from 'vs/base/common/event';
+import { domEvent } from 'vs/base/browser/event';
+import { StandardKeyboardEvent } from 'vs/base/browser/keyboardEvent';
 import { INavBarService } from 'vs/workbench/services/nav/common/navBar';
 import { INavService } from 'vs/workbench/services/nav/common/nav';
 import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
 import { IMessageService, Severity } from 'vs/platform/message/common/message';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
-import { ResolvedKeybinding } from 'vs/base/common/keyCodes';
+import { ResolvedKeybinding, KeyCode } from 'vs/base/common/keyCodes';
 import { IHistoryService } from 'vs/workbench/services/history/common/history';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { NAV_BAR_ACTIVE_BACKGROUND, NAV_BAR_ACTIVE_FOREGROUND, NAV_BAR_INACTIVE_FOREGROUND, NAV_BAR_INACTIVE_BACKGROUND, NAV_BAR_BORDER } from 'vs/workbench/common/theme';
@@ -112,6 +115,12 @@ export class NavbarPart extends Part implements INavBarService, INavBarPart {
 		this.initActions();
 
 		this.navContainer = $(parent);
+
+		// Pressing ESC key hides nav bar.
+		const onKeyDown = chain(domEvent(this.navContainer.getHTMLElement(), 'keydown'))
+			.map(e => new StandardKeyboardEvent(e));
+		this._register(onKeyDown.filter(e => e.keyCode === KeyCode.Escape)
+			.on(() => this.hideNavbarAction.run()));
 
 		// Location
 		this.locationContainer = $(this.navContainer).div({ class: 'location' });
