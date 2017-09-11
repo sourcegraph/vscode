@@ -77,7 +77,6 @@ registerThemingParticipant((theme, collector) => {
 	}
 	const activeLinkColor = theme.getColor(textLinkActiveForeground);
 	if (activeLinkColor) {
-		console.log('hihihi');
 		collector.addRule(`.thread-comments .comment .content a:hover { color: ${activeLinkColor}; }`);
 		collector.addRule(`.thread-comments .comment .content a:active { color: ${activeLinkColor}; }`);
 	}
