@@ -105,14 +105,14 @@ function formatPosition(line: number, column: number, canOmit: boolean): string 
 
 // formatString returns the string representation of the range or
 // position. The string representation can be parsed using parseSelection.
-function formatSelection(range: Selection): string {
+export function formatSelection(range: Selection): string {
 	const end = formatPosition(range.endLineNumber, range.endColumn, true);
 	const start = formatPosition(range.startLineNumber, range.startColumn, !end);
 	if (end) {
-		return 'L' + start + '-' + end;
+		return start + '-' + end;
 	}
 	if (start) {
-		return 'L' + start;
+		return start;
 	}
 	return '';
 }

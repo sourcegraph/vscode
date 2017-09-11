@@ -9,12 +9,9 @@
 	font-size: 12px;
 	overflow: hidden;
 	flex-shrink: 0;
-	/* align-items: ;
-	justify-content: center; */
 	-webkit-user-select: none;
 	-webkit-app-region: drag;
 	zoom: 1; /* prevent zooming */
-	/* line-height: 30px; */
 	height: 30px;
 	display: flex;
 }
@@ -86,4 +83,15 @@
 .vs-dark .monaco-workbench > .part.navbar .navigate-forward-action,
 .hc-black .monaco-workbench > .part.navbar .navigate-forward-action {
 	background: url('../../../../../editor/contrib/find/browser/images/next-inverse.svg') center center no-repeat;
+}
+
+.monaco-workbench > .part.navbar .share-location-action {
+	background: url('share.svg') center center no-repeat;
+	padding-left: 19px;
+	background-position: center left !important;
+}
+
+.vs-dark .monaco-workbench > .part.navbar .share-location-action,
+.hc-black .monaco-workbench > .part.navbar .share-location-action {
+	background: url('share-inverse.svg') center center no-repeat;
 }

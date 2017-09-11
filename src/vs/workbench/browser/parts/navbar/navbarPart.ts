@@ -15,24 +15,32 @@ import { RunOnceScheduler } from 'vs/base/common/async';
 import { IAction, Action } from 'vs/base/common/actions';
 import { prepareActions } from 'vs/workbench/browser/actions';
 import { EventType as BaseEventType } from 'vs/base/common/events';
+import { chain } from 'vs/base/common/event';
+import { domEvent } from 'vs/base/browser/event';
+import { StandardKeyboardEvent } from 'vs/base/browser/keyboardEvent';
 import { INavBarService } from 'vs/workbench/services/nav/common/navBar';
 import { INavService } from 'vs/workbench/services/nav/common/nav';
 import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
 import { IMessageService, Severity } from 'vs/platform/message/common/message';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
-import { ResolvedKeybinding } from 'vs/base/common/keyCodes';
+import { ResolvedKeybinding, KeyCode } from 'vs/base/common/keyCodes';
 import { IHistoryService } from 'vs/workbench/services/history/common/history';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { NAV_BAR_ACTIVE_BACKGROUND, NAV_BAR_ACTIVE_FOREGROUND, NAV_BAR_INACTIVE_FOREGROUND, NAV_BAR_INACTIVE_BACKGROUND, NAV_BAR_BORDER } from 'vs/workbench/common/theme';
 import { NavigateBackwardsAction, NavigateForwardAction } from 'vs/workbench/browser/parts/editor/editorActions';
 import { ToolBar } from 'vs/base/browser/ui/toolbar/toolbar';
-import { IActionItem, ActionItem, ActionsOrientation } from 'vs/base/browser/ui/actionbar/actionbar';
+import { IActionItem, ActionItem, ActionsOrientation, Separator } from 'vs/base/browser/ui/actionbar/actionbar';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { CopyLocationAction, ShareLocationAction, LocationHistoryActionItem } from 'vs/workbench/browser/parts/navbar/navbarActions';
+import { HideNavbarAction } from 'vs/workbench/browser/actions/toggleNavbarVisibility';
 import { LocationBarInput } from 'vs/workbench/browser/parts/navbar/locationBarInput';
 
-export class NavbarPart extends Part implements INavBarService {
+export interface INavBarPart {
+	readonly locationBarInput: LocationBarInput;
+}
+
+export class NavbarPart extends Part implements INavBarService, INavBarPart {
 
 	public _serviceBrand: any;
 
@@ -40,10 +48,12 @@ export class NavbarPart extends Part implements INavBarService {
 	private navigateForwardAction: NavigateForwardAction;
 	private copyLocationAction: CopyLocationAction;
 	private shareLocationAction: ShareLocationAction;
+	private hideNavbarAction: HideNavbarAction;
 
 	private navigationActionsToolbar: ToolBar; // before the locationBarInput
 	private locationActionsToolbar: ToolBar; // after the locationBarInput
-	private locationBarInput: LocationBarInput;
+	private _locationBarInput: LocationBarInput;
+	public get locationBarInput(): LocationBarInput { return this._locationBarInput; }
 
 	private scheduler: RunOnceScheduler;
 	private refreshScheduled: boolean;
@@ -76,7 +86,9 @@ export class NavbarPart extends Part implements INavBarService {
 		this.navigateBackwardsAction = this.instantiationService.createInstance(NavigateBackwardsAction, NavigateBackwardsAction.ID, NavigateBackwardsAction.LABEL);
 		this.navigateForwardAction = this.instantiationService.createInstance(NavigateForwardAction, NavigateForwardAction.ID, NavigateForwardAction.LABEL);
 		this.copyLocationAction = this.instantiationService.createInstance(CopyLocationAction, CopyLocationAction.ID, CopyLocationAction.LABEL);
-		this.shareLocationAction = this.instantiationService.createInstance(ShareLocationAction, ShareLocationAction.ID, ShareLocationAction.LABEL);
+		this.shareLocationAction = this.instantiationService.createInstance(ShareLocationAction, ShareLocationAction.ID, nls.localize({ key: 'shareLocationShort', comment: ['This is a shorter form of the workbench.action.shareLocation string for use on a button.'] }, "Share"));
+		this.shareLocationAction.tooltip = nls.localize('shareLocationTooltip', "Copy a shareable link to the current file ({0})", this.getKeybindingLabel(ShareLocationAction.ID));
+		this.hideNavbarAction = this.instantiationService.createInstance(HideNavbarAction, HideNavbarAction.ID, HideNavbarAction.LABEL);
 
 		this.updateNavigationEnablement();
 	}
@@ -104,6 +116,12 @@ export class NavbarPart extends Part implements INavBarService {
 
 		this.navContainer = $(parent);
 
+		// Pressing ESC key hides nav bar.
+		const onKeyDown = chain(domEvent(this.navContainer.getHTMLElement(), 'keydown'))
+			.map(e => new StandardKeyboardEvent(e));
+		this._register(onKeyDown.filter(e => e.keyCode === KeyCode.Escape)
+			.on(() => this.hideNavbarAction.run()));
+
 		// Location
 		this.locationContainer = $(this.navContainer).div({ class: 'location' });
 
@@ -113,8 +131,8 @@ export class NavbarPart extends Part implements INavBarService {
 
 		// Location input
 		const locationBarInputContainer = $(this.locationContainer).div({ class: 'location-input' });
-		this.locationBarInput = this.instantiationService.createInstance(LocationBarInput, locationBarInputContainer.getHTMLElement());
-		this._register(this.locationBarInput);
+		this._locationBarInput = this.instantiationService.createInstance(LocationBarInput, locationBarInputContainer.getHTMLElement());
+		this._register(this._locationBarInput);
 
 		// Location actions toolbar (after the location bar input)
 		const locationActionsContainer = $(this.locationContainer).div({ class: 'actions location' });
@@ -126,8 +144,8 @@ export class NavbarPart extends Part implements INavBarService {
 	}
 
 	public focusLocationBar(): void {
-		if (this.locationBarInput) {
-			this.locationBarInput.focus();
+		if (this._locationBarInput) {
+			this._locationBarInput.focus();
 		}
 	}
 
@@ -210,7 +228,7 @@ export class NavbarPart extends Part implements INavBarService {
 		this.locationActionsToolbar = new ToolBar(container, this.contextMenuService, {
 			actionItemProvider: (action: Action) => new ActionItem(null, action, {
 				label: true,
-				keybinding: this.getKeybindingLabel(action.id),
+				icon: true,
 			}),
 			orientation: ActionsOrientation.HORIZONTAL,
 			ariaLabel: nls.localize('ariaLabelLocationActions', "Location actions"),
@@ -222,6 +240,8 @@ export class NavbarPart extends Part implements INavBarService {
 		]);
 		const secondaryActions: IAction[] = prepareActions([
 			this.copyLocationAction,
+			new Separator(),
+			this.hideNavbarAction,
 		]);
 		this.locationActionsToolbar.setActions(primaryActions, secondaryActions)();
 
@@ -274,15 +294,15 @@ export class NavbarPart extends Part implements INavBarService {
 	}
 
 	private updateLocationInput(): void {
-		if (!this.locationBarInput) {
+		if (!this._locationBarInput) {
 			return;
 		}
 
 		const location = this.navService.getLocation();
 		if (location) {
-			this.locationBarInput.value = location.toString(true);
+			this._locationBarInput.value = location.toString(true);
 		} else {
-			this.locationBarInput.value = '';
+			this._locationBarInput.value = '';
 		}
 	}
 }
