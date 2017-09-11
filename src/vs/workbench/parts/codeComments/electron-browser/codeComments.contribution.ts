@@ -32,7 +32,7 @@ Registry.as<ViewletRegistry>(ViewletExtensions.Viewlets).registerViewlet(new Vie
 ));
 
 const openViewletKb: IKeybindings = {
-	primary: KeyMod.CtrlCmd | KeyMod.Alt | KeyCode.KEY_M
+	primary: KeyMod.CtrlCmd | KeyMod.Alt | KeyMod.Shift | KeyCode.KEY_M
 };
 
 // Global actions
