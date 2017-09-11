@@ -197,6 +197,11 @@
         "category": "Git"
       },
       {
+        "command": "git.addTempWorktree",
+        "title": "%command.addTempWorktree%",
+        "category": "Git"
+      },
+      {
         "command": "git.branch",
         "title": "%command.branch%",
         "category": "Git"
@@ -382,6 +387,10 @@
         },
         {
           "command": "git.addWorktree",
+          "when": "config.git.enabled && gitOpenRepositoryCount != 0"
+        },
+        {
+          "command": "git.addTempWorktree",
           "when": "config.git.enabled && gitOpenRepositoryCount != 0"
         },
         {
@@ -808,7 +817,9 @@
     }
   },
   "dependencies": {
+    "@types/rimraf": "^2.0.2",
     "iconv-lite": "0.4.15",
+    "rimraf": "^2.6.2",
     "vscode-extension-telemetry": "0.0.8",
     "vscode-nls": "2.0.2"
   },
