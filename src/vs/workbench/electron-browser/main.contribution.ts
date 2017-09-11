@@ -184,7 +184,7 @@ let workbenchProperties: { [path: string]: IJSONSchema; } = {
 	},
 	'workbench.navBar.visible': {
 		'type': 'boolean',
-		default: false,
+		default: true,
 		description: nls.localize('navBarVisible', "Controls the visibility of the navigation bar in the workbench.")
 	},
 	'workbench.sideBar.location': {
