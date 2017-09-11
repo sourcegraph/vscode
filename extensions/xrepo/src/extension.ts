@@ -99,6 +99,7 @@ async function ensureDevEnvironmentInitialized(workspaceFolder: vscode.Workspace
  * runTask runs the dev initialization task in the given @param workspaceFolder.
  *
  * Note: we are not using the runTask command, because that appears only to support one workspace root currently.
+ * See https://github.com/Microsoft/vscode/issues/29454 for details.
  */
 function runTask(workspaceFolder: vscode.WorkspaceFolder, task: BaseTaskConfig): Promise<void> {
 	return task.type === 'shell' ?
