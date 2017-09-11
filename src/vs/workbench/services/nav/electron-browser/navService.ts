@@ -101,7 +101,7 @@ export class NavService extends Disposable implements INavService {
 			options: { pinned: true },
 		};
 
-		let selections: ISelection[];
+		let selections: ISelection[] = [];
 		if (query.selection) {
 			let selectionStrings: string[];
 			if (types.isArray(query.selection)) {
