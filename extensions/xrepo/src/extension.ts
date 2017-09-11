@@ -52,8 +52,8 @@ async function ensureDevEnvironmentInitializedCmd(workspaceFolder?: vscode.Works
 async function ensureDevEnvironmentInitialized(workspaceFolder: vscode.WorkspaceFolder): Promise<boolean> {
 	const task = getDevEnvironmentInitializedTask(workspaceFolder);
 	if (!task) {
-		const choice = await vscode.window.showWarningMessage(localize('KEY-No initializeDevEnvironment task was found.', "No initializeDevEnvironment task was found."), localize('KEY-Add', "Add"));
-		if (choice === localize('KEY-Add', "Add")) {
+		const choice = await vscode.window.showWarningMessage(localize('noInitializeDevEnvironmentTaskWarning', "No initializeDevEnvironment task was found."), localize('add', "Add"));
+		if (choice === localize('add', "Add")) {
 			const tasksPath = getTasksFilePath(workspaceFolder);
 			if (!fs.existsSync(tasksPath)) {
 				await mkdirp(path.dirname(tasksPath));
@@ -75,8 +75,8 @@ async function ensureDevEnvironmentInitialized(workspaceFolder: vscode.Workspace
 	}
 
 	if (!task.creates) {
-		const run = await vscode.window.showWarningMessage(localize('KEY-Found initializeDevEnvironment task. Run it?', "Found initializeDevEnvironment task. Run it?"), localize('KEY-Run', "Run"));
-		if (run !== localize('KEY-Run', "Run")) {
+		const run = await vscode.window.showWarningMessage(localize('foundInitializeDevEnvironmentTaskMessage', "Found initializeDevEnvironment task. Run it?"), localize('run', "Run"));
+		if (run !== localize('run', "Run")) {
 			return false;
 		}
 	} else {
@@ -86,11 +86,11 @@ async function ensureDevEnvironmentInitialized(workspaceFolder: vscode.Workspace
 		}
 	}
 
-	vscode.window.showInformationMessage(localize('KEY-Initializing dev environment.', "Initializing dev environment."));
+	vscode.window.showInformationMessage(localize('initializingDevEnvironmentMessage.', "Initializing dev environment."));
 	await runTask(workspaceFolder, task).then(() => {
-		vscode.window.showInformationMessage(localize('KEY-Finished initializing dev environment.', "Finished initializing dev environment."));
+		vscode.window.showInformationMessage(localize('finishedInitializingDevEnvironmentMessage.', "Finished initializing dev environment."));
 	}, (err) => {
-		vscode.window.showErrorMessage(localize('KEY-Failed to initialize dev environment: ', "Failed to initialize dev environment: ") + err);
+		vscode.window.showErrorMessage(localize('failedToInitializeDevEnvironmentError ', "Failed to initialize dev environment: ") + err);
 	});
 	return true;
 }
