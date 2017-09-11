@@ -332,7 +332,7 @@ export abstract class ZoneWidget extends Widget implements IHorizontalSashLayout
 		} else {
 			position = {
 				lineNumber: where.startLineNumber,
-				column: where.startColumn
+				column: where.startColumn,
 			};
 		}
 
