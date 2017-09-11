@@ -15,7 +15,8 @@ const localize = nls.loadMessageBundle();
 
 export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.commands.registerCommand('xrepo.goToSource', goToSourceFile));
-	vscode.workspace.onDidChangeWorkspaceFolders(onWorkspaceFolderAdded);
+	context.subscriptions.push(vscode.commands.registerCommand('xrepo.ensureDevEnvironmentInitialized', ensureDevEnvironmentInitializedCmd));
+	context.subscriptions.push(vscode.workspace.onDidChangeWorkspaceFolders(onWorkspaceFolderAdded));
 }
 
 async function goToSourceFile(): Promise<any> {
@@ -33,12 +34,26 @@ async function onWorkspaceFolderAdded(e: vscode.WorkspaceFoldersChangeEvent) {
 	}, 0);
 }
 
+function getTasksFilePath(workspaceFolder: vscode.WorkspaceFolder): string {
+	return path.join(workspaceFolder.uri.fsPath, '.vscode', 'tasks.json');
+}
+
+async function ensureDevEnvironmentInitializedCmd(workspaceFolder?: vscode.WorkspaceFolder) {
+	if (!workspaceFolder) {
+		if (!vscode.window.activeTextEditor) {
+			return;
+		}
+		workspaceFolder = vscode.workspace.getWorkspaceFolder(vscode.window.activeTextEditor.document.uri);
+	}
+	return ensureDevEnvironmentInitialized(workspaceFolder!);
+}
+
 async function ensureDevEnvironmentInitialized(workspaceFolder: vscode.WorkspaceFolder) {
 	const task = getDevEnvironmentInitializedTask(workspaceFolder);
 	if (!task) {
 		const choice = await vscode.window.showWarningMessage(localize('KEY-No initializeDevEnvironment task was found.', "No initializeDevEnvironment task was found."), localize('KEY-Add', "Add"));
 		if (choice === localize('KEY-Add', "Add")) {
-			const tasksPath = path.join(workspaceFolder.uri.fsPath, '.vscode', 'tasks.json');
+			const tasksPath = getTasksFilePath(workspaceFolder);
 			if (!fs.existsSync(tasksPath)) {
 				await mkdirp(path.dirname(tasksPath));
 				const newFileUri = vscode.Uri.parse('untitled://' + tasksPath.replace(new RegExp(path.sep, 'g'), '/'));

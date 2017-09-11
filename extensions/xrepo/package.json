@@ -19,6 +19,10 @@
       {
         "command": "xrepo.goToSource",
         "title": "Go to Source File"
+      },
+      {
+        "command": "xrepo.ensureDevEnvironmentInitialized",
+        "title": "Ensure Dev Environment is Initialized"
       }
     ],
     "menus": {
