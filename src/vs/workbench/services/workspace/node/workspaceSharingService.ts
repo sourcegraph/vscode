@@ -22,7 +22,7 @@ import { IJSONEditingService } from 'vs/workbench/services/configuration/common/
 import { IExtensionService } from 'vs/platform/extensions/common/extensions';
 import { localize } from 'vs/nls';
 // tslint:disable-next-line:import-patterns
-import { IFoldersWorkbenchService } from 'vs/workbench/parts/workspace/common/workspace';
+import { IFoldersWorkbenchService } from 'vs/workbench/services/folders/common/folders';
 import { IFolderCatalogService } from 'vs/platform/folders/common/folderCatalog';
 
 export class WorkspaceSharingService implements IWorkspaceSharingService {
