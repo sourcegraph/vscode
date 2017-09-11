@@ -21,6 +21,8 @@ import * as arrays from 'vs/base/common/arrays';
 import { IJSONEditingService } from 'vs/workbench/services/configuration/common/jsonEditing';
 import { IExtensionService } from 'vs/platform/extensions/common/extensions';
 import { localize } from 'vs/nls';
+// tslint:disable-next-line:import-patterns
+import { IFoldersWorkbenchService } from 'vs/workbench/parts/workspace/common/workspace';
 import { IFolderCatalogService } from 'vs/platform/folders/common/folderCatalog';
 
 export class WorkspaceSharingService implements IWorkspaceSharingService {
@@ -34,6 +36,7 @@ export class WorkspaceSharingService implements IWorkspaceSharingService {
 		@IEnvironmentService private environmentService: IEnvironmentService,
 		@IJSONEditingService private jsonEditingService: IJSONEditingService,
 		@IExtensionService private extensionService: IExtensionService,
+		@IFoldersWorkbenchService private foldersWorkbenchService: IFoldersWorkbenchService,
 		@IFolderCatalogService private folderCatalogService: IFolderCatalogService,
 	) {
 		// Import after activation of extensions that supply resource resolvers.
@@ -83,7 +86,7 @@ export class WorkspaceSharingService implements IWorkspaceSharingService {
 				return;
 			}
 			const roots: URI[] = config.roots.map(URI.parse);
-			this.workspaceEditingService.addRoots(roots);
+			this.foldersWorkbenchService.addFoldersAsWorkspaceRootFolders(roots);
 			// Now that the roots have been added as folders, remove them from the config so we don't add them again.
 			this.jsonEditingService.write(workspace.configuration, { key: 'roots', value: [] }, true);
 		});
