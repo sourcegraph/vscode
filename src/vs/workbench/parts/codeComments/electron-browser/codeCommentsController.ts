@@ -148,6 +148,17 @@ export class CodeCommentsController extends Disposable implements IEditorContrib
 		}
 		this.telemetryService.publicLog('codeComments.viewThread', { codeComments: { commentCount: thread.comments.length } });
 		const threadWidget = this.instantiationService.createInstance(ThreadCommentsWidget, this.editor, thread);
+		const disposables: IDisposable[] = [];
+
+		thread.onDidChangeArchived(() => {
+			if (thread.archived) {
+				this.hideThreadWidget(thread, threadWidget);
+			}
+		}, this, disposables);
+		thread.onWillDispose(() => this.hideThreadWidget(thread, threadWidget), this, disposables);
+
+		threadWidget.onWillDispose(() => dispose(disposables));
+
 		this.openThreadWidgets.set(thread.id, threadWidget);
 		threadWidget.expand(reveal);
 
@@ -275,9 +286,19 @@ export class CodeCommentsController extends Disposable implements IEditorContrib
 	 * renders a highlight of the range for the currently selected thread (if there is one).
 	 */
 	private renderDecorations(model: IModel): void {
-		const threads = this.fileComments.threads.filter(t => !!t.displayRange);
-		const draftThreads = this.fileComments.draftThreads;
+		const threads = this.fileComments.threads.filter(t => {
+			if (!t.displayRange) {
+				// Display range not computed yet.
+				return false;
+			}
+			if (this.openThreadWidgets.get(t.id)) {
+				// It is already showing. We need to show the gutter because this is the close button.
+				return true;
+			}
+			return !t.archived;
+		});
 
+		const draftThreads = this.fileComments.draftThreads;
 		this.threadsByLine = index(threads, thread => thread.displayRange.startLineNumber);
 		this.draftThreadsByLine = index(draftThreads, thread => thread.displayRange.startLineNumber);
 

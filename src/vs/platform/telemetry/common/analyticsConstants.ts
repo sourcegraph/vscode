@@ -293,6 +293,7 @@ export const SOURCEGRAPH_EVENT_MAP: { [eventName: string]: EventMapEntry } = {
 
 	// Code comments
 	'codeComments.replyToThread': { eventCategory: EventCategory.CodeComments, eventAction: EventAction.Submit },
+	'codeComments.cancelCreateThread': { eventCategory: EventCategory.CodeComments, eventAction: EventAction.Close },
 	'codeComments.openCreateThreadView': { eventCategory: EventCategory.CodeComments, eventAction: EventAction.Open },
 	'codeComments.createThread': { eventCategory: EventCategory.CodeComments, eventAction: EventAction.Submit },
 	'codeComments.openViewlet': { eventCategory: EventCategory.CodeComments, eventAction: EventAction.Open },

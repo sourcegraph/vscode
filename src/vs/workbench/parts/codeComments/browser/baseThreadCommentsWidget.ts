@@ -13,6 +13,7 @@ import { ZoneWidget } from 'vs/editor/contrib/zoneWidget/browser/zoneWidget';
 import { getTotalHeight } from 'vs/base/browser/dom';
 import { peekViewBorder, peekViewResultsBackground } from 'vs/editor/contrib/referenceSearch/browser/referencesWidget';
 import { Color } from 'vs/base/common/color';
+import Event, { Emitter } from 'vs/base/common/event';
 
 /**
  * Base class for thead widgets.
@@ -57,6 +58,14 @@ export class BaseThreadCommentsWidget extends ZoneWidget {
 
 	protected _doLayout(heightInPixel: number, widthInPixel: number): void {
 		this.layout();
+	}
+
+	private willDispose = this._register(new Emitter<void>());
+	public onWillDispose: Event<void> = this.willDispose.event;
+
+	public dispose() {
+		this.willDispose.fire();
+		super.dispose();
 	}
 }
 

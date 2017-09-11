@@ -96,6 +96,10 @@ export class CommentInput extends Disposable {
 		this.inputBox.value = value;
 	}
 
+	public set secondaryButtonLabel(label: string) {
+		this.secondaryButton.label = label;
+	}
+
 	public setEnabled(enabled: boolean) {
 		this.submitButton.enabled = enabled;
 		this.inputBox.setEnabled(enabled);

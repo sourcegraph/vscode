@@ -49,6 +49,19 @@ interface DocumentId {
 }
 
 /**
+ * Graphql representation of a comment.
+ */
+const commentsGraphql = `
+comments {
+	id
+	contents
+	createdAt
+	updatedAt
+	authorName
+	authorEmail
+}`;
+
+/**
  * Graphql representation of an entire thread and its comments.
  */
 const threadGraphql = `
@@ -60,15 +73,9 @@ endLine
 startCharacter
 endCharacter
 createdAt
-comments {
-	id
-	contents
-	createdAt
-	updatedAt
-	authorName
-	authorEmail
-}
-`;
+archivedAt
+${commentsGraphql}`;
+
 
 export class CodeCommentsService implements ICodeCommentsService {
 	public _serviceBrand: any;
@@ -352,42 +359,41 @@ export class ThreadComments extends Disposable implements IThreadComments {
 	public readonly range: Range;
 	public readonly createdAt: Date;
 
-	private didChangeComments = this.disposable(new Emitter<void>());
-	public readonly onDidChangeComments = this.didChangeComments.event;
-
-	private didChangeDraftReply = this.disposable(new Emitter<void>());
-	public readonly onDidChangeDraftReply = this.didChangeDraftReply.event;
-
-	private didChangeSubmittingDraftReply = this.disposable(new Emitter<void>());
-	public readonly onDidChangeSubmittingDraftReply = this.didChangeSubmittingDraftReply.event;
-
-	private didChangeDisplayRange = this.disposable(new Emitter<void>());
-	public readonly onDidChangeDisplayRange = this.didChangeDisplayRange.event;
-
-	private _submittingDraftReply = false;
-	public get submittingDraftReply() {
-		return this._submittingDraftReply;
+	private _pendingOperation = false;
+	private didChangePendingOperation = this.disposable(new Emitter<void>());
+	public readonly onDidChangePendingOperation = this.didChangePendingOperation.event;
+	public get pendingOperation() { return this._pendingOperation; }
+	public set pendingOperation(pendingOperation: boolean) {
+		if (this._pendingOperation !== pendingOperation) {
+			this._pendingOperation = pendingOperation;
+			this.didChangePendingOperation.fire();
+		}
 	}
-	public set submittingDraftReply(submitting: boolean) {
-		if (this._submittingDraftReply !== submitting) {
-			this._submittingDraftReply = submitting;
-			this.didChangeSubmittingDraftReply.fire();
+
+	private _archived = false;
+	private didChangeArchived = this.disposable(new Emitter<void>());
+	public onDidChangeArchived = this.didChangeArchived.event;
+	public get archived(): boolean { return this._archived; }
+	public set archived(archived: boolean) {
+		if (this._archived !== archived) {
+			this._archived = archived;
+			this.didChangeArchived.fire();
 		}
 	}
 
 	private _comments: Comment[];
-	public get comments(): Comment[] {
-		return this._comments;
-	}
+	private didChangeComments = this.disposable(new Emitter<void>());
+	public readonly onDidChangeComments = this.didChangeComments.event;
+	public get comments(): Comment[] { return this._comments; }
 	public set comments(comments: Comment[]) {
 		this._comments = comments;
 		this.didChangeComments.fire();
 	}
 
-	private _draftReply: string;
-	public get draftReply(): string {
-		return this._draftReply;
-	}
+	private _draftReply = '';
+	private didChangeDraftReply = this.disposable(new Emitter<void>());
+	public readonly onDidChangeDraftReply = this.didChangeDraftReply.event;
+	public get draftReply(): string { return this._draftReply; }
 	public set draftReply(draftReply: string) {
 		if (this._draftReply !== draftReply) {
 			this._draftReply = draftReply;
@@ -396,9 +402,9 @@ export class ThreadComments extends Disposable implements IThreadComments {
 	}
 
 	private _displayRange?: Range;
-	public get displayRange(): Range | undefined {
-		return this._displayRange;
-	}
+	private didChangeDisplayRange = this.disposable(new Emitter<void>());
+	public readonly onDidChangeDisplayRange = this.didChangeDisplayRange.event;
+	public get displayRange(): Range | undefined { return this._displayRange; }
 	public set displayRange(displayRange: Range | undefined) {
 		if (this._displayRange !== displayRange) {
 			this._displayRange = displayRange;
@@ -426,29 +432,58 @@ export class ThreadComments extends Disposable implements IThreadComments {
 		this.revision = thread.revision;
 		this.range = new Range(thread.startLine, thread.startCharacter, thread.endLine, thread.endCharacter);
 		this.createdAt = new Date(thread.createdAt);
+		this.archived = !!thread.archivedAt;
 		this._comments = comments;
 	}
 
+	public setArchived(archived: boolean): TPromise<void> {
+		return this.operation(() => TPromise.join([
+			this.git.getRemoteRepo(),
+			this.git.getAccessToken(),
+		])
+			.then(([remoteURI, accessToken]) => {
+				return requestGraphQLMutation<{ updateThread: GQL.IThread }>(this.remoteService, `mutation SetArchived {
+					updateThread(
+						threadID: $threadID,
+						remoteURI: $remoteURI,
+						accessToken: $accessToken,
+						archived: $archived,
+					) {
+						archivedAt
+					}
+				}`, {
+						threadID: this.id,
+						remoteURI,
+						accessToken,
+						archived,
+					});
+			})
+			.then(response => {
+				this.archived = !!response.updateThread.archivedAt;
+			})
+		);
+	}
+
 	public submitDraftReply(): TPromise<void> {
-		return TPromise.join<any>([
+		return this.operation(() => TPromise.join<any>([
 			this.git.getUserName(),
 			this.git.getUserEmail(),
 			this.git.getRemoteRepo(),
 			this.git.getAccessToken(),
 		])
 			.then(([authorName, authorEmail, remoteURI, accessToken]) => {
-				return requestGraphQLMutation<{ addCommentToThread: GQL.IThread }>(this.remoteService, `mutation {
-					addCommentToThread(
-						threadID: $threadID,
-						remoteURI: $remoteURI,
-						accessToken: $accessToken,
-						contents: $contents,
-						authorName: $authorName,
-						authorEmail: $authorEmail,
-					) {
-						${threadGraphql}
-					}
-				}`, {
+				return requestGraphQLMutation<{ addCommentToThread: GQL.IThread }>(this.remoteService, `mutation SubmitDraftReply {
+						addCommentToThread(
+							threadID: $threadID,
+							remoteURI: $remoteURI,
+							accessToken: $accessToken,
+							contents: $contents,
+							authorName: $authorName,
+							authorEmail: $authorEmail,
+						) {
+							${commentsGraphql}
+						}
+					}`, {
 						threadID: this.id,
 						remoteURI,
 						accessToken,
@@ -460,8 +495,21 @@ export class ThreadComments extends Disposable implements IThreadComments {
 			.then(response => {
 				this.draftReply = '';
 				this.comments = response.addCommentToThread.comments.map(c => new Comment(c));
-			});
+			})
+		);
 	}
+
+	private operation(operation: () => TPromise<void>): TPromise<void> {
+		if (this.pendingOperation) {
+			return TPromise.wrapError(new Error('pending operation'));
+		}
+		this.pendingOperation = true;
+		const result = operation();
+		const clearPendingOperation = () => { this.pendingOperation = false; };
+		result.done(clearPendingOperation, clearPendingOperation);
+		return result;
+	}
+
 }
 
 export class DraftThreadComments extends Disposable implements IDraftThreadComments {
@@ -703,5 +751,6 @@ function endsWithSlash(s: string): string {
 }
 
 function resolveContent(accessor: ServicesAccessor, git: Git, documentId: DocumentId, revision: string): TPromise<{ revision: string, content: string }> {
+	// TODO(nick): better way to resolve content that leverages local workspaces.
 	return git.getContentsAtRevision(documentId.file, revision).then(content => ({ revision, content }));
 }

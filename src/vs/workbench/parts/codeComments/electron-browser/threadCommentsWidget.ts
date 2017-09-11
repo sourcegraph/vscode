@@ -56,18 +56,22 @@ export class ThreadCommentsWidget extends BaseThreadCommentsWidget {
 			this.threadCommentsElement,
 			localize('reply', "Reply..."),
 			this.threadComments.draftReply,
-			localize('archiveCommentThread', "Archive"),
+			this.getSecondaryButtonLabel(),
 		);
 		this._register(this.commentInput);
 		this._register(this.commentInput.onDidChangeContent(content => {
 			this.threadComments.draftReply = content;
+			this.commentInput.secondaryButtonLabel = this.getSecondaryButtonLabel();
 		}));
 		this._register(this.commentInput.onDidChangeHeight(() => {
 			this.layout();
 		}));
 		this._register(this.commentInput.onDidClickSubmitButton(e => this.submitReply()));
 		this._register(this.commentInput.onDidClickSecondaryButton(() => {
-			// TODO(nick): archive
+			const comment = this.canArchiveAndComment() ? this.submitReply() : TPromise.wrap(undefined);
+			comment.then(() => {
+				this.threadComments.setArchived(!this.threadComments.archived);
+			});
 		}));
 
 		this._register(this.threadComments.onDidChangeComments(() => {
@@ -77,9 +81,27 @@ export class ThreadCommentsWidget extends BaseThreadCommentsWidget {
 		this._register(this.threadComments.onDidChangeDraftReply(() => {
 			this.commentInput.value = this.threadComments.draftReply;
 		}));
-		this._register(this.threadComments.onDidChangeSubmittingDraftReply(() => {
-			this.commentInput.setEnabled(!this.threadComments.submittingDraftReply);
+		this._register(this.threadComments.onDidChangePendingOperation(() => {
+			this.commentInput.setEnabled(!this.threadComments.pendingOperation);
 		}));
+		this._register(this.threadComments.onDidChangeArchived(() => {
+			if (!this.threadComments.archived) {
+				this.commentInput.secondaryButtonLabel = this.getSecondaryButtonLabel();
+			}
+		}));
+	}
+
+	public canArchiveAndComment(): boolean {
+		return !this.threadComments.archived && this.threadComments.draftReply.trim().length > 0;
+	}
+
+	private getSecondaryButtonLabel(): string {
+		if (this.threadComments.archived) {
+			return localize('unarchiveCommentThread', "Unarchive");
+		}
+		return this.canArchiveAndComment() ?
+			localize('archiveAndComment', "Archive and comment") :
+			localize('archive', "Archive");
 	}
 
 	private toDisposeOnRender: IDisposable[] = [];
@@ -116,9 +138,9 @@ export class ThreadCommentsWidget extends BaseThreadCommentsWidget {
 		}
 	}
 
-	private submitReply(): void {
+	private submitReply(): TPromise<void> {
 		const content = this.threadComments.draftReply;
-		this.threadComments.submitDraftReply().then(() => {
+		return this.threadComments.submitDraftReply().then(() => {
 			this.telemetryService.publicLog('codeComments.replyToThread', getCommentTelemetryData({ thread: this.threadComments, content, error: false }));
 		}, error => {
 			this.telemetryService.publicLog('codeComments.replyToThread', getCommentTelemetryData({ thread: this.threadComments, content, error: true }));

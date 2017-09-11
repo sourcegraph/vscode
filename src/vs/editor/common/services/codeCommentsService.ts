@@ -28,7 +28,7 @@ export interface ICodeCommentsService {
 /**
  * Model for comments on a file.
  */
-export interface IFileComments extends IDisposable {
+export interface IFileComments extends IEventDisposable {
 
 	/**
 	 * A promise that resolves when comments
@@ -41,20 +41,12 @@ export interface IFileComments extends IDisposable {
 	 * Threads are ordered by the timestamp of the most recent comment descending.
 	 */
 	readonly threads: IThreadComments[];
-
-	/**
-	 * Event that is fired when threads change.
-	 */
 	readonly onDidChangeThreads: Event<void>;
 
 	/**
 	 * Returns all draft threads on the file in the order that they were created.
 	 */
 	readonly draftThreads: IDraftThreadComments[];
-
-	/**
-	 * Event that is fired when draft threads change.
-	 */
 	readonly onDidChangeDraftThreads: Event<void>;
 
 	/**
@@ -82,7 +74,7 @@ export interface IFileComments extends IDisposable {
 /**
  * Model for a new thread that the user has not submitted.
  */
-export interface IDraftThreadComments extends IDisposable {
+export interface IDraftThreadComments extends IEventDisposable {
 
 	/**
 	 * A client-local idendifier for the new thread.
@@ -113,8 +105,6 @@ export interface IDraftThreadComments extends IDisposable {
 	 */
 	readonly onDidSubmit: Event<IThreadComments>;
 
-	readonly onWillDispose: Event<void>;
-
 	/**
 	 * Submit the draft.
 	 */
@@ -124,7 +114,7 @@ export interface IDraftThreadComments extends IDisposable {
 /**
  * Model for comment threads on a file.
  */
-export interface IThreadComments extends IDisposable {
+export interface IThreadComments extends IEventDisposable {
 	/**
 	 * Auto increment id for the thread.
 	 */
@@ -150,6 +140,12 @@ export interface IThreadComments extends IDisposable {
 	 * The date the thread was created.
 	 */
 	readonly createdAt: Date;
+
+	/**
+	 * True if the thread is archived.
+	 */
+	readonly archived: boolean;
+	readonly onDidChangeArchived: Event<void>;
 
 	/**
 	 * The comments in the thread.
@@ -178,15 +174,20 @@ export interface IThreadComments extends IDisposable {
 	readonly onDidChangeDraftReply: Event<void>;
 
 	/**
-	 * True if the draftReply is being submitted.
+	 * True if an operation is pending (e.g. submitDraftReply or setArchived).
 	 */
-	readonly submittingDraftReply: boolean;
-	readonly onDidChangeSubmittingDraftReply: Event<void>;
+	readonly pendingOperation: boolean;
+	readonly onDidChangePendingOperation: Event<void>;
 
 	/**
 	 * Adds a new comment to a thread with the content of draftReply.
 	 */
 	submitDraftReply(): TPromise<void>;
+
+	/**
+	 * Sets the archived state of the thread.
+	 */
+	setArchived(archived: boolean): TPromise<void>;
 }
 
 /**
@@ -199,4 +200,12 @@ export interface IComment {
 	updatedAt: Date;
 	authorName: string;
 	authorEmail: string;
+}
+
+export interface IEventDisposable extends IDisposable {
+
+	/**
+	 * Event that is fired on dispose.
+	 */
+	readonly onWillDispose: Event<void>;
 }

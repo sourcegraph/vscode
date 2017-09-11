@@ -32,7 +32,6 @@ declare namespace GQL {
   */
   interface IRoot {
     __typename: "Root";
-    organization: IOrganization | null;
     repository: IRepository | null;
     repositories: Array<IRepository>;
     remoteRepositories: Array<IRemoteRepository>;
@@ -40,24 +39,11 @@ declare namespace GQL {
     symbols: Array<ISymbol>;
     currentUser: IUser | null;
     activeRepos: IActiveRepoResults;
+    search: Array<SearchResult>;
     searchRepos: ISearchResults;
     searchProfiles: Array<ISearchProfile>;
     revealCustomerCompany: ICompanyProfile | null;
     threads: Array<IThread>;
-  }
-
-  /*
-    description: null
-  */
-  interface IOrganization {
-    __typename: "Organization";
-    login: string;
-    githubId: number;
-    email: string;
-    name: string;
-    avatarURL: string;
-    description: string;
-    collaborators: number;
   }
 
   /*
@@ -145,10 +131,21 @@ declare namespace GQL {
     __typename: "File";
     name: string;
     content: string;
+    binary: boolean;
+    highlight: IHighlightedFile;
     blame: Array<IHunk>;
     commits: Array<ICommitInfo>;
     dependencyReferences: IDependencyReferences;
     blameRaw: string;
+  }
+
+  /*
+    description: null
+  */
+  interface IHighlightedFile {
+    __typename: "HighlightedFile";
+    aborted: boolean;
+    html: string;
   }
 
   /*
@@ -316,6 +313,23 @@ declare namespace GQL {
   /*
     description: null
   */
+  type SearchResult = IRepository | IFile | ISearchProfile;
+
+
+
+  /*
+    description: null
+  */
+  interface ISearchProfile {
+    __typename: "SearchProfile";
+    name: string;
+    description: string | null;
+    repositories: Array<IRepository>;
+  }
+
+  /*
+    description: null
+  */
   interface ISearchQuery {
     pattern: string;
     isRegExp: boolean;
@@ -364,16 +378,6 @@ declare namespace GQL {
     lineNumber: number;
     offsetAndLengths: Array<Array<number>>;
     limitHit: boolean;
-  }
-
-  /*
-    description: null
-  */
-  interface ISearchProfile {
-    __typename: "SearchProfile";
-    name: string;
-    description: string | null;
-    repositories: Array<IRepository>;
   }
 
   /*
@@ -438,11 +442,13 @@ declare namespace GQL {
     id: number;
     file: string;
     revision: string;
+    title: string;
     startLine: number;
     endLine: number;
     startCharacter: number;
     endCharacter: number;
     createdAt: string;
+    archivedAt: string | null;
     comments: Array<IComment>;
   }
 
@@ -465,6 +471,7 @@ declare namespace GQL {
   interface IMutation {
     __typename: "Mutation";
     createThread: IThread;
+    updateThread: IThread;
     addCommentToThread: IThread;
   }
 

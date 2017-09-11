@@ -13,7 +13,6 @@ import { IDraftThreadComments } from 'vs/editor/common/services/codeCommentsServ
 import { CommentInput } from 'vs/workbench/parts/codeComments/browser/commentInput';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { getCommentTelemetryData } from 'vs/workbench/parts/codeComments/common/codeComments';
-import Event, { Emitter } from 'vs/base/common/event';
 import { BaseThreadCommentsWidget } from 'vs/workbench/parts/codeComments/browser/baseThreadCommentsWidget';
 
 /**
@@ -48,7 +47,11 @@ export class DraftThreadCommentsWidget extends BaseThreadCommentsWidget {
 		this._register(this.commentInput.onDidChangeContent(content => this.draftThread.content = content));
 		this._register(this.commentInput.onDidChangeHeight(() => this.layout()));
 		this._register(this.commentInput.onDidClickSubmitButton(() => this.createThread()));
-		this._register(this.commentInput.onDidClickSecondaryButton(() => this.draftThread.dispose()));
+		this._register(this.commentInput.onDidClickSecondaryButton(() => {
+			const content = this.draftThread.content;
+			this.telemetryService.publicLog('codeComments.cancelCreateThread', getCommentTelemetryData({ content, error: false }));
+			this.draftThread.dispose();
+		}));
 
 		this._register(this.draftThread.onDidChangeContent(() => this.commentInput.value = this.draftThread.content));
 		this._register(this.draftThread.onDidChangeSubmitting(() => {
@@ -74,13 +77,5 @@ export class DraftThreadCommentsWidget extends BaseThreadCommentsWidget {
 		if (reveal) {
 			this.commentInput.focus();
 		}
-	}
-
-	private willDispose = this._register(new Emitter<void>());
-	public onWillDispose: Event<void> = this.willDispose.event;
-
-	public dispose() {
-		this.willDispose.fire();
-		super.dispose();
 	}
 }

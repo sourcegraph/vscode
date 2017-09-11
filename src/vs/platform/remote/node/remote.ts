@@ -57,7 +57,9 @@ export function requestGraphQL<T>(remoteService: IRemoteService, query: string, 
 }
 
 export function requestGraphQLMutation<T>(remoteService: IRemoteService, query: string, variables: { [name: string]: any }): TPromise<T> {
-	return sendGraphQLRequest<T>(remoteService, query, variables, '');
+	const match = query.match(/.*\bmutation\b +([A-Za-z]+)\b.*/m);
+	const caller = match ? match[1] : '';
+	return sendGraphQLRequest<T>(remoteService, query, variables, caller);
 }
 
 function sendGraphQLRequest<T>(remoteService: IRemoteService, query: string, variables: { [name: string]: any }, caller: string): TPromise<T> {
