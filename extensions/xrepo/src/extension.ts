@@ -27,7 +27,7 @@ async function goToSourceFile(): Promise<any> {
 const initializeDevEnvironmentTaskId = 'initializeDevEnvironment';
 
 async function onWorkspaceFolderAdded(e: vscode.WorkspaceFoldersChangeEvent) {
-	// timeout appears necessary to wait for config to load
+	// timeout appears necessary to wait for config to load. See https://github.com/Microsoft/vscode/issues/34254.
 	setTimeout(() => e.added.forEach(added => ensureDevEnvironmentInitialized(added)), 0);
 }
 
