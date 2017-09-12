@@ -41,8 +41,13 @@ export class BaseThreadCommentsWidget extends ZoneWidget {
 	}
 
 	protected _fillContainer(containerElement: HTMLElement): void {
-		$(containerElement).div({ class: 'thread-comments' }, div => {
+		// Set tabindex so it can handle focus.
+		$(containerElement).div({ class: 'thread-comments', tabindex: -1 }, div => {
 			this.threadCommentsElement = div.getContainer();
+		});
+
+		this.onkeydown(containerElement, e => {
+			this.dispose();
 		});
 	}
 

@@ -121,7 +121,7 @@ export class CodeCommentsController extends Disposable implements IEditorContrib
 				if (!draftThreadWidget) {
 					this.showDraftThreadWidget(draftThread, true);
 				} else {
-					this.hideDraftThreadWidget(draftThread, draftThreadWidget);
+					draftThreadWidget.dispose();
 				}
 			} else {
 				const thread = threads[0];
@@ -129,7 +129,7 @@ export class CodeCommentsController extends Disposable implements IEditorContrib
 				if (!threadWidget) {
 					this.showThreadWidget(thread, true);
 				} else {
-					this.hideThreadWidget(thread, threadWidget);
+					threadWidget.dispose();
 				}
 			}
 		}));
@@ -151,23 +151,20 @@ export class CodeCommentsController extends Disposable implements IEditorContrib
 
 		thread.onDidChangeArchived(() => {
 			if (thread.archived) {
-				this.hideThreadWidget(thread, threadWidget);
+				threadWidget.dispose();
 			}
 		}, this, disposables);
-		thread.onWillDispose(() => this.hideThreadWidget(thread, threadWidget), this, disposables);
+		thread.onWillDispose(() => threadWidget.dispose(), this, disposables);
 
-		threadWidget.onWillDispose(() => dispose(disposables));
+		threadWidget.onWillDispose(() => {
+			this.openThreadWidgets.delete(thread.id);
+			dispose(disposables);
+			this.renderCurrentModelDecorations();
+		});
 
 		this.openThreadWidgets.set(thread.id, threadWidget);
 		threadWidget.expand(reveal);
 
-		// Update highlights.
-		this.renderCurrentModelDecorations();
-	}
-
-	private hideThreadWidget(thread: IThreadComments, threadWidget: ThreadCommentsWidget): void {
-		this.openThreadWidgets.delete(thread.id);
-		threadWidget.dispose();
 		// Update highlights.
 		this.renderCurrentModelDecorations();
 	}
@@ -182,19 +179,16 @@ export class CodeCommentsController extends Disposable implements IEditorContrib
 		const disposables: IDisposable[] = [];
 
 		draftThread.onDidSubmit(thread => this.showThreadWidget(thread, true), this, disposables);
-		draftThread.onWillDispose(() => this.hideDraftThreadWidget(draftThread, draftThreadWidget), this, disposables);
-		draftThreadWidget.onWillDispose(() => dispose(disposables));
+		draftThread.onWillDispose(() => draftThreadWidget.dispose(), this, disposables);
+		draftThreadWidget.onWillDispose(() => {
+			this.openDraftThreadWidgets.delete(draftThread.id);
+			dispose(disposables);
+			this.renderCurrentModelDecorations();
+		});
 
 		this.openDraftThreadWidgets.set(draftThread.id, draftThreadWidget);
 		draftThreadWidget.expand(reveal);
 
-		// Update highlights.
-		this.renderCurrentModelDecorations();
-	}
-
-	private hideDraftThreadWidget(draftThread: IDraftThreadComments, draftThreadWidget: DraftThreadCommentsWidget): void {
-		this.openDraftThreadWidgets.delete(draftThread.id);
-		draftThreadWidget.dispose();
 		// Update highlights.
 		this.renderCurrentModelDecorations();
 	}
