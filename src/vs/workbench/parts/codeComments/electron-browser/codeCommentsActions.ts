@@ -63,7 +63,6 @@ export class CreateCodeCommentAction extends EditorAction {
 	public run(accessor: ServicesAccessor, editor: ICommonCodeEditor): TPromise<any> {
 		const codeCommentsService = accessor.get(ICodeCommentsService);
 		const model = editor.getModel();
-		// TODO(nick): use markers?
 		const fileComments = codeCommentsService.getFileComments(model.uri);
 		const draftThread = fileComments.createDraftThread(editor);
 		CodeCommentsController.get(editor).showDraftThreadWidget(draftThread, true);

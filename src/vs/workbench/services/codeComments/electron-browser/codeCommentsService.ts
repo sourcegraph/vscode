@@ -22,9 +22,10 @@ import { IInstantiationService, ServicesAccessor } from 'vs/platform/instantiati
 import { IModelService } from 'vs/editor/common/services/modelService';
 import { ICommonCodeEditor, IModel } from 'vs/editor/common/editorCommon';
 import { RawTextSource } from 'vs/editor/common/model/textSource';
-import { dispose } from 'vs/base/common/lifecycle';
+import { dispose, IDisposable } from 'vs/base/common/lifecycle';
 import { StrictResourceMap } from 'vs/base/common/map';
 import { IMessageService, Severity } from 'vs/platform/message/common/message';
+import { IModelContentChangedEvent } from 'vs/editor/common/model/textModelEvents';
 export { Event }
 
 /**
@@ -93,6 +94,10 @@ export class CodeCommentsService implements ICodeCommentsService {
 	 * See documentation on ICodeCommentsService.
 	 */
 	public getFileComments(file: URI): FileComments {
+		// TODO(nick): prevent memory from growing unbounded.
+		// We should tie the lifecycle of our code comments models to the lifecycle of the
+		// editor models that they are attached to; however, we woud need to persist certain data
+		// like draft threads and draft replies so they could be restored.
 		let model = this.models.get(file);
 		if (!model) {
 			model = this.instantiationService.createInstance(FileComments, file);
@@ -106,7 +111,8 @@ export class CodeCommentsService implements ICodeCommentsService {
  * Model for comments on a file.
  */
 export class FileComments extends Disposable implements IFileComments {
-	private model: IModel;
+
+	private modelWatcher: ModelWatcher;
 
 	private _threads: ThreadComments[] = [];
 	private didChangeThreads = this.disposable(new Emitter<void>());
@@ -132,16 +138,17 @@ export class FileComments extends Disposable implements IFileComments {
 	private scmRepository: ISCMRepository;
 
 	constructor(
-		private fileUri: URI,
-		@IModelService modelService: IModelService,
+		uri: URI,
 		@ISCMService scmService: ISCMService,
+		@IModelService private modelService: IModelService,
 		@IInstantiationService private instantiationService: IInstantiationService,
 		@IRemoteService private remoteService: IRemoteService,
 	) {
 		super();
-		this.git = instantiationService.createInstance(Git, fileUri);
-		this.model = modelService.getModel(this.fileUri);
-		this.disposable(this.model.onDidChangeContent(() => {
+		this.git = instantiationService.createInstance(Git, uri);
+
+		this.modelWatcher = this.disposable(instantiationService.createInstance(ModelWatcher, uri));
+		this.disposable(this.modelWatcher.onDidChangeContent(() => {
 			this.updateDisplayRanges();
 		}));
 
@@ -150,7 +157,7 @@ export class FileComments extends Disposable implements IFileComments {
 			scmService.onDidRemoveRepository,
 			scmService.onDidChangeRepository
 		)(() => {
-			const scmRepository = scmService.getRepositoryForResource(this.fileUri);
+			const scmRepository = scmService.getRepositoryForResource(this.modelWatcher.uri);
 			if (this.scmRepository !== scmRepository) {
 				this.scmRepository = scmRepository;
 				if (scmRepository) {
@@ -173,10 +180,6 @@ export class FileComments extends Disposable implements IFileComments {
 	 * See documentation on IFileComments.
 	 */
 	public createDraftThread(editor: ICommonCodeEditor): DraftThreadComments {
-		const model = editor.getModel();
-		if (model.uri.toString() !== this.model.uri.toString()) {
-			throw new Error(`mismatch models: ${model.uri}, ${this.model.uri}`);
-		}
 		const draft = this.instantiationService.createInstance(DraftThreadComments, editor, this.git);
 		draft.onDidSubmit(thread => {
 			draft.dispose();
@@ -286,11 +289,11 @@ export class FileComments extends Disposable implements IFileComments {
 	 * file:///Users/nick/dev/xsourcegraph/README.md -> github.com/sourcegraph/xsourcegraph/README.md
 	 */
 	private getDocumentId(): TPromise<DocumentId | undefined> {
-		if (this.fileUri.scheme !== Schemas.file) {
+		if (this.modelWatcher.uri.scheme !== Schemas.file) {
 			return TPromise.as(void 0);
 		}
 		return TPromise.join([
-			this.instantiationService.invokeFunction(getPathRelativeToRepo, this.fileUri),
+			this.instantiationService.invokeFunction(getPathRelativeToRepo, this.modelWatcher.uri),
 			this.git.getRemoteRepo(),
 		]).then(([relativeFile, repo]) => {
 			return { repo, file: relativeFile };
@@ -327,9 +330,12 @@ export class FileComments extends Disposable implements IFileComments {
 					this.updatingDisplayRanges = undefined;
 					return this.updateDisplayRanges();
 				}
+				if (!this.modelWatcher.model) {
+					return TPromise.wrap<void>(undefined);
+				}
 				const diffs = revContents.reduce((diffs, revContent) => {
 					const originalLines = RawTextSource.fromString(revContent.content).lines;
-					const modifiedLines = this.model.getLinesContent();
+					const modifiedLines = this.modelWatcher.model.getLinesContent();
 					diffs.set(revContent.revision, new Diff(originalLines, modifiedLines));
 					return diffs;
 				}, new Map<string, Diff>());
@@ -350,6 +356,54 @@ export class FileComments extends Disposable implements IFileComments {
 			this.updatingDisplayRanges = undefined;
 		});
 		return updatingDisplayRanges;
+	}
+}
+
+/**
+ * Watches a URI for changes.
+ */
+class ModelWatcher extends Disposable {
+	private _model: IModel;
+	public get model(): IModel {
+		return this._model;
+	}
+
+	private didChangeContent = this.disposable(new Emitter<IModelContentChangedEvent>());
+	public readonly onDidChangeContent = this.didChangeContent.event;
+
+	constructor(
+		public readonly uri: URI,
+		@IModelService private modelService: IModelService,
+	) {
+		super();
+
+		this.disposable(any(
+			modelService.onModelAdded,
+			modelService.onModelRemoved,
+		)(this.handleModelChange, this));
+		this.handleModelChange();
+	}
+
+	private disposeOnModelChange: IDisposable[] = [];
+
+	private handleModelChange(): void {
+		const model = this.modelService.getModel(this.uri);
+		if (this._model === model) {
+			return;
+		}
+		this._model = model;
+		this.disposeOnModelChange = dispose(this.disposeOnModelChange);
+		if (!model) {
+			return;
+		}
+		this.disposeOnModelChange.push(model.onDidChangeContent(e => {
+			this.didChangeContent.fire(e);
+		}));
+	}
+
+	public dispose() {
+		this.disposeOnModelChange = dispose(this.disposeOnModelChange);
+		super.dispose();
 	}
 }
 
@@ -519,9 +573,9 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 	public readonly id = DraftThreadComments.NEXT_ID++;
 
 	private _content: string = '';
-	public get content(): string {
-		return this._content;
-	}
+	private didChangeContent = this.disposable(new Emitter<void>());
+	public readonly onDidChangeContent = this.didChangeContent.event;
+	public get content(): string { return this._content; }
 	public set content(content: string) {
 		if (this._content !== content) {
 			this._content = content;
@@ -529,12 +583,10 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 		}
 	}
 
-	// TODO(nick): display range should continue to update if content changes
-	// while comment is being written.
 	private _displayRange: Range;
-	public get displayRange(): Range {
-		return this._displayRange;
-	}
+	private didChangeDisplayRange = this.disposable(new Emitter<void>());
+	public readonly onDidChangeDisplayRange = this.didChangeDisplayRange.event;
+	public get displayRange(): Range { return this._displayRange; }
 	public set displayRange(displayRange: Range) {
 		if (this._displayRange !== displayRange) {
 			this._displayRange = displayRange;
@@ -542,17 +594,11 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 		}
 	}
 
-	private didChangeContent = this.disposable(new Emitter<void>());
-	public readonly onDidChangeContent = this.didChangeContent.event;
-
 	private didSubmit = this.disposable(new Emitter<ThreadComments>());
 	public readonly onDidSubmit = this.didSubmit.event;
 
 	private didChangeSubmitting = this.disposable(new Emitter<void>());
 	public readonly onDidChangeSubmitting = this.didChangeSubmitting.event;
-
-	private didChangeDisplayRange = this.disposable(new Emitter<void>());
-	public readonly onDidChangeDisplayRange = this.didChangeDisplayRange.event;
 
 	private submitData: TPromise<{
 		remoteURI: string,
@@ -575,11 +621,18 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 		@IRemoteService private remoteService: IRemoteService,
 	) {
 		super();
-
-		this.ensureNonEmptySelection(editor);
-		this.displayRange = editor.getSelection();
-
+		this.displayRange = this.getNonEmptySelection(editor);
 		const model = editor.getModel();
+
+		// Save a decoration for the range so if content changes
+		// while we are waiting for promises to resolve, we will have an updated range.
+		const rangeDecorationId = model.changeDecorations(change => {
+			return change.addDecoration(this.displayRange, {});
+		});
+		this.disposable(model.onDidChangeContent(() => {
+			this.displayRange = model.getDecorationRange(rangeDecorationId);
+		}));
+
 		const remoteURI = git.getRemoteRepo();
 		const accessToken = git.getAccessToken();
 		const file = instantiationService.invokeFunction(getPathRelativeToRepo, model.uri);
@@ -593,11 +646,13 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 		])
 			.then(([repo, file, revision]) => instantiationService.invokeFunction(resolveContent, git, { repo, file }, revision))
 			.then(content => {
+				if (model.isDisposed()) {
+					return TPromise.wrapError<Range>(new Error(localize('modelDisposedError', "Unable to create comment on editor that no longer exists.")));
+				}
 				const originalLines = RawTextSource.fromString(content.content).lines;
 				const modifiedLines = model.getLinesContent();
 				// Compute reverse diff.
 				const diff = new Diff(modifiedLines, originalLines);
-				this.displayRange = editor.getSelection();
 				return diff.transformRange(this.displayRange);
 			});
 
@@ -677,16 +732,13 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 	 * Returns the range that the new comment should be attached to.
 	 * It guarantees the returned range is not empty.
 	 */
-	private ensureNonEmptySelection(editor: ICommonCodeEditor) {
+	private getNonEmptySelection(editor: ICommonCodeEditor): Range {
 		let selection: Range = editor.getSelection();
 		if (selection.isEmpty()) {
 			// The user has not selected any text (just a cursor on a line).
 			// Select the entire line.
 			const line = selection.startLineNumber;
 			selection = new Range(line, 1, line + 1, 1);
-
-			// Update editor selection to reflect the comment range.
-			editor.setSelection(selection);
 		}
 
 		if (selection.endColumn === 1) {
@@ -705,9 +757,9 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 			// their original range.
 			if (!trimmedSelection.isEmpty()) {
 				selection = trimmedSelection;
-				editor.setSelection(selection);
 			}
 		}
+		return selection;
 	}
 }
 
