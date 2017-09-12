@@ -10,9 +10,11 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as cp from 'child_process';
 import * as rimraf from 'rimraf';
+import * as nls from 'vscode-nls';
 import { mkdirp } from './util';
 import os = require('os');
 
+const localize = nls.loadMessageBundle();
 const tmpRoot = path.join(os.homedir(), '.sourcegraph', 'temp-workspace-roots');
 
 export function activate(context: vscode.ExtensionContext) {
@@ -25,6 +27,10 @@ export function activate(context: vscode.ExtensionContext) {
 async function onDidChangeWorkspaceFolders(e: vscode.WorkspaceFoldersChangeEvent) {
 	for (const removed of e.removed) {
 		if (removed.uri.fsPath.startsWith(tmpRoot + path.sep)) {
+			const choice = await vscode.window.showInformationMessage(localize('deleteDirectoryContainingWorktreeWorkspaceFolder', "Delete directory containing the worktree workspace folder you just removed?"), localize('delete', "Delete"));
+			if (choice !== localize('delete', "Delete")) {
+				continue;
+			}
 			const relpath = path.relative(tmpRoot, removed.uri.fsPath);
 			const firstCmp = relpath.split(path.sep)[0];
 			await new Promise<void>((resolve, reject) => rimraf(path.join(tmpRoot, firstCmp), (err) => err ? reject(err) : resolve()));
