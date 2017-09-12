@@ -87,11 +87,12 @@ async function ensureDevEnvironmentInitialized(workspaceFolder: vscode.Workspace
 	}
 
 	vscode.window.showInformationMessage(localize('initializingDevEnvironmentMessage.', "Initializing dev environment."));
-	await runTask(workspaceFolder, task).then(() => {
+	try {
+		await runTask(workspaceFolder, task);
 		vscode.window.showInformationMessage(localize('finishedInitializingDevEnvironmentMessage.', "Finished initializing dev environment."));
-	}, (err) => {
+	} catch (err) {
 		vscode.window.showErrorMessage(localize('failedToInitializeDevEnvironmentError ', "Failed to initialize dev environment: ") + err);
-	});
+	}
 	return true;
 }
 
@@ -103,8 +104,8 @@ async function ensureDevEnvironmentInitialized(workspaceFolder: vscode.Workspace
  */
 function runTask(workspaceFolder: vscode.WorkspaceFolder, task: BaseTaskConfig): Promise<void> {
 	return task.type === 'shell' ?
-		new Promise((resolve, reject) => cp.exec(task.command, { cwd: workspaceFolder.uri.fsPath }, (err, stdout, stderr) => err ? reject(err) : resolve())) :
-		new Promise((resolve, reject) => cp.execFile(task.command, task.args, { cwd: workspaceFolder.uri.fsPath }, (err, stdout, stderr) => err ? reject(err) : resolve()));
+		new Promise((resolve, reject) => cp.exec(task.command, { cwd: workspaceFolder.uri.fsPath }, (err) => err ? reject(err) : resolve())) :
+		new Promise((resolve, reject) => cp.execFile(task.command, task.args, { cwd: workspaceFolder.uri.fsPath }, (err) => err ? reject(err) : resolve()));
 }
 
 function getDevEnvironmentInitializedTask(workspaceFolder: vscode.WorkspaceFolder): BaseTaskConfig | null {
@@ -125,25 +126,9 @@ function getDevEnvironmentInitializedTask(workspaceFolder: vscode.WorkspaceFolde
  * Converts the raw task config to an effective task config by squashing OS-specific fields.
  */
 function toEffectiveTaskConfig(raw: TaskConfig): BaseTaskConfig {
-	const effective: BaseTaskConfig = Object.assign({}, raw);
-	switch (process.platform) {
-		case 'darwin':
-			if (raw.windows) {
-				Object.assign(effective, raw.windows);
-			}
-			break;
-		case 'linux':
-			if (raw.linux) {
-				Object.assign(effective, raw.linux);
-			}
-			break;
-		case 'win32':
-			if (raw.windows) {
-				Object.assign(effective, raw.windows);
-			}
-			break;
-	}
-	return effective;
+	const platformMap: { [key: string]: string } = { darwin: 'osx', linux: 'linux', win32: 'windows' };
+	const platformKey = platformMap[process.platform];
+	return { ...raw, ...(raw as any)[platformKey] };
 }
 
 interface TaskConfig extends BaseTaskConfig {
