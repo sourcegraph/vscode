@@ -15,6 +15,7 @@ import { peekViewBorder, peekViewResultsBackground } from 'vs/editor/contrib/ref
 import { Color } from 'vs/base/common/color';
 import Event, { Emitter } from 'vs/base/common/event';
 import { textLinkActiveForeground, textLinkForeground } from 'vs/platform/theme/common/colorRegistry';
+import { KeyCode } from 'vs/base/common/keyCodes';
 
 /**
  * Base class for thead widgets.
@@ -47,7 +48,9 @@ export class BaseThreadCommentsWidget extends ZoneWidget {
 		});
 
 		this.onkeydown(containerElement, e => {
-			this.dispose();
+			if (e.keyCode === KeyCode.Escape) {
+				this.dispose();
+			}
 		});
 	}
 
