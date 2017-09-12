@@ -15,6 +15,7 @@
 
 .thread-comments {
 	overflow: hidden; /* This forces child margins to increase the size of .thread-comments */
+	outline: none;
 }
 
 .thread-comments .comments {
