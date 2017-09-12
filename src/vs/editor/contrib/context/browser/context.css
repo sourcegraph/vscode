@@ -1,0 +1,67 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Sourcegraph. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.monaco-editor-context {
+	cursor: default;
+	position: absolute;
+	overflow: hidden;
+	z-index: 50;
+	box-sizing: initial;
+	animation: fadein 100ms linear;
+	line-height: 1.5em;
+}
+
+.monaco-editor-context.hidden {
+	display: none;
+}
+
+/*
+ * https://github.com/Microsoft/monaco-editor/issues/417
+ * Safari 10.1, fails inherit correct visibility from parent when we change the visibility of parent element from hidden to inherit, in this particular case.
+ */
+.monaco-editor-context .monaco-scrollable-element {
+	visibility: visible;
+}
+
+.monaco-editor-context .context-row {
+	padding: 3.5px 2px;
+}
+
+.monaco-editor-context p,
+.monaco-editor-context ul {
+	margin: 8px 0;
+}
+
+.monaco-editor-context p:first-child,
+.monaco-editor-context ul:first-child {
+	margin-top: 0;
+}
+
+.monaco-editor-context p:last-child,
+.monaco-editor-context ul:last-child {
+	margin-bottom: 0;
+}
+
+.monaco-editor-context ul {
+	padding-left: 20px;
+}
+
+.monaco-editor-context li > p {
+	margin-bottom: 0;
+}
+
+.monaco-editor-context li > ul {
+	margin-top: 0;
+}
+
+.monaco-editor-context code {
+	border-radius: 3px;
+	padding: 0 0.4em;
+}
+
+.monaco-editor-context .monaco-tokenized-source {
+	white-space: pre-wrap;
+	word-break: break-all;
+}

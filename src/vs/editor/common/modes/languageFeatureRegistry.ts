@@ -58,6 +58,13 @@ export default class LanguageFeatureRegistry<T> {
 		};
 	}
 
+	/**
+	 * Returns all registered providers and the selector they were registered with.
+	 */
+	registeredProviders(): { selector: LanguageSelector, provider: T }[] {
+		return this._entries;
+	}
+
 	has(model: IReadOnlyModel): boolean {
 		return this.all(model).length > 0;
 	}

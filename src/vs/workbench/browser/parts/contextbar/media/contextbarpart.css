@@ -1,0 +1,18 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Sourcegraph. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.monaco-workbench > .part.contextbar {
+	box-sizing: border-box;
+	padding: 0 10px;
+	overflow: hidden;
+}
+
+.monaco-workbench > .part.contextbar .monaco-editor-context {
+	width: calc(100% - 10px);
+}
+
+.monaco-workbench > .part.contextbar .monaco-editor-context .monaco-editor-context-content {
+	height: 25px;
+}

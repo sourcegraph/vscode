@@ -44,6 +44,9 @@ interface IConfiguration extends IFilesConfiguration {
 		statusBar: {
 			visible: boolean;
 		},
+		contextBar: {
+			visible: boolean;
+		},
 		activityBar: {
 			visible: boolean;
 		}
@@ -69,6 +72,7 @@ export class CodeMenu {
 	private currentNavbarVisible: boolean;
 	private currentSidebarLocation: 'left' | 'right';
 	private currentStatusbarVisible: boolean;
+	private currentContextbarVisible: boolean;
 	private currentActivityBarVisible: boolean;
 	private currentEnableMenuBarMnemonics: boolean;
 	private currentEnableNativeTabs: boolean;
@@ -186,6 +190,15 @@ export class CodeMenu {
 		}
 		if (newStatusbarVisible !== this.currentStatusbarVisible) {
 			this.currentStatusbarVisible = newStatusbarVisible;
+			updateMenu = true;
+		}
+
+		let newContextbarVisible = config && config.workbench && config.workbench.contextBar && config.workbench.contextBar.visible;
+		if (typeof newContextbarVisible !== 'boolean') {
+			newContextbarVisible = true;
+		}
+		if (newContextbarVisible !== this.currentContextbarVisible) {
+			this.currentContextbarVisible = newContextbarVisible;
 			updateMenu = true;
 		}
 
@@ -750,6 +763,14 @@ export class CodeMenu {
 		}
 		const toggleStatusbar = this.createMenuItem(statusBarLabel, 'workbench.action.toggleStatusbarVisibility');
 
+		let contextBarLabel: string;
+		if (this.currentContextbarVisible) {
+			contextBarLabel = nls.localize({ key: 'miHideContextbar', comment: ['&& denotes a mnemonic'] }, "&&Hide Context Bar");
+		} else {
+			contextBarLabel = nls.localize({ key: 'miShowContextbar', comment: ['&& denotes a mnemonic'] }, "&&Show Context Bar");
+		}
+		const toggleContextbar = this.createMenuItem(contextBarLabel, 'workbench.action.toggleContextbarVisibility');
+
 		let activityBarLabel: string;
 		if (this.currentActivityBarVisible) {
 			activityBarLabel = nls.localize({ key: 'miHideActivityBar', comment: ['&& denotes a mnemonic'] }, "Hide &&Activity Bar");
@@ -793,6 +814,7 @@ export class CodeMenu {
 			toggleSidebar,
 			togglePanel,
 			toggleStatusbar,
+			toggleContextbar,
 			toggleActivtyBar,
 			__separator__(),
 			toggleWordWrap,

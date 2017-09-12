@@ -215,6 +215,11 @@ let workbenchProperties: { [path: string]: IJSONSchema; } = {
 		'default': true,
 		'description': nls.localize('statusBarVisibility', "Controls the visibility of the status bar at the bottom of the workbench.")
 	},
+	'workbench.contextBar.visible': {
+		'type': 'boolean',
+		'default': false,
+		'description': nls.localize('contextBarVisibility', "Controls the visibility of the context bar at the bottom of the workbench (below the status bar).")
+	},
 	'workbench.activityBar.visible': {
 		'type': 'boolean',
 		'default': true,

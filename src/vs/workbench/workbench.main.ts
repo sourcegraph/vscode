@@ -22,6 +22,7 @@ import 'vs/workbench/api/browser/viewsExtensionPoint';
 import 'vs/workbench/browser/actions/toggleNavbarVisibility';
 import 'vs/workbench/browser/actions/toggleActivityBarVisibility';
 import 'vs/workbench/browser/actions/toggleStatusbarVisibility';
+import 'vs/workbench/browser/actions/toggleContextbarVisibility';
 import 'vs/workbench/browser/actions/toggleSidebarVisibility';
 import 'vs/workbench/browser/actions/toggleSidebarPosition';
 import 'vs/workbench/browser/actions/toggleEditorLayout';

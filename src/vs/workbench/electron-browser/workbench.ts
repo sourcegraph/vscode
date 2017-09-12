@@ -33,6 +33,7 @@ import { EditorPart } from 'vs/workbench/browser/parts/editor/editorPart';
 import { SidebarPart } from 'vs/workbench/browser/parts/sidebar/sidebarPart';
 import { PanelPart } from 'vs/workbench/browser/parts/panel/panelPart';
 import { StatusbarPart } from 'vs/workbench/browser/parts/statusbar/statusbarPart';
+import { ContextbarPart } from 'vs/workbench/browser/parts/contextbar/contextbarPart';
 import { TitlebarPart } from 'vs/workbench/browser/parts/titlebar/titlebarPart';
 import { NavbarPart } from 'vs/workbench/browser/parts/navbar/navbarPart';
 import { WorkbenchLayout } from 'vs/workbench/browser/layout';
@@ -130,6 +131,7 @@ interface IZenModeSettings {
 	hideTabs: boolean;
 	hideActivityBar: boolean;
 	hideStatusBar: boolean;
+	hideContextBar: boolean;
 	restore: boolean;
 }
 
@@ -156,6 +158,7 @@ const Identifiers = {
 	PANEL_PART: 'workbench.parts.panel',
 	EDITOR_PART: 'workbench.parts.editor',
 	STATUSBAR_PART: 'workbench.parts.statusbar',
+	CONTEXTBAR_PART: 'workbench.parts.contextbar',
 	MODAL_PART: 'workbench.parts.modaloverlay'
 };
 
@@ -172,6 +175,7 @@ export class Workbench implements IPartService {
 	private static navbarVisibleConfigurationKey = 'workbench.navBar.visible';
 	private static sidebarPositionConfigurationKey = 'workbench.sideBar.location';
 	private static statusbarVisibleConfigurationKey = 'workbench.statusBar.visible';
+	private static contextbarVisibleConfigurationKey = 'workbench.contextBar.visible';
 	private static activityBarVisibleConfigurationKey = 'workbench.activityBar.visible';
 
 	private static closeWhenEmptyConfigurationKey = 'window.closeWhenEmpty';
@@ -205,6 +209,7 @@ export class Workbench implements IPartService {
 	private panelPart: PanelPart;
 	private editorPart: EditorPart;
 	private statusbarPart: StatusbarPart;
+	private contextbarPart: ContextbarPart;
 	private modalPart: ModalPart;
 	private quickOpen: QuickOpenController;
 	private workbenchLayout: WorkbenchLayout;
@@ -216,6 +221,7 @@ export class Workbench implements IPartService {
 	private navBarHidden: boolean;
 	private sideBarHidden: boolean;
 	private statusBarHidden: boolean;
+	private contextBarHidden: boolean;
 	private activityBarHidden: boolean;
 	private sideBarPosition: Position;
 	private panelHidden: boolean;
@@ -231,6 +237,7 @@ export class Workbench implements IPartService {
 		transitionedToFullScreen: boolean;
 		wasNavBarVisible: boolean;
 		wasSideBarVisible: boolean;
+		wasContextBarVisible: boolean;
 		wasPanelVisible: boolean;
 	};
 
@@ -591,6 +598,11 @@ export class Workbench implements IPartService {
 			this.telemetryService.registerEditorServiceEventListeners(this.editorPart);
 		}
 
+		// Context bar
+		this.contextbarPart = this.instantiationService.createInstance(ContextbarPart, Identifiers.CONTEXTBAR_PART);
+		this.toDispose.push(this.contextbarPart);
+		this.toShutdown.push(this.contextbarPart);
+
 		// Title bar
 		this.titlebarPart = this.instantiationService.createInstance(TitlebarPart, Identifiers.TITLEBAR_PART);
 		this.toDispose.push(this.titlebarPart);
@@ -700,6 +712,10 @@ export class Workbench implements IPartService {
 		const sideBarPosition = this.configurationService.lookup<string>(Workbench.sidebarPositionConfigurationKey).value;
 		this.sideBarPosition = (sideBarPosition === 'right') ? Position.RIGHT : Position.LEFT;
 
+		// Contextbar visibility
+		const contextBarVisible = this.configurationService.lookup<string>(Workbench.contextbarVisibleConfigurationKey).value;
+		this.contextBarHidden = !contextBarVisible;
+
 		// Statusbar visibility
 		const statusBarVisible = this.configurationService.lookup<string>(Workbench.statusbarVisibleConfigurationKey).value;
 		this.statusBarHidden = !statusBarVisible;
@@ -717,6 +733,7 @@ export class Workbench implements IPartService {
 			transitionedToFullScreen: false,
 			wasNavBarVisible: false,
 			wasSideBarVisible: false,
+			wasContextBarVisible: false,
 			wasPanelVisible: false
 		};
 	}
@@ -773,6 +790,9 @@ export class Workbench implements IPartService {
 			case Parts.STATUSBAR_PART:
 				container = this.statusbarPart.getContainer();
 				break;
+			case Parts.CONTEXTBAR_PART:
+				container = this.contextbarPart.getContainer();
+				break;
 			case Parts.MODAL_PART:
 				container = this.modalPart.getContainer();
 				break;
@@ -792,6 +812,8 @@ export class Workbench implements IPartService {
 				return !this.panelHidden;
 			case Parts.STATUSBAR_PART:
 				return !this.statusBarHidden;
+			case Parts.CONTEXTBAR_PART:
+				return !this.contextBarHidden;
 			case Parts.ACTIVITYBAR_PART:
 				return !this.activityBarHidden;
 			case Parts.MODAL_PART:
@@ -852,6 +874,16 @@ export class Workbench implements IPartService {
 
 	private setStatusBarHidden(hidden: boolean, skipLayout?: boolean): void {
 		this.statusBarHidden = hidden;
+
+
+		// Layout
+		if (!skipLayout) {
+			this.workbenchLayout.layout();
+		}
+	}
+
+	private setContextBarHidden(hidden: boolean, skipLayout?: boolean): void {
+		this.contextBarHidden = hidden;
 
 
 		// Layout
@@ -1186,6 +1218,11 @@ export class Workbench implements IPartService {
 				this.setStatusBarHidden(newStatusbarHiddenValue, skipLayout);
 			}
 
+			const newContextbarHiddenValue = !this.configurationService.lookup<boolean>(Workbench.contextbarVisibleConfigurationKey).value;
+			if (newContextbarHiddenValue !== this.contextBarHidden) {
+				this.setContextBarHidden(newContextbarHiddenValue, skipLayout);
+			}
+
 			const newActivityBarHiddenValue = !this.configurationService.lookup<boolean>(Workbench.activityBarVisibleConfigurationKey).value;
 			if (newActivityBarHiddenValue !== this.activityBarHidden) {
 				this.setActivityBarHidden(newActivityBarHiddenValue, skipLayout);
@@ -1205,6 +1242,7 @@ export class Workbench implements IPartService {
 				sidebar: this.sidebarPart,				// Sidebar
 				panel: this.panelPart,					// Panel Part
 				statusbar: this.statusbarPart,			// Statusbar
+				contextbar: this.contextbarPart,		// Contextbar
 			},
 			this.quickOpen								// Quickopen
 		);
@@ -1251,6 +1289,7 @@ export class Workbench implements IPartService {
 		this.createEditorPart();
 		this.createPanelPart();
 		this.createStatusbarPart();
+		this.createContextbarPart();
 		this.createModalPart();
 
 		// Add Workbench to DOM
@@ -1331,6 +1370,16 @@ export class Workbench implements IPartService {
 		this.statusbarPart.create(statusbarContainer);
 	}
 
+	private createContextbarPart(): void {
+		const contextbarContainer = $(this.workbench).div({
+			'class': ['part', 'contextbar'],
+			id: Identifiers.CONTEXTBAR_PART,
+			role: 'contentinfo'
+		});
+
+		this.contextbarPart.create(contextbarContainer);
+	}
+
 	private createModalPart(): void {
 		const modalContainer = $(this.workbench).div({
 			'class': ['part', 'modal'],
@@ -1397,6 +1446,7 @@ export class Workbench implements IPartService {
 			this.zenMode.transitionedToFullScreen = toggleFullScreen;
 			this.zenMode.wasNavBarVisible = this.isVisible(Parts.NAVBAR_PART);
 			this.zenMode.wasSideBarVisible = this.isVisible(Parts.SIDEBAR_PART);
+			this.zenMode.wasContextBarVisible = this.isVisible(Parts.CONTEXTBAR_PART);
 			this.zenMode.wasPanelVisible = this.isVisible(Parts.PANEL_PART);
 			this.setPanelHidden(true, true).done(undefined, errors.onUnexpectedError);
 			this.setSideBarHidden(true, true).done(undefined, errors.onUnexpectedError);
@@ -1410,6 +1460,9 @@ export class Workbench implements IPartService {
 			if (config.hideStatusBar) {
 				this.setStatusBarHidden(true, true);
 			}
+			if (config.hideContextBar) {
+				this.setContextBarHidden(true, true);
+			}
 			if (config.hideTabs) {
 				this.editorPart.hideTabs(true);
 			}
@@ -1419,6 +1472,9 @@ export class Workbench implements IPartService {
 			}
 			if (this.zenMode.wasPanelVisible) {
 				this.setPanelHidden(false, true).done(undefined, errors.onUnexpectedError);
+			}
+			if (this.zenMode.wasContextBarVisible) {
+				this.setContextBarHidden(false, true);
 			}
 			if (this.zenMode.wasSideBarVisible) {
 				this.setSideBarHidden(false, true).done(undefined, errors.onUnexpectedError);

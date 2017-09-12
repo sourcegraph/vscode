@@ -17,6 +17,7 @@ import 'vs/editor/contrib/caretOperations/common/transpose';
 import 'vs/editor/contrib/clipboard/browser/clipboard';
 import 'vs/editor/contrib/codelens/browser/codelensController';
 import 'vs/editor/contrib/comment/common/comment';
+import 'vs/editor/contrib/context/browser/contextHoverAdapter';
 import 'vs/editor/contrib/contextmenu/browser/contextmenu';
 import 'vs/editor/contrib/cursorUndo/browser/cursorUndo';
 import 'vs/editor/contrib/dnd/browser/dnd';

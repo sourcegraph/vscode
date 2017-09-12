@@ -151,6 +151,7 @@ const configurationValueWhitelist = [
 	'files.associations',
 	'workbench.navBar.visible',
 	'workbench.statusBar.visible',
+	'workbench.contextBar.visible',
 	'files.trimTrailingWhitespace',
 	'git.confirmSync',
 	'workbench.sideBar.location',

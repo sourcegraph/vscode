@@ -30,6 +30,7 @@ const HIDE_PANEL_HEIGHT_THRESHOLD = 50;
 const TITLE_BAR_HEIGHT = 22;
 const NAV_BAR_HEIGHT = 30;
 const STATUS_BAR_HEIGHT = 22;
+const CONTEXT_BAR_HEIGHT = 25;
 const ACTIVITY_BAR_WIDTH = 50;
 
 interface PartLayoutInfo {
@@ -40,6 +41,7 @@ interface PartLayoutInfo {
 	panel: { minHeight: number; };
 	editor: { minWidth: number; minHeight: number; };
 	statusbar: { height: number; };
+	contextbar: { height: number; };
 }
 
 /**
@@ -59,6 +61,7 @@ export class WorkbenchLayout implements IVerticalSashLayoutProvider, IHorizontal
 	private sidebar: Part;
 	private panel: Part;
 	private statusbar: Part;
+	private contextbar: Part;
 	private quickopen: QuickOpenController;
 	private toUnbind: IDisposable[];
 	private partLayoutInfo: PartLayoutInfo;
@@ -72,6 +75,7 @@ export class WorkbenchLayout implements IVerticalSashLayoutProvider, IHorizontal
 	private navbarHeight: number;
 	private activitybarWidth: number;
 	private statusbarHeight: number;
+	private contextbarHeight: number;
 	private startPanelHeight: number;
 	private panelHeight: number;
 	private panelHeightBeforeMaximized: number;
@@ -90,7 +94,8 @@ export class WorkbenchLayout implements IVerticalSashLayoutProvider, IHorizontal
 			editor: Part,
 			sidebar: Part,
 			panel: Part,
-			statusbar: Part
+			statusbar: Part,
+			contextbar: Part,
 		},
 		quickopen: QuickOpenController,
 		@IStorageService private storageService: IStorageService,
@@ -110,6 +115,7 @@ export class WorkbenchLayout implements IVerticalSashLayoutProvider, IHorizontal
 		this.sidebar = parts.sidebar;
 		this.panel = parts.panel;
 		this.statusbar = parts.statusbar;
+		this.contextbar = parts.contextbar;
 		this.quickopen = quickopen;
 		this.toUnbind = [];
 		this.partLayoutInfo = this.getPartLayoutInfo();
@@ -160,7 +166,10 @@ export class WorkbenchLayout implements IVerticalSashLayoutProvider, IHorizontal
 			},
 			statusbar: {
 				height: STATUS_BAR_HEIGHT
-			}
+			},
+			contextbar: {
+				height: CONTEXT_BAR_HEIGHT
+			},
 		};
 	}
 
@@ -231,7 +240,7 @@ export class WorkbenchLayout implements IVerticalSashLayoutProvider, IHorizontal
 				if (newSashHeight + HIDE_PANEL_HEIGHT_THRESHOLD < this.partLayoutInfo.panel.minHeight) {
 					let dragCompensation = MIN_PANEL_PART_HEIGHT - HIDE_PANEL_HEIGHT_THRESHOLD;
 					promise = this.partService.setPanelHidden(true);
-					startY = Math.min(this.sidebarHeight - this.statusbarHeight - this.titlebarHeight - this.navbarHeight, e.currentY + dragCompensation);
+					startY = Math.min(this.sidebarHeight - this.contextbarHeight - this.statusbarHeight - this.titlebarHeight - this.navbarHeight, e.currentY + dragCompensation);
 					this.panelHeight = this.startPanelHeight; // when restoring panel, restore to the panel height we started from
 				}
 
@@ -315,6 +324,7 @@ export class WorkbenchLayout implements IVerticalSashLayoutProvider, IHorizontal
 		const isTitlebarHidden = !this.partService.isVisible(Parts.TITLEBAR_PART);
 		const isNavbarHidden = !this.partService.isVisible(Parts.NAVBAR_PART);
 		const isPanelHidden = !this.partService.isVisible(Parts.PANEL_PART);
+		const isContextbarHidden = !this.partService.isVisible(Parts.CONTEXTBAR_PART);
 		const isStatusbarHidden = !this.partService.isVisible(Parts.STATUSBAR_PART);
 		const isSidebarHidden = !this.partService.isVisible(Parts.SIDEBAR_PART);
 		const sidebarPosition = this.partService.getSideBarPosition();
@@ -331,11 +341,12 @@ export class WorkbenchLayout implements IVerticalSashLayoutProvider, IHorizontal
 		}
 
 		this.statusbarHeight = isStatusbarHidden ? 0 : this.partLayoutInfo.statusbar.height;
+		this.contextbarHeight = isContextbarHidden ? 0 : this.partLayoutInfo.contextbar.height;
 		this.titlebarHeight = isTitlebarHidden ? 0 : this.partLayoutInfo.titlebar.height / getZoomFactor(); // adjust for zoom prevention
 		this.navbarHeight = isNavbarHidden ? 0 : this.partLayoutInfo.navbar.height;
 
 		const previousMaxPanelHeight = this.sidebarHeight - MIN_EDITOR_PART_HEIGHT;
-		this.sidebarHeight = this.workbenchSize.height - this.statusbarHeight - this.titlebarHeight - this.navbarHeight;
+		this.sidebarHeight = this.workbenchSize.height - this.contextbarHeight - this.statusbarHeight - this.titlebarHeight - this.navbarHeight;
 		let sidebarSize = new Dimension(sidebarWidth, this.sidebarHeight);
 
 		// Activity Bar
@@ -462,16 +473,16 @@ export class WorkbenchLayout implements IVerticalSashLayoutProvider, IHorizontal
 		this.editor.getContainer().size(editorSize.width, editorSize.height);
 		this.panel.getContainer().size(panelDimension.width, panelDimension.height);
 
-		const editorBottom = this.statusbarHeight + panelDimension.height;
+		const editorBottom = this.contextbarHeight + this.statusbarHeight + panelDimension.height;
 		if (isSidebarHidden) {
 			this.editor.getContainer().position(this.titlebarHeight + this.navbarHeight, editorSize.remainderRight, editorBottom, editorSize.remainderLeft);
 			this.panel.getContainer().position(editorSize.height + this.titlebarHeight + this.navbarHeight, editorSize.remainderRight, this.statusbarHeight, editorSize.remainderLeft);
 		} else if (sidebarPosition === Position.LEFT) {
 			this.editor.getContainer().position(this.titlebarHeight + this.navbarHeight, 0, editorBottom, sidebarSize.width + activityBarSize.width);
-			this.panel.getContainer().position(editorSize.height + this.titlebarHeight + this.navbarHeight, 0, this.statusbarHeight, sidebarSize.width + activityBarSize.width);
+			this.panel.getContainer().position(editorSize.height + this.titlebarHeight + this.navbarHeight, 0, this.contextbarHeight + this.statusbarHeight, sidebarSize.width + activityBarSize.width);
 		} else {
 			this.editor.getContainer().position(this.titlebarHeight + this.navbarHeight, sidebarSize.width, editorBottom, 0);
-			this.panel.getContainer().position(editorSize.height + this.titlebarHeight + this.navbarHeight, sidebarSize.width, this.statusbarHeight, 0);
+			this.panel.getContainer().position(editorSize.height + this.titlebarHeight + this.navbarHeight, sidebarSize.width, this.contextbarHeight + this.statusbarHeight, 0);
 		}
 
 		// Activity Bar Part
@@ -499,11 +510,19 @@ export class WorkbenchLayout implements IVerticalSashLayoutProvider, IHorizontal
 		}
 
 		// Statusbar Part
-		this.statusbar.getContainer().position(this.workbenchSize.height - this.statusbarHeight);
+		this.statusbar.getContainer().position(this.workbenchSize.height - this.statusbarHeight - this.contextbarHeight);
 		if (isStatusbarHidden) {
 			this.statusbar.getContainer().hide();
 		} else {
 			this.statusbar.getContainer().show();
+		}
+
+		// Contextbar Part
+		this.contextbar.getContainer().position(this.workbenchSize.height - this.contextbarHeight);
+		if (isContextbarHidden) {
+			this.contextbar.getContainer().hide();
+		} else {
+			this.contextbar.getContainer().show();
 		}
 
 		// Quick open
@@ -520,6 +539,7 @@ export class WorkbenchLayout implements IVerticalSashLayoutProvider, IHorizontal
 		this.sidebar.layout(sidebarSize);
 		this.panel.layout(panelDimension);
 		this.activitybar.layout(activityBarSize);
+		this.contextbar.layout(new Dimension(this.workbenchSize.width, this.contextbarHeight));
 
 		// Propagate to Context View
 		this.contextViewService.layout();
