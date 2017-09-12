@@ -171,7 +171,7 @@ export class CodeMenu {
 
 		let newNavbarVisible = config && config.workbench && config.workbench.navBar && config.workbench.navBar.visible;
 		if (typeof newNavbarVisible !== 'boolean') {
-			newNavbarVisible = false;
+			newNavbarVisible = true;
 		}
 		if (newNavbarVisible !== this.currentNavbarVisible) {
 			this.currentNavbarVisible = newNavbarVisible;
@@ -195,7 +195,7 @@ export class CodeMenu {
 
 		let newContextbarVisible = config && config.workbench && config.workbench.contextBar && config.workbench.contextBar.visible;
 		if (typeof newContextbarVisible !== 'boolean') {
-			newContextbarVisible = true;
+			newContextbarVisible = false;
 		}
 		if (newContextbarVisible !== this.currentContextbarVisible) {
 			this.currentContextbarVisible = newContextbarVisible;
