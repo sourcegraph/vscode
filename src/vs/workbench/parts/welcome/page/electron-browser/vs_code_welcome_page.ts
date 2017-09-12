@@ -37,7 +37,7 @@ export default () => `
 							<li>
 								<button data-href="command:workbench.action.addRootFolder">
 									<div class="folder-icon"></div>
-									<span class="detail button-label">${escape(localize('welcomePage.openFolder', "Add folder to workspace"))}</span>
+									<span class="detail button-label">${escape(localize('welcomePage.openFolder', "Add folder to workspace..."))}</span>
 								</button>
 							</li>
 							<li>

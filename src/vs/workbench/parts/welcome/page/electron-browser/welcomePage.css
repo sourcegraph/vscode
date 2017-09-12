@@ -24,7 +24,7 @@
 .monaco-workbench > .part.editor > .content .welcomePage .row {
 	display: flex;
 	flex-flow: row;
-	overflow: auto;
+	overflow: hidden;
 }
 
 .monaco-workbench > .part.editor > .content .welcomePage button {

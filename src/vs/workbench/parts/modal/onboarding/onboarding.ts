@@ -33,7 +33,7 @@ export class OnboardingModal extends Modal {
 		@ITelemetryService protected telemetryService: ITelemetryService,
 		@IKeybindingService private keybindingService: IKeybindingService
 	) {
-		super(parent, telemetryService, false);
+		super(parent, telemetryService);
 	}
 
 	public shouldShow(): boolean {
