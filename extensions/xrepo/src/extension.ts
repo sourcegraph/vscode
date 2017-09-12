@@ -55,7 +55,7 @@ async function ensureDevEnvironmentInitialized(workspaceFolder: vscode.Workspace
 		const choice = await vscode.window.showWarningMessage(localize('noInitializeDevEnvironmentTaskWarning', "No initializeDevEnvironment task was found."), localize('add', "Add"));
 		if (choice === localize('add', "Add")) {
 			const tasksPath = getTasksFilePath(workspaceFolder);
-			if (!fs.existsSync(tasksPath)) {
+			if (!await new Promise<boolean>(resolve => fs.exists(tasksPath, exists => resolve(exists)))) {
 				await mkdirp(path.dirname(tasksPath));
 				const newFileUri = vscode.Uri.parse('untitled://' + tasksPath.replace(new RegExp(path.sep, 'g'), '/'));
 				const doc = await vscode.workspace.openTextDocument(newFileUri);
@@ -81,7 +81,7 @@ async function ensureDevEnvironmentInitialized(workspaceFolder: vscode.Workspace
 		}
 	} else {
 		const creates = path.join(workspaceFolder.uri.fsPath, task.creates);
-		if (fs.existsSync(creates)) {
+		if (await new Promise<boolean>(resolve => fs.exists(creates, exists => resolve(exists)))) {
 			return false;
 		}
 	}
