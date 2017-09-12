@@ -34,16 +34,10 @@ export default () => `
 				<div class="splash first">
 					<div class="section start commands">
 						<ul>
-							<li class="mac-only">
-								<button data-href="command:workbench.action.files.openFileFolder">
+							<li>
+								<button data-href="command:workbench.action.addRootFolder">
 									<div class="folder-icon"></div>
-									<span class="detail button-label">${escape(localize('welcomePage.openFolder', "Open local folder"))}</span>
-								</button>
-							</li>
-							<li class="windows-only linux-only">
-								<button data-href="command:workbench.action.files.openFolder">
-									<div class="folder-icon"></div>
-									<span class="detail button-label">${escape(localize('welcomePage.openFolder', "Open local folder"))}</span>
+									<span class="detail button-label">${escape(localize('welcomePage.openFolder', "Add folder to workspace"))}</span>
 								</button>
 							</li>
 							<li>
