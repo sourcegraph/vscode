@@ -1050,7 +1050,7 @@ export class CommandCenter {
 		let dst: string;
 		const goPackage = await getGoPackage(repository.root);
 		if (goPackage) {
-			dst = path.join(tempFolder, goPackage.replace(/\//g, path.sep));
+			dst = path.join(tempFolder, 'src', goPackage.replace(/\//g, path.sep));
 		} else {
 			dst = path.join(tempFolder, path.basename(repository.root));
 		}
