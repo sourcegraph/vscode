@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import nls = require('vs/nls');
-import { registerColor, editorBackground, contrastBorder, transparent, lighten, darken } from 'vs/platform/theme/common/colorRegistry';
+import { registerColor, editorForeground, editorBackground, editorHoverBackground, contrastBorder, transparent, lighten, darken } from 'vs/platform/theme/common/colorRegistry';
 import { IDisposable, Disposable, dispose } from 'vs/base/common/lifecycle';
 import { IThemeService, ITheme } from 'vs/platform/theme/common/themeService';
 import { Color } from 'vs/base/common/color';
@@ -201,6 +201,28 @@ export const STATUS_BAR_PROMINENT_ITEM_HOVER_BACKGROUND = registerColor('statusB
 	light: '#369432',
 	hc: '#369432'
 }, nls.localize('statusBarProminentItemHoverBackground', "Status bar prominent items background color when hovering. Prominent items stand out from other status bar entries to indicate importance. The status bar is shown in the bottom of the window."));
+
+
+
+// < --- Context Bar --- >
+
+export const CONTEXT_BAR_FOREGROUND = registerColor('contextBar.foreground', {
+	dark: editorForeground,
+	light: editorForeground,
+	hc: editorForeground
+}, nls.localize('contextBarForeground', "Context bar foreground color. The context bar is shown in the bottom of the window (below the status bar)."));
+
+export const CONTEXT_BAR_BACKGROUND = registerColor('contextBar.background', {
+	dark: editorHoverBackground,
+	light: editorHoverBackground,
+	hc: editorHoverBackground,
+}, nls.localize('contextBarBackground', "Context bar background color. The context bar is shown in the bottom of the window (below the status bar)."));
+
+export const CONTEXT_BAR_BORDER = registerColor('contextBar.border', {
+	dark: STATUS_BAR_BORDER,
+	light: STATUS_BAR_BORDER,
+	hc: STATUS_BAR_BORDER
+}, nls.localize('contextBarBorder', "Context bar border color separating the context bar and status bar. The context bar is shown in the bottom of the window (below the status bar)."));
 
 
 

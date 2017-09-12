@@ -4446,6 +4446,58 @@ declare module monaco.languages {
 	}
 
 	/**
+	 * Contextual information about the active document and position or selection. Context is shown
+	 * in a statusbar-like widget.
+	 */
+	export interface ContextItem {
+		/**
+		 * Code or text to display as the primary description of the current range or active document.
+		 */
+		contents?: IMarkdownString[];
+		/**
+		 * Action to display as a labeled button in the context widget.
+		 */
+		action?: Command;
+		/**
+		 * The range to which this context item applies. If missing, the context item applies to the
+		 * the entire document.
+		 */
+		range?: IRange;
+		/**
+		 * Indicates whether this context item needs to be resolved. If resolving it requires expensive
+		 * computation, the context provider can set needsResolve to true to defer the work until
+		 * the editor deems it necessary.
+		 */
+		needsResolve?: boolean;
+	}
+
+	/**
+	 * The context provider interface defines the contract between extensions and
+	 * the context feature.
+	 */
+	export interface ContextProvider {
+		/**
+		 * An event that is fired when the context contributed by this provided has changed. The editor
+		 * will refresh this provider's context.
+		 */
+		onDidChange?: IEvent<this>;
+		/**
+		 * Provide a context item for the given position and document. Multiple items for the same
+		 * position will be merged by the editor.
+		 *
+		 * If computing a context item is expensive, the provider can return an incomplete context item.
+		 * The editor will display the incomplete context immediately and call the provider's
+		 * resolveContext method to retrieve the full information.
+		 */
+		provideContext(model: editor.IReadOnlyModel, range: Range, token: CancellationToken): ContextItem[] | Thenable<ContextItem[]>;
+		/**
+		 * Resolve full information about a context item that was previously returned by provideContext,
+		 * performing expensive computation if necessary.
+		 */
+		resolveContext?(model: editor.IReadOnlyModel, item: ContextItem, token: CancellationToken): ContextItem | Thenable<ContextItem>;
+	}
+
+	/**
 	 * Represents a parameter of a callable-signature. A parameter can
 	 * have a label and a doc-comment.
 	 */
