@@ -13,7 +13,7 @@ import * as rimraf from 'rimraf';
 import { mkdirp } from './util';
 import os = require('os');
 
-const tmpRoot = path.join(os.tmpdir(), 'sourcegraph-temporary-roots');
+const tmpRoot = path.join(os.homedir(), '.sourcegraph', 'temp-workspace-roots');
 
 export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.workspace.onDidChangeWorkspaceFolders(onDidChangeWorkspaceFolders));
