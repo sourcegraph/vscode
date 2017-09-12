@@ -1035,6 +1035,11 @@ export class CommandCenter {
 		return await repository.specifyComparison(revisionOrRangeSpecifier);
 	}
 
+	@command('git.worktreePrune', { repository: true })
+	async worktreePrune(repository: Repository): Promise<void> {
+		await repository.worktreePrune();
+	}
+
 	@command('git.addTempWorktree', { repository: true })
 	async addAndInitializeTempWorkTree(repository: Repository, rev?: string): Promise<void> {
 		if (!rev) {
@@ -1054,6 +1059,7 @@ export class CommandCenter {
 		} else {
 			dst = path.join(tempFolder, path.basename(repository.root));
 		}
+		await this.worktreePrune(repository);
 		await this.addWorktree(repository, dst, rev);
 
 		// Add new worktree to workspace.

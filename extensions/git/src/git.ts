@@ -711,6 +711,10 @@ export class Repository {
 		await this.run(args);
 	}
 
+	async worktreePrune(): Promise<void> {
+		await this.run(['worktree', 'prune']);
+	}
+
 	async commit(message: string, opts: { all?: boolean, amend?: boolean, signoff?: boolean, signCommit?: boolean } = Object.create(null)): Promise<void> {
 		const args = ['commit', '--quiet', '--allow-empty-message', '--file', '-'];
 
