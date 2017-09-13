@@ -93,6 +93,7 @@ export class ShareLocationAction extends Action {
 		@INavService private navService: INavService,
 		@INavBarService private navBarService: INavBarService,
 		@IClipboardService private clipboardService: IClipboardService,
+		@IPartService private partService: IPartService,
 	) {
 		super(id, label, 'share-location-action');
 	}
@@ -101,9 +102,11 @@ export class ShareLocationAction extends Action {
 		const location = this.navService.getShareableLocation();
 		this.clipboardService.writeText(location);
 
-		const navbarPart = this.navBarService as NavbarPart;
-		if (navbarPart.locationBarInput) {
-			navbarPart.locationBarInput.showMessage(nls.localize('copiedShareableLocation', "Copied shareable link to current file and position."));
+		if (this.partService.isVisible(Parts.NAVBAR_PART)) {
+			const navbarPart = this.navBarService as NavbarPart;
+			if (navbarPart.locationBarInput) {
+				navbarPart.locationBarInput.showMessage(nls.localize('copiedShareableLocation', "Copied shareable link to current file and position."));
+			}
 		}
 
 		return TPromise.as(null);
