@@ -13,6 +13,7 @@ import { Git, GitErrorCodes } from './git';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as nls from 'vscode-nls';
+import { GlobalRepositories } from './globalRepositories';
 
 const localize = nls.loadMessageBundle();
 
@@ -53,6 +54,7 @@ export class Model {
 	private openRepositories: OpenRepository[] = [];
 	get repositories(): Repository[] { return this.openRepositories.map(r => r.repository); }
 
+	private globalRepositories: GlobalRepositories;
 	private possibleGitRepositoryPaths = new Set<string>();
 
 	private enabled = false;
@@ -64,6 +66,7 @@ export class Model {
 		this.enabled = config.get<boolean>('enabled') === true;
 
 		this.configurationChangeDisposable = workspace.onDidChangeConfiguration(this.onDidChangeConfiguration, this);
+		this.globalRepositories = new GlobalRepositories(git);
 
 		if (this.enabled) {
 			this.enable();
@@ -105,6 +108,9 @@ export class Model {
 		onPossibleGitRepositoryChange(this.onPossibleGitRepositoryChange, this, this.disposables);
 
 		this.scanWorkspaceFolders();
+
+		this.disposables.push(this.globalRepositories);
+		this.globalRepositories.build();
 	}
 
 	private disable(): void {
@@ -236,6 +242,15 @@ export class Model {
 
 			// console.error('Failed to find repository:', err);
 		}
+	}
+
+	async tryOpenRepositoryWithRemote(remote: Uri): Promise<Repository | undefined> {
+		const path = this.globalRepositories.resolveRemote(remote.toString());
+		if (!path) {
+			return undefined;
+		}
+		await this.tryOpenRepository(path, true);
+		return this.getRepository(path, true);
 	}
 
 	private open(repository: Repository): void {

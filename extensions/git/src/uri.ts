@@ -24,3 +24,21 @@ export function toGitUri(uri: Uri, ref: string, replaceFileExtension = false): U
 		})
 	});
 }
+
+/** Canonicalize git like URIs. If two different git URIs point to the same
+ * resource, but using a different protocol they should canonicalize to the
+ * same string. */
+export function canonicalRemote(remote: string): string {
+	if (remote.indexOf('://') === -1) {
+		remote = 'ignore://' + remote;
+	}
+	const uri = Uri.parse(remote);
+
+	let authority = uri.authority;
+	const idx = authority.indexOf('@');
+	if (idx !== -1) {
+		authority = authority.slice(idx + 1);
+	}
+
+	return authority.toLowerCase() + uri.path.replace(/\.(git|hg|svn)$/i, '').toLowerCase();
+}

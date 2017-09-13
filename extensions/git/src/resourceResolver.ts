@@ -14,6 +14,7 @@ import { mkdirp } from './util';
 import * as fs from 'fs';
 import { Model } from './model';
 import * as nls from 'vscode-nls';
+import { canonicalRemote } from './uri';
 
 const localize = nls.loadMessageBundle();
 
@@ -49,15 +50,21 @@ export class GitResourceResolver {
 		if (resource.scheme.startsWith('git+')) {
 			resource = resource.with({ scheme: resource.scheme.replace(/^git\+/, '') });
 		}
+		const canonicalResource = canonicalRemote(resource.toString());
 
 		// See if a repository with this clone URL already exists. This is best-effort and is based on string
 		// equality between our unresolved resource URI and the repositories' remote URLs.
 		for (const repository of this.model.repositories) {
 			for (const remote of repository.remotes) {
-				if (remote.url.toLowerCase() === resource.toString()) {
+				if (canonicalRemote(remote.url) === canonicalResource) {
 					return Uri.file(repository.root);
 				}
 			}
+		}
+
+		const repoForRemote = await this.model.tryOpenRepositoryWithRemote(resource);
+		if (repoForRemote) {
+			return Uri.file(repoForRemote.root);
 		}
 
 		// Repository doesn't exist (or we don't know about it), so clone it to a temporary location.
