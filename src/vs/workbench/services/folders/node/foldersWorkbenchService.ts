@@ -365,21 +365,30 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 			.then(() => this.configurationService.reloadConfiguration());
 
 		const folders = anyFolders.map(folder => folder instanceof URI ? new Folder(this, this.stateProvider, folder) : folder);
-		return allPromise.then(() => TPromise.join(folders.map(folder => {
+		return TPromise.join(folders.map(folder => {
 			let folderPromise: TPromise<void>;
 			if (this.getWorkspaceFolderForCatalogFolder(folder)) {
 				// Folder is already added and ready.
 				folderPromise = TPromise.as(void 0);
 			} else {
-				// Wait for each folder's SCM provider to be ready.
-				folderPromise = toPromise(filterEvent(this.onChange, () => !!this.getWorkspaceFolderForCatalogFolder(folder)));
+				// Wait for each folder to be added as a root and for its SCM provider to be ready.
+				folderPromise = allPromise.then(() => {
+					// Check if the SCM provider is already ready (or perhaps it was there before
+					// but just wasn't a root).
+					if (this.getWorkspaceFolderForCatalogFolder(folder)) {
+						return void 0;
+					}
+
+					// Wait for the SCM provider to be ready.
+					return toPromise(filterEvent(this.onChange, () => !!this.getWorkspaceFolderForCatalogFolder(folder)));
+				});
 			}
 
 			// Monitor the progress of the entire operation (addRoots, reloadConfiguration, and SCM ready).
 			this.monitorFolderOperation(folder, FolderOperation.Adding, folderPromise);
 
 			return folderPromise.then(() => this.getWorkspaceFolderForCatalogFolder(folder));
-		})));
+		}));
 	}
 
 	public removeFoldersAsWorkspaceRootFolders(folders: IFolder[]): TPromise<void> {
