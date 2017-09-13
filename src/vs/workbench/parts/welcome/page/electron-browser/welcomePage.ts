@@ -43,6 +43,7 @@ import { IExtensionsWorkbenchService } from 'vs/workbench/parts/extensions/commo
 import { IStorageService } from 'vs/platform/storage/common/storage';
 import { IWorkspaceIdentifier, getWorkspaceLabel, ISingleFolderWorkspaceIdentifier, isSingleFolderWorkspaceIdentifier } from 'vs/platform/workspaces/common/workspaces';
 import { IEditorInputFactory, EditorInput } from 'vs/workbench/common/editor';
+import { IFoldersWorkbenchService } from 'vs/workbench/services/folders/common/folders';
 
 used();
 
@@ -210,6 +211,7 @@ class WelcomePage {
 		@ILifecycleService lifecycleService: ILifecycleService,
 		@IThemeService private themeService: IThemeService,
 		@IExperimentService private experimentService: IExperimentService,
+		@IFoldersWorkbenchService private foldersWorkbenchService: IFoldersWorkbenchService,
 		@ITelemetryService private telemetryService: ITelemetryService
 	) {
 		this.disposables.push(lifecycleService.onShutdown(() => this.dispose()));
@@ -357,7 +359,7 @@ class WelcomePage {
 
 				a.addEventListener('click', e => {
 					const root = URI.parse(`git+${workspace.cloneURL}`);
-					this.editingService.addRoots([root]);
+					this.foldersWorkbenchService.addFoldersAsWorkspaceRootFolders([root]);
 					e.preventDefault();
 					e.stopPropagation();
 				});
