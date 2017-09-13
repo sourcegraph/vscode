@@ -349,7 +349,7 @@ class WelcomePage {
 			listItems.forEach((workspace, i) => {
 				const li = document.createElement('li');
 				const repoIcon = document.createElement('div');
-				repoIcon.className = localize("welcomePage.repoIconClass", "repo-icon");
+				repoIcon.className = 'repo-icon';
 				li.appendChild(repoIcon);
 				const a = document.createElement('a');
 				a.href = 'javascript:void(0)';
