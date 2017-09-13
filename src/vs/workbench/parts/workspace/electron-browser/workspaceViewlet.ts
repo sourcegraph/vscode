@@ -351,7 +351,7 @@ export class WorkspaceViewlet extends PersistentViewsViewlet implements IWorkspa
 		const message = err && err.message || '';
 
 		if (/ECONNREFUSED/.test(message)) {
-			const error = createError(localize('suggestProxyError', "Marketplace returned 'ECONNREFUSED'. Please check the 'http.proxy' setting."), {
+			const error = createError(localize('suggestProxyError', "Request returned 'ECONNREFUSED'. Please check the 'http.proxy' setting."), {
 				actions: [
 					this.instantiationService.createInstance(OpenGlobalSettingsAction, OpenGlobalSettingsAction.ID, OpenGlobalSettingsAction.LABEL),
 					CloseAction
