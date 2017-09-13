@@ -301,7 +301,9 @@ Note that there can still be cases where this setting is ignored (e.g. when usin
 - default: folders will open in a new window unless a folder is picked from within the application (e.g. via the File menu)
 - on: folders will open in a new window
 - off: folders will replace the last active window
-Note that there can still be cases where this setting is ignored (e.g. when using the -new-window or -reuse-window command line option).`
+Note that there can still be cases where this setting is ignored (e.g. when using the -new-window or -reuse-window command line option).
+
+READ: This setting is ignored for the Sourcegraph editor (for now). All folders are added to an existing workspace.`
 		)
 	},
 	'window.restoreWindows': {

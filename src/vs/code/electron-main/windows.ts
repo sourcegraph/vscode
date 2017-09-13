@@ -353,6 +353,10 @@ export class WindowsManager implements IWindowsMainService {
 	}
 
 	public open(openConfig: IOpenConfiguration): CodeWindow[] {
+		// HACK: Force folder(s) to be added to the existing workspace
+		if (openConfig.forceExistingWorkspace) {
+			openConfig.addMode = true;
+		}
 		openConfig = this.validateOpenConfig(openConfig);
 
 		let pathsToOpen = this.getPathsToOpen(openConfig);
@@ -1032,6 +1036,10 @@ export class WindowsManager implements IWindowsMainService {
 	}
 
 	private shouldOpenNewWindow(openConfig: IOpenConfiguration): { openFolderInNewWindow: boolean; openFilesInNewWindow: boolean; } {
+		// HACK: Force folder(s) to be added to the existing workspace
+		if (openConfig.forceExistingWorkspace) {
+			return { openFolderInNewWindow: false, openFilesInNewWindow: false };
+		}
 
 		// let the user settings override how folders are open in a new window or same window unless we are forced
 		const windowConfig = this.configurationService.getConfiguration<IWindowSettings>('window');
@@ -1793,7 +1801,9 @@ class FileDialog {
 					cli: this.environmentService.args,
 					pathsToOpen: paths,
 					forceNewWindow: options.forceNewWindow,
-					forceOpenWorkspaceAsFile: options.dialogOptions && !equals(options.dialogOptions.filters, WORKSPACE_FILTER_OPEN)
+					forceOpenWorkspaceAsFile: options.dialogOptions && !equals(options.dialogOptions.filters, WORKSPACE_FILTER_OPEN),
+					// HACK: Force folder(s)to be addded to the existing workspace
+					forceExistingWorkspace: true
 				});
 			}
 		});

@@ -93,6 +93,8 @@ export interface IOpenConfiguration {
 	addMode?: boolean;
 	forceOpenWorkspaceAsFile?: boolean;
 	initialStartup?: boolean;
+	// HACK: Force folder(s) to be added to the existing workspace
+	forceExistingWorkspace?: boolean;
 }
 
 export interface ISharedProcess {
