@@ -1484,6 +1484,7 @@ export class WindowsManager implements IWindowsMainService {
 
 		const resolvedWorkspace = this.workspacesService.resolveWorkspaceSync(workspace.configPath);
 		if (!resolvedWorkspace || resolvedWorkspace.folders.length <= 1) {
+			this.workspacesService.deleteUntitledWorkspaceSync(workspace);
 			return; // a workspace with 0 or 1 folders is usually not worth saving
 		}
 
