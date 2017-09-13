@@ -193,7 +193,9 @@ query($owner: String!, $name: String!) {
 		await vscode.commands.executeCommand(setRevisionCommand.command, ...setRevisionArgs);
 
 		// Set base revision.
-		sourceControl.specifierBox.value = `origin/${choice.pullRequest.baseRefName}...${choice.pullRequest.headRefName}`;
+		//
+		// HACK(sqs): this $(git merge-base ...) is hard-coded in the git extension and is shell-interpolated.
+		sourceControl.specifierBox.value = `$(git merge-base origin/${choice.pullRequest.baseRefName})`;
 		await vscode.commands.executeCommand('git.specifyComparisonWithInput', sourceControl);
 	});
 }

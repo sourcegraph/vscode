@@ -760,10 +760,22 @@ export class Repository implements Disposable {
 	private async updateModelState(): Promise<void> {
 		const { status, didHitLimit: statusDidHitLimit } = await this.repository.getStatus();
 
-		const specifierArgs = this.specifierBox.value ? this.specifierBox.value.split(/\s+/g) : undefined;
+		let specifierArgs: string[] | undefined;
 		let diff: IFileDiff[] = [];
 		let diffDidHitLimit = false;
-		if (specifierArgs) {
+		if (this.specifierBox.value) {
+			// HACK(sqs): special-case interpolate the merge-base so that it supports branch diffs vs. the working tree.
+			const mergeBaseArg = '$(git merge-base origin/master)';
+			let argString = this.specifierBox.value;
+			if (argString.includes(mergeBaseArg)) {
+				const result = await this.repository.run(['merge-base', 'origin/master', 'HEAD']);
+				if (result.stdout) {
+					const mergeBase = result.stdout.trim();
+					argString = argString.replace(mergeBaseArg, mergeBase);
+				}
+			}
+			specifierArgs = argString.split(/\s+/);
+
 			({ diff, didHitLimit: diffDidHitLimit } = await this.repository.getDiff(specifierArgs));
 		}
 
