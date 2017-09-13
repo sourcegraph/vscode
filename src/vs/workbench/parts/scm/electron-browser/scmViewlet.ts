@@ -247,6 +247,7 @@ class SourceControlViewDescriptor implements IViewDescriptor {
 	get ctor(): any { return null; }
 	get when(): ContextKeyExpr { return SCMViewletActiveRepositoryContext.isEqualTo(this._repository.provider.id); }
 	get location(): ViewLocation { return ViewLocation.SCM; }
+	get order(): number { return 10; }
 
 	constructor(private _repository: ISCMRepository) {
 		if (SourceControlViewDescriptor.freeIds.length > 0) {
@@ -673,6 +674,7 @@ export class SCMViewlet extends PersistentViewsViewlet {
 			location: ViewLocation.SCM,
 			ctor: RepositoriesView,
 			size: 50,
+			order: 0,
 		};
 		ViewsRegistry.registerViews([activeRepositoriesListViewDescriptor]);
 	}
