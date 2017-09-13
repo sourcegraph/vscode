@@ -160,6 +160,7 @@ export class CodeCommentsController extends Disposable implements IEditorContrib
 			this.openThreadWidgets.delete(thread.id);
 			dispose(disposables);
 			this.renderCurrentModelDecorations();
+			this.editor.focus();
 		});
 
 		this.openThreadWidgets.set(thread.id, threadWidget);
@@ -184,6 +185,7 @@ export class CodeCommentsController extends Disposable implements IEditorContrib
 			this.openDraftThreadWidgets.delete(draftThread.id);
 			dispose(disposables);
 			this.renderCurrentModelDecorations();
+			this.editor.focus();
 		});
 
 		this.openDraftThreadWidgets.set(draftThread.id, draftThreadWidget);
