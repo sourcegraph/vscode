@@ -85,8 +85,18 @@ export class NavService extends Disposable implements INavService {
 		if (!query.repo) {
 			return Promise.resolve(void 0);
 		}
+
+		if (!query.vcs) {
+			query.vcs = 'git';
+		}
+
+		// Wait for all extensions to register resource resolvers.
+		//
+		// TODO(sqs): add resource resolver-specific activation events for extensions so that they
+		// don't all need to be always (eagerly) activated (i.e., '*')
 		await this.extensionService.onReady(); // extensions register resource resolvers
-		await TPromise.timeout(1000); // HACK(sqs): wait for git extension to register resource resolver
+		await this.extensionService.activateByEvent('*');
+
 		const resource = URI.parse(`${query.vcs}+${query.repo}`);
 		const [root] = await this.foldersWorkbenchService.addFoldersAsWorkspaceRootFolders([resource]);
 
@@ -98,7 +108,11 @@ export class NavService extends Disposable implements INavService {
 		// TODO(sqs): wait for IPartService.joinCreation?
 		const input: IResourceInput = {
 			resource: URI.file(paths.join(root.fsPath, query.path)),
-			options: { pinned: true },
+			options: {
+				pinned: true,
+				revealIfVisible: true,
+				revealInCenterIfOutsideViewport: true,
+			},
 		};
 
 		let selections: ISelection[] = [];
