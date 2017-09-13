@@ -73,7 +73,7 @@ export class DraftThreadCommentsWidget extends BaseThreadCommentsWidget {
 
 	public expand(reveal: boolean): void {
 		// Render once so we can then measure actual height and then render again.
-		super.show(this.draftThread.displayRange, 0, reveal);
+		super.show(this.draftThread.displayRange.getEndPosition(), 0, reveal);
 		if (reveal) {
 			this.commentInput.focus();
 		}

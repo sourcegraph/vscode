@@ -162,7 +162,7 @@ export class ThreadCommentsWidget extends BaseThreadCommentsWidget {
 			this.create();
 		}
 		// Render once so we can then measure actual height and then render again.
-		super.show(this.threadComments.displayRange, 0, reveal);
+		super.show(this.threadComments.displayRange.getEndPosition(), 0, reveal);
 		if (reveal) {
 			this.commentInput.focus();
 		}
