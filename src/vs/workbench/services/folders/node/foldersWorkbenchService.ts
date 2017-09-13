@@ -59,7 +59,7 @@ class Folder implements IFolder {
 		if (this.catalog) {
 			return this.catalog.displayPath;
 		}
-		return this.resource.scheme === Schemas.file ? this.resource.fsPath : this.resource.authority + this.resource.path;
+		return this.resource.scheme === Schemas.file ? this.resource.fsPath : this.resource.authority + this.resource.path.replace(/\.(git|hg|svn)$/, '');
 	}
 
 	get displayName(): string {
