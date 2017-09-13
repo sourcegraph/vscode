@@ -206,7 +206,7 @@ export class WorkbenchShell {
 	private onWorkbenchStarted(info: IWorkbenchStartedInfo): void {
 
 		// Telemetry: workspace info
-		const { filesToOpen, filesToCreate, filesToDiff } = this.configuration;
+		const { filesToOpen, filesToCreate, filesToDiff, urisToHandle } = this.configuration;
 		this.telemetryService.publicLog('workspaceLoad', {
 			userAgent: navigator.userAgent,
 			windowSize: { innerHeight: window.innerHeight, innerWidth: window.innerWidth, outerHeight: window.outerHeight, outerWidth: window.outerWidth },
@@ -214,6 +214,7 @@ export class WorkbenchShell {
 			'workbench.filesToOpen': filesToOpen && filesToOpen.length || void 0,
 			'workbench.filesToCreate': filesToCreate && filesToCreate.length || void 0,
 			'workbench.filesToDiff': filesToDiff && filesToDiff.length || void 0,
+			'workbench.urisToHandle': urisToHandle && urisToHandle.length || void 0,
 			customKeybindingsCount: info.customKeybindingsCount,
 			theme: this.themeService.getColorTheme().id,
 			language: platform.language,

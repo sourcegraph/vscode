@@ -534,7 +534,7 @@ export class WindowsManager implements IWindowsMainService {
 
 		// Handle files to open/diff or to create when we dont open a folder and we do not restore any folder/untitled from hot-exit
 		const potentialWindowsCount = foldersToOpen.length + foldersToRestore.length + workspacesToOpen.length + workspacesToRestore.length + emptyToRestore.length;
-		if (potentialWindowsCount === 0 && (filesToOpen.length > 0 || filesToCreate.length > 0 || filesToDiff.length > 0)) {
+		if (potentialWindowsCount === 0 && (filesToOpen.length > 0 || filesToCreate.length > 0 || filesToDiff.length > 0 || urisToHandle.length > 0)) {
 
 			// Find suitable window or folder path to open files in
 			const fileToCheck = filesToOpen[0] || filesToCreate[0] || filesToDiff[0];
@@ -687,13 +687,13 @@ export class WindowsManager implements IWindowsMainService {
 
 		// Handle URIs
 		if (urisToHandle.length > 0) {
-			this.openInBrowserWindow({
+			usedWindows.push(this.openInBrowserWindow({
 				userEnv: openConfig.userEnv,
 				cli: openConfig.cli,
 				initialStartup: openConfig.initialStartup,
 				urisToHandle,
 				forceNewWindow: true,
-			});
+			}));
 
 			// Reset these because we handled them
 			urisToHandle = [];
