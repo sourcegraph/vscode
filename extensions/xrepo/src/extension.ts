@@ -6,9 +6,6 @@
 
 import * as vscode from 'vscode';
 import * as cp from 'child_process';
-import * as path from 'path';
-import * as fs from 'fs';
-import { mkdirp } from './util';
 import * as nls from 'vscode-nls';
 
 const localize = nls.loadMessageBundle();
@@ -31,10 +28,6 @@ async function onWorkspaceFolderAdded(e: vscode.WorkspaceFoldersChangeEvent) {
 	setTimeout(() => e.added.forEach(added => initializeWorkspaceFolder(added)), 0);
 }
 
-function getTasksFilePath(workspaceFolder: vscode.WorkspaceFolder): string {
-	return path.join(workspaceFolder.uri.fsPath, '.vscode', 'tasks.json');
-}
-
 async function initializeWorkspaceFolderCmd(workspaceFolder?: vscode.WorkspaceFolder) {
 	if (!workspaceFolder) {
 		if (!vscode.window.activeTextEditor) {
@@ -52,7 +45,6 @@ async function initializeWorkspaceFolderCmd(workspaceFolder?: vscode.WorkspaceFo
 async function initializeWorkspaceFolder(workspaceFolder: vscode.WorkspaceFolder): Promise<boolean> {
 	const tasks = getInitializeWorkspaceFolderTasks(workspaceFolder);
 	if (tasks.length === 0) {
-		await promptUserToAddInitializeWorkspaceFolderTask(workspaceFolder);
 		return false;
 	}
 
@@ -64,28 +56,6 @@ async function initializeWorkspaceFolder(workspaceFolder: vscode.WorkspaceFolder
 		vscode.window.showErrorMessage(localize('failedToInitializeWorkspaceFolderError', "Failed to initialize workspace folder environment: ") + err);
 	}
 	return true;
-}
-
-async function promptUserToAddInitializeWorkspaceFolderTask(workspaceFolder: vscode.WorkspaceFolder) {
-	const choice = await vscode.window.showWarningMessage(localize('noInitializeWorkspaceFolderTaskWarning', "No workspace folder initialization task was found."), localize('add', "Add"));
-	if (choice === localize('add', "Add")) {
-		const tasksPath = getTasksFilePath(workspaceFolder);
-		if (!await new Promise<boolean>(resolve => fs.exists(tasksPath, exists => resolve(exists)))) {
-			await mkdirp(path.dirname(tasksPath));
-			const newFileUri = vscode.Uri.parse('untitled://' + tasksPath.replace(new RegExp(path.sep, 'g'), '/'));
-			const doc = await vscode.workspace.openTextDocument(newFileUri);
-			const editor = await vscode.window.showTextDocument(doc);
-			const edited = editor.edit(editBuilder => {
-				editBuilder.insert(new vscode.Position(0, 0), tasksSnippet);
-			});
-			if (edited) {
-				editor.selection = taskSnippetSelection;
-			}
-		} else {
-			const doc = await vscode.workspace.openTextDocument(tasksPath);
-			await vscode.window.showTextDocument(doc);
-		}
-	}
 }
 
 /**
@@ -147,23 +117,3 @@ export interface CommandOptions {
 	*/
 	env?: any;
 }
-
-/**
- * Default suggested value of tasks.json if it does not yet exist
- */
-const tasksSnippet = `{
-	"version": "2.0.0",
-	"tasks": [
-		{
-			"type": "shell",
-			"taskName": "Initialize dev environment",
-			"group": "init",
-			"command": "[[Enter initialization command here]]"
-		}
-	]
-}`;
-
-const taskSnippetSelection = new vscode.Selection(
-	new vscode.Position(7, 15),
-	new vscode.Position(7, 52),
-);
