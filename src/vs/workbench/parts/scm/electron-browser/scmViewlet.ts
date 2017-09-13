@@ -794,7 +794,7 @@ Registry.as<IConfigurationRegistry>(Extensions.Configuration)
 			'scm.enableCompare': {
 				type: 'boolean',
 				description: localize('scm.enableCompare', "(Experimental) Enable the comparison specifier input in the SCM viewlet"),
-				default: false,
+				default: true,
 			}
 		}
 	});
