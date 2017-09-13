@@ -85,6 +85,10 @@ export class NavService extends Disposable implements INavService {
 		if (!query.repo) {
 			return Promise.resolve(void 0);
 		}
+
+		if (!query.vcs) {
+			query.vcs = 'git';
+		}
 		await this.extensionService.onReady(); // extensions register resource resolvers
 		await TPromise.timeout(1000); // HACK(sqs): wait for git extension to register resource resolver
 		const resource = URI.parse(`${query.vcs}+${query.repo}`);
