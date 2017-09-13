@@ -51,29 +51,33 @@ export async function getTempDirectory(key: string): Promise<string> {
 }
 
 /**
- * Returns the path to the `go` command. This is copied over from the VS Code Go extension (github.com/Microsoft/vscode-go).
+ * Returns the Go package prefix of @param dir.
  */
-export function getGoPackage(dir: string): Promise<string | null> {
+export async function getGoPackagePrefix(dir: string): Promise<string | null> {
 	const goRuntimePath = getGoRuntimePath();
-
 	if (!goRuntimePath) {
 		return Promise.resolve(null);
 	}
 
-	return new Promise<string>((resolve, reject) => {
-		// Use `{env: {}}` to make the execution faster. Include GOPATH to account if custom work space exists.
-		const env: any = getToolsEnvVars();
-
-		const cmd = cp.spawn(goRuntimePath, ['list', '-f', '{{.ImportPath}}', '.'], { env: env, cwd: dir });
-		const chunks: any[] = [];
-		cmd.stdout.on('data', (d) => {
-			chunks.push(d);
-		});
-
-		cmd.on('close', (status) => {
-			return resolve(chunks.join('').trim());
-		});
-	});
+	const env: any = getToolsEnvVars();
+	const out = await new Promise<string>((resolve, reject) => cp.execFile(goRuntimePath, ['list', '-f', '[{{ printf "%q" .ImportPath }}, {{ printf "%q" .Dir }}]', './...'], { env: env, cwd: dir }, (err, stdout) => err ? reject(err) : resolve(stdout)));
+	const lines = out.split(/\r?\n/);
+	for (const line of lines) {
+		const pkgAndDir = JSON.parse(line);
+		if (!Array.isArray(pkgAndDir) || pkgAndDir.length !== 2) {
+			continue;
+		}
+		const [pkg, pkgDir] = pkgAndDir;
+		if (typeof (pkg) !== 'string' || typeof (pkgDir) !== 'string') {
+			continue;
+		}
+		const relDir = path.relative(dir, pkgDir);
+		if (!pkg.endsWith(relDir)) {
+			continue;
+		}
+		return pkg.substring(0, pkg.length - relDir.length);
+	}
+	return null;
 }
 
 let runtimePathCache: string = '';
