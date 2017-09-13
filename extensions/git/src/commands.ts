@@ -13,6 +13,7 @@ import { toGitUri, fromGitUri } from './uri';
 import { applyLineChanges, intersectDiffWithRange, toLineRanges, invertLineChange } from './staging';
 import * as path from 'path';
 import * as os from 'os';
+import * as fs from 'fs';
 import TelemetryReporter from 'vscode-extension-telemetry';
 import * as nls from 'vscode-nls';
 import { getTempDirectory, getGoPackagePrefix } from './tempFolder';
@@ -1059,8 +1060,10 @@ export class CommandCenter {
 		} else {
 			dst = path.join(tempFolder, path.basename(repository.root));
 		}
-		await this.worktreePrune(repository);
-		await this.addWorktree(repository, dst, rev);
+		if (!await new Promise(resolve => fs.exists(dst, exists => resolve(exists)))) {
+			await this.worktreePrune(repository);
+			await this.addWorktree(repository, dst, rev);
+		}
 
 		// Add new worktree to workspace.
 		if (workspace.workspaceFolders) {
