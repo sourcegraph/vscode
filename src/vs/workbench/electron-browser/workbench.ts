@@ -139,6 +139,7 @@ export interface IWorkbenchStartedInfo {
 	customKeybindingsCount: number;
 	restoreViewletDuration: number;
 	restoreEditorsDuration: number;
+	handleUrisDuration: number;
 	pinnedViewlets: string[];
 	restoredViewlet: string;
 	restoredEditors: string[];
@@ -202,6 +203,7 @@ export class Workbench implements IPartService {
 	private configurationEditingService: IConfigurationEditingService;
 	private workspaceMigrationService: WorkspaceMigrationService;
 	private fileService: IFileService;
+	private navService: INavService;
 	private titlebarPart: TitlebarPart;
 	private navbarPart: NavbarPart;
 	private activitybarPart: ActivitybarPart;
@@ -391,6 +393,17 @@ export class Workbench implements IPartService {
 				});
 			})));
 
+			// Handle URIs
+			let handleUrisStopWatch: StopWatch;
+			const { urisToHandle } = this.workbenchParams.configuration;
+			if (urisToHandle && urisToHandle.length) {
+				handleUrisStopWatch = StopWatch.create();
+				const urisTimer = startTimer('handle:uris');
+				compositeAndEditorPromises.push(urisTimer.while(TPromise.join(urisToHandle.map(uri => {
+					return this.navService.handle(URI.parse(uri));
+				}))).then(() => handleUrisStopWatch.stop()));
+			}
+
 			if (this.storageService.getBoolean(Workbench.zenModeActiveSettingKey, StorageScope.WORKSPACE, false)) {
 				this.toggleZenMode(true);
 			}
@@ -405,6 +418,7 @@ export class Workbench implements IPartService {
 						customKeybindingsCount: this.keybindingService.customKeybindingsCount(),
 						restoreViewletDuration: viewletRestoreStopWatch ? Math.round(viewletRestoreStopWatch.elapsed()) : 0,
 						restoreEditorsDuration: Math.round(editorRestoreStopWatch.elapsed()),
+						handleUrisDuration: handleUrisStopWatch ? Math.round(handleUrisStopWatch.elapsed()) : 0,
 						pinnedViewlets: this.activitybarPart.getPinned(),
 						restoredViewlet: viewletIdToRestore,
 						restoredEditors
@@ -672,7 +686,8 @@ export class Workbench implements IPartService {
 		serviceCollection.set(IQuickOpenService, this.quickOpen);
 
 		// Nav Service
-		serviceCollection.set(INavService, new SyncDescriptor(NavService));
+		this.navService = this.instantiationService.createInstance(NavService);
+		serviceCollection.set(INavService, this.navService);
 
 		// Nav bar
 		this.navbarPart = this.instantiationService.createInstance(NavbarPart, Identifiers.NAVBAR_PART);
