@@ -9,11 +9,11 @@ import { memoize } from 'vs/base/common/decorators';
 import { ISCMService, ISCMRepository } from 'vs/workbench/services/scm/common/scm';
 
 /**
- * Represents the state of open SCM repositories.
+ * Represents the state of SCM repositories.
  */
-export interface IOpenRepositoriesModel {
+export interface IRepositoriesModel {
 	/**
-	 * All open SCM repositories.
+	 * All active SCM repositories.
 	 */
 	readonly repositories: ISCMRepository[];
 
@@ -53,7 +53,7 @@ export interface IOpenRepositoriesModel {
 	getPendingChangesCount(repository: ISCMRepository): number;
 }
 
-export class OpenRepositoriesModel implements IOpenRepositoriesModel, IDisposable {
+export class RepositoriesModel implements IRepositoriesModel, IDisposable {
 	private _activeRepository: ISCMRepository | undefined;
 	private disposables: IDisposable[] = [];
 

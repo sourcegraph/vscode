@@ -51,7 +51,7 @@ import * as platform from 'vs/base/common/platform';
 import { domEvent } from 'vs/base/browser/event';
 import { StandardKeyboardEvent } from 'vs/base/browser/keyboardEvent';
 import { KeyMod, KeyCode } from 'vs/base/common/keyCodes';
-import { OpenRepositoriesView } from './views/openRepositoriesView';
+import { RepositoriesView } from './views/repositoriesView';
 import { ILifecycleService } from 'vs/platform/lifecycle/common/lifecycle';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { IConfigurationRegistry, Extensions } from 'vs/platform/configuration/common/configurationRegistry';
@@ -667,14 +667,14 @@ export class SCMViewlet extends PersistentViewsViewlet {
 	}
 
 	private registerViews(): void {
-		const openRepositoriesListViewDescriptor: IViewDescriptor = {
-			id: OpenRepositoriesView.ID,
-			name: OpenRepositoriesView.NAME,
+		const activeRepositoriesListViewDescriptor: IViewDescriptor = {
+			id: RepositoriesView.ID,
+			name: RepositoriesView.NAME,
 			location: ViewLocation.SCM,
-			ctor: OpenRepositoriesView,
+			ctor: RepositoriesView,
 			size: 50,
 		};
-		ViewsRegistry.registerViews([openRepositoriesListViewDescriptor]);
+		ViewsRegistry.registerViews([activeRepositoriesListViewDescriptor]);
 	}
 
 	private onDidAddRepository(repository: ISCMRepository): void {
@@ -700,7 +700,7 @@ export class SCMViewlet extends PersistentViewsViewlet {
 		await super.create(parent);
 
 		parent.addClass('scm-viewlet', 'empty');
-		append(parent.getHTMLElement(), $('div.empty-message', null, localize('no open repo', "There are no source controls active.")));
+		append(parent.getHTMLElement(), $('div.empty-message', null, localize('no active repo', "There are no active repositories.")));
 
 		this.scmService.onDidAddRepository(this.onDidAddRepository, this, this.disposables);
 		this.scmService.onDidRemoveRepository(this.onDidRemoveRepository, this, this.disposables);

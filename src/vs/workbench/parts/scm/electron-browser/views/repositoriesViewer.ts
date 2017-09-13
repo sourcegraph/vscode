@@ -24,7 +24,7 @@ import { attachBadgeStyler } from 'vs/platform/theme/common/styler';
 import { ContributableActionProvider } from 'vs/workbench/browser/actions';
 import { ITextFileService } from 'vs/workbench/services/textfile/common/textfiles';
 import { ISCMRepository } from 'vs/workbench/services/scm/common/scm';
-import { IOpenRepositoriesModel, OpenRepositoriesModel } from './openRepositoriesModel';
+import { IRepositoriesModel, RepositoriesModel } from './repositoriesModel';
 import { SCMMenus } from 'vs/workbench/parts/scm/electron-browser/scmMenus';
 import { FolderSCMRevisionLabelAction } from 'vs/workbench/parts/workspace/browser/scmFolderActions';
 import { CountBadge } from 'vs/base/browser/ui/countBadge/countBadge';
@@ -34,18 +34,18 @@ import { EventType } from 'vs/base/common/events';
 export class DataSource implements IDataSource {
 
 	public getId(tree: ITree, element: any): string {
-		if (element instanceof OpenRepositoriesModel) {
+		if (element instanceof RepositoriesModel) {
 			return 'root';
 		}
 		return (<ISCMRepository>element).provider.id;
 	}
 
 	public hasChildren(tree: ITree, element: any): boolean {
-		return element instanceof OpenRepositoriesModel;
+		return element instanceof RepositoriesModel;
 	}
 
 	public getChildren(tree: ITree, element: any): TPromise<any> {
-		if (element instanceof OpenRepositoriesModel) {
+		if (element instanceof RepositoriesModel) {
 			return TPromise.as(element.repositories);
 		}
 
@@ -57,7 +57,7 @@ export class DataSource implements IDataSource {
 	}
 }
 
-export interface IOpenRepositoryTemplateData {
+export interface IRepositoryTemplateData {
 	container: HTMLElement;
 	label: FileLabel;
 	actionBar: ActionBar;
@@ -70,11 +70,11 @@ export interface IOpenRepositoryTemplateData {
 export class Renderer implements IRenderer {
 
 	public static ITEM_HEIGHT = 28;
-	private static OPEN_REPOSITORY_TEMPLATE_ID = 'openrepository';
+	private static REPOSITORY_TEMPLATE_ID = 'repository';
 
 	constructor(
 		private actionProvider: ActionProvider,
-		private model: IOpenRepositoriesModel,
+		private model: IRepositoriesModel,
 		@IInstantiationService private instantiationService: IInstantiationService,
 		@IThemeService private themeService: IThemeService,
 		@IMessageService private messageService: IMessageService,
@@ -85,10 +85,10 @@ export class Renderer implements IRenderer {
 	}
 
 	public getTemplateId(tree: ITree, element: ISCMRepository): string {
-		return Renderer.OPEN_REPOSITORY_TEMPLATE_ID;
+		return Renderer.REPOSITORY_TEMPLATE_ID;
 	}
 
-	public renderTemplate(tree: ITree, templateId: string, container: HTMLElement): IOpenRepositoryTemplateData {
+	public renderTemplate(tree: ITree, templateId: string, container: HTMLElement): IRepositoryTemplateData {
 		const disposables: IDisposable[] = [];
 
 		const header = dom.append(container, dom.$('.header'));
@@ -117,14 +117,14 @@ export class Renderer implements IRenderer {
 				scmRevisionAction.folderResource = repository.provider.rootFolder;
 				label.setFile(repository.provider.rootFolder, {
 					hidePath: true,
-					extraClasses: ['open-repository'],
+					extraClasses: ['repository'],
 					fileKind: FileKind.REPOSITORY,
 				});
 			},
 		};
 	}
 
-	public renderElement(tree: ITree, repository: ISCMRepository, templateId: string, templateData: IOpenRepositoryTemplateData): void {
+	public renderElement(tree: ITree, repository: ISCMRepository, templateId: string, templateData: IRepositoryTemplateData): void {
 		const count = this.model.getPendingChangesCount(repository);
 		if (count > 0) {
 			dom.addClass(templateData.container, 'dirty');
@@ -137,7 +137,7 @@ export class Renderer implements IRenderer {
 		templateData.repository = repository;
 	}
 
-	public disposeTemplate(tree: ITree, templateId: string, templateData: IOpenRepositoryTemplateData): void {
+	public disposeTemplate(tree: ITree, templateId: string, templateData: IRepositoryTemplateData): void {
 		templateData.disposables = dispose(templateData.disposables);
 	}
 }
@@ -146,7 +146,7 @@ export class Controller extends DefaultController {
 
 	constructor(
 		private actionProvider: ActionProvider,
-		private model: IOpenRepositoriesModel,
+		private model: IRepositoriesModel,
 		@IContextMenuService private contextMenuService: IContextMenuService,
 		@IContextKeyService contextKeyService: IContextKeyService,
 		@ITelemetryService private telemetryService: ITelemetryService
@@ -176,7 +176,7 @@ export class Controller extends DefaultController {
 			}
 		}
 
-		// Select, Focus and open files
+		// Select, focus, and open entries.
 		else {
 			tree.setFocus(element, payload);
 
@@ -185,7 +185,7 @@ export class Controller extends DefaultController {
 			}
 
 			tree.setSelection([element], payload);
-			this.openRepository(element);
+			this.setActiveRepository(element);
 		}
 
 		return true;
@@ -232,7 +232,7 @@ export class Controller extends DefaultController {
 		return true;
 	}
 
-	public openRepository(element: ISCMRepository): void {
+	public setActiveRepository(element: ISCMRepository): void {
 		this.model.activeRepository = element;
 		element.focus();
 	}
@@ -241,7 +241,7 @@ export class Controller extends DefaultController {
 export class AccessibilityProvider implements IAccessibilityProvider {
 
 	getAriaLabel(tree: ITree, element: any): string {
-		return nls.localize('openRepositoryAriaLabel', "{0}, Open Repository", (<ISCMRepository>element).provider.label);
+		return nls.localize('repositoryAriaLabel', "{0}, Repository", (<ISCMRepository>element).provider.label);
 	}
 }
 
@@ -251,7 +251,7 @@ export class ActionProvider extends ContributableActionProvider {
 	private disposables: IDisposable[] = [];
 
 	constructor(
-		private model: IOpenRepositoriesModel,
+		private model: IRepositoriesModel,
 		@IInstantiationService private instantiationService: IInstantiationService,
 		@ITextFileService private textFileService: ITextFileService,
 	) {

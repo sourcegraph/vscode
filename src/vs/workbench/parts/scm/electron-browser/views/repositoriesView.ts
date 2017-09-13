@@ -18,26 +18,26 @@ import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { CollapsibleView, IViewletViewOptions, IViewOptions } from 'vs/workbench/browser/parts/views/views';
 import { VIEWLET_ID, SCMViewletActiveRepositoryContext } from 'vs/workbench/parts/scm/common/scm';
 import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
-import { Renderer, DataSource, Controller, AccessibilityProvider, ActionProvider } from 'vs/workbench/parts/scm/electron-browser/views/openRepositoriesViewer';
+import { Renderer, DataSource, Controller, AccessibilityProvider, ActionProvider } from 'vs/workbench/parts/scm/electron-browser/views/repositoriesViewer';
 import { IContextKeyService, IContextKey } from 'vs/platform/contextkey/common/contextkey';
 import { IListService } from 'vs/platform/list/browser/listService';
 import { attachListStyler } from 'vs/platform/theme/common/styler';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { ViewSizing } from 'vs/base/browser/ui/splitview/splitview';
 import { ISCMService, ISCMRepository } from 'vs/workbench/services/scm/common/scm';
-import { IOpenRepositoriesModel, OpenRepositoriesModel } from './openRepositoriesModel';
+import { IRepositoriesModel, RepositoriesModel } from './repositoriesModel';
 
 const $ = dom.$;
 
-export class OpenRepositoriesView extends CollapsibleView {
+export class RepositoriesView extends CollapsibleView {
 
-	private static DEFAULT_VISIBLE_OPEN_REPOSITORIES = 9;
+	private static DEFAULT_VISIBLE_REPOSITORIES = 9;
 	private static DEFAULT_DYNAMIC_HEIGHT = true;
-	static ID = 'scm.openRepositoriesView';
-	static NAME = nls.localize({ key: 'openRepositories', comment: ['Open is an adjective'] }, "Open Repositories");
+	static ID = 'scm.activeRepositoriesView';
+	static NAME = nls.localize('activeRepositories', "Active Repositories");
 
-	private model: OpenRepositoriesModel;
-	private visibleOpenRepositories: number;
+	private model: RepositoriesModel;
+	private visibleRepositories: number;
 	private dynamicHeight: boolean;
 	private structuralTreeRefreshScheduler: RunOnceScheduler;
 	private structuralRefreshDelay: number;
@@ -60,9 +60,9 @@ export class OpenRepositoriesView extends CollapsibleView {
 		super(initialSize,
 			{
 				...(options as IViewOptions),
-				ariaHeaderLabel: nls.localize({ key: 'openRepositoriesSection', comment: ['Open is an adjective'] }, "Open Repositories Section"),
+				ariaHeaderLabel: nls.localize('activeRepositoriesSection', "Active Repositories Section"),
 				sizing: ViewSizing.Fixed,
-				initialBodySize: OpenRepositoriesView.computeExpandedBodySize(scmService.repositories.length)
+				initialBodySize: RepositoriesView.computeExpandedBodySize(scmService.repositories.length)
 			}, keybindingService, contextMenuService);
 
 		this.scmViewletActiveRepositoryContextKey = SCMViewletActiveRepositoryContext.bindTo(contextKeyService);
@@ -70,7 +70,7 @@ export class OpenRepositoriesView extends CollapsibleView {
 		this.structuralRefreshDelay = 0;
 		this.structuralTreeRefreshScheduler = new RunOnceScheduler(() => this.structuralTreeUpdate(), this.structuralRefreshDelay);
 
-		this.model = this.instantiationService.createInstance(OpenRepositoriesModel);
+		this.model = this.instantiationService.createInstance(RepositoriesModel);
 	}
 
 	public renderHeader(container: HTMLElement): void {
@@ -108,7 +108,7 @@ export class OpenRepositoriesView extends CollapsibleView {
 		}, {
 				indentPixels: 0,
 				twistiePixels: 22,
-				ariaLabel: nls.localize({ key: 'treeAriaLabel', comment: ['Open is an adjective'] }, "Open Repositories: List of Active Repositories"),
+				ariaLabel: nls.localize('treeAriaLabel', "Active Repositories: List of Active Repositories"),
 				showTwistie: false,
 				keyboardSupport: false
 			});
@@ -122,7 +122,7 @@ export class OpenRepositoriesView extends CollapsibleView {
 		// Open when selecting via keyboard
 		this.toDispose.push(this.tree.addListener('selection', event => {
 			if (event && event.payload && event.payload.origin === 'keyboard') {
-				controller.openRepository(this.tree.getFocus());
+				controller.setActiveRepository(this.tree.getFocus());
 			}
 		}));
 
@@ -143,7 +143,7 @@ export class OpenRepositoriesView extends CollapsibleView {
 	private registerListeners(): void {
 
 		// update on model changes
-		this.toDispose.push(this.model.onDidUpdateRepositories(e => this.onOpenRepositoriesModelChanged()));
+		this.toDispose.push(this.model.onDidUpdateRepositories(e => this.onRepositoriesModelChanged()));
 		this.toDispose.push(this.model.onDidAddRepository(repository => this.onDidAddRepository(repository)));
 		this.toDispose.push(this.model.onDidChangeActiveRepository(() => this.onActiveRepositoryChanged()));
 		this.model.repositories.forEach(repository => this.onDidAddRepository(repository));
@@ -172,7 +172,7 @@ export class OpenRepositoriesView extends CollapsibleView {
 		this.toDispose.push(disposable);
 	}
 
-	private onOpenRepositoriesModelChanged(): void {
+	private onRepositoriesModelChanged(): void {
 		if (this.isDisposed || !this.isVisible() || !this.tree) {
 			return;
 		}
@@ -222,16 +222,16 @@ export class OpenRepositoriesView extends CollapsibleView {
 		}
 	}
 
-	private getExpandedBodySize(model: IOpenRepositoriesModel): number {
-		return OpenRepositoriesView.computeExpandedBodySize(model.repositories.length, this.visibleOpenRepositories, this.dynamicHeight);
+	private getExpandedBodySize(model: IRepositoriesModel): number {
+		return RepositoriesView.computeExpandedBodySize(model.repositories.length, this.visibleRepositories, this.dynamicHeight);
 	}
 
-	private static computeExpandedBodySize(openRepositoriesCount: number, visibleOpenRepositories = OpenRepositoriesView.DEFAULT_VISIBLE_OPEN_REPOSITORIES, dynamicHeight = OpenRepositoriesView.DEFAULT_DYNAMIC_HEIGHT): number {
+	private static computeExpandedBodySize(repositoriesCount: number, visibleRepositories = RepositoriesView.DEFAULT_VISIBLE_REPOSITORIES, dynamicHeight = RepositoriesView.DEFAULT_DYNAMIC_HEIGHT): number {
 		let itemsToShow: number;
 		if (dynamicHeight) {
-			itemsToShow = Math.min(Math.max(visibleOpenRepositories, 1), openRepositoriesCount);
+			itemsToShow = Math.min(Math.max(visibleRepositories, 1), repositoriesCount);
 		} else {
-			itemsToShow = Math.max(visibleOpenRepositories, 1);
+			itemsToShow = Math.max(visibleRepositories, 1);
 		}
 
 		return itemsToShow * Renderer.ITEM_HEIGHT;
