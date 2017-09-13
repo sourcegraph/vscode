@@ -29,7 +29,7 @@
       "editor/context": [
         {
           "command": "xrepo.goToSource",
-          "group": "navigation"
+          "group": "navigation@4"
         }
       ]
     },
