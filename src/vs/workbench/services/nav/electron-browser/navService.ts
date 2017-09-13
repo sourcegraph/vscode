@@ -108,7 +108,11 @@ export class NavService extends Disposable implements INavService {
 		// TODO(sqs): wait for IPartService.joinCreation?
 		const input: IResourceInput = {
 			resource: URI.file(paths.join(root.fsPath, query.path)),
-			options: { pinned: true },
+			options: {
+				pinned: true,
+				revealIfVisible: true,
+				revealInCenterIfOutsideViewport: true,
+			},
 		};
 
 		let selections: ISelection[] = [];
