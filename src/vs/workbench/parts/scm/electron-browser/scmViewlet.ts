@@ -331,10 +331,24 @@ class SourceControlView extends CollapsibleView {
 		this.specifierBox.value = this.repository.specifier.value;
 		this.repository.specifier.onDidChange(value => this.specifierBox.value = value, null, this.disposables);
 
+		this.specifierBox.onDidChange(value => {
+			if (!value) {
+				this.onDidAcceptSpecifier();
+			}
+		});
+
 		chain(domEvent(this.specifierBox.inputElement, 'keydown'))
 			.map(e => new StandardKeyboardEvent(e))
 			.filter(e => e.equals(KeyCode.Enter))
 			.on(this.onDidAcceptSpecifier, this, this.disposables);
+
+		chain(domEvent(this.specifierBox.inputElement, 'keydown'))
+			.map(e => new StandardKeyboardEvent(e))
+			.filter(e => e.equals(KeyCode.Escape))
+			.on(() => {
+				this.specifierBox.value = '';
+				this.onDidAcceptSpecifier();
+			}, this, this.disposables);
 
 		chain(domEvent(this.specifierBox.inputElement, 'blur'))
 			.on(this.onDidAcceptSpecifier, this, this.disposables);
