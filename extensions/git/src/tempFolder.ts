@@ -16,6 +16,7 @@ import os = require('os');
 
 const localize = nls.loadMessageBundle();
 const tmpRoot = path.join(os.homedir(), '.sourcegraph', 'temp-workspace-roots');
+const deleteWord = localize('delete', "Delete");
 
 export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.workspace.onDidChangeWorkspaceFolders(onDidChangeWorkspaceFolders));
@@ -27,8 +28,8 @@ export function activate(context: vscode.ExtensionContext) {
 async function onDidChangeWorkspaceFolders(e: vscode.WorkspaceFoldersChangeEvent) {
 	for (const removed of e.removed) {
 		if (removed.uri.fsPath.startsWith(tmpRoot + path.sep)) {
-			const choice = await vscode.window.showInformationMessage(localize('deleteDirectoryContainingWorktreeWorkspaceFolder', "Delete directory containing the worktree workspace folder you just removed?"), localize('delete', "Delete"));
-			if (choice !== localize('delete', "Delete")) {
+			const choice = await vscode.window.showInformationMessage(localize('deleteDirectoryContainingWorktreeWorkspaceFolder', "Delete directory containing the worktree workspace folder you just removed?"), deleteWord);
+			if (choice !== deleteWord) {
 				continue;
 			}
 			const relpath = path.relative(tmpRoot, removed.uri.fsPath);

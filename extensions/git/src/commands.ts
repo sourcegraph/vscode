@@ -1043,7 +1043,7 @@ export class CommandCenter {
 	@command('git.addTempWorktree', { repository: true })
 	async addAndInitializeTempWorkTree(repository: Repository, rev?: string): Promise<void> {
 		if (!rev) {
-			const choice = await quickPickRef(repository, 'dummy');
+			const choice = await quickPickRef(repository, 'dummy'); // only need the quick-pick item for the revision, so pass a dummy value here
 			if (!choice) {
 				return;
 			}
@@ -1608,6 +1608,10 @@ export class CommandCenter {
 	}
 }
 
+/**
+ * quickPickRef presents a quick-pick to the user to select the ref to check out via `git worktree`.
+ * The returned item has a `run` method to execute the appropriate `git worktree` action.
+ */
 async function quickPickRef(repository: Repository, worktreePath: string): Promise<AddWorktreeItem | undefined> {
 	const config = workspace.getConfiguration('git');
 	const checkoutType = config.get<string>('checkoutType') || 'all';
