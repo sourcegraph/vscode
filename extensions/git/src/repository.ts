@@ -222,6 +222,7 @@ export enum Operation {
 	ExecuteCommand = 1 << 20,
 	AddWorktree = 1 << 21,
 	SpecifyComparison = 1 << 22,
+	WorktreePrune = 1 << 23,
 }
 
 // function getOperationName(operation: Operation): string {
@@ -597,6 +598,10 @@ export class Repository implements Disposable {
 
 	async addWorktree(worktreeDir: string, ref: string): Promise<void> {
 		await this.run(Operation.AddWorktree, () => this.repository.addWorktree(worktreeDir, ref));
+	}
+
+	async worktreePrune(): Promise<void> {
+		await this.run(Operation.WorktreePrune, () => this.repository.worktreePrune());
 	}
 
 	async getCommit(ref: string): Promise<Commit> {

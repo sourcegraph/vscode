@@ -15,6 +15,7 @@ import * as path from 'path';
 import * as os from 'os';
 import TelemetryReporter from 'vscode-extension-telemetry';
 import * as nls from 'vscode-nls';
+import { getTempDirectory, getGoPackage } from './tempFolder';
 
 const localize = nls.loadMessageBundle();
 
@@ -103,7 +104,7 @@ class CreateBranchItem implements QuickPickItem {
 class AddWorktreeItem implements QuickPickItem {
 
 	protected get shortCommit(): string { return (this.ref.commit || '').substr(0, 8); }
-	protected get treeish(): string | undefined { return this.ref.fullName; }
+	get treeish(): string | undefined { return this.ref.fullName; }
 	get label(): string { return this.ref.name || this.shortCommit; }
 	get description(): string { return this.shortCommit; }
 
@@ -1034,6 +1035,39 @@ export class CommandCenter {
 		return await repository.specifyComparison(revisionOrRangeSpecifier);
 	}
 
+	@command('git.worktreePrune', { repository: true })
+	async worktreePrune(repository: Repository): Promise<void> {
+		await repository.worktreePrune();
+	}
+
+	@command('git.addTempWorktree', { repository: true })
+	async addAndInitializeTempWorkTree(repository: Repository, rev?: string): Promise<void> {
+		if (!rev) {
+			const choice = await quickPickRef(repository, 'dummy'); // only need the quick-pick item for the revision, so pass a dummy value here
+			if (!choice) {
+				return;
+			}
+			rev = choice.treeish;
+		}
+
+		const tempFolder = await getTempDirectory(repository.root + '@' + rev);
+
+		let dst: string;
+		const goPackage = await getGoPackage(repository.root);
+		if (goPackage) {
+			dst = path.join(tempFolder, 'src', goPackage.replace(/\//g, path.sep));
+		} else {
+			dst = path.join(tempFolder, path.basename(repository.root));
+		}
+		await this.worktreePrune(repository);
+		await this.addWorktree(repository, dst, rev);
+
+		// Add new worktree to workspace.
+		if (workspace.workspaceFolders) {
+			await commands.executeCommand('_workbench.addRoots', [Uri.file(dst)]);
+		}
+	}
+
 	@command('git.addWorktree', { repository: true })
 	async addWorktree(repository: Repository, path?: string, rev?: string): Promise<void> {
 		if (typeof path === 'string' && typeof rev === 'string') {
@@ -1060,24 +1094,7 @@ export class CommandCenter {
 			worktreePath = inputPath;
 		}
 
-		const config = workspace.getConfiguration('git');
-		const checkoutType = config.get<string>('checkoutType') || 'all';
-		const includeTags = checkoutType === 'all' || checkoutType === 'tags';
-		const includeRemotes = checkoutType === 'all' || checkoutType === 'remote';
-
-		const heads = repository.refs.filter(ref => ref.type === RefType.Head)
-			.map(ref => new AddWorktreeItem(worktreePath, ref));
-
-		const tags = (includeTags ? repository.refs.filter(ref => ref.type === RefType.Tag) : [])
-			.map(ref => new AddWorktreeTagItem(worktreePath, ref));
-
-		const remoteHeads = (includeRemotes ? repository.refs.filter(ref => ref.type === RefType.RemoteHead) : [])
-			.map(ref => new AddWorktreeRemoteHeadItem(worktreePath, ref));
-
-		const picks = [...heads, ...tags, ...remoteHeads];
-		const placeHolder = localize('select a ref to checkout in the worktree', 'Select a ref to checkout in the worktree');
-		const choice = await window.showQuickPick(picks, { placeHolder });
-
+		const choice = await quickPickRef(repository, worktreePath);
 		if (!choice) {
 			this.telemetryReporter.sendTelemetryEvent('addWorktree', { outcome: 'no_ref' });
 			return;
@@ -1589,4 +1606,28 @@ export class CommandCenter {
 	dispose(): void {
 		this.disposables.forEach(d => d.dispose());
 	}
+}
+
+/**
+ * quickPickRef presents a quick-pick to the user to select the ref to check out via `git worktree`.
+ * The returned item has a `run` method to execute the appropriate `git worktree` action.
+ */
+async function quickPickRef(repository: Repository, worktreePath: string): Promise<AddWorktreeItem | undefined> {
+	const config = workspace.getConfiguration('git');
+	const checkoutType = config.get<string>('checkoutType') || 'all';
+	const includeTags = checkoutType === 'all' || checkoutType === 'tags';
+	const includeRemotes = checkoutType === 'all' || checkoutType === 'remote';
+
+	const heads = repository.refs.filter(ref => ref.type === RefType.Head)
+		.map(ref => new AddWorktreeItem(worktreePath, ref));
+
+	const tags = (includeTags ? repository.refs.filter(ref => ref.type === RefType.Tag) : [])
+		.map(ref => new AddWorktreeTagItem(worktreePath, ref));
+
+	const remoteHeads = (includeRemotes ? repository.refs.filter(ref => ref.type === RefType.RemoteHead) : [])
+		.map(ref => new AddWorktreeRemoteHeadItem(worktreePath, ref));
+
+	const picks = [...heads, ...tags, ...remoteHeads];
+	const placeHolder = localize('select a ref to checkout in the worktree', 'Select a ref to checkout in the worktree');
+	return await window.showQuickPick(picks, { placeHolder });
 }

@@ -16,6 +16,7 @@ import { GitResourceResolver } from './resourceResolver';
 import { Askpass } from './askpass';
 import { toDisposable } from './util';
 import { IGitExtension } from './api';
+import { activate as activateTempFolder } from './tempFolder';
 import TelemetryReporter from 'vscode-extension-telemetry';
 
 async function init(context: ExtensionContext, disposables: Disposable[]): Promise<IGitExtension> {
@@ -68,6 +69,7 @@ async function init(context: ExtensionContext, disposables: Disposable[]): Promi
 export function activate(context: ExtensionContext): Promise<IGitExtension | void> {
 	const disposables: Disposable[] = [];
 	context.subscriptions.push(new Disposable(() => Disposable.from(...disposables).dispose()));
+	activateTempFolder(context);
 
 	return init(context, disposables)
 		.catch(err => console.error(err));
