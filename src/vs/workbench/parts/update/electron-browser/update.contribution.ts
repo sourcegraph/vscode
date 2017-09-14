@@ -12,12 +12,13 @@ import { IWorkbenchContributionsRegistry, Extensions as WorkbenchExtensions } fr
 import { ReleaseNotesEditor } from 'vs/workbench/parts/update/electron-browser/releaseNotesEditor';
 import { ReleaseNotesInput } from 'vs/workbench/parts/update/electron-browser/releaseNotesInput';
 import { EditorDescriptor } from 'vs/workbench/browser/parts/editor/baseEditor';
+import { IGlobalActivityRegistry, GlobalActivityExtensions } from 'vs/workbench/common/activity';
 import { IEditorRegistry, Extensions as EditorExtensions } from 'vs/workbench/common/editor';
 import { SyncDescriptor } from 'vs/platform/instantiation/common/descriptors';
 import { IWorkbenchActionRegistry, Extensions as ActionExtensions } from 'vs/workbench/common/actions';
 import { SyncActionDescriptor } from 'vs/platform/actions/common/actions';
 import { IConfigurationRegistry, Extensions as ConfigurationExtensions } from 'vs/platform/configuration/common/configurationRegistry';
-import { ShowCurrentReleaseNotesAction, ProductContribution, Win3264BitContribution } from './update';
+import { ShowCurrentReleaseNotesAction, ProductContribution, UpdateContribution, Win3264BitContribution } from './update';
 
 Registry.as<IWorkbenchContributionsRegistry>(WorkbenchExtensions.Workbench)
 	.registerWorkbenchContribution(ProductContribution);
@@ -26,6 +27,9 @@ if (process.platform === 'win32' && process.arch === 'ia32') {
 	Registry.as<IWorkbenchContributionsRegistry>(WorkbenchExtensions.Workbench)
 		.registerWorkbenchContribution(Win3264BitContribution);
 }
+
+Registry.as<IGlobalActivityRegistry>(GlobalActivityExtensions)
+	.registerActivity(UpdateContribution);
 
 // Editor
 const editorDescriptor = new EditorDescriptor(

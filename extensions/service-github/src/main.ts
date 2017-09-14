@@ -21,14 +21,6 @@ export function activate(context: vscode.ExtensionContext): void {
 		},
 	}));
 
-	vscode.commands.registerCommand('github.checkAccessToken', async (args) => {
-		return checkGitHubToken();
-	});
-
-	vscode.commands.registerCommand('github.showCreateAccessTokenWalkthrough', async (args) => {
-		return await showCreateGitHubTokenWalkthrough();
-	});
-
 	const repoFields = [
 		'name',
 		'nameWithOwner',
@@ -76,12 +68,9 @@ query($owner: String!, $name: String!) {
 			});
 		},
 		async search(query: string): Promise<vscode.CatalogFolder[]> {
-			const token = checkGitHubToken();
-			if (!token) {
-				const ok = await showCreateGitHubTokenWalkthrough();
-				if (!ok) {
-					return [];
-				}
+			const ok = await checkGitHubToken();
+			if (!ok) {
+				return [];
 			}
 
 			let request: Thenable<any>;
@@ -118,12 +107,9 @@ query {
 	}));
 
 	vscode.commands.registerCommand('github.pullRequests.quickopen', async (sourceControl: vscode.SourceControl) => {
-		const token = checkGitHubToken();
-		if (!token) {
-			const ok = await showCreateGitHubTokenWalkthrough();
-			if (!ok) {
-				return [];
-			}
+		const ok = await checkGitHubToken();
+		if (!ok) {
+			return;
 		}
 
 		if (!sourceControl) {
@@ -243,9 +229,7 @@ function showErrorImmediately<T>(error: string): T | Thenable<T> {
 					if (hasToken) {
 						await vscode.workspace.getConfiguration('github').update('token', undefined, vscode.ConfigurationTarget.Global);
 					}
-					if (checkGitHubToken()) {
-						showCreateGitHubTokenWalkthrough(); // will walk the user through recreating the token
-					}
+					checkGitHubToken(); // will walk the user through recreating the token
 				}
 			});
 
@@ -254,9 +238,15 @@ function showErrorImmediately<T>(error: string): T | Thenable<T> {
 }
 
 /**
- * Shows the GitHub token creation walkthrough and returns if a GitHub token was added.
+ * Checks if the user has a GitHub token configured. If not, it walks them through
+ * creating and configuring one.
  */
-async function showCreateGitHubTokenWalkthrough(): Promise<boolean> {
+async function checkGitHubToken(): Promise<boolean> {
+	const hasToken = vscode.workspace.getConfiguration('github').get<string>('token');
+	if (hasToken) {
+		return true;
+	}
+
 	// Close quickopen so the user sees our message.
 	await vscode.commands.executeCommand('workbench.action.closeMessages');
 
@@ -283,13 +273,6 @@ async function showCreateGitHubTokenWalkthrough(): Promise<boolean> {
 		return true;
 	}
 	return false;
-}
-
-/**
- * Checks if the user has a GitHub token configured.
- */
-function checkGitHubToken(): boolean {
-	return !!vscode.workspace.getConfiguration('github').get<string>('token');
 }
 
 function toCatalogFolder(repo: {

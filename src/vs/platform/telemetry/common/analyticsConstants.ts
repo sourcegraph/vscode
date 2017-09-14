@@ -95,12 +95,6 @@ export enum EventCategory {
 	 * Events related to marketing, re-engagement or re-targeting, or growth initiatives
 	 */
 	Marketing = 'Marketing',
-
-	/**
-	 * Events related to account management.
-	 */
-	Management = 'Management',
-
 	/**
 	 * Events related to sales or online billing
 	 */
@@ -315,12 +309,6 @@ export const SOURCEGRAPH_EVENT_MAP: { [eventName: string]: EventMapEntry } = {
 	'codeComments.createThread': { eventCategory: EventCategory.CodeComments, eventAction: EventAction.Submit },
 	'codeComments.openViewlet': { eventCategory: EventCategory.CodeComments, eventAction: EventAction.Open },
 	'codeComments.viewThread': { eventCategory: EventCategory.CodeComments, eventAction: EventAction.Open },
-	'codeComments.signupButtonClicked': { eventCategory: EventCategory.CodeComments, eventAction: EventAction.Click },
-
-	// Account Management
-	'management.openViewlet': { eventCategory: EventCategory.Management, eventAction: EventAction.Open },
-	'management.addGitHubTokenClicked': { eventCategory: EventCategory.Management, eventAction: EventAction.Click },
-	'management.addBitbucketAppClicked': { eventCategory: EventCategory.Management, eventAction: EventAction.Click },
 
 	// Workspace Sharing
 	'workspace.import': { eventCategory: EventCategory.Workspace, eventAction: EventAction.Open },

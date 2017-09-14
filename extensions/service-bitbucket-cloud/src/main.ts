@@ -25,14 +25,6 @@ export function activate(context: vscode.ExtensionContext): void {
 		},
 	}));
 
-	vscode.commands.registerCommand('bitbucket.checkBitbucketAppPassword', async (args) => {
-		return checkBitbucketAppPassword();
-	});
-
-	vscode.commands.registerCommand('bitbucket.showBitbucketAppPasswordWalkthrough', async (args) => {
-		return await showBitbucketAppPasswordWalkthrough();
-	});
-
 	context.subscriptions.push(vscode.workspace.registerFolderCatalogProvider(vscode.Uri.parse(`${BITBUCKET_CLOUD_SCHEME}://bitbucket.org`), {
 		resolveFolder(resource: vscode.Uri): Thenable<vscode.CatalogFolder> {
 			return fetchFromBitbucket<Repository>(`/repositories/${resourceToApiPath(resource)}`).then(
@@ -49,12 +41,9 @@ export function activate(context: vscode.ExtensionContext): void {
 				return [];
 			}
 
-			const hasApp = checkBitbucketAppPassword();
-			if (!hasApp) {
-				const ok = await showBitbucketAppPasswordWalkthrough();
-				if (!ok) {
-					return [];
-				}
+			const ok = await checkBitbucketAppPassword();
+			if (!ok) {
+				return [];
 			}
 
 			let url = `/repositories?role=member&pagelen=50`;
@@ -115,10 +104,7 @@ function showErrorImmediately<T>(error: string): T | Thenable<T> {
 				};
 				if (value === resetAppPassword) {
 					await unsetAppPassword();
-					const hasApp = checkBitbucketAppPassword();
-					if (!hasApp) {
-						await showBitbucketAppPasswordWalkthrough(); // will walk the user through recreating the app password
-					}
+					await checkBitbucketAppPassword(); // will walk the user through recreating the app password
 				} else if (!value || value === disableItem) {
 					// TODO(sqs): If the user is temporarily offline, it's annoying to completely remove their
 					// credentials. Figure out a better way to handle this.
@@ -132,11 +118,17 @@ function showErrorImmediately<T>(error: string): T | Thenable<T> {
 }
 
 /**
- * Shows the Bitbucket app password creation walkthrough and returns if a Bitbucket app password was added.
+ * Checks if the user has a Bitbucket app password configured. If not, it walks them through
+ * creating and configuring one.
  */
-async function showBitbucketAppPasswordWalkthrough(): Promise<boolean> {
-	// Close quickopen so the user sees our message.
+async function checkBitbucketAppPassword(): Promise<boolean> {
 	const config = vscode.workspace.getConfiguration('bitbucket.cloud');
+	const hasAuth = config.get<string>('username') && config.get<string>('appPassword');
+	if (hasAuth) {
+		return true;
+	}
+
+	// Close quickopen so the user sees our message.
 	await vscode.commands.executeCommand('workbench.action.closeMessages');
 
 	const createAppPasswordItem: vscode.MessageItem = { title: localize('createAppPassword', "Create App Password on Bitbucket") };
@@ -174,14 +166,6 @@ async function showBitbucketAppPasswordWalkthrough(): Promise<boolean> {
 		return true;
 	}
 	return false;
-}
-
-/**
- * Checks if the user has a Bitbucket app password configured
- */
-function checkBitbucketAppPassword(): boolean {
-	const config = vscode.workspace.getConfiguration('bitbucket.cloud');
-	return !!config.get<string>('username') && !!config.get<string>('appPassword');
 }
 
 function toCatalogFolder(repo: Repository): vscode.CatalogFolder {

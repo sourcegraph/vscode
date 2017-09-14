@@ -165,10 +165,6 @@ export class ViewletDescriptor extends CompositeDescriptor<Viewlet> {
 	}
 }
 
-export class GlobalViewletDescriptor extends ViewletDescriptor {
-
-}
-
 export const Extensions = {
 	Viewlets: 'workbench.contributions.viewlets'
 };
@@ -194,11 +190,7 @@ export class ViewletRegistry extends CompositeRegistry<Viewlet> {
 	 * Returns an array of registered viewlets known to the platform.
 	 */
 	public getViewlets(): ViewletDescriptor[] {
-		return this.getComposites().filter(composite => !(composite instanceof GlobalViewletDescriptor)) as ViewletDescriptor[];
-	}
-
-	public getGlobalViewlets(): GlobalViewletDescriptor[] {
-		return this.getComposites().filter(composite => (composite instanceof GlobalViewletDescriptor)) as GlobalViewletDescriptor[];
+		return this.getComposites() as ViewletDescriptor[];
 	}
 
 	/**
@@ -217,11 +209,6 @@ export class ViewletRegistry extends CompositeRegistry<Viewlet> {
 }
 
 Registry.add(Extensions.Viewlets, new ViewletRegistry());
-
-
-export class GlobalViewletRegistry extends ViewletRegistry {
-
-}
 
 /**
  * A reusable action to toggle a viewlet with a specific id.
