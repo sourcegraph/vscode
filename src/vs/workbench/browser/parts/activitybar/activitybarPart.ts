@@ -14,12 +14,12 @@ import { illegalArgument } from 'vs/base/common/errors';
 import { Builder, $, Dimension } from 'vs/base/browser/builder';
 import { Action } from 'vs/base/common/actions';
 import { ActionsOrientation, ActionBar, IActionItem, Separator } from 'vs/base/browser/ui/actionbar/actionbar';
-import { ViewletDescriptor } from 'vs/workbench/browser/viewlet';
+import { GlobalViewletDescriptor, ViewletDescriptor, GlobalViewletRegistry, Extensions as ViewletExtensions } from 'vs/workbench/browser/viewlet';
 import { GlobalActivityExtensions, IGlobalActivityRegistry } from 'vs/workbench/common/activity';
 import { Registry } from 'vs/platform/registry/common/platform';
 import { Part } from 'vs/workbench/browser/part';
 import { IViewlet } from 'vs/workbench/common/viewlet';
-import { ToggleViewletPinnedAction, ViewletActivityAction, ActivityAction, ActivityRunActionItem, GlobalActivityActionItem, ViewletActionItem, ViewletOverflowActivityAction, ViewletOverflowActivityActionItem, GlobalActivityAction, IViewletActivity } from 'vs/workbench/browser/parts/activitybar/activitybarActions';
+import { GlobalViewletActionItem, ToggleViewletPinnedAction, ViewletActivityAction, ActivityAction, ActivityRunActionItem, GlobalActivityActionItem, ViewletActionItem, ViewletOverflowActivityAction, ViewletOverflowActivityActionItem, GlobalActivityAction, IViewletActivity } from 'vs/workbench/browser/parts/activitybar/activitybarActions';
 import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
 import { IActivityBarService, IBadge } from 'vs/workbench/services/activity/common/activityBarService';
 import { IPartService, Position as SideBarPosition } from 'vs/workbench/services/part/common/partService';
@@ -213,7 +213,6 @@ export class ActivitybarPart extends Part implements IActivityBarService {
 		// Contextmenu for viewlets
 		$(parent).on('contextmenu', (e: MouseEvent) => {
 			DOM.EventHelper.stop(e, true);
-
 			this.showContextMenu(e);
 		}, this.toUnbind);
 
@@ -291,6 +290,9 @@ export class ActivitybarPart extends Part implements IActivityBarService {
 
 		this.globalActionBar = new ActionBar(container, {
 			actionItemProvider: a => {
+				if (a instanceof ViewletActivityAction) {
+					return this.instantiationService.createInstance(GlobalViewletActionItem, a);
+				}
 				if (a.id === 'vs.home') {
 					return this.instantiationService.createInstance(ActivityRunActionItem, a);
 				}
@@ -300,10 +302,16 @@ export class ActivitybarPart extends Part implements IActivityBarService {
 			ariaLabel: nls.localize('globalActions', "Global Actions"),
 			animated: false
 		});
-
 		actions.forEach(a => {
 			this.globalActivityIdToActions[a.id] = a;
 			this.globalActionBar.push(a);
+		});
+
+		const globalViewletRegistry = Registry.as<GlobalViewletRegistry>(ViewletExtensions.Viewlets) as GlobalViewletRegistry;
+		const viewlets = globalViewletRegistry.getGlobalViewlets();
+		viewlets.forEach(viewlet => {
+			const action = this.instantiationService.createInstance(ViewletActivityAction, viewlet);
+			this.globalActionBar.push(action);
 		});
 	}
 
@@ -314,9 +322,9 @@ export class ActivitybarPart extends Part implements IActivityBarService {
 
 		let viewletsToShow = this.getPinnedViewlets();
 
-		// Always show the active viewlet even if it is marked to be hidden
+		// Always show the active viewlet even if it is marked to be hidden unless it is a global action viewlet.
 		const activeViewlet = this.viewletService.getActiveViewlet();
-		if (activeViewlet && !viewletsToShow.some(viewlet => viewlet.id === activeViewlet.getId())) {
+		if (activeViewlet && activeViewlet instanceof GlobalViewletDescriptor && !viewletsToShow.some(viewlet => viewlet.id === activeViewlet.getId())) {
 			this.activeUnpinnedViewlet = this.viewletService.getViewlet(activeViewlet.getId());
 			viewletsToShow.push(this.activeUnpinnedViewlet);
 		} else {

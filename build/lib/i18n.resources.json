@@ -155,6 +155,10 @@
 			"project": "vscode-workbench"
 		},
 		{
+			"name": "vs/workbench/parts/management",
+			"project": "vscode-workbench"
+		},
+		{
 			"name": "vs/workbench/services/codeComments",
 			"project": "vscode-workbench"
 		},

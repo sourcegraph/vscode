@@ -14,6 +14,10 @@
 	flex-direction: column;
 }
 
+.codeComments .auth-view {
+	padding: 0 20px 0 20px;
+}
+
 .codeComments .empty {
 	padding: 16px;
 }
