@@ -12,6 +12,7 @@ import * as cp from 'child_process';
 import * as rimraf from 'rimraf';
 import * as nls from 'vscode-nls';
 import { mkdirp } from './util';
+import { Repository } from './repository';
 import os = require('os');
 
 const localize = nls.loadMessageBundle();
@@ -48,6 +49,30 @@ export async function getTempDirectory(key: string): Promise<string> {
 	const tmpPath = path.join(tmpRoot, key.replace(new RegExp('[' + path.sep + path.delimiter + ']', 'g'), '-'));
 	await mkdirp(tmpPath);
 	return tmpPath;
+}
+
+/**
+ * setUpGoConfiguration sets the `go.gopath` value in `.vscode/settings.json` in the new workspace folder, taking into account the configuration of the
+ * source repository, to make the vscode-go plugin work. Local jump-to-definition should occur within the new workspace folder while external
+ * jump-to-definition should work as in the original workspace folder.
+ */
+export async function setUpGoConfiguration(srcRepo: Repository, tempDir: string, workspaceRoot: string) {
+	const workspaceSettingsPath = path.join(workspaceRoot, '.vscode', 'settings.json');
+	if (await new Promise(resolve => fs.access(workspaceSettingsPath, fs.constants.F_OK, err => err ? resolve(false) : resolve(true)))) {
+		const data = await new Promise<string>((resolve, reject) => fs.readFile(workspaceSettingsPath, 'utf8', (err, data) => err ? reject(err) : resolve(data)));
+		const settings = JSON.parse(data);
+		if (settings['go.gopath']) {
+			settings['go.gopath'] = [tempDir, settings['go.gopath']].join(path.delimiter);
+		} else {
+			settings['go.gopath'] = tempDir;
+		}
+		await new Promise((resolve, reject) => fs.writeFile(workspaceSettingsPath, JSON.stringify(settings), 'utf8', err => err ? reject(err) : resolve()));
+	} else {
+		const currentGoPath = getCurrentGoPath(vscode.Uri.file(srcRepo.root));
+		await mkdirp(path.dirname(workspaceSettingsPath));
+		const settings = { 'go.gopath': [tempDir, currentGoPath].join(path.delimiter) };
+		await new Promise((resolve, reject) => fs.writeFile(workspaceSettingsPath, JSON.stringify(settings), 'utf8', err => err ? reject(err) : resolve()));
+	}
 }
 
 /**
@@ -140,9 +165,9 @@ export function getToolsEnvVars(): any {
 	return Object.assign(envVars, toolsEnvVars);
 }
 
-export function getCurrentGoPath(): string {
+export function getCurrentGoPath(resource?: vscode.Uri): string {
 	let inferredGopath = getInferredGopath();
-	let configGopath = vscode.workspace.getConfiguration('go')['gopath'];
+	let configGopath = vscode.workspace.getConfiguration('go', resource)['gopath'];
 	return inferredGopath ? inferredGopath : (configGopath ? resolvePath(configGopath, vscode.workspace.rootPath) : process.env['GOPATH']);
 }
 

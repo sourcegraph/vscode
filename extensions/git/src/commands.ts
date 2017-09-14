@@ -16,7 +16,7 @@ import * as os from 'os';
 import * as fs from 'fs';
 import TelemetryReporter from 'vscode-extension-telemetry';
 import * as nls from 'vscode-nls';
-import { getTempDirectory, getGoPackagePrefix } from './tempFolder';
+import { getTempDirectory, getGoPackagePrefix, setUpGoConfiguration } from './tempFolder';
 
 const localize = nls.loadMessageBundle();
 
@@ -1060,9 +1060,14 @@ export class CommandCenter {
 		} else {
 			dst = path.join(tempFolder, path.basename(repository.root));
 		}
-		if (!await new Promise(resolve => fs.exists(dst, exists => resolve(exists)))) {
+
+		const exists = await new Promise<boolean>(resolve => fs.access(dst, fs.constants.F_OK, err => err ? resolve(false) : resolve(true)));
+		if (!exists) {
 			await this.worktreePrune(repository);
 			await this.addWorktree(repository, dst, rev);
+			if (goPackagePrefix) {
+				await setUpGoConfiguration(repository, tempFolder, dst);
+			}
 		}
 
 		// Add new worktree to workspace.
