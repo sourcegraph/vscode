@@ -236,7 +236,7 @@ class BlameLineDecorator extends Disposable {
 			}
 
 			return {
-				range: new vscode.Range(d.range.end.line, Number.MAX_SAFE_INTEGER, d.range.end.line, Number.MAX_SAFE_INTEGER),
+				range: new vscode.Range(d.range.start.line, Number.MAX_SAFE_INTEGER, d.range.start.line, Number.MAX_SAFE_INTEGER),
 				hoverMessage: this.blameFileEnabled ? undefined : formatBlameDecorationHoverMessage(d.hunk),
 				renderOptions: {
 					after: {
