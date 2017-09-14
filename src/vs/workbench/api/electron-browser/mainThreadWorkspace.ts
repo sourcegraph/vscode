@@ -22,6 +22,7 @@ import { Emitter } from 'vs/base/common/event';
 import { extHostNamedCustomer } from 'vs/workbench/api/electron-browser/extHostCustomers';
 import { IResourceResolutionProvider, IResourceResolverService } from 'vs/platform/resourceResolver/common/resourceResolver';
 import { IFolderCatalogProvider, IFolderCatalogService } from 'vs/platform/folders/common/folderCatalog';
+import { IExperimentService } from 'vs/platform/telemetry/common/experiments';
 
 @extHostNamedCustomer(MainContext.MainThreadWorkspace)
 export class MainThreadWorkspace implements MainThreadWorkspaceShape {
@@ -39,6 +40,7 @@ export class MainThreadWorkspace implements MainThreadWorkspaceShape {
 		@ITextModelService private readonly _textModelResolverService: ITextModelService,
 		@IResourceResolverService private readonly _resourceResolverService: IResourceResolverService,
 		@IFolderCatalogService private readonly _folderCatalogService: IFolderCatalogService,
+		@IExperimentService private experimentService: IExperimentService,
 		@IFileService private readonly _fileService: IFileService
 	) {
 		this._proxy = extHostContext.get(ExtHostContext.ExtHostWorkspace);
@@ -76,6 +78,7 @@ export class MainThreadWorkspace implements MainThreadWorkspaceShape {
 			maxResults,
 			includePattern: { [include]: true },
 			excludePattern: { [exclude]: true },
+			useRipgrep: this.experimentService.getExperiments().ripgrepQuickSearch
 		};
 		this._searchService.extendQuery(query);
 

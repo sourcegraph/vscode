@@ -43,18 +43,18 @@ export class DraftThreadCommentsWidget extends BaseThreadCommentsWidget {
 			this.draftThread.content,
 			localize('cancelDraft', "Cancel"),
 		);
-		this._register(this.commentInput);
-		this._register(this.commentInput.onDidChangeContent(content => this.draftThread.content = content));
-		this._register(this.commentInput.onDidChangeHeight(() => this.layout()));
-		this._register(this.commentInput.onDidClickSubmitButton(() => this.createThread()));
-		this._register(this.commentInput.onDidClickSecondaryButton(() => {
+		this._disposables.push(this.commentInput);
+		this._disposables.push(this.commentInput.onDidChangeContent(content => this.draftThread.content = content));
+		this._disposables.push(this.commentInput.onDidChangeHeight(() => this.layout()));
+		this._disposables.push(this.commentInput.onDidClickSubmitButton(() => this.createThread()));
+		this._disposables.push(this.commentInput.onDidClickSecondaryButton(() => {
 			const content = this.draftThread.content;
 			this.telemetryService.publicLog('codeComments.cancelCreateThread', getCommentTelemetryData({ content, error: false }));
 			this.draftThread.dispose();
 		}));
 
-		this._register(this.draftThread.onDidChangeContent(() => this.commentInput.value = this.draftThread.content));
-		this._register(this.draftThread.onDidChangeSubmitting(() => {
+		this._disposables.push(this.draftThread.onDidChangeContent(() => this.commentInput.value = this.draftThread.content));
+		this._disposables.push(this.draftThread.onDidChangeSubmitting(() => {
 			this.commentInput.setEnabled(!this.draftThread.submitting);
 		}));
 	}
