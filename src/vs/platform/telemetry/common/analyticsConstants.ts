@@ -83,6 +83,11 @@ export enum EventCategory {
 	CodeComments = 'CodeComments',
 
 	/**
+	 * Events related to the workspace.
+	 */
+	Workspace = 'Workspace',
+
+	/**
 	 * Events related to the post-auth signup flow
 	 */
 	Onboarding = 'Onboarding',
@@ -304,6 +309,10 @@ export const SOURCEGRAPH_EVENT_MAP: { [eventName: string]: EventMapEntry } = {
 	'codeComments.createThread': { eventCategory: EventCategory.CodeComments, eventAction: EventAction.Submit },
 	'codeComments.openViewlet': { eventCategory: EventCategory.CodeComments, eventAction: EventAction.Open },
 	'codeComments.viewThread': { eventCategory: EventCategory.CodeComments, eventAction: EventAction.Open },
+
+	// Workspace Sharing
+	'workspace.import': { eventCategory: EventCategory.Workspace, eventAction: EventAction.Open },
+	'workspace.export': { eventCategory: EventCategory.Workspace, eventAction: EventAction.Submit },
 
 	// In repo search
 	'search.useIgnoreFiles.toggled': { eventCategory: EventCategory.Search, eventAction: EventAction.Unknown, eventFeature: EventFeature.SidebarSearch },

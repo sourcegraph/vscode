@@ -24,6 +24,7 @@ import { localize } from 'vs/nls';
 // tslint:disable-next-line:import-patterns
 import { IFoldersWorkbenchService } from 'vs/workbench/services/folders/common/folders';
 import { IFolderCatalogService } from 'vs/platform/folders/common/folderCatalog';
+import { ITelemetryData, ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 
 export class WorkspaceSharingService implements IWorkspaceSharingService {
 
@@ -38,6 +39,7 @@ export class WorkspaceSharingService implements IWorkspaceSharingService {
 		@IExtensionService private extensionService: IExtensionService,
 		@IFoldersWorkbenchService private foldersWorkbenchService: IFoldersWorkbenchService,
 		@IFolderCatalogService private folderCatalogService: IFolderCatalogService,
+		@ITelemetryService private telemetryService: ITelemetryService,
 	) {
 		// Import after activation of extensions that supply resource resolvers.
 		this.extensionService.onReady().then(() =>
@@ -63,6 +65,8 @@ export class WorkspaceSharingService implements IWorkspaceSharingService {
 				folders: [],
 				roots: uris.map(u => u.toString()),
 			};
+			this.telemetryService.publicLog('workspace.export', getTelemetryData(storedWorkspace));
+
 			const header = localize('srcWorkspaceHeader', `// This is a Sourcegraph workspace that defines a set of related repositories
 // and associated configuration.
 //
@@ -86,6 +90,7 @@ export class WorkspaceSharingService implements IWorkspaceSharingService {
 				return;
 			}
 			const roots: URI[] = config.roots.map(URI.parse);
+			this.telemetryService.publicLog('workspace.import', getTelemetryData(config as IStoredWorkspace));
 			this.foldersWorkbenchService.addFoldersAsWorkspaceRootFolders(roots);
 			// Now that the roots have been added as folders, remove them from the config so we don't add them again.
 			this.jsonEditingService.write(workspace.configuration, { key: 'roots', value: [] }, true);
@@ -131,4 +136,29 @@ export function parseGitURL(gitURL: string): URI | null {
 	}
 	const uri = URI.parse(gitURL);
 	return uri.scheme !== '' ? uri.with({ scheme: 'git+' + uri.scheme }) : null;
+}
+
+function getTelemetryData(workspace: IStoredWorkspace): ITelemetryData {
+	// Count up what we are storing by URL scheme
+	const schemes = new Map<string, number>();
+	let count = 0;
+	if (!arrays.isFalsyOrEmpty(workspace.folders)) {
+		schemes.set('folders', workspace.folders.length);
+		count += workspace.folders.length;
+	}
+	(workspace.roots || []).map(root => {
+		const u = URI.parse(root);
+		schemes.set(u.scheme, (schemes.get(u.scheme) || 0) + 1);
+		count++;
+	});
+	const schemesList: { name: string; count: number; }[] = [];
+	schemes.forEach((count, name) => {
+		schemesList.push({ name, count });
+	});
+	return {
+		storedWorkspace: {
+			count,
+			schemes: schemesList,
+		},
+	};
 }
