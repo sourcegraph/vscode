@@ -829,15 +829,14 @@
     }
   },
   "dependencies": {
-    "@types/rimraf": "^2.0.2",
     "iconv-lite": "0.4.15",
-    "rimraf": "^2.6.2",
+    "rimraf": "2.6.2",
     "vscode-extension-telemetry": "0.0.8",
     "vscode-nls": "2.0.2"
   },
   "devDependencies": {
     "@types/mocha": "^2.2.41",
-    "@types/node": "^7.0.4",
+    "@types/rimraf": "^2.0.2",
     "mocha": "^3.2.0"
   }
 }

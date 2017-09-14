@@ -60,7 +60,7 @@ export function getGoPackage(dir: string): Promise<string | null> {
 		return Promise.resolve(null);
 	}
 
-	return new Promise<string>((resolve, reject) => {
+	return new Promise<string>(resolve => {
 		// Use `{env: {}}` to make the execution faster. Include GOPATH to account if custom work space exists.
 		const env: any = getToolsEnvVars();
 
@@ -70,7 +70,7 @@ export function getGoPackage(dir: string): Promise<string | null> {
 			chunks.push(d);
 		});
 
-		cmd.on('close', (status) => {
+		cmd.on('close', () => {
 			return resolve(chunks.join('').trim());
 		});
 	});
