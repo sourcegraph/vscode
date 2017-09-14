@@ -287,6 +287,10 @@ declare namespace GQL {
   interface IUser {
     __typename: "User";
     githubInstallations: Array<IInstallation>;
+    id: string;
+    handle?: string | null;
+    avatarURL?: string | null;
+    email?: string | null;
   }
 
   /*

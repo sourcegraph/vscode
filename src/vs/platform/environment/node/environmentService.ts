@@ -152,13 +152,6 @@ export class EnvironmentService implements IEnvironmentService {
 	@memoize
 	get eventLogDebug(): boolean { return process.env['LOG_DEBUG']; }
 
-	@memoize
-	get primaryEmail(): string | null {
-		return (this.sourcegraphContext.emails
-			&& this.sourcegraphContext.emails.EmailAddrs
-			&& this.sourcegraphContext.emails.EmailAddrs.filter(e => e.Primary).map(e => e.Email)[0]) || null;
-	}
-
 	readonly machineUUID: string;
 
 	constructor(private _args: ParsedArgs, private _execPath: string) {

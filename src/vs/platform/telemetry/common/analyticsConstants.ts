@@ -68,9 +68,14 @@ export enum EventCategory {
 	Settings = 'Settings',
 
 	/**
-	 * Events related to the GitHub/etc authorization process
+	 * Events related to the authentication process
 	 */
 	Auth = 'Auth',
+
+	/**
+	 * Events related to Sourcegraph organizations
+	 */
+	Orgs = 'Orgs',
 
 	/**
 	 * Events related to code comments.
@@ -196,9 +201,9 @@ export enum EventAction {
 	 */
 	Error = 'Error',
 
-	Signup = 'Signup',
-	Login = 'Login',
-	Logout = 'Logout',
+	SignUp = 'SignUp',
+	SignIn = 'SignIn',
+	SignOut = 'SignOut',
 
 	/**
 	 *  Get redirected from one page or location to another
@@ -226,6 +231,7 @@ export enum EventFeature {
 	OnboardingModal = 'OnboardingModal',
 	PromptInstallModal = 'PromptInstallModal',
 	Reminder = 'Reminder',
+	SignInModal = 'SignInModal',
 };
 
 export const SOURCEGRAPH_EVENT_DEFAULT_MAP: EventMapEntry = { eventCategory: EventCategory.Unknown, eventAction: EventAction.Unknown };
@@ -416,33 +422,35 @@ export const SOURCEGRAPH_EVENT_MAP: { [eventName: string]: EventMapEntry } = {
 
 	// TODO(Dan): pare these down to what gets carried over
 	// Sourcegraph specific events
-	'SignupCompleted': { eventCategory: EventCategory.Auth, eventAction: EventAction.Signup, topLevelOnly: true },
-	'InitiateGitHubOAuth2Flow': { eventCategory: EventCategory.Auth, eventAction: EventAction.Click },
-	'CompletedGitHubOAuth2Flow': { eventCategory: EventCategory.Auth, eventAction: EventAction.Login, topLevelOnly: true },
-	'LogoutClicked': { eventCategory: EventCategory.Auth, eventAction: EventAction.Logout },
 
+	// Auth/user
+	'SignupCompleted': { eventCategory: EventCategory.Auth, eventAction: EventAction.SignUp, topLevelOnly: true },
+	'CompletedGitHubOAuth2Flow': { eventCategory: EventCategory.Auth, eventAction: EventAction.SignIn, topLevelOnly: true },
+	'LogoutClicked': { eventCategory: EventCategory.Auth, eventAction: EventAction.SignOut, topLevelOnly: true },
+	'RemoteSettingsOpened': { eventCategory: EventCategory.External, eventAction: EventAction.Click, topLevelOnly: true },
+	'SignInModalInitiated': { eventCategory: EventCategory.Auth, eventAction: EventAction.Click, eventFeature: EventFeature.SignInModal },
+	'CurrentUserSignedIn': { eventCategory: EventCategory.Auth, eventAction: EventAction.Submit },
+	'CurrentUserSignedOut': { eventCategory: EventCategory.Auth, eventAction: EventAction.Submit },
+	'CurrentUserChanged': { eventCategory: EventCategory.Auth, eventAction: EventAction.Submit },
+
+	// Orgs
+	'CurrentOrgChanged': { eventCategory: EventCategory.Orgs, eventAction: EventAction.Submit },
+
+	// Redirects
 	'EmailInviteClicked': { eventCategory: EventCategory.Marketing, eventAction: EventAction.Redirect, topLevelOnly: true },
 	'RepoBadgeRedirected': { eventCategory: EventCategory.External, eventAction: EventAction.Redirect, topLevelOnly: true },
 	'OpenAtCursor': { eventCategory: EventCategory.External, eventAction: EventAction.Redirect, topLevelOnly: true },
 	'OpenWorkspace': { eventCategory: EventCategory.External, eventAction: EventAction.Redirect, topLevelOnly: true },
 	'OpenFile': { eventCategory: EventCategory.External, eventAction: EventAction.Redirect, topLevelOnly: true },
 
-	'InviteModalInitiated': { eventCategory: EventCategory.Marketing, eventAction: EventAction.Initiate, eventFeature: EventFeature.InviteModal },
-	'SendInviteClicked': { eventCategory: EventCategory.Marketing, eventAction: EventAction.Click, eventFeature: EventFeature.InviteModal },
-	'SendInviteFailed': { eventCategory: EventCategory.Marketing, eventAction: EventAction.Error, eventFeature: EventFeature.InviteModal },
-	'SendInviteByEmailClicked': { eventCategory: EventCategory.Marketing, eventAction: EventAction.Click, eventFeature: EventFeature.InviteModal },
-	'SignupModalInitiated': { eventCategory: EventCategory.Onboarding, eventAction: EventAction.Initiate },
-	'SignupFormSubmitted': { eventCategory: EventCategory.Onboarding, eventAction: EventAction.Submit },
+	// Modals
 	'OnboardingModalInitiated': { eventCategory: EventCategory.Onboarding, eventAction: EventAction.Initiate, eventFeature: EventFeature.OnboardingModal },
 	'OnboardingModalSlideViewed': { eventCategory: EventCategory.Onboarding, eventAction: EventAction.Click, eventFeature: EventFeature.OnboardingModal },
 	'OnboardingModalCompleted': { eventCategory: EventCategory.Onboarding, eventAction: EventAction.Close, eventFeature: EventFeature.OnboardingModal },
-	'PromptInstallModalInitiated': { eventCategory: EventCategory.Auth, eventAction: EventAction.Error, eventFeature: EventFeature.PromptInstallModal },
-	'PromptInstallModalSignInClicked': { eventCategory: EventCategory.Auth, eventAction: EventAction.Click, eventFeature: EventFeature.PromptInstallModal },
-	'PromptInstallModalInstallGitHubAppClicked': { eventCategory: EventCategory.Auth, eventAction: EventAction.Click, eventFeature: EventFeature.PromptInstallModal },
-	'ModalSkipped': { eventCategory: EventCategory.Editor, eventAction: EventAction.Close },
 
 	'MessageRendered': { eventCategory: EventCategory.Editor, eventAction: EventAction.Error },
 
+	// Marketing/reminders
 	'BrowserExtReminderViewed': { eventCategory: EventCategory.Marketing, eventAction: EventAction.Passive, eventFeature: EventFeature.Reminder },
 	'BrowserExtReminderSkipped': { eventCategory: EventCategory.Marketing, eventAction: EventAction.Passive, eventFeature: EventFeature.Reminder },
 	'BrowserExtInstallClicked': { eventCategory: EventCategory.Marketing, eventAction: EventAction.Click, eventFeature: EventFeature.Reminder },

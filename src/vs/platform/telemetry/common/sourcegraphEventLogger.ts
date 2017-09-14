@@ -32,17 +32,6 @@ export class SourcegraphEventLogger implements ITelemetryAppender {
 		@optional(IConfigurationService) private configurationService: IConfigurationService
 	) {
 		this.telligent = new TelligentWrapper(environmentService);
-		this.setSourcegraphUserId();
-	}
-
-	setSourcegraphUserId(email?: string): void {
-		if (!email) {
-			email = this.environmentService.primaryEmail;
-		}
-
-		if (email) {
-			this.telligent.setUserId(email);
-		}
 	}
 
 	atTopLevel(): boolean {
@@ -74,10 +63,6 @@ export class SourcegraphEventLogger implements ITelemetryAppender {
 			if (this.environmentService.eventLogDebug) {
 				console.warn(`Not logging event: ${eventName}`);
 			}
-		}
-
-		if (eventName === 'LogoutClicked') {
-			this.logout();
 		}
 	}
 
@@ -116,13 +101,8 @@ export class SourcegraphEventLogger implements ITelemetryAppender {
 		}
 	}
 
-	// TODO(Dan)
 	decorateEventProperties(props?: any): any {
 		return props;
-	}
-
-	logout(): void {
-		this.setSourcegraphUserId('');
 	}
 
 	dispose(): any {

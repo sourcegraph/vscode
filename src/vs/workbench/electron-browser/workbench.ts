@@ -114,6 +114,8 @@ import { IFolderCatalogService } from 'vs/platform/folders/common/folderCatalog'
 import { FolderCatalogService } from 'vs/workbench/services/folders/common/folderCatalogService';
 import { IFoldersWorkbenchService } from 'vs/workbench/services/folders/common/folders';
 import { FoldersWorkbenchService } from 'vs/workbench/services/folders/node/foldersWorkbenchService';
+import { IAuthService } from 'vs/platform/auth/common/auth';
+import { AuthService } from 'vs/platform/auth/node/authService';
 
 export const MessagesVisibleContext = new RawContextKey<boolean>('globalMessageVisible', false);
 export const EditorsVisibleContext = new RawContextKey<boolean>('editorIsOpen', false);
@@ -662,6 +664,9 @@ export class Workbench implements IPartService {
 		// Configuration Editing
 		this.configurationEditingService = this.instantiationService.createInstance(ConfigurationEditingService);
 		serviceCollection.set(IConfigurationEditingService, this.configurationEditingService);
+
+		// Auth Service
+		serviceCollection.set(IAuthService, this.instantiationService.createInstance(AuthService));
 
 		// Workspace Editing
 		serviceCollection.set(IWorkspaceEditingService, new SyncDescriptor(WorkspaceEditingService));

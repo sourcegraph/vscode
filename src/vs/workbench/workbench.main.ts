@@ -130,3 +130,4 @@ import 'vs/workbench/parts/watermark/electron-browser/watermark';
 
 import 'vs/workbench/parts/welcome/overlay/browser/welcomeOverlay';
 import 'vs/workbench/parts/modal/modal.contribution';
+import 'vs/platform/auth/electron-browser/auth.contribution';
