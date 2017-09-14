@@ -125,7 +125,8 @@ export class AuthService extends Disposable implements IAuthService {
 	private onDidUpdateConfiguration() {
 		const config = this.configurationService.getConfiguration<IRemoteConfiguration>();
 		// Only re-request user data, fire an event, and log telemetry if the cookie actually changed
-		if (!config.remote || this._currentSessionId !== config.remote.cookie) {
+		if (this._currentSessionId !== config.remote.cookie) {
+			this._currentSessionId = config.remote.cookie;
 			// Request updated user profile information
 			requestGraphQL<UserResponse>(this.remoteService, `query CurrentUser() {
 				root {
@@ -149,8 +150,11 @@ export class AuthService extends Disposable implements IAuthService {
 
 					this.didChangeCurrentUser(UserChangedEventTypes.SignedIn);
 				}, () => {
+					// If user is already signed in, notify them that their signout was successful and log telemetry.
+					// If not, it's possible they ran into this failed request during app launch.
 					if (this.currentUser) {
 						this.telemetryService.publicLog('LogoutClicked');
+						this.messageService.show(Severity.Info, localize('remote.auth.signedOutConfirmation', "Your editor has been signed out of Sourcegraph. Visit {0} to end your web session.", urlToSignOut(this.configurationService)));
 					}
 
 					// Delete user from memory
@@ -158,7 +162,6 @@ export class AuthService extends Disposable implements IAuthService {
 					this._currentSessionId = undefined;
 					// Fire event
 					this.didChangeCurrentUser(UserChangedEventTypes.SignedOut);
-					this.messageService.show(Severity.Info, localize('remote.auth.signedOutConfirmation', "Your editor has been signed out of Sourcegraph. Visit {0} to end your web session.", urlToSignOut(this.configurationService)));
 				});
 		}
 	}
