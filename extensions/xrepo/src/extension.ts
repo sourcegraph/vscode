@@ -7,6 +7,7 @@
 import * as vscode from 'vscode';
 import * as cp from 'child_process';
 import * as nls from 'vscode-nls';
+import * as go from './go';
 
 const localize = nls.loadMessageBundle();
 
@@ -17,8 +18,35 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 async function goToSourceFile(): Promise<any> {
-	vscode.window.showWarningMessage('Go to Source File is unsupported for this type of file');
-	vscode.commands.executeCommand('_telemetry.publicLog', 'stub:goToSource');
+	const editor = vscode.window.activeTextEditor;
+	if (!editor) {
+		return;
+	}
+	const lang = editor.document.languageId;
+	let sourceFileLocations: [vscode.Uri, vscode.Range | undefined][];
+	switch (lang) {
+		case 'go':
+			sourceFileLocations = await go.getSourceLocation(editor.document.uri, editor.selection);
+			break;
+		default:
+			vscode.window.showWarningMessage('Go to Source File is unsupported for this type of file');
+			vscode.commands.executeCommand('_telemetry.publicLog', 'stub:goToSource');
+			return;
+	}
+	if (!sourceFileLocations || sourceFileLocations.length === 0) {
+		vscode.window.showWarningMessage(localize('sourceFileNotFoundInWorkspace', "Source file was not found in workspace."));
+		return;
+	}
+	// Just jump to first choice for now (later we can add an API to display the same picker as for jump-to-definition
+	const [dstUri, dstSelection] = sourceFileLocations[0];
+	// For some reason, need to call this twice to make it scroll reliably
+	for (let i = 0; i < 2; i++) {
+		await vscode.window.showTextDocument(dstUri);
+		if (dstSelection && vscode.window.activeTextEditor && vscode.window.activeTextEditor.document.uri.toString() === dstUri.toString()) {
+			vscode.window.activeTextEditor.selection = new vscode.Selection(dstSelection.start, dstSelection.end);
+			vscode.window.activeTextEditor.revealRange(dstSelection, vscode.TextEditorRevealType.InCenter);
+		}
+	}
 }
 
 const initializeWorkspaceFolderGroup = 'init';
