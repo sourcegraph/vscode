@@ -16,19 +16,6 @@ export default () => `
 		<div>
 			<div class="title">
 				<div class="head-logo"></div>
-				<div class="nav">
-					<ul>
-						<li><a href="https://about.sourcegraph.com/about">About</a></li>
-						<li><a href="https://about.sourcegraph.com/product">Product</a></li>
-						<li><a href="https://about.sourcegraph.com/blog">Blog</a></li>
-						<li><a href="https://about.sourcegraph.com/pricing">Pricing</a></li>
-						<li><a href="https://about.sourcegraph.com/jobs">Careers</a></li>
-					</ul>
-					<ul class="login">
-						<li><a class="sg-inactive">Sign in</a></li>
-						<li><a class="sg-inactive">Sign up</a></li>
-					</ul>
-				</div>
 			</div>
 			<div class="row">
 				<div class="splash first">
