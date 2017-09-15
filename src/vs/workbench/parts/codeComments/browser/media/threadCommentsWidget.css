@@ -40,11 +40,12 @@
 
 .thread-comments .content {
 	user-select: initial;
+	white-space: pre-wrap;
 }
 
 .thread-comments .content .code {
+	font-family: Menlo, Monaco, "Courier New", monospace;
 	padding: 8px;
-	white-space: pre-wrap;
 }
 
 .thread-comments .border {
