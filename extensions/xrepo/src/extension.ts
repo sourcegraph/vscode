@@ -8,6 +8,8 @@ import * as vscode from 'vscode';
 import * as cp from 'child_process';
 import * as nls from 'vscode-nls';
 import * as go from './go';
+import * as python from './python';
+import * as typescript from './typescript';
 
 const localize = nls.loadMessageBundle();
 
@@ -23,10 +25,16 @@ async function goToSourceFile(): Promise<any> {
 		return;
 	}
 	const lang = editor.document.languageId;
-	let sourceFileLocations: [vscode.Uri, vscode.Range | undefined][];
+	let sourceFileLocations: vscode.Location[];
 	switch (lang) {
 		case 'go':
 			sourceFileLocations = await go.getSourceLocation(editor.document.uri, editor.selection);
+			break;
+		case 'python':
+			sourceFileLocations = await python.getSourceLocation(editor.document.uri, editor.selection);
+			break;
+		case 'typescript':
+			sourceFileLocations = await typescript.getSourceLocation(editor.document.uri, editor.selection);
 			break;
 		default:
 			vscode.window.showWarningMessage('Go to Source File is unsupported for this type of file');
@@ -38,15 +46,10 @@ async function goToSourceFile(): Promise<any> {
 		return;
 	}
 	// Just jump to first choice for now (later we can add an API to display the same picker as for jump-to-definition
-	const [dstUri, dstSelection] = sourceFileLocations[0];
-	// For some reason, need to call this twice to make it scroll reliably
-	for (let i = 0; i < 2; i++) {
-		await vscode.window.showTextDocument(dstUri);
-		if (dstSelection && vscode.window.activeTextEditor && vscode.window.activeTextEditor.document.uri.toString() === dstUri.toString()) {
-			vscode.window.activeTextEditor.selection = new vscode.Selection(dstSelection.start, dstSelection.end);
-			vscode.window.activeTextEditor.revealRange(dstSelection, vscode.TextEditorRevealType.InCenter);
-		}
-	}
+	const dstLoc = sourceFileLocations[0];
+	const dstEditor = await vscode.window.showTextDocument(dstLoc.uri);
+	dstEditor.selection = new vscode.Selection(dstLoc.range.start, dstLoc.range.end);
+	dstEditor.revealRange(dstLoc.range, vscode.TextEditorRevealType.InCenter);
 }
 
 const initializeWorkspaceFolderGroup = 'init';

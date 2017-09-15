@@ -27,25 +27,25 @@ interface DefinitionInfo extends PackageInfo {
  * Returns the canonical source location(s) of cursor position specified by @param srcUri and @param srcSelection.
  * The caller should verify the file is a Go file. Otherwise, the behavior is undefined.
  */
-export async function getSourceLocation(uri: vscode.Uri, selection: vscode.Selection): Promise<[vscode.Uri, vscode.Range | undefined][]> {
+export async function getSourceLocation(uri: vscode.Uri, selection: vscode.Selection): Promise<vscode.Location[]> {
 	return getDefSourceLocation(await definitionInfo(uri, selection));
 }
 
 /**
  * Returns the canonical source location(s) that match the metadata descriptor @param defInfo.
  */
-async function getDefSourceLocation(defInfo: DefinitionInfo): Promise<[vscode.Uri, vscode.Range | undefined][]> {
+async function getDefSourceLocation(defInfo: DefinitionInfo): Promise<vscode.Location[]> {
 	if (!vscode.workspace.workspaceFolders) {
 		return [];
 	}
 
-	const found: [vscode.Uri, vscode.Range | undefined][] = [];
+	const found: vscode.Location[] = [];
 	for (const wsFolder of vscode.workspace.workspaceFolders) {
 		const pkgDir = workspaceFolderContainsPackage(wsFolder, defInfo);
 		if (!pkgDir) {
 			continue;
 		}
-		found.push([vscode.Uri.file(path.join(pkgDir, defInfo.fileName)), defInfo.selection]);
+		found.push(new vscode.Location(vscode.Uri.file(path.join(pkgDir, defInfo.fileName)), defInfo.selection));
 	}
 	return found;
 }
