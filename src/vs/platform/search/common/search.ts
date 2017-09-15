@@ -192,7 +192,6 @@ export interface ISearchConfiguration extends IFilesConfiguration {
 		exclude: glob.IExpression;
 		useRipgrep: boolean;
 		useIgnoreFilesByDefault: boolean;
-		alwaysIncludeFolderMatches: boolean;
 		profiles: ISearchProfile[];
 	};
 	editor: {

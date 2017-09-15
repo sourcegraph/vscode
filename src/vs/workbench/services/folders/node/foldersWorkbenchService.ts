@@ -17,7 +17,7 @@ import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IMessageService } from 'vs/platform/message/common/message';
 import URI from 'vs/base/common/uri';
 import { IFolder, ISearchQuery, ISearchComplete, ISearchStats, WorkspaceFolderState, FolderOperation, IFoldersWorkbenchService } from 'vs/workbench/services/folders/common/folders';
-import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
+import { IWorkspaceContextService, WorkbenchState } from 'vs/platform/workspace/common/workspace';
 import { IEditorGroupService } from 'vs/workbench/services/group/common/groupService';
 import { IFolderCatalogService, ICatalogFolder, FolderGenericIconClass } from 'vs/platform/folders/common/folderCatalog';
 import { ISCMService, ISCMRepository } from 'vs/workbench/services/scm/common/scm';
@@ -215,7 +215,7 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 	private registerListeners(): void {
 		// Fire onChange even for folder operations that aren't monitored by
 		// monitorFolderOperation.
-		this.disposables.push(this.contextService.onDidChangeWorkspaceRoots(() => this._onChange.fire()));
+		this.disposables.push(this.contextService.onDidChangeWorkspaceFolders(() => this._onChange.fire()));
 		this.disposables.push(this.scmService.onDidAddRepository(repository => this.onDidAddRepository(repository)));
 		this.disposables.push(this.scmService.onDidChangeRepository(() => this._onChange.fire()));
 		for (const repository of this.scmService.repositories) {
@@ -241,8 +241,8 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 	}
 
 	public getCurrentWorkspaceFolders(): TPromise<IFolder[]> {
-		const roots = (this.contextService.hasWorkspace() ? this.contextService.getWorkspace().roots : []);
-		return TPromise.as(this.populateCatalogInfo(roots.map(root => new Folder(this, this.stateProvider, root))));
+		const folders = (this.contextService.getWorkbenchState() === WorkbenchState.WORKSPACE ? this.contextService.getWorkspace().folders : []);
+		return TPromise.as(this.populateCatalogInfo(folders.map(root => new Folder(this, this.stateProvider, root))));
 	}
 
 	/**
@@ -361,7 +361,7 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 	}
 
 	public addFoldersAsWorkspaceRootFolders(anyFolders: (IFolder | URI)[]): TPromise<URI[]> {
-		const allPromise = this.workspaceEditingService.addRoots(anyFolders.map(folder => folder instanceof URI ? folder : folder.resource))
+		const allPromise = this.workspaceEditingService.addFolders(anyFolders.map(folder => folder instanceof URI ? folder : folder.resource))
 			.then(() => this.configurationService.reloadConfiguration());
 
 		const folders = anyFolders.map(folder => folder instanceof URI ? new Folder(this, this.stateProvider, folder) : folder);
@@ -394,7 +394,7 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 	public removeFoldersAsWorkspaceRootFolders(folders: IFolder[]): TPromise<void> {
 		const rootsToRemove = arrays.coalesce(folders.map(folder => this.getWorkspaceFolderForCatalogFolder(folder)));
 
-		const promise = this.workspaceEditingService.removeRoots(rootsToRemove)
+		const promise = this.workspaceEditingService.removeFolders(rootsToRemove)
 			.then<void>(() => this.configurationService.reloadConfiguration());
 		for (const folder of folders) {
 			this.monitorFolderOperation(folder, FolderOperation.Removing, promise);
@@ -443,11 +443,11 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 			return catalogFolder.resource;
 		}
 
-		if (!this.contextService.hasWorkspace()) {
+		if (this.contextService.getWorkbenchState() !== WorkbenchState.WORKSPACE) {
 			return undefined;
 		}
 
-		for (const root of this.contextService.getWorkspace().roots) {
+		for (const root of this.contextService.getWorkspace().folders) {
 			const repository = this.scmService.getRepositoryForResource(root);
 			if (repository && repository.provider && repository.provider.remoteResources) {
 				for (const remoteResource of repository.provider.remoteResources) {

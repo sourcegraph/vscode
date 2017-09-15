@@ -22,7 +22,7 @@ import { IDisposable, dispose } from 'vs/base/common/lifecycle';
 import * as TPath from 'vs/base/common/paths';
 
 import { IMarkerService } from 'vs/platform/markers/common/markers';
-import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
+import { IWorkspaceContextService, WorkbenchState } from 'vs/platform/workspace/common/workspace';
 import { IModelService } from 'vs/editor/common/services/modelService';
 import { ProblemMatcher, ProblemMatcherRegistry /*, ProblemPattern, getResource */ } from 'vs/platform/markers/common/problemMatcher';
 
@@ -647,7 +647,7 @@ export class TerminalTaskSystem extends EventEmitter implements ITaskSystem {
 
 	private resolveVariable(value: string): string {
 		// TODO@Dirk adopt new configuration resolver service https://github.com/Microsoft/vscode/issues/31365
-		const root = this.contextService.hasWorkspace() ? this.contextService.getWorkspace().roots[0] : undefined;
+		const root = this.contextService.getWorkbenchState() === WorkbenchState.WORKSPACE ? this.contextService.getWorkspace().folders[0] : undefined;
 		return this.configurationResolverService.resolve(root, value);
 	}
 

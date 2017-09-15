@@ -423,11 +423,11 @@ export function registerCommands(): void {
 		});
 	});
 
-	CommandsRegistry.registerCommand('_workbench.addRoots', function (accessor: ServicesAccessor, rootsToAdd: URI[]) {
+	CommandsRegistry.registerCommand('_workbench.addRoots', function (accessor: ServicesAccessor, foldersToAdd: URI[]) {
 		const workspaceEditingService = accessor.get(IWorkspaceEditingService);
 		const configurationService = accessor.get(IConfigurationService);
 
-		return workspaceEditingService.addRoots(rootsToAdd).then(() => {
+		return workspaceEditingService.addFolders(foldersToAdd).then(() => {
 			// Wait for workspace to reload and detect its newly added root.
 			return configurationService.reloadConfiguration();
 		});

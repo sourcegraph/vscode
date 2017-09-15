@@ -9,7 +9,7 @@ import { IConfigurationService } from 'vs/platform/configuration/common/configur
 import Event, { Emitter } from 'vs/base/common/event';
 import { localize } from 'vs/nls';
 import * as arrays from 'vs/base/common/arrays';
-import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
+import { IWorkspaceContextService, WorkbenchState } from 'vs/platform/workspace/common/workspace';
 import { IRemoteService, requestGraphQL } from 'vs/platform/remote/node/remote';
 import { onUnexpectedError } from 'vs/base/common/errors';
 
@@ -45,7 +45,7 @@ export class SearchProfileService extends Disposable implements ISearchProfileSe
 		super();
 
 		this.fetchServerProfiles();
-		this._register(this.contextService.onDidChangeWorkspaceRoots(() => this.didSearchProfilesChange.fire()));
+		this._register(this.contextService.onDidChangeWorkspaceFolders(() => this.didSearchProfilesChange.fire()));
 		this._register(this.configurationService.onDidUpdateConfiguration(e => this.onConfigUpdated()));
 		this.onConfigUpdated();
 	}
@@ -86,14 +86,14 @@ export class SearchProfileService extends Disposable implements ISearchProfileSe
 	}
 
 	private getCurrentWorkspaceText(): string {
-		if (!this.contextService.hasWorkspace()) {
+		if (this.contextService.getWorkbenchState() !== WorkbenchState.WORKSPACE) {
 			return SearchProfileService.EMPTY_WORKSPACE_TEXT;
 		}
 
-		const roots = this.contextService.getWorkspace().roots;
+		const folders = this.contextService.getWorkspace().folders;
 		let text = SearchProfileService.CURRENT_WORKSPACE_TEXT;
-		if (roots.length === 0 || roots.length > 1) {
-			return text.replace('{0}', localize('searchProfile.currentWorkspace.multiple', "{0} Repositories", roots.length));
+		if (folders.length === 0 || folders.length > 1) {
+			return text.replace('{0}', localize('searchProfile.currentWorkspace.multiple', "{0} Repositories", folders.length));
 		}
 		return text.replace('{0}', localize('searchProfile.currentWorkspace.single', "1 Repository"));
 	}

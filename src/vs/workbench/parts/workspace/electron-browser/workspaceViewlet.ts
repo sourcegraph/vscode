@@ -41,7 +41,7 @@ import { IConfigurationService } from 'vs/platform/configuration/common/configur
 import { ViewsRegistry, ViewLocation, IViewDescriptor } from 'vs/workbench/browser/parts/views/viewsRegistry';
 import { PersistentViewsViewlet, IViewletView } from 'vs/workbench/browser/parts/views/views';
 import { IStorageService } from 'vs/platform/storage/common/storage';
-import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
+import { IWorkspaceContextService, WorkbenchState } from 'vs/platform/workspace/common/workspace';
 import { IContextKeyService, ContextKeyExpr, RawContextKey, IContextKey } from 'vs/platform/contextkey/common/contextkey';
 import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
 import { OpenWorkspaceAction, SaveWorkspaceAsAction, OpenWorkspaceConfigFileAction, ExportWorkspaceAction } from 'vs/workbench/browser/actions/workspaceActions';
@@ -94,7 +94,7 @@ export class WorkspaceViewlet extends PersistentViewsViewlet implements IWorkspa
 	}
 
 	private get showEmptyView(): boolean {
-		return !this.contextService.hasMultiFolderWorkspace();
+		return this.contextService.getWorkbenchState() !== WorkbenchState.WORKSPACE;
 	}
 
 	private registerViews(): void {

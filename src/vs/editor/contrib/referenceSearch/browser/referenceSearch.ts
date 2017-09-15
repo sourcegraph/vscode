@@ -121,7 +121,7 @@ let showReferencesCommand: ICommandHandler = (accessor: ServicesAccessor, resour
 		throw new Error('illegal argument, uri expected');
 	}
 
-	const currentWorkspacePath = accessor.get(IWorkspaceContextService).getWorkspace().roots[0].path;
+	const currentWorkspacePath = accessor.get(IWorkspaceContextService).getWorkspace().folders[0].path;
 
 	return accessor.get(IEditorService).openEditor({ resource: resource }).then(editor => {
 

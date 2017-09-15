@@ -7,7 +7,7 @@
 import { TPromise } from 'vs/base/common/winjs.base';
 import URI from 'vs/base/common/uri';
 import { IWorkspaceSharingService } from 'vs/workbench/services/workspace/common/workspaceSharing';
-import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
+import { IWorkspaceContextService, WorkbenchState } from 'vs/platform/workspace/common/workspace';
 import { IFileService, isParent } from 'vs/platform/files/common/files';
 import { IStoredWorkspace } from 'vs/platform/workspaces/common/workspaces';
 import { nfcall } from 'vs/base/common/async';
@@ -48,7 +48,7 @@ export class WorkspaceSharingService implements IWorkspaceSharingService {
 	}
 
 	public export(target: URI): TPromise<void> {
-		const roots = this.contextService.getWorkspace().roots;
+		const roots = this.contextService.getWorkspace().folders;
 
 		return TPromise.join(roots.map(root => {
 			// For each root try and resolve it via the FolderCatalogService, since they will provide
@@ -81,7 +81,7 @@ export class WorkspaceSharingService implements IWorkspaceSharingService {
 		// * The workspace will stay Untitled
 		// * roots in the configuration will be non-empty
 		const workspace = this.contextService.getWorkspace();
-		if (!this.contextService.hasMultiFolderWorkspace() || !this.isUntitledWorkspace(workspace.configuration.fsPath)) {
+		if (this.contextService.getWorkbenchState() !== WorkbenchState.WORKSPACE || !this.isUntitledWorkspace(workspace.configuration.fsPath)) {
 			return;
 		}
 		this.fileService.resolveContent(workspace.configuration).then(content => {

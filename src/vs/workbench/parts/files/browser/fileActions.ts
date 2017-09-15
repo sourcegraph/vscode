@@ -801,9 +801,10 @@ export class ImportFileAction extends BaseFileAction {
 		return this.tree;
 	}
 
-	public run(resources: URI[]): TPromise<any> {
+	public run(context?: any): TPromise<any> {
 		const importPromise = TPromise.as(null).then(() => {
-			if (resources && resources.length > 0) {
+			const input = context.input as { paths: string[] };
+			if (input.paths && input.paths.length > 0) {
 
 				// Find parent for import
 				let targetElement: FileStat;
@@ -828,8 +829,8 @@ export class ImportFileAction extends BaseFileAction {
 					});
 
 					let overwrite = true;
-					if (resources.some(resource => {
-						return !!targetNames[isLinux ? paths.basename(resource.fsPath) : paths.basename(resource.fsPath).toLowerCase()];
+					if (input.paths.some(path => {
+						return !!targetNames[isLinux ? paths.basename(path) : paths.basename(path).toLowerCase()];
 					})) {
 						const confirm: IConfirmation = {
 							message: nls.localize('confirmOverwrite', "A file or folder with the same name already exists in the destination folder. Do you want to replace it?"),
@@ -847,10 +848,10 @@ export class ImportFileAction extends BaseFileAction {
 
 					// Run import in sequence
 					const importPromisesFactory: ITask<TPromise<void>>[] = [];
-					resources.forEach(resource => {
+					input.paths.forEach(path => {
 						importPromisesFactory.push(() => {
-							const sourceFile = resource;
-							const targetFile = targetElement.resource.with({ path: paths.join(targetElement.resource.fsPath, paths.basename(sourceFile.fsPath)) });
+							const sourceFile = URI.file(path);
+							const targetFile = URI.file(paths.join(targetElement.resource.fsPath, paths.basename(path)));
 
 							// if the target exists and is dirty, make sure to revert it. otherwise the dirty contents
 							// of the target file would replace the contents of the imported file. since we already
@@ -864,7 +865,7 @@ export class ImportFileAction extends BaseFileAction {
 								return this.fileService.importFile(sourceFile, targetElement.resource).then(res => {
 
 									// if we only import one file, just open it directly
-									if (resources.length === 1) {
+									if (input.paths.length === 1) {
 										this.editorService.openEditor({ resource: res.stat.resource, options: { pinned: true } }).done(null, errors.onUnexpectedError);
 									}
 								}, error => this.onError(error));
