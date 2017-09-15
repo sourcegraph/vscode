@@ -34,7 +34,7 @@ async function init(context: ExtensionContext, disposables: Disposable[]): Promi
 	const askpass = new Askpass();
 	const env = await askpass.getEnv();
 	const git = new Git({ gitPath: info.path, version: info.version, env });
-	const model = new Model(git);
+	const model = new Model(git, context.globalState);
 	disposables.push(model);
 
 	const onRepository = () => commands.executeCommand('setContext', 'gitOpenRepositoryCount', `${model.repositories.length}`);
@@ -52,7 +52,9 @@ async function init(context: ExtensionContext, disposables: Disposable[]): Promi
 
 	const onOutput = str => outputChannel.append(str);
 	git.onOutput.addListener('log', onOutput);
+	model.onOutput.addListener('log', onOutput);
 	disposables.push(toDisposable(() => git.onOutput.removeListener('log', onOutput)));
+	disposables.push(toDisposable(() => model.onOutput.removeListener('log', onOutput)));
 
 	const commandCenter = new CommandCenter(git, model, outputChannel, telemetryReporter);
 	disposables.push(

@@ -10,51 +10,81 @@ import * as cp from 'child_process';
 import * as path from 'path';
 import { canonicalRemote } from './uri';
 import { Git } from './git';
+import { StringDecoder } from 'string_decoder';
+import { EventEmitter } from 'events';
+import { Memento } from 'vscode';
 
 export class GlobalRepositories {
+	private static MEMENTO_KEY = 'git.globalrepositories.map';
+
 	private operation = 0;
 	private walker: FolderWalker | null;
 
 	/** canonical remote -> path */
 	private map = new Map<string, string>();
 
+	private _onOutput = new EventEmitter();
+	get onOutput(): EventEmitter { return this._onOutput; }
+
 	constructor(
 		private git: Git,
+		private globalState: Memento,
 	) {
+		const mapEntries = globalState.get<[string, string][]>(GlobalRepositories.MEMENTO_KEY);
+		if (mapEntries) {
+			this.map = new Map<string, string>(mapEntries);
+		}
 	}
 
 	public resolveRemote(remote: string): string | undefined {
-		return this.map.get(canonicalRemote(remote));
+		const key = canonicalRemote(remote);
+		return key ? this.map.get(key) : undefined;
 	}
 
-	public build(): void {
+	public scan(dir: string): Promise<void> {
+		if (!FolderWalker.available()) {
+			return Promise.resolve();
+		}
+
 		this.cancel();
 		const operation = ++this.operation;
 
 		const walker = new FolderWalker();
 		this.walker = walker;
 
-		const map = new Map<string, string>();
-		walker.search(path => {
-			this.git.exec(path, ['remote', '--verbose']).then(result => {
-				for (const key of extractCanonicalRemotes(result.stdout)) {
-					map.set(key, path);
+		return new Promise<void>((resolve, reject) => {
+			this.log('Starting home directory scan');
+			const oldSize = this.map.size;
+			const staleRemotes = new Set<string>(this.map.keys());
+			const remotePromises: Promise<void>[] = [];
+			walker.search(dir, path => {
+				remotePromises.push(this.git.exec(path, ['remote', '--verbose']).then(result => {
+					for (const key of extractCanonicalRemotes(result.stdout)) {
+						this.map.set(key, path);
+						staleRemotes.delete(key);
+					}
+				}, () => { }));
+			}, err => {
+				this.walker = null;
+				if (err) {
+					this.log('Home directory scan failed: ' + err.message);
+					reject(err);
+					return;
 				}
+
+				resolve(Promise.all(remotePromises).then(() => {
+					const count = this.map.size - oldSize;
+					this.log(`Home directory scan found ${count} new remotes (total ${this.map.size})`);
+
+					const canceled = operation !== this.operation;
+					if (!canceled) {
+						// We only know staleRemotes is accurate if the operation finished
+						staleRemotes.forEach(k => this.map.delete(k));
+					}
+
+					return this.globalState.update(GlobalRepositories.MEMENTO_KEY, [...this.map]);
+				}));
 			});
-		}, err => {
-			this.walker = null;
-			if (err) {
-				console.error(err);
-				return;
-			}
-
-			// Canceled
-			if (operation !== this.operation) {
-				return;
-			}
-
-			// TODO childProcess.exec may still be running
-			this.map = map;
 		});
 	}
 
@@ -65,9 +95,12 @@ export class GlobalRepositories {
 		}
 	}
 
+	private log(msg: string): void {
+		this._onOutput.emit('log', msg + '\n');
+	}
+
 	public dispose(): void {
 		this.cancel();
-		this.map.clear();
 	}
 }
 
@@ -76,16 +109,54 @@ export class FolderWalker {
 	private isCanceled = false;
 	private proc: cp.ChildProcess;
 
-	public search(onCandidatePath: (path: string) => void, done: (error?: Error) => void): void {
-		// TODO stream out results
-		this.proc = cp.execFile('find', this.buildFindArgs(os.homedir()), (error, stdout, stderr) => {
+	public search(dir: string, onCandidatePath: (path: string) => void, done: (error?: Error) => void): void {
+		const proc = this.spawnFindCmd(dir);
+		this.proc = proc;
+
+		const processLines = (data: string) => {
+			for (const gitDir of data.split(os.EOL)) {
+				const candidate = path.dirname(gitDir);
+				if (candidate.length > 0) {
+					onCandidatePath(candidate);
+				}
+			}
+		};
+
+		const decoder = new StringDecoder('utf8');
+		let linebuf = '';
+		proc.stdout.on('data', (b: Buffer) => {
+			const data = linebuf + decoder.write(b);
+			const idx = data.lastIndexOf(os.EOL);
+			if (idx < 0) {
+				// we haven't seen EOL, so just keep building up linebuf
+				linebuf = data;
+				return;
+			}
+			linebuf = data.substr(idx + os.EOL.length);
+			processLines(data.substr(0, idx));
+		});
+
+		proc.on('error', (err: Error) => {
 			if (this.isCanceled) {
 				done();
 			}
-			for (const gitDir of (stdout || '').split(os.EOL)) {
-				onCandidatePath(path.dirname(gitDir));
+
+			done(err);
+		});
+
+		proc.on('close', (code: number) => {
+			if (this.isCanceled) {
+				done();
 			}
-			done(error);
+
+			if (code !== 0) {
+				done(new Error(`find failed with error code ${code}`));
+				return;
+			}
+
+			linebuf = linebuf + decoder.end();
+			processLines(linebuf);
+			done();
 		});
 	}
 
@@ -94,7 +165,7 @@ export class FolderWalker {
 		this.proc.kill();
 	}
 
-	private buildFindArgs(rootPath: string): string[] {
+	private spawnFindCmd(rootPath: string): cp.ChildProcess {
 		// find $HOME -maxdepth 10 -type d -name .git -print -o \( -name '.*' -o -name 'node_modules' \) -prune
 		const args = [rootPath].concat('-maxdepth 10 -type d -name .git -print'.split(' '));
 
@@ -106,7 +177,14 @@ export class FolderWalker {
 		args.pop(); // Remove last -o
 		args.push(')', '-prune');
 
-		return args;
+		return cp.spawn('find', args, {
+			cwd: rootPath,
+			stdio: ['ignore', 'pipe', 'ignore'], // only care about stdout
+		});
+	}
+
+	public static available(): boolean {
+		return process.platform !== 'win32'; // we do not have find on windows
 	}
 }
 
@@ -116,6 +194,9 @@ function extractCanonicalRemotes(stdout: string): string[] {
 		.filter(b => !!b)
 		.map(line => regex.exec(line))
 		.filter(g => !!g)
-		.map((groups: RegExpExecArray) => canonicalRemote(groups[1]))
+		.map((groups: RegExpExecArray) => {
+			const r = canonicalRemote(groups[1]);
+			return r || '';
+		})
 		.filter(s => s.length > 0);
 }

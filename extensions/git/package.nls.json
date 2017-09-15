@@ -55,6 +55,7 @@
 	"config.ignoreLegacyWarning": "Ignores the legacy Git warning",
 	"config.ignoreLimitWarning": "Ignores the warning when there are too many changes in a repository",
 	"config.defaultCloneDirectory": "The default location where to clone a git repository",
+	"config.repositoryScanDirectory": "The directory to scan for repositories. When opening a remote repository, it will use an existing clone found via this scan. If empty, the feature is disabled. Variables are substituted based on the context:\n ${homePath}: the current user's home directory (e.g. /home/myUser or /Users/myUser)\n ${separator}: the path separator for the OS (slash on macOS and Linux, backslash on Windows)",
 	"config.enableSmartCommit": "Commit all changes when there are no staged changes.",
 	"config.enableCommitSigning": "Enables commit signing with GPG.",
 	"config.discardAllScope": "Controls what changes are discarded by the `Discard all changes` command. `all` discards all changes. `tracked` discards only tracked files. `prompt` shows a prompt dialog every time the action is run."
