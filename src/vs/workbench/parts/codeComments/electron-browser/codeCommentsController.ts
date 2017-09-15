@@ -254,6 +254,8 @@ export class CodeCommentsController extends Disposable implements IEditorContrib
 			this.toDisposeOnModelChange.push(this.fileComments.onDidChangeThreads(() => this.renderDecorations(model)));
 			this.toDisposeOnModelChange.push(this.fileComments.onDidChangeDraftThreads(() => this.renderDecorations(model)));
 			this.renderDecorations(model);
+		} else {
+			this.fileComments = undefined;
 		}
 	}
 
@@ -318,6 +320,10 @@ export class CodeCommentsController extends Disposable implements IEditorContrib
 	}
 
 	public restoreViewState(state?: ViewState): void {
+		if (!this.fileComments) {
+			// No model (e.g. untitled file).
+			return;
+		}
 		this.fileComments.refreshThreads().then(() => {
 			const openThreadIds = (state && state.openThreadIds) || [];
 			for (const threadId of openThreadIds) {
