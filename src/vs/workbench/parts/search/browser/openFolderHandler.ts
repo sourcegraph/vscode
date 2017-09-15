@@ -19,7 +19,7 @@ import { Mode, IEntryRunContext, IAutoFocus } from 'vs/base/parts/quickopen/comm
 import { QuickOpenEntry, QuickOpenModel, QuickOpenEntryGroup } from 'vs/base/parts/quickopen/browser/quickOpenModel';
 import { QuickOpenHandler } from 'vs/workbench/browser/quickopen';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
-import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
+import { IWorkspaceContextService, WorkbenchState } from 'vs/platform/workspace/common/workspace';
 import { IWindowsService } from 'vs/platform/windows/common/windows';
 import { ThrottledDelayer } from 'vs/base/common/async';
 import { IMessageService, Severity } from 'vs/platform/message/common/message';
@@ -212,7 +212,7 @@ export class FolderEntry extends QuickOpenEntry {
 		const hideWidget = (mode === Mode.OPEN);
 
 		if (mode === Mode.OPEN) {
-			if (!this.contextService.hasMultiFolderWorkspace()) {
+			if (this.contextService.getWorkbenchState() !== WorkbenchState.WORKSPACE) {
 				// Upgrade workspace to multi-root workspace.
 				const p = this.resourceResolverService.resolveResource(this.folder.resource)
 					.then(resolvedResource => this.workspacesService.createWorkspace([resolvedResource.toString()]))

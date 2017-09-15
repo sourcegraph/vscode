@@ -23,7 +23,7 @@ import { ExplorerViewlet } from 'vs/workbench/parts/files/browser/explorerViewle
 import { VIEWLET_ID as EXPLORER_VIEWLET_ID } from 'vs/workbench/parts/files/common/files';
 import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
 import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
-import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
+import { IWorkspaceContextService, WorkbenchState } from 'vs/platform/workspace/common/workspace';
 import { IWorkspaceEditingService } from 'vs/workbench/services/workspace/common/workspaceEditing';
 import { BaseWorkspacesAction } from 'vs/workbench/browser/actions/workspaceActions';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
@@ -213,7 +213,7 @@ export class RemoveWorkspaceFolderExplorerAction extends Action {
 	}
 
 	run(): TPromise<any> {
-		return this.workspaceEditingService.removeRoots([this.folder])
+		return this.workspaceEditingService.removeFolders([this.folder])
 			.then(() => this.configurationService.reloadConfiguration());
 	}
 }
@@ -448,12 +448,12 @@ export class AddLocalWorkspaceFolderAction extends BaseWorkspacesAction {
 	}
 
 	public run(): TPromise<any> {
-		if (!this.contextService.hasWorkspace()) {
+		if (this.contextService.getWorkbenchState() !== WorkbenchState.WORKSPACE) {
 			return this.windowService.createAndOpenWorkspace([]);
 		}
 
-		if (this.contextService.hasFolderWorkspace()) {
-			return this.windowService.createAndOpenWorkspace([this.contextService.getWorkspace().roots[0].toString()]);
+		if (this.contextService.getWorkbenchState() === WorkbenchState.FOLDER) {
+			return this.windowService.createAndOpenWorkspace([this.contextService.getWorkspace().folders[0].toString()]);
 		}
 
 		const folders = super.pickFolders(mnemonicButtonLabel(localize({ key: 'add', comment: ['&& denotes a mnemonic'] }, "&&Add")), localize('addFolderToWorkspaceTitle', "Add Folder to Workspace"));
@@ -461,7 +461,7 @@ export class AddLocalWorkspaceFolderAction extends BaseWorkspacesAction {
 			return TPromise.as(null);
 		}
 
-		return this.workspaceEditingService.addRoots(folders.map(folder => URI.file(folder)))
+		return this.workspaceEditingService.addFolders(folders.map(folder => URI.file(folder)))
 			.then(() => this.configurationService.reloadConfiguration());;
 	}
 

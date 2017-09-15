@@ -20,7 +20,7 @@ import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
 import { ViewSizing } from 'vs/base/browser/ui/splitview/splitview';
-import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
+import { IWorkspaceContextService, WorkbenchState } from 'vs/platform/workspace/common/workspace';
 
 export class EmptyView extends CollapsibleView {
 
@@ -51,7 +51,7 @@ export class EmptyView extends CollapsibleView {
 
 		let section = $('div.section').appendTo(container);
 
-		const actionClass = this.contextService.hasWorkspace() ? SaveWorkspaceAsAction : NewEmptyWorkspaceAction;
+		const actionClass = this.contextService.getWorkbenchState() === WorkbenchState.WORKSPACE ? SaveWorkspaceAsAction : NewEmptyWorkspaceAction;
 
 		this.openWorkspaceButton = new Button(section);
 		attachButtonStyler(this.openWorkspaceButton, this.themeService);

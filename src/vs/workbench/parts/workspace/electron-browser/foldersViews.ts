@@ -27,7 +27,7 @@ import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { attachListStyler, attachBadgeStyler } from 'vs/platform/theme/common/styler';
 import { CollapsibleView, IViewletViewOptions, IViewOptions } from 'vs/workbench/browser/parts/views/views';
 import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
-import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
+import { IWorkspaceContextService, WorkbenchState } from 'vs/platform/workspace/common/workspace';
 import { IEditorGroupService } from 'vs/workbench/services/group/common/groupService';
 import { IModeService } from 'vs/editor/common/services/modeService';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
@@ -236,8 +236,8 @@ export class CurrentWorkspaceFoldersView extends FoldersListView {
 		// The only time that an entry can be deleted (a list structural change) is when
 		// a root is removed. All other changes are handled by the actions' and widgets'
 		// own listeners within an entry.
-		if (this.contextService.hasWorkspace()) {
-			this.toDispose.push(this.contextService.onDidChangeWorkspaceRoots(() => {
+		if (this.contextService.getWorkbenchState() !== WorkbenchState.EMPTY) {
+			this.toDispose.push(this.contextService.onDidChangeWorkspaceFolders(() => {
 				this.show(''); // trigger a reload; query is always empty in this view
 			}));
 		}

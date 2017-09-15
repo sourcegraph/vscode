@@ -81,8 +81,7 @@ export interface IWorkbenchSearchConfiguration extends ISearchConfiguration {
 		exclude: glob.IExpression,
 		useRipgrep: boolean,
 		useIgnoreFilesByDefault: boolean,
-		alwaysIncludeFolderMatches: boolean,
-		profiles: ISearchProfile[],
+		profiles: ISearchProfile[]
 	};
 }
 

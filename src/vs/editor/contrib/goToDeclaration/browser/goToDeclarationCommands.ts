@@ -53,7 +53,7 @@ export class DefinitionAction extends EditorAction {
 		const messageService = accessor.get(IMessageService);
 		const editorService = accessor.get(IEditorService);
 		const progressService = accessor.get(IProgressService);
-		const currentWorkspacePath = accessor.get(IWorkspaceContextService).getWorkspace().roots[0].path;
+		const currentWorkspacePath = accessor.get(IWorkspaceContextService).getWorkspace().folders[0].path;
 
 		const model = editor.getModel();
 		const pos = editor.getPosition();

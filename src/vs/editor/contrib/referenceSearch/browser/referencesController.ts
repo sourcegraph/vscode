@@ -203,7 +203,7 @@ export class ReferencesController implements editorCommon.IEditorContribution {
 			}
 			if (firstUpdate) {
 				// Didn't receive any non-empty progress events.
-				const currentWorkspacePath = this._contextService.getWorkspace().roots[0].path;
+				const currentWorkspacePath = this._contextService.getWorkspace().folders[0].path;
 				return handleModel(new ReferencesModel([], currentWorkspacePath), true);
 			}
 			// Received all results via progress so we can ignore the final result.
@@ -223,7 +223,7 @@ export class ReferencesController implements editorCommon.IEditorContribution {
 			aggregatedLocations.push(...newLocations);
 			if (firstUpdate) {
 				firstUpdate = false;
-				const currentWorkspacePath = this._contextService.getWorkspace().roots[0].path;
+				const currentWorkspacePath = this._contextService.getWorkspace().folders[0].path;
 				const model = new ReferencesModel(aggregatedLocations, currentWorkspacePath);
 				handleModel(model, false);
 				return;
