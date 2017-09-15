@@ -58,33 +58,33 @@ export class ThreadCommentsWidget extends BaseThreadCommentsWidget {
 			this.threadComments.draftReply,
 			this.getSecondaryButtonLabel(),
 		);
-		this._register(this.commentInput);
-		this._register(this.commentInput.onDidChangeContent(content => {
+		this._disposables.push(this.commentInput);
+		this._disposables.push(this.commentInput.onDidChangeContent(content => {
 			this.threadComments.draftReply = content;
 			this.commentInput.secondaryButtonLabel = this.getSecondaryButtonLabel();
 		}));
-		this._register(this.commentInput.onDidChangeHeight(() => {
+		this._disposables.push(this.commentInput.onDidChangeHeight(() => {
 			this.layout();
 		}));
-		this._register(this.commentInput.onDidClickSubmitButton(e => this.submitReply()));
-		this._register(this.commentInput.onDidClickSecondaryButton(() => {
+		this._disposables.push(this.commentInput.onDidClickSubmitButton(e => this.submitReply()));
+		this._disposables.push(this.commentInput.onDidClickSecondaryButton(() => {
 			const comment = this.canArchiveAndComment() ? this.submitReply() : TPromise.wrap(undefined);
 			comment.then(() => {
 				this.threadComments.setArchived(!this.threadComments.archived);
 			});
 		}));
 
-		this._register(this.threadComments.onDidChangeComments(() => {
+		this._disposables.push(this.threadComments.onDidChangeComments(() => {
 			this.renderComments();
 			this.layout();
 		}));
-		this._register(this.threadComments.onDidChangeDraftReply(() => {
+		this._disposables.push(this.threadComments.onDidChangeDraftReply(() => {
 			this.commentInput.value = this.threadComments.draftReply;
 		}));
-		this._register(this.threadComments.onDidChangePendingOperation(() => {
+		this._disposables.push(this.threadComments.onDidChangePendingOperation(() => {
 			this.commentInput.setEnabled(!this.threadComments.pendingOperation);
 		}));
-		this._register(this.threadComments.onDidChangeArchived(() => {
+		this._disposables.push(this.threadComments.onDidChangeArchived(() => {
 			if (!this.threadComments.archived) {
 				this.commentInput.secondaryButtonLabel = this.getSecondaryButtonLabel();
 			}
@@ -152,7 +152,7 @@ export class ThreadCommentsWidget extends BaseThreadCommentsWidget {
 
 	public expand(reveal: boolean): void {
 		if (!this.threadComments.displayRange) {
-			this._register(once(this.threadComments.onDidChangeDisplayRange)(() => {
+			this._disposables.push(once(this.threadComments.onDidChangeDisplayRange)(() => {
 				this.expand(reveal);
 			}));
 			return;

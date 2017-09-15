@@ -9,14 +9,13 @@ import { Builder, $ } from 'vs/base/browser/builder';
 import { Part } from 'vs/workbench/browser/part';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { OnboardingModal } from 'vs/workbench/parts/modal/onboarding/onboarding';
+import { SignInModal } from 'vs/workbench/parts/modal/signIn/signInModal';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IModal, Modal, ModalIdentifiers } from 'vs/workbench/parts/modal/modal';
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { IPartService } from 'vs/workbench/services/part/common/partService';
-
-export const AfterSignupQuery = 'afterSignup';
 
 /**
  * ModalPart is layed out above the workbench and has it's own layout that displays modal content based
@@ -73,6 +72,9 @@ export class ModalPart extends Part {
 					this.onboardingSingleton = this.onboardingSingleton || this.instantiationService.createInstance(OnboardingModal, this);
 					modal = this.onboardingSingleton;
 					break;
+				case ModalIdentifiers.SIGNIN:
+					modal = this.instantiationService.createInstance(SignInModal, this);
+					break;
 				default:
 					throw new Error(`Modal type "${modal}" not supported.`);
 			}
@@ -92,7 +94,6 @@ export class ModalPart extends Part {
 		}
 
 		this.modals.push(modal);
-
 		// Show the modal and its container
 		modal.show(container, { zIndex: this.modals.length });
 		if (container.isHidden()) {
@@ -114,6 +115,7 @@ export class ModalPart extends Part {
 		}
 
 		const modal = this.modals.pop();
+		// Hide modal (the modal itself handles disposal, if necessary)
 		modal.hide();
 
 		if (this.modals.length === 0) {

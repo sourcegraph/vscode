@@ -13,9 +13,11 @@ import { registerColor, inputBorder, inputBackground, inputForeground, buttonBac
 import { registerThemingParticipant } from 'vs/platform/theme/common/themeService';
 import { ProgressBar } from 'vs/base/browser/ui/progressbar/progressbar';
 import { SIDE_BAR_BACKGROUND, SIDE_BAR_FOREGROUND, PANEL_BORDER } from 'vs/workbench/common/theme';
+import { IDisposable } from 'vs/base/common/lifecycle';
 
 export enum ModalIdentifiers {
-	ONBOARDING
+	ONBOARDING,
+	SIGNIN
 };
 
 export interface IModal {
@@ -35,7 +37,7 @@ export interface IModalClosedHandler {
 /**
  * Abstract class implementing basic modal interface and functionality
  */
-export abstract class Modal implements IModal {
+export abstract class Modal implements IModal, IDisposable {
 	readonly closeable: boolean = true;
 	modalBackgroundContainer: Builder;
 	private _onClose: Set<IModalClosedHandler> = new Set();
@@ -44,11 +46,15 @@ export abstract class Modal implements IModal {
 	protected constructor(
 		protected parent: ModalPart,
 		@ITelemetryService protected telemetryService: ITelemetryService,
-		closeable?: boolean
+		closeable?: boolean,
+		disposeOnClose: boolean = true
 	) {
 		this.parent = parent;
 		if (closeable !== undefined) {
 			this.closeable = closeable;
+		}
+		if (disposeOnClose) {
+			this.onClose(() => this.dispose());
 		}
 	}
 
@@ -128,6 +134,10 @@ export abstract class Modal implements IModal {
 			closeHandler();
 		});
 		this._onClose.clear();
+	}
+
+	public dispose(): void {
+		this.modalBackgroundContainer.dispose();
 	}
 }
 

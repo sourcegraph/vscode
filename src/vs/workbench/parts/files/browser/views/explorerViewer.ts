@@ -596,7 +596,8 @@ export class FileSorter implements ISorter {
 	private sortOrder: SortOrder;
 
 	constructor(
-		@IConfigurationService private configurationService: IConfigurationService
+		@IConfigurationService private configurationService: IConfigurationService,
+		@IWorkspaceContextService private contextService: IWorkspaceContextService
 	) {
 		this.toDispose = [];
 
@@ -617,6 +618,10 @@ export class FileSorter implements ISorter {
 
 		// Do not sort roots
 		if (statA.isRoot) {
+			if (statB.isRoot) {
+				const ws = this.contextService.getWorkspace();
+				return ws.roots.indexOf(statA.resource) - ws.roots.indexOf(statB.resource);
+			}
 			return -1;
 		}
 		if (statB.isRoot) {
@@ -952,9 +957,8 @@ export class FileDragAndDrop extends SimpleFileResourceDragAndDrop {
 			// Handle dropped files (only support FileStat as target)
 			else if (target instanceof FileStat) {
 				const importAction = this.instantiationService.createInstance(ImportFileAction, tree, target, null);
-				return importAction.run({
-					input: { paths: droppedResources.map(res => res.resource.fsPath) }
-				});
+
+				return importAction.run(droppedResources.map(res => res.resource));
 			}
 
 			return void 0;

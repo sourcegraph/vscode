@@ -60,9 +60,9 @@ CommandsRegistry.registerCommand('sg.modal.clearAllModalsCommand', (accessor: Se
 Registry.as<IWorkbenchActionRegistry>(Extensions.WorkbenchActions)
 	.registerWorkbenchAction(
 	new SyncActionDescriptor(ShowOnboardingModalAction, ShowOnboardingModalAction.ID, ShowOnboardingModalAction.LABEL),
-	null, localize('sg.sourcegraph', "Sourcegraph"));
+	null, localize('view', "View"));
 
 Registry.as<IWorkbenchActionRegistry>(Extensions.WorkbenchActions)
 	.registerWorkbenchAction(
 	new SyncActionDescriptor(ClearAllModalsAction, ClearAllModalsAction.ID, ClearAllModalsAction.LABEL),
-	null, localize('sg.sourcegraph', "Sourcegraph"));
+	null, localize('view', "View"));

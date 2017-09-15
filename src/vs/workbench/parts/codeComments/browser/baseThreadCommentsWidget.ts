@@ -9,8 +9,9 @@ import 'vs/css!./media/threadCommentsWidget';
 import { ICodeEditor } from 'vs/editor/browser/editorBrowser';
 import { registerThemingParticipant, ITheme, IThemeService } from 'vs/platform/theme/common/themeService';
 import { $ } from 'vs/base/browser/builder';
+import * as dom from 'vs/base/browser/dom';
+import { IKeyboardEvent } from 'vs/base/browser/keyboardEvent';
 import { ZoneWidget } from 'vs/editor/contrib/zoneWidget/browser/zoneWidget';
-import { getTotalHeight } from 'vs/base/browser/dom';
 import { peekViewBorder, peekViewResultsBackground } from 'vs/editor/contrib/referenceSearch/browser/referencesWidget';
 import { Color } from 'vs/base/common/color';
 import Event, { Emitter } from 'vs/base/common/event';
@@ -29,7 +30,7 @@ export class BaseThreadCommentsWidget extends ZoneWidget {
 		@IThemeService themeService: IThemeService,
 	) {
 		super(editor, { isResizeable: false });
-		this._register(themeService.onThemeChange(this.applyTheme, this));
+		this._disposables.push(themeService.onThemeChange(this.applyTheme, this));
 		this.applyTheme(themeService.getTheme());
 	}
 
@@ -47,16 +48,16 @@ export class BaseThreadCommentsWidget extends ZoneWidget {
 			this.threadCommentsElement = div.getContainer();
 		});
 
-		this.onkeydown(containerElement, e => {
+		this._disposables.push(dom.addStandardDisposableListener(containerElement, 'keydown', (e: IKeyboardEvent) => {
 			if (e.keyCode === KeyCode.Escape) {
 				this.dispose();
 			}
-		});
+		}));
 	}
 
 	protected layout() {
 		const lineHeight = this.editor.getConfiguration().lineHeight;
-		const totalHeight = getTotalHeight(this.threadCommentsElement) + this._decoratingElementsHeight();
+		const totalHeight = dom.getTotalHeight(this.threadCommentsElement) + this._decoratingElementsHeight();
 		const heightInLines = Math.ceil(totalHeight / lineHeight);
 		this._relayout(heightInLines);
 	}
@@ -69,7 +70,7 @@ export class BaseThreadCommentsWidget extends ZoneWidget {
 		this.layout();
 	}
 
-	private willDispose = this._register(new Emitter<void>());
+	private willDispose = new Emitter<void>();
 	public onWillDispose: Event<void> = this.willDispose.event;
 
 	public dispose() {

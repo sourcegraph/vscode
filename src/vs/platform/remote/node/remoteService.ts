@@ -40,9 +40,12 @@ export class RemoteService extends Disposable implements IRemoteService {
 	private configure(config: IRemoteConfiguration) {
 		if (config.remote && config.remote.endpoint) {
 			this.endpoint = URI.parse(config.remote.endpoint);
-			this.cookie = config.remote.cookie;
 		} else {
 			this.endpoint = null;
+		}
+		if (config.remote && config.remote.cookie) {
+			this.cookie = config.remote.cookie;
+		} else {
 			this.cookie = null;
 		}
 	}

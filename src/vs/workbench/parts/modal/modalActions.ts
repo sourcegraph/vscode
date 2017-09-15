@@ -28,6 +28,22 @@ export class ShowOnboardingModalAction extends Action {
 }
 
 /**
+ * Sign in modal
+ */
+export class ShowSignInModalAction extends Action {
+	public static ID = 'sg.modal.showSignInModal';
+	public static LABEL = localize('sg.modal.showSignInModal', "Show Sign In Modal");
+
+	constructor(id: string, label: string, @ICommandService private commandService: ICommandService, @ITelemetryService private telemetryService: ITelemetryService) {
+		super(id, label);
+	}
+	public run(): TPromise<void> {
+		this.telemetryService.publicLog('SignInModalInitiated');
+		return this.commandService.executeCommand('sg.modal.pushModal', ModalIdentifiers.SIGNIN) as TPromise<any>;
+	}
+}
+
+/**
  * Clear all modals
  */
 export class ClearAllModalsAction extends Action {

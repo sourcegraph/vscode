@@ -553,6 +553,11 @@
           "when": "config.git.enabled && scmProvider == git"
         },
         {
+          "command": "git.stageAll",
+          "group": "4_stage",
+          "when": "config.git.enabled && scmProvider == git"
+        },
+        {
           "command": "git.unstageAll",
           "group": "4_stage",
           "when": "config.git.enabled && scmProvider == git"
@@ -832,7 +837,7 @@
   },
   "devDependencies": {
     "@types/mocha": "^2.2.41",
-    "@types/node": "^7.0.4",
+    "@types/rimraf": "^2.0.2",
     "mocha": "^3.2.0"
   }
 }

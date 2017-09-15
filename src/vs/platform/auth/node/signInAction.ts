@@ -1,0 +1,30 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Sourcegraph. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+'use strict';
+
+import { TPromise } from 'vs/base/common/winjs.base';
+import { Action } from 'vs/base/common/actions';
+import { localize } from 'vs/nls';
+import { IAuthService } from 'vs/platform/auth/common/auth';
+
+/**
+ * Sign in action creates a SignInModal, which itself guides the user through signing in or registering a Sourcegraph account
+ */
+export class SignInAction extends Action {
+	public static ID = 'remote.auth.signInAction';
+	public static LABEL = localize('remote.auth.signInLabel', "Sign In or Sign Up To Sourcegraph");
+
+	constructor(
+		id: string,
+		label: string,
+		@IAuthService private authService: IAuthService
+	) {
+		super(id, label);
+	}
+
+	public run(): TPromise<void> {
+		return TPromise.as(this.authService.showSignInFlow());
+	}
+}

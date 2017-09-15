@@ -80,7 +80,13 @@ export function formatFragment(args: FragmentArgs): string {
 export function parseSelection(range: string): Selection | undefined {
 	let m = range.match(/^L?(\d+)(?::(\d+))?(?:-(\d+)(?::(\d+))?)?$/);
 	if (m) {
-		const sel: Selection = { startLineNumber: Number(m[1]) };
+		const line = Number(m[1]);
+		const sel: Selection = {
+			startLineNumber: line,
+			startColumn: 1,
+			endLineNumber: line,
+			endColumn: 1,
+		};
 		if (typeof m[2] === 'string') { sel.startColumn = Number(m[2]); }
 		if (typeof m[3] === 'string') { sel.endLineNumber = Number(m[3]); }
 		if (typeof m[4] === 'string') { sel.endColumn = Number(m[4]); }
