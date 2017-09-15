@@ -7,7 +7,7 @@
 
 import * as os from 'os';
 import * as path from 'path';
-import { workspace, Uri, Disposable } from 'vscode';
+import { workspace, Uri, Disposable, window, ProgressLocation } from 'vscode';
 import { Git, IGitErrorData } from './git';
 import { CommandCenter } from './commands';
 import { mkdirp, replaceVariables } from './util';
@@ -73,7 +73,14 @@ export class GitResourceResolver {
 		const folderPath = this.getFolderPath(resource);
 		await mkdirp(path.dirname(folderPath));
 		try {
-			await this.git.exec(path.dirname(folderPath), ['clone', resource.toString(), folderPath]);
+			const clonePromise = this.git.exec(path.dirname(folderPath), ['clone', resource.toString(), folderPath]);
+			const displayName = canonicalResource || resource.toString();
+
+			window.withProgress({ location: ProgressLocation.SourceControl, title: localize('cloning', "Cloning {0}...", displayName) }, () => clonePromise);
+			window.withProgress({ location: ProgressLocation.Window, title: localize('cloning', "Cloning {0}...", displayName) }, () => clonePromise);
+
+			await clonePromise;
+
 			return Uri.file(folderPath);
 		} catch (anyErr) {
 			const err = anyErr as IGitErrorData;

@@ -5,7 +5,7 @@
 
 'use strict';
 
-import Event, { Emitter, filterEvent, toPromise } from 'vs/base/common/event';
+import Event, { Emitter, filterEvent } from 'vs/base/common/event';
 import * as paths from 'vs/base/common/paths';
 import * as arrays from 'vs/base/common/arrays';
 import { localize } from 'vs/nls';
@@ -24,6 +24,7 @@ import { ISCMService, ISCMRepository } from 'vs/workbench/services/scm/common/sc
 import { IProgressService2, IProgressOptions, ProgressLocation } from 'vs/platform/progress/common/progress';
 import { IWorkspaceEditingService } from 'vs/workbench/services/workspace/common/workspaceEditing';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
+import { IResourceResolverService } from 'vs/platform/resourceResolver/common/resourceResolver';
 
 interface IWorkspaceFolderStateProvider {
 	(folder: Folder): WorkspaceFolderState;
@@ -206,6 +207,7 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 		@IProgressService2 private progressService: IProgressService2,
 		@IWorkspaceEditingService private workspaceEditingService: IWorkspaceEditingService,
 		@IConfigurationService private configurationService: IConfigurationService,
+		@IResourceResolverService private resourceResolverService: IResourceResolverService,
 	) {
 		this.stateProvider = folder => this.getFolderState(folder);
 
@@ -361,34 +363,10 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 	}
 
 	public addFoldersAsWorkspaceRootFolders(anyFolders: (IFolder | URI)[]): TPromise<URI[]> {
-		const allPromise = this.workspaceEditingService.addFolders(anyFolders.map(folder => folder instanceof URI ? folder : folder.resource))
-			.then(() => this.configurationService.reloadConfiguration());
-
-		const folders = anyFolders.map(folder => folder instanceof URI ? new Folder(this, this.stateProvider, folder) : folder);
-		return TPromise.join(folders.map(folder => {
-			let folderPromise: TPromise<void>;
-			if (this.getWorkspaceFolderForCatalogFolder(folder)) {
-				// Folder is already added and ready.
-				folderPromise = TPromise.as(void 0);
-			} else {
-				// Wait for each folder to be added as a root and for its SCM provider to be ready.
-				folderPromise = allPromise.then(() => {
-					// Check if the SCM provider is already ready (or perhaps it was there before
-					// but just wasn't a root).
-					if (this.getWorkspaceFolderForCatalogFolder(folder)) {
-						return void 0;
-					}
-
-					// Wait for the SCM provider to be ready.
-					return toPromise(filterEvent(this.onChange, () => !!this.getWorkspaceFolderForCatalogFolder(folder)));
-				});
-			}
-
-			// Monitor the progress of the entire operation (addRoots, reloadConfiguration, and SCM ready).
-			this.monitorFolderOperation(folder, FolderOperation.Adding, folderPromise);
-
-			return folderPromise.then(() => this.getWorkspaceFolderForCatalogFolder(folder));
-		}));
+		const uris = anyFolders.map(folder => folder instanceof URI ? folder : folder.resource);
+		return this.workspaceEditingService.addFolders(uris)
+			.then(() => this.configurationService.reloadConfiguration())
+			.then(() => TPromise.join(uris.map(this.resourceResolverService.resolveResource)));
 	}
 
 	public removeFoldersAsWorkspaceRootFolders(folders: IFolder[]): TPromise<void> {
