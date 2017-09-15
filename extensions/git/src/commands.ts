@@ -13,10 +13,10 @@ import { toGitUri, fromGitUri } from './uri';
 import { applyLineChanges, intersectDiffWithRange, toLineRanges, invertLineChange } from './staging';
 import * as path from 'path';
 import * as os from 'os';
-import * as fs from 'fs';
 import TelemetryReporter from 'vscode-extension-telemetry';
 import * as nls from 'vscode-nls';
 import { getTempDirectory, getGoPackagePrefix, setUpGoConfiguration } from './tempFolder';
+import { pathExists } from './nodeutil';
 
 const localize = nls.loadMessageBundle();
 
@@ -1061,8 +1061,7 @@ export class CommandCenter {
 			dst = path.join(tempFolder, path.basename(repository.root));
 		}
 
-		const exists = await new Promise<boolean>(resolve => fs.access(dst, fs.constants.F_OK, err => err ? resolve(false) : resolve(true)));
-		if (!exists) {
+		if (await pathExists(dst)) {
 			await this.worktreePrune(repository);
 			await this.addWorktree(repository, dst, rev);
 			if (goPackagePrefix) {

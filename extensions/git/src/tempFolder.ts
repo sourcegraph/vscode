@@ -8,11 +8,11 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import * as fs from 'fs';
-import * as cp from 'child_process';
 import * as rimraf from 'rimraf';
 import * as nls from 'vscode-nls';
 import { mkdirp } from './util';
 import { Repository } from './repository';
+import { readFile, writeFile, execFile, pathExists } from './nodeutil';
 import os = require('os');
 
 const localize = nls.loadMessageBundle();
@@ -60,20 +60,20 @@ export async function getTempDirectory(key: string): Promise<string> {
  */
 export async function setUpGoConfiguration(srcRepo: Repository, tempDir: string, workspaceRoot: string) {
 	const workspaceSettingsPath = path.join(workspaceRoot, '.vscode', 'settings.json');
-	if (await new Promise(resolve => fs.access(workspaceSettingsPath, fs.constants.F_OK, err => err ? resolve(false) : resolve(true)))) {
-		const data = await new Promise<string>((resolve, reject) => fs.readFile(workspaceSettingsPath, 'utf8', (err, data) => err ? reject(err) : resolve(data)));
+	if (await pathExists(workspaceSettingsPath)) {
+		const data = await readFile(workspaceSettingsPath, 'utf8');
 		const settings = JSON.parse(data);
 		if (settings['go.gopath']) {
 			settings['go.gopath'] = [tempDir, settings['go.gopath']].join(path.delimiter);
 		} else {
 			settings['go.gopath'] = tempDir;
 		}
-		await new Promise((resolve, reject) => fs.writeFile(workspaceSettingsPath, JSON.stringify(settings), 'utf8', err => err ? reject(err) : resolve()));
+		await writeFile(workspaceSettingsPath, JSON.stringify(settings), 'utf8');
 	} else {
 		const currentGoPath = getCurrentGoPath(vscode.Uri.file(srcRepo.root));
 		await mkdirp(path.dirname(workspaceSettingsPath));
 		const settings = { 'go.gopath': [tempDir, currentGoPath].join(path.delimiter) };
-		await new Promise((resolve, reject) => fs.writeFile(workspaceSettingsPath, JSON.stringify(settings), 'utf8', err => err ? reject(err) : resolve()));
+		await writeFile(workspaceSettingsPath, JSON.stringify(settings), 'utf8');
 	}
 }
 
@@ -87,7 +87,11 @@ export async function getGoPackagePrefix(dir: string): Promise<string | null> {
 	}
 
 	const env: any = getToolsEnvVars();
-	const out = await new Promise<string>((resolve, reject) => cp.execFile(goRuntimePath, ['list', '-f', '[{{ printf "%q" .ImportPath }}, {{ printf "%q" .Dir }}]', './...'], { env: env, cwd: dir }, (err, stdout) => err ? reject(err) : resolve(stdout)));
+	const [out] = await execFile(
+		goRuntimePath,
+		['list', '-f', '[{{ printf "%q" .ImportPath }}, {{ printf "%q" .Dir }}]', './...'],
+		{ env: env, cwd: dir },
+	);
 	const lines = out.split(/\r?\n/);
 	for (const line of lines) {
 		const pkgAndDir = JSON.parse(line);
