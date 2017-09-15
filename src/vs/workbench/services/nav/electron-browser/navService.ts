@@ -192,7 +192,7 @@ export class NavService extends Disposable implements INavService {
 			`repo=${encodeURIComponent(repository.provider.remoteResources[0].toString())}`,
 			'vcs=git',
 			repository.provider.revision ? `revision=${encodeURIComponent(repository.provider.revision.specifier)}` : undefined,
-			`path=${encodeURIComponent(paths.relative(repository.provider.rootFolder.fsPath, resource.fsPath))}`,
+			`path=${encodeURIComponent(paths.relative(repository.provider.rootUri.fsPath, resource.fsPath))}`,
 			selection ? `selection=${selection}` : undefined,
 		].filter(v => !!v);
 		// const uri = URI.from({ scheme: product.urlProtocol, path: 'open', query })

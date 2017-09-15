@@ -50,7 +50,6 @@ import * as paths from 'vs/base/common/paths';
 import { MainContext, ExtHostContext, IInitData } from './extHost.protocol';
 import * as languageConfiguration from 'vs/editor/common/modes/languageConfiguration';
 import { TextEditorCursorStyle } from 'vs/editor/common/config/editorOptions';
-import * as types from 'vs/base/common/types';
 import { ExtHostThreadService } from 'vs/workbench/services/thread/node/extHostThreadService';
 import { ProxyIdentifier } from 'vs/workbench/services/thread/common/threadService';
 import { ExtHostDialogs } from 'vs/workbench/api/node/extHostDialogs';
@@ -493,14 +492,14 @@ export function createApiFactory(
 			get inputBox() {
 				return extHostSCM.getLastInputBox(extension);
 			},
-			createSourceControl(id: string, arg: any) {
+			createSourceControl(id: string, label: string, rootUri?: vscode.Uri) {
 				mainThreadTelemetry.$publicLog('registerSCMProvider', {
 					extensionId: extension.id,
 					providerId: id,
-					providerLabel: types.isString(arg) ? arg : arg.label,
+					providerLabel: label,
 				});
 
-				return extHostSCM.createSourceControl(extension, id, arg);
+				return extHostSCM.createSourceControl(extension, id, label, rootUri);
 			},
 			getSourceControlForResource(resource: vscode.Uri) {
 				return extHostSCM.getSourceControlForResource(resource);
