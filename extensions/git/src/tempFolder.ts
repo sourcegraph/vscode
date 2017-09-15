@@ -87,14 +87,24 @@ export async function getGoPackagePrefix(dir: string): Promise<string | null> {
 	}
 
 	const env: any = getToolsEnvVars();
-	const [out] = await execFile(
-		goRuntimePath,
-		['list', '-f', '[{{ printf "%q" .ImportPath }}, {{ printf "%q" .Dir }}]', './...'],
-		{ env: env, cwd: dir },
-	);
-	const lines = out.split(/\r?\n/);
+	let out: string;
+	try {
+		[out] = await execFile(
+			goRuntimePath,
+			['list', '-f', '[{{ printf "%q" .ImportPath }}, {{ printf "%q" .Dir }}]', './...'],
+			{ env: env, cwd: dir },
+		);
+	} catch (e) {
+		return null;
+	}
+	const lines = out.trim().split(/\r?\n/);
 	for (const line of lines) {
-		const pkgAndDir = JSON.parse(line);
+		let pkgAndDir;
+		try {
+			pkgAndDir = JSON.parse(line);
+		} catch {
+			continue;
+		}
 		if (!Array.isArray(pkgAndDir) || pkgAndDir.length !== 2) {
 			continue;
 		}
