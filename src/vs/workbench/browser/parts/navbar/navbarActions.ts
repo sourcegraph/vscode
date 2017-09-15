@@ -99,17 +99,16 @@ export class ShareLocationAction extends Action {
 	}
 
 	public run(): TPromise<any> {
-		const location = this.navService.getShareableLocation();
-		this.clipboardService.writeText(location);
+		return this.navService.getShareableLocation().then(location => {
+			this.clipboardService.writeText(location);
 
-		if (this.partService.isVisible(Parts.NAVBAR_PART)) {
-			const navbarPart = this.navBarService as NavbarPart;
-			if (navbarPart.locationBarInput) {
-				navbarPart.locationBarInput.showMessage(nls.localize('copiedShareableLocation', "Copied shareable link to current file and position."));
+			if (this.partService.isVisible(Parts.NAVBAR_PART)) {
+				const navbarPart = this.navBarService as NavbarPart;
+				if (navbarPart.locationBarInput) {
+					navbarPart.locationBarInput.showMessage(nls.localize('copiedShareableLocation', "Copied shareable link to current file and position."));
+				}
 			}
-		}
-
-		return TPromise.as(null);
+		});
 	}
 }
 

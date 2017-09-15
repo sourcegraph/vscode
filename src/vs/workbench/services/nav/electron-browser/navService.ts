@@ -165,7 +165,7 @@ export class NavService extends Disposable implements INavService {
 		return this.location;
 	}
 
-	public getShareableLocation(): string {
+	public getShareableLocation(): TPromise<string> {
 		const { stack, index } = this.historyService.getStack();
 		const entry = stack[index];
 
@@ -181,22 +181,31 @@ export class NavService extends Disposable implements INavService {
 			throw new Error(nls.localize('noRepository', "Unable to determine the repository, which is necessary to make a shareable URL."));
 		}
 
-		// Get the selection directly from the editor because the history service only records
-		// positions, not selections.
-		let selection: string | undefined = undefined;
-		const control = getCodeEditor(this.editorService.getActiveEditor());
-		if (control) {
-			selection = control.getSelections().map(formatSelection).filter(s => !!s).join(',');
-		}
-		const query = [
-			`repo=${encodeURIComponent(repository.provider.remoteResources[0].toString())}`,
-			'vcs=git',
-			repository.provider.revision ? `revision=${encodeURIComponent(repository.provider.revision.specifier)}` : undefined,
-			`path=${encodeURIComponent(paths.relative(repository.provider.rootFolder.fsPath, resource.fsPath))}`,
-			selection ? `selection=${selection}` : undefined,
-		].filter(v => !!v);
-		// const uri = URI.from({ scheme: product.urlProtocol, path: 'open', query })
-		return 'https://about.sourcegraph.com/open-native#open?' + query.join('&');
+		// We need to pick a remoteResource URI. We prefer the current branch's remote, so we try to get that first.
+		return repository.provider.executeCommand(['ls-remote', '--get-url']).then(stdout => {
+			return stdout.trim();
+		}, () => '').then(remote => {
+			if (!remote) {
+				remote = repository.provider.remoteResources[0].toString();
+			}
+
+			// Get the selection directly from the editor because the history service only records
+			// positions, not selections.
+			let selection: string | undefined = undefined;
+			const control = getCodeEditor(this.editorService.getActiveEditor());
+			if (control) {
+				selection = control.getSelections().map(formatSelection).filter(s => !!s).join(',');
+			}
+			const query = [
+				`repo=${encodeURIComponent(remote)}`,
+				'vcs=git',
+				repository.provider.revision ? `revision=${encodeURIComponent(repository.provider.revision.specifier)}` : undefined,
+				`path=${encodeURIComponent(paths.relative(repository.provider.rootFolder.fsPath, resource.fsPath))}`,
+				selection ? `selection=${selection}` : undefined,
+			].filter(v => !!v);
+			// const uri = URI.from({ scheme: product.urlProtocol, path: 'open', query })
+			return 'https://about.sourcegraph.com/open-native#open?' + query.join('&');
+		});
 	}
 
 	private onHistoryChange(): void {
