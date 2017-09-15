@@ -497,7 +497,7 @@ export class Repository implements Disposable {
 
 			return this.repository.run(args, runOptions)
 				.then(result => {
-					return Promise.resolve(result.stdout);
+					return result.stdout;
 				}, error => {
 					throw Object.assign(new Error(error.stderr), { args, error });
 				});
