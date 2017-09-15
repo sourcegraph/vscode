@@ -17,7 +17,7 @@ import { Schemas } from 'vs/base/common/network';
 import { startsWith } from 'vs/base/common/strings';
 import { IRemoteService, requestGraphQL, requestGraphQLMutation } from 'vs/platform/remote/node/remote';
 import { TPromise } from 'vs/base/common/winjs.base';
-import { first, uniqueFilter } from 'vs/base/common/arrays';
+import { first, uniqueFilter, coalesce } from 'vs/base/common/arrays';
 import { IInstantiationService, ServicesAccessor } from 'vs/platform/instantiation/common/instantiation';
 import { IModelService } from 'vs/editor/common/services/modelService';
 import { ICommonCodeEditor, IModel } from 'vs/editor/common/editorCommon';
@@ -666,13 +666,14 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 				const startCharacter = range.startColumn;
 				const endCharacter = range.endColumn;
 				return { remoteURI, accessToken, file, revision, startLine, endLine, startCharacter, endCharacter, authorName, authorEmail };
+			})
+			.then(undefined, err => {
+				const errors = coalesce(Array.isArray(err) ? err : [err]);
+				const error = errors[0];
+				messageService.show(Severity.Error, error.message);
+				this.dispose();
+				throw error;
 			});
-		// Handle the error separately so that
-		// 1. The promise doesn't complain that it doesn't have an error handler.
-		// 2. The promise that is returned by submit will still be failed with an error.
-		this.submitData.done(undefined, err => {
-			messageService.show(Severity.Error, err.toString());
-		});
 	}
 
 	private join<T1, T2, T3, T4, T5, T6, T7>(promises: [PromiseLike<T1>, PromiseLike<T2>, PromiseLike<T3>, PromiseLike<T4>, PromiseLike<T5>, PromiseLike<T6>, PromiseLike<T7>]): TPromise<[T1, T2, T3, T4, T5, T6, T7]> {

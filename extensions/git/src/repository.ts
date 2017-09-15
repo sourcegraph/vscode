@@ -495,13 +495,12 @@ export class Repository implements Disposable {
 				}
 			}
 
-			return this.repository.run(args, runOptions).then(result => {
-				if (result.exitCode !== 0) {
-					const msg = `'git ${args.join('')}' failed with exitCode=${result.exitCode} stderr: ${result.stderr}`;
-					return Promise.reject(Object.assign(new Error(msg), { args, result }));
-				}
-				return Promise.resolve(result.stdout);
-			});
+			return this.repository.run(args, runOptions)
+				.then(result => {
+					return Promise.resolve(result.stdout);
+				}, error => {
+					throw Object.assign(new Error(error.stderr), { args, error });
+				});
 		});
 	}
 
