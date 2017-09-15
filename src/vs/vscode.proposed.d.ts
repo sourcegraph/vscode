@@ -297,20 +297,6 @@ declare module 'vscode' {
 	export interface SourceControl {
 
 		/**
-		 * The [input box](#SourceControlInputBox) that specifies the resources for this
-		 * source control, typically containing a revision range.
-		 */
-		readonly specifierBox: SourceControlInputBox;
-
-		/**
-		 * Optional accept specifier command.
-		 *
-		 * This command will be invoked when the user accepts the value
-		 * in the Source Control specifier input.
-		 */
-		acceptSpecifierCommand?: Command;
-
-		/**
 		 * The root (top-level) folder of the source control repository.
 		 */
 		readonly rootFolder?: Uri;

@@ -360,11 +360,6 @@ export type SCMRawResource = [
 	boolean /*faded*/
 ];
 
-export enum InputHandle {
-	InputBox = 0,
-	SpecifierBox = 1,
-}
-
 export type SCMRawResourceSplice = [
 	number /* start */,
 	number /* delete count */,
@@ -388,7 +383,7 @@ export interface MainThreadSCMShape extends IDisposable {
 
 	$spliceResourceStates(sourceControlHandle: number, splices: SCMRawResourceSplices[]): void;
 
-	$setInputBoxValue(sourceControlHandle: number, inputHandle: InputHandle, value: string): void;
+	$setInputBoxValue(sourceControlHandle: number, value: string): void;
 }
 
 export type DebugSessionUUID = string;
@@ -582,7 +577,7 @@ export interface ExtHostTerminalServiceShape {
 export interface ExtHostSCMShape {
 	$executeCommand(sourceControlHandle: number, args: string[], options: ICommandOptions | undefined): TPromise<string>;
 	$provideOriginalResource(sourceControlHandle: number, uri: URI): TPromise<URI>;
-	$onInputBoxValueChange(sourceControlHandle: number, inputHandle: InputHandle, value: string): TPromise<void>;
+	$onInputBoxValueChange(sourceControlHandle: number, value: string): TPromise<void>;
 	$executeResourceCommand(sourceControlHandle: number, groupHandle: number, handle: number): TPromise<void>;
 }
 

@@ -13,7 +13,7 @@ import { asWinJsPromise } from 'vs/base/common/async';
 import { TrieMap } from 'vs/base/common/map';
 import { IExtensionDescription } from 'vs/platform/extensions/common/extensions';
 import { ExtHostCommands } from 'vs/workbench/api/node/extHostCommands';
-import { MainContext, MainThreadSCMShape, SCMRawResource, SCMRawResourceSplice, SCMRawResourceSplices, IMainContext, InputHandle } from './extHost.protocol';
+import { MainContext, MainThreadSCMShape, SCMRawResource, SCMRawResourceSplice, SCMRawResourceSplices, IMainContext } from './extHost.protocol';
 import { sortedDiff } from 'vs/base/common/arrays';
 import { comparePaths } from 'vs/base/common/comparers';
 import * as vscode from 'vscode';
@@ -119,7 +119,7 @@ export class ExtHostSCMInputBox {
 	}
 
 	set value(value: string) {
-		this._proxy.$setInputBoxValue(this._sourceControlHandle, this._inputHandle, value);
+		this._proxy.$setInputBoxValue(this._sourceControlHandle, value);
 		this.updateValue(value);
 	}
 
@@ -129,7 +129,7 @@ export class ExtHostSCMInputBox {
 		return this._onDidChange.event;
 	}
 
-	constructor(private _proxy: MainThreadSCMShape, private _sourceControlHandle: number, private _inputHandle: InputHandle) {
+	constructor(private _proxy: MainThreadSCMShape, private _sourceControlHandle: number) {
 		// noop
 	}
 
@@ -292,9 +292,6 @@ class ExtHostSourceControl implements vscode.SourceControl {
 	private _inputBox: ExtHostSCMInputBox;
 	get inputBox(): ExtHostSCMInputBox { return this._inputBox; }
 
-	private _specifierBox: ExtHostSCMInputBox;
-	get specifierBox(): ExtHostSCMInputBox { return this._specifierBox; }
-
 	public commandExecutor?: vscode.CommandExecutor;
 
 	private _count: number | undefined = undefined;
@@ -341,19 +338,6 @@ class ExtHostSourceControl implements vscode.SourceControl {
 
 		const internal = this._commands.converter.toInternal(acceptInputCommand);
 		this._proxy.$updateSourceControl(this.handle, { acceptInputCommand: internal });
-	}
-
-	private _acceptSpecifierCommand: vscode.Command | undefined = undefined;
-
-	get acceptSpecifierCommand(): vscode.Command | undefined {
-		return this._acceptSpecifierCommand;
-	}
-
-	set acceptSpecifierCommand(acceptSpecifierCommand: vscode.Command | undefined) {
-		this._acceptSpecifierCommand = acceptSpecifierCommand;
-
-		const internal = this._commands.converter.toInternal(acceptSpecifierCommand);
-		this._proxy.$updateSourceControl(this.handle, { acceptSpecifierCommand: internal });
 	}
 
 	private _statusBarCommands: vscode.Command[] | undefined = undefined;
@@ -419,8 +403,7 @@ class ExtHostSourceControl implements vscode.SourceControl {
 		private _label: string,
 		private _rootFolder: URI,
 	) {
-		this._inputBox = new ExtHostSCMInputBox(this._proxy, this.handle, InputHandle.InputBox);
-		this._specifierBox = new ExtHostSCMInputBox(this._proxy, this.handle, InputHandle.SpecifierBox);
+		this._inputBox = new ExtHostSCMInputBox(this._proxy, this.handle);
 		this._proxy.$registerSourceControl(this.handle, _id, _label, _rootFolder);
 	}
 
@@ -593,18 +576,14 @@ export class ExtHostSCM {
 		});
 	}
 
-	$onInputBoxValueChange(sourceControlHandle: number, inputHandle: InputHandle, value: string): TPromise<void> {
+	$onInputBoxValueChange(sourceControlHandle: number, value: string): TPromise<void> {
 		const sourceControl = this._sourceControls.get(sourceControlHandle);
 
 		if (!sourceControl) {
 			return TPromise.as(null);
 		}
 
-		switch (inputHandle) {
-			case InputHandle.InputBox: sourceControl.inputBox.$onInputBoxValueChange(value); break;
-			case InputHandle.SpecifierBox: sourceControl.specifierBox.$onInputBoxValueChange(value); break;
-		}
-
+		sourceControl.inputBox.$onInputBoxValueChange(value);
 		return TPromise.as(null);
 	}
 

@@ -24,7 +24,6 @@
 	"command.commitAllAmend": "Commit All (Amend)",
 	"command.undoCommit": "Undo Last Commit",
 	"command.checkout": "Checkout to...",
-	"command.specifyComparison": "Specify Comparison Range or Revision...",
 	"command.addWorktree": "Create Worktree...",
 	"command.addTempWorktree": "Create Temp Worktree...",
 	"command.branch": "Create Branch...",

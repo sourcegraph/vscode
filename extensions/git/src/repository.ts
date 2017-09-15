@@ -6,7 +6,7 @@
 'use strict';
 
 import { Uri, Command, EventEmitter, Event, scm, SourceControl, SourceControlInputBox, CommandOptions, SourceControlResourceGroup, SourceControlResourceState, SourceControlResourceDecorations, Disposable, ProgressLocation, window, workspace, WorkspaceEdit } from 'vscode';
-import { Repository as BaseRepository, Ref, Branch, Remote, Commit, GitErrorCodes, Stash, RefType, IFileDiff } from './git';
+import { Repository as BaseRepository, Ref, Branch, Remote, Commit, GitErrorCodes, Stash, RefType } from './git';
 import { anyEvent, filterEvent, eventToPromise, dispose, find } from './util';
 import { memoize, throttle, debounce } from './decorators';
 import { toGitUri } from './uri';
@@ -221,7 +221,6 @@ export enum Operation {
 	Stash = 1 << 19,
 	ExecuteCommand = 1 << 20,
 	AddWorktree = 1 << 21,
-	SpecifyComparison = 1 << 22,
 	WorktreePrune = 1 << 23,
 }
 
@@ -332,8 +331,6 @@ export class Repository implements Disposable {
 
 	get inputBox(): SourceControlInputBox { return this._sourceControl.inputBox; }
 
-	get specifierBox(): SourceControlInputBox { return this._sourceControl.specifierBox; }
-
 	private _mergeGroup: SourceControlResourceGroup;
 	get mergeGroup(): GitResourceGroup { return this._mergeGroup as GitResourceGroup; }
 
@@ -342,9 +339,6 @@ export class Repository implements Disposable {
 
 	private _workingTreeGroup: SourceControlResourceGroup;
 	get workingTreeGroup(): GitResourceGroup { return this._workingTreeGroup as GitResourceGroup; }
-
-	private _committedGroup: SourceControlResourceGroup;
-	get committedGroup(): GitResourceGroup { return this._committedGroup as GitResourceGroup; }
 
 	private _compareLeft: string | undefined;
 	private _compareRight: string | undefined;
@@ -385,7 +379,6 @@ export class Repository implements Disposable {
 		this.mergeGroup.resourceStates = [];
 		this.indexGroup.resourceStates = [];
 		this.workingTreeGroup.resourceStates = [];
-		this.committedGroup.resourceStates = [];
 		this._sourceControl.count = 0;
 		this._sourceControl.revision = { rawSpecifier: 'HEAD' };
 	}
@@ -423,12 +416,6 @@ export class Repository implements Disposable {
 		this._sourceControl.commandExecutor = this;
 		this.disposables.push(this._sourceControl);
 
-		this._sourceControl.acceptSpecifierCommand = {
-			command: 'git.specifyComparisonWithInput',
-			title: localize('specifyComparison', "Specify Git Comparison Target (Diff Base or Working Tree Status)"),
-			arguments: [this._sourceControl],
-		};
-
 		this._sourceControl.setRevisionCommand = {
 			command: 'git.checkout',
 			title: localize('checkout', "Git Checkout"),
@@ -438,16 +425,13 @@ export class Repository implements Disposable {
 		this._mergeGroup = this._sourceControl.createResourceGroup('merge', localize('merge changes', "Merge Changes"));
 		this._indexGroup = this._sourceControl.createResourceGroup('index', localize('staged changes', "Staged Changes"));
 		this._workingTreeGroup = this._sourceControl.createResourceGroup('workingTree', localize('changes', "Changes"));
-		this._committedGroup = this._sourceControl.createResourceGroup('committed', localize('committed changes', "Committed Changes"));
 
 		this.mergeGroup.hideWhenEmpty = true;
 		this.indexGroup.hideWhenEmpty = true;
-		this.committedGroup.hideWhenEmpty = true;
 
 		this.disposables.push(this.mergeGroup);
 		this.disposables.push(this.indexGroup);
 		this.disposables.push(this.workingTreeGroup);
-		this.disposables.push(this.committedGroup);
 
 		this.disposables.push(new AutoFetcher(this));
 
@@ -590,10 +574,6 @@ export class Repository implements Disposable {
 
 	async checkout(treeish: string): Promise<void> {
 		await this.run(Operation.Checkout, () => this.repository.checkout(treeish, []));
-	}
-
-	async specifyComparison(revisionOrRangeSpecifier: string): Promise<void> {
-		await this.run(Operation.SpecifyComparison, () => this.updateModelState());
 	}
 
 	async addWorktree(worktreeDir: string, ref: string): Promise<void> {
@@ -763,29 +743,7 @@ export class Repository implements Disposable {
 
 	@throttle
 	private async updateModelState(): Promise<void> {
-		const { status, didHitLimit: statusDidHitLimit } = await this.repository.getStatus();
-
-		let specifierArgs: string[] | undefined;
-		let diff: IFileDiff[] = [];
-		let diffDidHitLimit = false;
-		if (this.specifierBox.value) {
-			// HACK(sqs): special-case interpolate the merge-base so that it supports branch diffs vs. the working tree.
-			const mergeBaseArg = '$(git merge-base origin/master)';
-			let argString = this.specifierBox.value;
-			if (argString.includes(mergeBaseArg)) {
-				const result = await this.repository.run(['merge-base', 'origin/master', 'HEAD']);
-				if (result.stdout) {
-					const mergeBase = result.stdout.trim();
-					argString = argString.replace(mergeBaseArg, mergeBase);
-				}
-			}
-			specifierArgs = argString.split(/\s+/);
-
-			({ diff, didHitLimit: diffDidHitLimit } = await this.repository.getDiff(specifierArgs));
-		}
-
-		const didHitLimit = statusDidHitLimit || diffDidHitLimit;
-
+		const { status, didHitLimit } = await this.repository.getStatus();
 		const config = workspace.getConfiguration('git');
 		const shouldIgnore = config.get<boolean>('ignoreLimitWarning') === true;
 
@@ -818,43 +776,6 @@ export class Repository implements Disposable {
 			}
 		} catch (err) {
 			// noop
-		}
-
-		// Determine the comparison revision range.
-		//
-		// If a single revision is specified, then the other point of comparison is our working
-		// tree (and the right-side diff editor should be editable). If a range is specifed,
-		// then the other point of comparison is a revision and the right side is NOT editable.
-		this._compareLeft = undefined;
-		this._compareRight = undefined;
-		if (specifierArgs) {
-			// The specifier input can contain any args to `git diff`, but we only want to consider
-			// args that refer to revisions.
-			//
-			// Ignore args that are not valid revs. Also ignore '--' arg and anything following it.
-			let revisionArgs: string[] = [];
-			for (const arg of specifierArgs) {
-				if (arg === '--') {
-					break;
-				}
-				if (arg.startsWith('-')) {
-					continue;
-				}
-				try {
-					const parsed = await this.repository.revParse(['--verify', arg + '^{commit}']);
-					revisionArgs.push(parsed[0]);
-				} catch (err) {
-					// `git diff` ignores invalid revisions like FOO in `git diff master FOO`, so
-					// we'll match that behavior and also ignore invalid revisions.
-				}
-			}
-
-			if (revisionArgs.length >= 2) {
-				this._compareLeft = revisionArgs[1].replace(/^\^/, '');
-				this._compareRight = revisionArgs[0];
-			} else {
-				this._compareLeft = revisionArgs[0] || 'HEAD';
-			}
 		}
 
 		const [refs, remotes] = await Promise.all([this.repository.getRefs(), this.repository.getRemotes()]);
@@ -899,29 +820,10 @@ export class Repository implements Disposable {
 			}
 		});
 
-		const committed: Resource[] = [];
-
-		diff.forEach(raw => {
-			const uri = Uri.file(path.join(this.repository.root, raw.path));
-			const renameUri = raw.rename ? Uri.file(path.join(this.repository.root, raw.rename)) : undefined;
-
-			switch (raw.status) {
-				case 'A': committed.push(new Resource(ResourceGroupType.Committed, uri, Status.ADDED)); break;
-				case 'C': committed.push(new Resource(ResourceGroupType.Committed, renameUri!, Status.COPIED, uri)); break;
-				case 'D': committed.push(new Resource(ResourceGroupType.Committed, uri, Status.DELETED)); break;
-				case 'M': committed.push(new Resource(ResourceGroupType.Committed, uri, Status.MODIFIED)); break;
-				case 'R': committed.push(new Resource(ResourceGroupType.Committed, renameUri!, Status.RENAMED, uri)); break;
-				case 'T': committed.push(new Resource(ResourceGroupType.Committed, uri, Status.MODIFIED)); break;
-				case 'U': committed.push(new Resource(ResourceGroupType.Committed, uri, Status.BOTH_MODIFIED, renameUri)); break;
-				case 'X': committed.push(new Resource(ResourceGroupType.Committed, uri, Status.MODIFIED)); break;
-			}
-		});
-
 		// set resource groups
 		this.mergeGroup.resourceStates = merge;
 		this.indexGroup.resourceStates = index;
 		this.workingTreeGroup.resourceStates = workingTree;
-		this.committedGroup.resourceStates = committed;
 
 		// set count badge
 		const countBadge = workspace.getConfiguration('git').get<string>('countBadge');
