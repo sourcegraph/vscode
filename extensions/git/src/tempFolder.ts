@@ -83,7 +83,7 @@ export async function setUpGoConfiguration(srcRepo: Repository, tempDir: string,
 export async function getGoPackagePrefix(dir: string): Promise<string | null> {
 	const goRuntimePath = getGoRuntimePath();
 	if (!goRuntimePath) {
-		return Promise.resolve(null);
+		return null;
 	}
 
 	const env: any = getToolsEnvVars();

@@ -1061,7 +1061,7 @@ export class CommandCenter {
 			dst = path.join(tempFolder, path.basename(repository.root));
 		}
 
-		if (await pathExists(dst)) {
+		if (!await pathExists(dst)) {
 			await this.worktreePrune(repository);
 			await this.addWorktree(repository, dst, rev);
 			if (goPackagePrefix) {
