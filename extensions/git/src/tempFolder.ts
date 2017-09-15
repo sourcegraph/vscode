@@ -41,7 +41,7 @@ async function onDidChangeWorkspaceFolders(e: vscode.WorkspaceFoldersChangeEvent
 }
 
 /**
- * Returns a temporary folder keyed by @param key. If a temporary directory with that key already
+ * Returns a temporary folder keyed by a value. If a temporary directory with that key already
  * exists, returns the existing one; otherwise creates a new one. Temp folders are always immediate children
  * of the tmpRoot directory.
  */
@@ -76,7 +76,7 @@ export async function setUpGoConfiguration(srcRepo: Repository, tempDir: string,
 }
 
 /**
- * Returns the Go package prefix of @param dir.
+ * Returns the Go package prefix of a directory.
  */
 export async function getGoPackagePrefix(dir: string): Promise<string | null> {
 	const goRuntimePath = getGoRuntimePath();
