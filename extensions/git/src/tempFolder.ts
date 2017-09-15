@@ -27,6 +27,7 @@ export function activate(context: vscode.ExtensionContext) {
  * Handles removal of temp folders from disk when the corresponding workspace folder is removed from the workspace.
  */
 async function onDidChangeWorkspaceFolders(e: vscode.WorkspaceFoldersChangeEvent) {
+	const removals: Promise<void>[] = [];
 	for (const removed of e.removed) {
 		if (removed.uri.fsPath.startsWith(tmpRoot + path.sep)) {
 			const choice = await vscode.window.showInformationMessage(localize('deleteDirectoryContainingWorktreeWorkspaceFolder', "Delete directory containing the worktree workspace folder you just removed?"), deleteWord);
@@ -35,9 +36,10 @@ async function onDidChangeWorkspaceFolders(e: vscode.WorkspaceFoldersChangeEvent
 			}
 			const relpath = path.relative(tmpRoot, removed.uri.fsPath);
 			const firstCmp = relpath.split(path.sep)[0];
-			await new Promise<void>((resolve, reject) => rimraf(path.join(tmpRoot, firstCmp), (err) => err ? reject(err) : resolve()));
+			removals.push(new Promise<void>((resolve, reject) => rimraf(path.join(tmpRoot, firstCmp), (err) => err ? reject(err) : resolve())));
 		}
 	}
+	await Promise.all(removals);
 }
 
 /**
