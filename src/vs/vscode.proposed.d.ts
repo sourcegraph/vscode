@@ -351,15 +351,6 @@ declare module 'vscode' {
 	export namespace scm {
 
 		/**
-		 * Creates a new [source control](#SourceControl) instance.
-		 *
-		 * @param id A unique `id` for the source control. Something short, eg: `git`.
-		 * @param options Options for creating the source control.
-		 * @return An instance of [source control](#SourceControl).
-		 */
-		export function createSourceControl(id: string, options: SourceControlOptions): SourceControl;
-
-		/**
 		 * Returns the source control for the given resource (by traversing up the directory
 		 * hierarchy until the first folder is found that is associated with an source
 		 * control). Can be undefined if the resource is not in any known source control.

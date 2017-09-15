@@ -17,7 +17,6 @@ import { MainContext, MainThreadSCMShape, SCMRawResource, SCMRawResourceSplice, 
 import { sortedDiff } from 'vs/base/common/arrays';
 import { comparePaths } from 'vs/base/common/comparers';
 import * as vscode from 'vscode';
-import * as types from 'vs/base/common/types';
 
 type ProviderHandle = number;
 type GroupHandle = number;
@@ -289,6 +288,10 @@ class ExtHostSourceControl implements vscode.SourceControl {
 		return this._label;
 	}
 
+	get rootUri(): vscode.Uri | undefined {
+		return this._rootUri;
+	}
+
 	private _inputBox: ExtHostSCMInputBox;
 	get inputBox(): ExtHostSCMInputBox { return this._inputBox; }
 
@@ -353,10 +356,6 @@ class ExtHostSourceControl implements vscode.SourceControl {
 		this._proxy.$updateSourceControl(this.handle, { statusBarCommands: internal });
 	}
 
-	get rootFolder(): vscode.Uri | undefined {
-		return this._rootFolder;
-	}
-
 	private _revision: vscode.SCMRevision | undefined = undefined;
 
 	get revision(): vscode.SCMRevision {
@@ -401,10 +400,10 @@ class ExtHostSourceControl implements vscode.SourceControl {
 		private _commands: ExtHostCommands,
 		private _id: string,
 		private _label: string,
-		private _rootFolder: URI,
+		private _rootUri?: vscode.Uri
 	) {
 		this._inputBox = new ExtHostSCMInputBox(this._proxy, this.handle);
-		this._proxy.$registerSourceControl(this.handle, _id, _label, _rootFolder);
+		this._proxy.$registerSourceControl(this.handle, _id, _label, _rootUri && _rootUri.toString());
 	}
 
 	private updatedResourceGroups = new Set<ExtHostSourceControlResourceGroup>();
@@ -458,7 +457,7 @@ class ExtHostSourceControl implements vscode.SourceControl {
 	}
 }
 
-type SourceControlRootFolder = { handle: number, rootFolder: string };
+type SourceControlRootFolder = { handle: number, rootUri: vscode.Uri };
 type SourceControlHandle = { handle: number };
 
 export class ExtHostSCM {
@@ -532,18 +531,13 @@ export class ExtHostSCM {
 		});
 	}
 
-	createSourceControl(extension: IExtensionDescription, id: string, label: string): vscode.SourceControl;
-	createSourceControl(extension: IExtensionDescription, id: string, options: vscode.SourceControlOptions): vscode.SourceControl;
-	createSourceControl(extension: IExtensionDescription, id: string, arg: string | vscode.SourceControlOptions): vscode.SourceControl {
-		if (types.isString(arg)) {
-			arg = { label: arg };
-		}
+	createSourceControl(extension: IExtensionDescription, id: string, label: string, rootUri: vscode.Uri | undefined): vscode.SourceControl {
 		const handle = ExtHostSCM._handlePool++;
-		const sourceControl = new ExtHostSourceControl(this._proxy, this._commands, id, arg.label, arg.rootFolder as URI);
+		const sourceControl = new ExtHostSourceControl(this._proxy, this._commands, id, label, rootUri);
 		this._sourceControls.set(handle, sourceControl);
 
-		if (arg.rootFolder) {
-			this._folderSourceControls.push({ handle, rootFolder: arg.rootFolder.toString() });
+		if (rootUri) {
+			this._folderSourceControls.push({ handle, rootUri });
 			this.updateFolderSourceControlsMap();
 		}
 
@@ -623,8 +617,8 @@ export class ExtHostSCM {
 
 	private updateFolderSourceControlsMap(): void {
 		this._folderSourceControlsMap = new TrieMap<SourceControlHandle>(TrieMap.PathSplitter);
-		for (const { handle, rootFolder } of this._folderSourceControls) {
-			this._folderSourceControlsMap.insert(rootFolder, { handle });
+		for (const { handle, rootUri } of this._folderSourceControls) {
+			this._folderSourceControlsMap.insert(rootUri.toString(), { handle });
 		}
 	}
 }

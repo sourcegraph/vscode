@@ -114,8 +114,8 @@ export class Renderer implements IRenderer {
 			badge,
 			disposables,
 			set repository(repository: ISCMRepository) {
-				scmRevisionAction.folderResource = repository.provider.rootFolder;
-				label.setFile(repository.provider.rootFolder, {
+				scmRevisionAction.folderResource = repository.provider.rootUri;
+				label.setFile(repository.provider.rootUri, {
 					hidePath: true,
 					extraClasses: ['repository'],
 					fileKind: FileKind.REPOSITORY,

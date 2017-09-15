@@ -84,7 +84,7 @@ export class ShowAllRepositoriesAction extends Action {
 			data.push({
 				// id: provider.id,
 				// label: provider.label,
-				root: provider.rootFolder ? provider.rootFolder.toString() : '',
+				root: provider.rootUri ? provider.rootUri.toString() : '',
 				'rev.rawSpecifier': provider.revision ? provider.revision.rawSpecifier : '',
 				// 'rev.specifier': provider.revision ? provider.revision.specifier : '',
 				'rev.id': provider.revision ? provider.revision.id : '',

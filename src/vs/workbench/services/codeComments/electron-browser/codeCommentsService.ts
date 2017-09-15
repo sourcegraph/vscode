@@ -786,10 +786,10 @@ function getPathRelativeToRepo(accessor: ServicesAccessor, file: URI): TPromise<
 	if (!repository) {
 		return TPromise.wrapError(new Error(`no repository in context ${file.toString()}`));
 	}
-	if (!repository.provider.rootFolder) {
+	if (!repository.provider.rootUri) {
 		return TPromise.wrapError(new Error(`provider for context ${file.toString()} has no root folder`));
 	}
-	const root = endsWithSlash(repository.provider.rootFolder.path);
+	const root = endsWithSlash(repository.provider.rootUri.path);
 	if (!startsWith(file.path, root)) {
 		return TPromise.wrapError(new Error(`file ${file.path} not in root ${root}`));
 	}
