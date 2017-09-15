@@ -830,7 +830,7 @@
   },
   "dependencies": {
     "iconv-lite": "0.4.15",
-    "rimraf": "2.6.2",
+    "rimraf": "^2.6.2",
     "vscode-extension-telemetry": "0.0.8",
     "vscode-nls": "2.0.2"
   },
