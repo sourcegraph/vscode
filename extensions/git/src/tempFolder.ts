@@ -29,7 +29,7 @@ export function activate(context: vscode.ExtensionContext) {
 async function onDidChangeWorkspaceFolders(e: vscode.WorkspaceFoldersChangeEvent) {
 	const removals: Promise<void>[] = [];
 	for (const removed of e.removed) {
-		if (removed.uri.fsPath.startsWith(tmpRoot + path.sep)) {
+		if (isTempWorkspaceFolder(removed)) {
 			const choice = await vscode.window.showInformationMessage(localize('deleteDirectoryContainingWorktreeWorkspaceFolder', "Delete directory containing the worktree workspace folder you just removed?"), deleteWord);
 			if (choice !== deleteWord) {
 				continue;
@@ -119,4 +119,8 @@ export async function getGoPackagePrefix(dir: string): Promise<string | null> {
 		return pkg.substring(0, pkg.length - relDir.length);
 	}
 	return null;
+}
+
+function isTempWorkspaceFolder(workspaceFolder: vscode.WorkspaceFolder): boolean {
+	return workspaceFolder.uri.fsPath.startsWith(tmpRoot + path.sep);
 }

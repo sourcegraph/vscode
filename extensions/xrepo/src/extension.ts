@@ -7,6 +7,7 @@
 import * as vscode from 'vscode';
 import * as cp from 'child_process';
 import * as nls from 'vscode-nls';
+import * as path from 'path';
 import * as go from './go';
 import * as python from './python';
 import * as typescript from './typescript';
@@ -55,10 +56,20 @@ async function goToSourceFile(): Promise<any> {
 }
 
 const initializeWorkspaceFolderGroup = 'init';
+const runText = localize('run', "Run");
 
 async function onWorkspaceFolderAdded(e: vscode.WorkspaceFoldersChangeEvent) {
 	// timeout appears necessary to wait for config to load. See https://github.com/Microsoft/vscode/issues/34254.
-	setTimeout(() => e.added.forEach(added => initializeWorkspaceFolder(added)), 0);
+	setTimeout(() => e.added.forEach(async added => {
+		const choice = await vscode.window.showInformationMessage(
+			localize('runTasksToAutoInitializeWorkspaceFolder', "Run tasks to auto-initialize new workspace folder?") + ' (' + path.basename(added.uri.fsPath) + ')',
+			runText,
+		);
+		if (choice !== runText) {
+			return;
+		}
+		initializeWorkspaceFolder(added);
+	}), 0);
 }
 
 async function initializeWorkspaceFolderCmd(workspaceFolder?: vscode.WorkspaceFolder) {
@@ -81,10 +92,10 @@ async function initializeWorkspaceFolder(workspaceFolder: vscode.WorkspaceFolder
 		return false;
 	}
 
-	vscode.window.showInformationMessage(localize('initializingWorkspaceFolderMessage.', "Initializing workspace folder environment."));
 	try {
-		await Promise.all(tasks.map(t => runTask(workspaceFolder, t)));
-		vscode.window.showInformationMessage(localize('finishedInitializingWorkspaceFolderMessage.', "Finished initializing workspace folder environment."));
+		const initTasks = Promise.all(tasks.map(t => runTask(workspaceFolder, t)));
+		vscode.window.setStatusBarMessage(localize('initializingWorkspaceFolderMessage', "Initializing workspace folder environment..."), initTasks);
+		await initTasks;
 	} catch (err) {
 		vscode.window.showErrorMessage(localize('failedToInitializeWorkspaceFolderError', "Failed to initialize workspace folder environment: ") + err);
 	}
