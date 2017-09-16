@@ -24,7 +24,7 @@ interface DefinitionInfo extends PackageInfo {
 }
 
 /**
- * Returns the canonical source location(s) of cursor position specified by @param srcUri and @param srcSelection.
+ * Returns the canonical source location(s) of cursor position specified by the URI and selection.
  * The caller should verify the file is a Go file. Otherwise, the behavior is undefined.
  */
 export async function getSourceLocation(uri: vscode.Uri, selection: vscode.Selection): Promise<vscode.Location[]> {
@@ -32,7 +32,7 @@ export async function getSourceLocation(uri: vscode.Uri, selection: vscode.Selec
 }
 
 /**
- * Returns the canonical source location(s) that match the metadata descriptor @param defInfo.
+ * Returns the canonical source location(s) that match the definition metadata descriptor.
  */
 async function getDefSourceLocation(defInfo: DefinitionInfo): Promise<vscode.Location[]> {
 	if (!vscode.workspace.workspaceFolders) {
@@ -51,7 +51,7 @@ async function getDefSourceLocation(defInfo: DefinitionInfo): Promise<vscode.Loc
 }
 
 /**
- * Returns a metadata descriptor of the definition at the given @param selection in @param resource.
+ * Returns a metadata descriptor of the definition at the given selection and resource.
  */
 async function definitionInfo(resource: vscode.Uri, selection: vscode.Selection): Promise<DefinitionInfo> {
 	const [pkg, fileName] = await getPackageAndFile(resource.fsPath);
@@ -64,8 +64,8 @@ async function definitionInfo(resource: vscode.Uri, selection: vscode.Selection)
 }
 
 /**
- * If @param workspaceFolder defines a Go package matching the metadata descriptor @param pkgInfo,
- * returns the filesystem directory that corresponds to the package or null if @param workspaceFolder
+ * If the workspace folder defines a Go package matching the package metadata descriptor,
+ * returns the filesystem directory that corresponds to the package or null if the workspace folder
  * does not define the package.
  */
 function workspaceFolderContainsPackage(workspaceFolder: vscode.WorkspaceFolder, pkgInfo: PackageInfo): string | null {
@@ -80,7 +80,7 @@ function workspaceFolderContainsPackage(workspaceFolder: vscode.WorkspaceFolder,
 }
 
 /**
- * Returns the Go package and file basename of the file at @param filePath.
+ * Returns the Go package and file basename of the file at the file path.
  */
 async function getPackageAndFile(filePath: string): Promise<[string, string]> {
 	const pkg = await getPackage(path.dirname(filePath));
@@ -91,7 +91,8 @@ async function getPackageAndFile(filePath: string): Promise<[string, string]> {
 }
 
 /**
- * packageToCanonicalPackage converts a raw package name (e.g., sourcegraph.com/sourcegraph/sourcegraph/vendor/github.com/gorilla/mux) to a canonical
+ * packageToCanonicalPackage converts a raw package name
+ * (e.g., sourcegraph.com/sourcegraph/sourcegraph/vendor/github.com/gorilla/mux) to a canonical
  * one (e.g., github.com/gorilla/mux)
  */
 function packageToCanonicalPackage(pkg: string) {
@@ -101,4 +102,3 @@ function packageToCanonicalPackage(pkg: string) {
 	}
 	return pkg.substring(lastVendorIdx + '/vendor/'.length);
 }
-

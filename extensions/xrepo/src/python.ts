@@ -9,20 +9,32 @@ import * as path from 'path';
 import { walk } from './util';
 
 /**
- * Package descriptor
+ * Package descriptor. This is empty for now, but is here for consistency with the other languages and
+ * will likely be filled in the future as the implementation evolves.
  */
 interface PackageInfo { }
 
+/**
+ * Definition descriptor
+ */
 interface DefinitionInfo extends PackageInfo {
 	modulePath: string;
 	selection: vscode.Selection;
 }
 
+/**
+ * Returns the canonical source location(s) of cursor position specified by the URI and selection.
+ * The caller should verify the file is a Go file. Otherwise, the behavior is undefined.
+ */
 export async function getSourceLocation(uri: vscode.Uri, selection: vscode.Selection): Promise<vscode.Location[]> {
 	const finfo = await definitionInfo(uri, selection);
 	return finfo ? getDefSourceLocation(finfo) : [new vscode.Location(uri, selection)];
 }
 
+
+/**
+ * Returns the canonical source location(s) that match the definition metadata descriptor.
+ */
 async function getDefSourceLocation(fileInfo: DefinitionInfo): Promise<vscode.Location[]> {
 	if (!vscode.workspace.workspaceFolders) {
 		return [];
@@ -38,6 +50,9 @@ async function getDefSourceLocation(fileInfo: DefinitionInfo): Promise<vscode.Lo
 	return flatMatches;
 }
 
+/**
+ * findDefinition returns the list of definition locations matching a definition metadata descriptor in a workspace folder.
+ */
 async function findDefinition(workspaceFolder: vscode.WorkspaceFolder, defInfo: DefinitionInfo): Promise<vscode.Location[]> {
 	const moduleBasename = path.basename(defInfo.modulePath);
 	const matches: string[] = [];
@@ -56,8 +71,8 @@ async function findDefinition(workspaceFolder: vscode.WorkspaceFolder, defInfo: 
 }
 
 /**
- * DRAFT: returns null when file is not an installed dependency
- * uses simple filesystem heuristics (site-packages); test on both virtualenv and system path
+ * Returns a metadata descriptor of the definition at the given selection and resource. Returns null
+ * when the file is not in an installed dependency. This uses simple filesystem heuristics ("site-packages").
  */
 async function definitionInfo(uri: vscode.Uri, selection: vscode.Selection): Promise<DefinitionInfo | null> {
 	const fsPath = uri.fsPath;

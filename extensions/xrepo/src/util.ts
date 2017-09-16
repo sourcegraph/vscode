@@ -52,6 +52,14 @@ export async function mkdirp(path: string, mode?: number): Promise<boolean> {
 	return true;
 }
 
+/**
+ * walk recursively walks the filesystem tree rooted at `root`, calling the function `visit` for each file/directory.
+ *
+ * @param root is the root of the filesystem tree to walk.
+ * @param visit is the visitor function called for every file/directory. If it returns false and the current path
+ * is a directory, then subtree of the directory will not be visited.
+ * @returns a promise that resolves when the walk is complete.
+ */
 export async function walk(root: string, visit: (filepath: string, stats: fs.Stats) => boolean): Promise<void> {
 	const stats = await new Promise<fs.Stats>((resolve, reject) => fs.lstat(root, (err, stats) => err ? reject(err) : resolve(stats)));
 	const descend = visit(root, stats);

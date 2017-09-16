@@ -9,21 +9,34 @@ import * as path from 'path';
 import { readFile } from './nodeutil';
 import { walk } from './util';
 
+/**
+ * Pacakge descriptor
+ */
 interface PackageInfo {
 	package: string;
 	version?: string;
 }
 
+/**
+ * Definition descriptor
+ */
 interface DefinitionInfo extends PackageInfo {
 	filePath: string;
 	selection: vscode.Selection;
 }
 
+/**
+ * Returns the canonical source location(s) of cursor position specified by the URI and selection.
+ * The caller should verify the file is a Go file. Otherwise, the behavior is undefined.
+ */
 export async function getSourceLocation(uri: vscode.Uri, selection: vscode.Selection): Promise<vscode.Location[]> {
 	const defInfo = await definitionInfo(uri, selection);
 	return defInfo ? getDefSourceLocation(defInfo) : [new vscode.Location(uri, selection)];
 }
 
+/**
+ * Returns the canonical source location(s) that match the definition metadata descriptor.
+ */
 async function getDefSourceLocation(defInfo: DefinitionInfo): Promise<vscode.Location[]> {
 	if (!vscode.workspace.workspaceFolders) {
 		return [];
@@ -39,6 +52,9 @@ async function getDefSourceLocation(defInfo: DefinitionInfo): Promise<vscode.Loc
 	return flatMatches;
 }
 
+/**
+ * Returns a metadata descriptor of the definition at the given selection and resource.
+ */
 async function definitionInfo(uri: vscode.Uri, selection: vscode.Selection): Promise<DefinitionInfo | null> {
 	const fsPathCmps = uri.fsPath.split(path.sep);
 	const i = fsPathCmps.lastIndexOf('node_modules');
@@ -60,6 +76,9 @@ async function definitionInfo(uri: vscode.Uri, selection: vscode.Selection): Pro
 	};
 }
 
+/**
+ * findDefinition returns the list of definition locations matching a definition metadata descriptor in a workspace folder.
+ */
 async function findDefinition(workspaceFolder: vscode.WorkspaceFolder, defInfo: DefinitionInfo): Promise<vscode.Location[]> {
 	// Find package.json files
 	const pkgJsonFiles: string[] = [];
