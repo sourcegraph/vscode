@@ -75,16 +75,18 @@ async function findDefinition(workspaceFolder: vscode.WorkspaceFolder, defInfo: 
  * when the file is not in an installed dependency. This uses simple filesystem heuristics ("site-packages").
  */
 async function definitionInfo(uri: vscode.Uri, selection: vscode.Selection): Promise<DefinitionInfo | null> {
-	const fsPath = uri.fsPath;
-	const i = fsPath.indexOf('site-packages/');
+	const fsPathCmps = uri.fsPath.split(path.sep);
+	const i = Math.max(fsPathCmps.lastIndexOf('site-packages'), fsPathCmps.lastIndexOf('dist-packages'));
 	if (i === -1) {
 		return null;
 	}
-	const remainder = fsPath.substr(i + 'site-packages/'.length);
-	let relpathCmps = remainder.split(path.sep);
-	if (relpathCmps[0].endsWith('.egg')) {
-		relpathCmps = relpathCmps.slice(1);
+	let relCmps = fsPathCmps.slice(i + 1);
+	if (relCmps.length === 0) {
+		return null;
 	}
-	const relpath = relpathCmps.join(path.sep);
+	if (relCmps[0].endsWith('.egg')) {
+		relCmps = relCmps.slice(1);
+	}
+	const relpath = relCmps.join(path.sep);
 	return { modulePath: relpath, selection: selection };
 }
