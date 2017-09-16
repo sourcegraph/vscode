@@ -24,7 +24,7 @@ interface DefinitionInfo extends PackageInfo {
 
 /**
  * Returns the canonical source location(s) of cursor position specified by the URI and selection.
- * The caller should verify the file is a Go file. Otherwise, the behavior is undefined.
+ * The caller should verify the file is a Python file. Otherwise, the behavior is undefined.
  */
 export async function getSourceLocation(uri: vscode.Uri, selection: vscode.Selection): Promise<vscode.Location[]> {
 	const finfo = await definitionInfo(uri, selection);

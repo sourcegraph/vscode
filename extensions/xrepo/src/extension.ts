@@ -48,9 +48,8 @@ async function goToSourceFile(): Promise<any> {
 	}
 	// Just jump to first choice for now (later we can add an API to display the same picker as for jump-to-definition
 	const dstLoc = sourceFileLocations[0];
+	const dstEditor = await vscode.window.showTextDocument(dstLoc.uri, { selection: new vscode.Selection(dstLoc.range.start, dstLoc.range.end) });
 	if (dstLoc.uri.toString() !== editor.document.uri.toString() || !dstLoc.range.isEqual(editor.selection)) {
-		const dstEditor = await vscode.window.showTextDocument(dstLoc.uri);
-		dstEditor.selection = new vscode.Selection(dstLoc.range.start, dstLoc.range.end);
 		dstEditor.revealRange(dstLoc.range, vscode.TextEditorRevealType.InCenter);
 	}
 }
