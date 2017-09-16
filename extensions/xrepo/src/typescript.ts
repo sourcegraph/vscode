@@ -21,7 +21,7 @@ interface DefinitionInfo extends PackageInfo {
 
 export async function getSourceLocation(uri: vscode.Uri, selection: vscode.Selection): Promise<vscode.Location[]> {
 	const defInfo = await definitionInfo(uri, selection);
-	return defInfo ? getDefSourceLocation(defInfo) : [];
+	return defInfo ? getDefSourceLocation(defInfo) : [new vscode.Location(uri, selection)];
 }
 
 async function getDefSourceLocation(defInfo: DefinitionInfo): Promise<vscode.Location[]> {

@@ -6,13 +6,12 @@
 
 import * as vscode from 'vscode';
 import * as path from 'path';
-import * as fs from 'fs';
 import { walk } from './util';
 
 /**
  * Package descriptor
  */
-interface PackageInfo {}
+interface PackageInfo { }
 
 interface DefinitionInfo extends PackageInfo {
 	modulePath: string;
@@ -21,7 +20,7 @@ interface DefinitionInfo extends PackageInfo {
 
 export async function getSourceLocation(uri: vscode.Uri, selection: vscode.Selection): Promise<vscode.Location[]> {
 	const finfo = await definitionInfo(uri, selection);
-	return finfo ? getDefSourceLocation(finfo) : [];
+	return finfo ? getDefSourceLocation(finfo) : [new vscode.Location(uri, selection)];
 }
 
 async function getDefSourceLocation(fileInfo: DefinitionInfo): Promise<vscode.Location[]> {
@@ -29,7 +28,6 @@ async function getDefSourceLocation(fileInfo: DefinitionInfo): Promise<vscode.Lo
 		return [];
 	}
 
-	const found: vscode.Uri[] = [];
 	const matches: vscode.Location[][] = await Promise.all(
 		vscode.workspace.workspaceFolders.map(wsFolder => findDefinition(wsFolder, fileInfo))
 	);
