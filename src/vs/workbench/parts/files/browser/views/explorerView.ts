@@ -178,9 +178,22 @@ export class ExplorerView extends CollapsibleView {
 		actions.push(this.instantiationService.createInstance(NewFileAction, this.getViewer(), null));
 		actions.push(this.instantiationService.createInstance(NewFolderAction, this.getViewer(), null));
 		actions.push(this.instantiationService.createInstance(RefreshViewExplorerAction, this, 'explorer-action refresh-explorer'));
+		actions.push(this.instantiationService.createInstance(CollapseAction, this.getViewer(), true, 'explorer-action collapse-explorer'));
+
+		// Set Order
+		for (let i = 0; i < actions.length; i++) {
+			const action = actions[i];
+			action.order = 10 * (i + 1);
+		}
+
+		return actions;
+	}
+
+	public getSecondaryActions(): IAction[] {
+		const actions: Action[] = [];
+
 		actions.push(this.instantiationService.createInstance(AddRootFolderAction, AddRootFolderAction.ID, AddRootFolderAction.LABEL));
 		actions.push(this.instantiationService.createInstance(OpenRepoAction, OPEN_REPO_ACTION_ID, OPEN_REPO_ACTION_LABEL));
-		actions.push(this.instantiationService.createInstance(CollapseAction, this.getViewer(), true, 'explorer-action collapse-explorer'));
 
 		// Set Order
 		for (let i = 0; i < actions.length; i++) {
