@@ -40,7 +40,7 @@ export class ResourceResolverService implements IResourceResolverService {
 		if (provider) {
 			return provider.resolveResource(resource).then(resolvedResource => {
 				if (resource.toString() !== resolvedResource.toString()) {
-					return this.resolveResource(resolvedResource, recursionLimit--);
+					return this.resolveResource(resolvedResource, recursionLimit - 1);
 				}
 				return resolvedResource;
 			});

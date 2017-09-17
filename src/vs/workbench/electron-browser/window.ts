@@ -170,7 +170,11 @@ export class ElectronWindow extends Themable {
 
 		// Support handleUris event
 		ipc.on('vscode:handleUris', (event, urisToHandle: string[]) => {
-			TPromise.wrap(this.onHandleUris(urisToHandle)).done(null, errors.onUnexpectedError);
+			this.onHandleUris(urisToHandle).done(_ => {
+				this.telemetryService.publicLog('uriHandled');
+			}, err => {
+				this.messageService.show(Severity.Error, err);
+			});
 		});
 
 		// Emit event when vscode has loaded

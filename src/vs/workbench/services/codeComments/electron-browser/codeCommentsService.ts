@@ -286,7 +286,7 @@ export class FileComments extends Disposable implements IFileComments {
 	 * that don't support code comments.
 	 *
 	 * For example:
-	 * file:///Users/nick/dev/xsourcegraph/README.md -> github.com/sourcegraph/xsourcegraph/README.md
+	 * file:///Users/nick/dev/src/README.md -> github.com/sourcegraph/src/README.md
 	 */
 	private getDocumentId(): TPromise<DocumentId | undefined> {
 		if (this.modelWatcher.uri.scheme !== Schemas.file) {

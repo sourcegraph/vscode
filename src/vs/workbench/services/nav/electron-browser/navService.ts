@@ -57,7 +57,6 @@ export class NavService extends Disposable implements INavService {
 	}
 
 	public handle(location: URI): TPromise<void> {
-		// TODO(sqs): telemetry
 		return TPromise.wrap(this.doHandle(location));
 	}
 
