@@ -350,7 +350,7 @@ class ProvidersView extends CollapsibleView {
 		this.contextMenuService.showContextMenu({
 			getAnchor: () => e.anchor,
 			getActions: () => TPromise.as(this.getSCMMenus(e.element).getTitleSecondaryActions()),
-			getActionsContext: () => e.element,
+			getActionsContext: () => e.element.provider,
 		});
 	}
 }
