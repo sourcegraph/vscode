@@ -858,7 +858,8 @@ export class Repository implements Disposable {
 		// Convert ssh short syntax (e.g. user@company.com:foo/bar) to a valid URI.
 		const sshMatch = remote.match(/^([^/@:]+@)?([^:/]+):([^/].*)$/);
 		if (sshMatch) {
-			remote = `ssh://${sshMatch[1]}${sshMatch[2]}/${sshMatch[3]}`;
+			const userName = sshMatch[1] || '';
+			remote = `ssh://${userName}${sshMatch[2]}/${sshMatch[3]}`;
 		}
 		return Uri.parse(remote);
 	}
