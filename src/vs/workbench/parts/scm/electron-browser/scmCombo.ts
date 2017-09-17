@@ -27,6 +27,8 @@ export class CombinedSCMRepository extends SCMRepository {
 		super(provider, EmptyDisposable);
 	}
 
+	get onDidFocus(): Event<void> { return Event.None; }
+
 	public addRepository(repository: ISCMRepository): void {
 		this.provider.addProvider(repository.provider);
 	}
