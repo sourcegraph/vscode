@@ -60,7 +60,7 @@ query($owner: String!, $name: String!) {
 				cp.exec('git ls-remote --get-url', { cwd: path }, (error, stdout, stderr) => resolve(stdout));
 			}).then(gitURL => {
 				gitURL = decodeURIComponent(gitURL.trim()).replace(/\.git$/, '');
-				const match = gitURL.match(/github.com\/([^/]+\/[^/]+)/);
+				const match = gitURL.match(/github.com[\/:]([^/]+\/[^/]+)/);
 				if (match) {
 					return vscode.Uri.parse('github://github.com/repository/' + match[1]);
 				}

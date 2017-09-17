@@ -36,6 +36,7 @@
 }
 
 .codeComments .thread .content .code {
+	font-family: Menlo, Monaco, "Courier New", monospace;
 	padding: 8px;
 }
 

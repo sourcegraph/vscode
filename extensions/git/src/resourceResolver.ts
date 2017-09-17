@@ -7,10 +7,10 @@
 
 import * as os from 'os';
 import * as path from 'path';
-import { workspace, Uri, Disposable } from 'vscode';
+import { workspace, Uri, Disposable, window, ProgressLocation } from 'vscode';
 import { Git, IGitErrorData } from './git';
 import { CommandCenter } from './commands';
-import { mkdirp } from './util';
+import { mkdirp, replaceVariables } from './util';
 import * as fs from 'fs';
 import { Model } from './model';
 import * as nls from 'vscode-nls';
@@ -54,10 +54,12 @@ export class GitResourceResolver {
 
 		// See if a repository with this clone URL already exists. This is best-effort and is based on string
 		// equality between our unresolved resource URI and the repositories' remote URLs.
-		for (const repository of this.model.repositories) {
-			for (const remote of repository.remotes) {
-				if (canonicalRemote(remote.url) === canonicalResource) {
-					return Uri.file(repository.root);
+		if (canonicalResource) {
+			for (const repository of this.model.repositories) {
+				for (const remote of repository.remotes) {
+					if (canonicalRemote(remote.url) === canonicalResource) {
+						return Uri.file(repository.root);
+					}
 				}
 			}
 		}
@@ -71,7 +73,14 @@ export class GitResourceResolver {
 		const folderPath = this.getFolderPath(resource);
 		await mkdirp(path.dirname(folderPath));
 		try {
-			await this.git.exec(path.dirname(folderPath), ['clone', resource.toString(), folderPath]);
+			const clonePromise = this.git.exec(path.dirname(folderPath), ['clone', resource.toString(), folderPath]);
+			const displayName = canonicalResource || resource.toString();
+
+			window.withProgress({ location: ProgressLocation.SourceControl, title: localize('cloning', "Cloning {0}...", displayName) }, () => clonePromise);
+			window.withProgress({ location: ProgressLocation.Window, title: localize('cloning', "Cloning {0}...", displayName) }, () => clonePromise);
+
+			await clonePromise;
+
 			return Uri.file(folderPath);
 		} catch (anyErr) {
 			const err = anyErr as IGitErrorData;
@@ -103,15 +112,4 @@ export class GitResourceResolver {
 	dispose(): void {
 		this.disposables.forEach(d => d.dispose());
 	}
-}
-
-function replaceVariables(value: string, vars: { [name: string]: string }): string {
-	const regexp = /\$\{(.*?)\}/g;
-	return value.replace(regexp, (match: string, name: string) => {
-		let newValue = vars[name];
-		if (typeof newValue === 'string') {
-			return newValue;
-		}
-		return match;
-	});
 }

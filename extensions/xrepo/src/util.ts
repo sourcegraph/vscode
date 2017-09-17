@@ -8,7 +8,7 @@
 'use strict';
 
 import * as fs from 'fs';
-import { dirname } from 'path';
+import { dirname, join } from 'path';
 
 export function nfcall<R>(fn: Function, ...args: any[]): Promise<R> {
 	return new Promise<R>((c, e) => fn(...args, (err: any, r: any) => err ? e(err) : c(r)));
@@ -50,4 +50,28 @@ export async function mkdirp(path: string, mode?: number): Promise<boolean> {
 	}
 
 	return true;
+}
+
+/**
+ * walk recursively walks the filesystem tree rooted at `root`, calling the function `visit` for each file/directory.
+ *
+ * @param root is the root of the filesystem tree to walk.
+ * @param visit is the visitor function called for every file/directory. If it returns false and the current path
+ * is a directory, then subtree of the directory will not be visited.
+ * @returns a promise that resolves when the walk is complete.
+ */
+export async function walk(root: string, visit: (filepath: string, stats: fs.Stats) => boolean): Promise<void> {
+	const stats = await new Promise<fs.Stats>((resolve, reject) => fs.lstat(root, (err, stats) => err ? reject(err) : resolve(stats)));
+	const descend = visit(root, stats);
+	if (!descend) {
+		return;
+	}
+	if (stats.isSymbolicLink()) {
+		return;
+	}
+	if (!stats.isDirectory()) {
+		return;
+	}
+	const children = await new Promise<string[]>((resolve, reject) => fs.readdir(root, (err, files) => err ? reject(err) : resolve(files)));
+	await Promise.all(children.map(c => walk(join(root, c), visit)));
 }

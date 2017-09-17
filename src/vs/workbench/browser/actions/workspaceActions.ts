@@ -20,11 +20,12 @@ import { IWorkspacesService, WORKSPACE_FILTER_SAVE, WORKSPACE_FILTER_EXPORT, EXP
 import { IMessageService, Severity } from 'vs/platform/message/common/message';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 import { isLinux } from 'vs/base/common/platform';
-import { dirname } from 'vs/base/common/paths';
+import { dirname, basename } from 'vs/base/common/paths';
 import { mnemonicButtonLabel } from 'vs/base/common/labels';
 import { isParent } from 'vs/platform/files/common/files';
 import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { IWorkspaceSharingService } from 'vs/workbench/services/workspace/common/workspaceSharing';
+import { IProgressService2, ProgressLocation } from 'vs/platform/progress/common/progress';
 
 export class OpenFolderAction extends Action {
 
@@ -256,6 +257,7 @@ export class ExportWorkspaceAction extends BaseWorkspacesAction {
 		@IWorkspaceContextService contextService: IWorkspaceContextService,
 		@IWorkspaceSharingService private workspaceSharingService: IWorkspaceSharingService,
 		@IMessageService private messageService: IMessageService,
+		@IProgressService2 private progressService: IProgressService2,
 	) {
 		super(id, label, windowService, environmentService, contextService);
 	}
@@ -282,7 +284,15 @@ export class ExportWorkspaceAction extends BaseWorkspacesAction {
 			return TPromise.as(null);
 		}
 
-		return this.workspaceSharingService.export(URI.file(target));
+
+		const exportPromise = this.workspaceSharingService.export(URI.file(target));
+		this.progressService.withProgress({
+			location: ProgressLocation.Window,
+			title: nls.localize('exportingWorkspace', "Exporting {0}...", basename(target)),
+		}, () => exportPromise);
+		return exportPromise.then(() => {
+			this.messageService.show(Severity.Info, nls.localize('exportWorkspaceSuccess', "Exported workspace {0}. Share the file with colleagues for fast workspace creation.", basename(target)));
+		});
 	}
 
 	private isUntitledWorkspace(path: string): boolean {

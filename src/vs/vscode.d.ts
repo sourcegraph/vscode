@@ -3890,6 +3890,21 @@ declare module 'vscode' {
 	}
 
 	/**
+	 * The scope of a task.
+	 */
+	export enum TaskScope {
+		/**
+		 * The task is a global task
+		 */
+		Global = 1,
+
+		/**
+		 * The task is a workspace task
+		 */
+		Workspace = 2
+	}
+
+	/**
 	 * A task to execute
 	 */
 	export class Task {
@@ -3897,8 +3912,10 @@ declare module 'vscode' {
 		/**
 		 * Creates a new task.
 		 *
+		 * @deprecated: Use the new constructors that allow specifying a target for the task.
+		 *
 		 * @param definition The task definition as defined in the taskDefinitions extension point.
-		 * @param name The task's name. Is presented in the user interface.
+		 * @param scope The task's name. Is presented in the user interface.
 		 * @param source The task's source (e.g. 'gulp', 'npm', ...). Is presented in the user interface.
 		 * @param execution The process or shell execution.
 		 * @param problemMatchers the names of problem matchers to use, like '$tsc'
@@ -3908,9 +3925,29 @@ declare module 'vscode' {
 		constructor(taskDefinition: TaskDefinition, name: string, source: string, execution?: ProcessExecution | ShellExecution, problemMatchers?: string | string[]);
 
 		/**
+		 * Creates a new task.
+		 *
+		 * @param definition The task definition as defined in the taskDefinitions extension point.
+		 * @param scope Specifies the task's scope. It is either a global or a workspace task or a task for a specific workspace folder.
+		 * @param workspaceFolder The workspace folder this task is created for.
+		 * @param name The task's name. Is presented in the user interface.
+		 * @param source The task's source (e.g. 'gulp', 'npm', ...). Is presented in the user interface.
+		 * @param execution The process or shell execution.
+		 * @param problemMatchers the names of problem matchers to use, like '$tsc'
+		 *  or '$eslint'. Problem matchers can be contributed by an extension using
+		 *  the `problemMatchers` extension point.
+		 */
+		constructor(taskDefinition: TaskDefinition, target: TaskScope.Global | TaskScope.Workspace | WorkspaceFolder, name: string, source: string, execution?: ProcessExecution | ShellExecution, problemMatchers?: string | string[]);
+
+		/**
 		 * The task's definition.
 		 */
 		definition: TaskDefinition;
+
+		/**
+		 * The task's scope.
+		 */
+		scope?: TaskScope.Global | TaskScope.Workspace | WorkspaceFolder;
 
 		/**
 		 * The task's name

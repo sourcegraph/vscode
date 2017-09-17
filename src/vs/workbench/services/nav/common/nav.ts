@@ -50,5 +50,5 @@ export interface INavService {
 	 * getLocation) or guides the user through installing the application if it isn't yet
 	 * installed.
 	 */
-	getShareableLocation(): string;
+	getShareableLocation(): TPromise<string>;
 }

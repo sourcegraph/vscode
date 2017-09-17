@@ -5,14 +5,16 @@
 
 'use strict';
 
-import { workspace, WorkspaceFoldersChangeEvent, Uri, window, Event, EventEmitter, QuickPickItem, Disposable, SourceControl, SourceControlResourceGroup, TextEditor, TextDocument } from 'vscode';
+import { workspace, WorkspaceFoldersChangeEvent, Uri, window, Event, EventEmitter, QuickPickItem, Disposable, SourceControl, SourceControlResourceGroup, TextEditor, TextDocument, Memento } from 'vscode';
 import { Repository, RepositoryState } from './repository';
 import { memoize, sequentialize, debounce } from './decorators';
-import { dispose, anyEvent, filterEvent } from './util';
+import { dispose, anyEvent, filterEvent, replaceVariables } from './util';
 import { Git, GitErrorCodes } from './git';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as nls from 'vscode-nls';
+import * as events from 'events';
+import * as os from 'os';
 import { GlobalRepositories } from './globalRepositories';
 
 const localize = nls.loadMessageBundle();
@@ -55,18 +57,23 @@ export class Model {
 	get repositories(): Repository[] { return this.openRepositories.map(r => r.repository); }
 
 	private globalRepositories: GlobalRepositories;
+	get onOutput(): events.EventEmitter { return this.globalRepositories.onOutput; }
+
 	private possibleGitRepositoryPaths = new Set<string>();
 
 	private enabled = false;
 	private configurationChangeDisposable: Disposable;
 	private disposables: Disposable[] = [];
 
-	constructor(private git: Git) {
+	constructor(
+		private git: Git,
+		private globalState: Memento,
+	) {
 		const config = workspace.getConfiguration('git');
 		this.enabled = config.get<boolean>('enabled') === true;
 
 		this.configurationChangeDisposable = workspace.onDidChangeConfiguration(this.onDidChangeConfiguration, this);
-		this.globalRepositories = new GlobalRepositories(git);
+		this.globalRepositories = new GlobalRepositories(git, globalState);
 
 		if (this.enabled) {
 			this.enable();
@@ -110,7 +117,7 @@ export class Model {
 		this.scanWorkspaceFolders();
 
 		this.disposables.push(this.globalRepositories);
-		this.globalRepositories.build();
+		this.scanRepositoryDirectory();
 	}
 
 	private disable(): void {
@@ -135,6 +142,18 @@ export class Model {
 				.filter(child => child !== '.git')
 				.forEach(child => this.tryOpenRepository(path.join(root, child), true));
 		}
+	}
+
+	private scanRepositoryDirectory(): Promise<void> {
+		const directoryTemplate = workspace.getConfiguration('git').get<string>('repositoryScanDirectory');
+		if (!directoryTemplate) {
+			return Promise.resolve();
+		}
+
+		const homePath = os.homedir();
+		const separator = path.sep;
+		const dir = replaceVariables(directoryTemplate, { homePath, separator });
+		return this.globalRepositories.scan(dir);
 	}
 
 	private onPossibleGitRepositoryChange(uri: Uri): void {

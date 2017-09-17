@@ -189,3 +189,14 @@ export function find<T>(array: T[], fn: (t: T) => boolean): T | undefined {
 
 	return result;
 }
+
+export function replaceVariables(value: string, vars: { [name: string]: string }): string {
+	const regexp = /\$\{(.*?)\}/g;
+	return value.replace(regexp, (match: string, name: string) => {
+		let newValue = vars[name];
+		if (typeof newValue === 'string') {
+			return newValue;
+		}
+		return match;
+	});
+}
