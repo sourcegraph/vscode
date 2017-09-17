@@ -60,7 +60,6 @@ class FakeSCMService implements ISCMService {
 		return {
 			provider: this.fakeProvider,
 			input: undefined,
-			specifier: undefined,
 			onDidFocus: undefined,
 			focus: () => void 0,
 			dispose: () => void 0,

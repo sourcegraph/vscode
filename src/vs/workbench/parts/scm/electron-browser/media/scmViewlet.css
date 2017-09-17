@@ -33,6 +33,14 @@
 	flex-wrap: wrap;
 }
 
+.scm-viewlet .scm-provider:not(.dirty) .badge {
+	display: none;
+}
+
+.scm-viewlet .scm-provider .badge {
+	margin-left: 4px;
+}
+
 .scm-viewlet .monaco-list-row > .scm-provider > input {
 	flex-shrink: 0;
 }

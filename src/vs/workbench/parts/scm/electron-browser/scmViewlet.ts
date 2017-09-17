@@ -11,14 +11,14 @@ import { TPromise } from 'vs/base/common/winjs.base';
 import { chain } from 'vs/base/common/event';
 import { basename } from 'vs/base/common/paths';
 import { onUnexpectedError } from 'vs/base/common/errors';
-import { IDisposable, dispose, combinedDisposable, empty as EmptyDisposable } from 'vs/base/common/lifecycle';
+import { IDisposable, dispose, combinedDisposable } from 'vs/base/common/lifecycle';
 import { Builder } from 'vs/base/browser/builder';
 import { PersistentViewsViewlet, CollapsibleView, IViewletViewOptions, IViewletView, IViewOptions } from 'vs/workbench/browser/parts/views/views';
-import { append, $, toggleClass, trackFocus } from 'vs/base/browser/dom';
+import { append, $, toggleClass, trackFocus, addClass, removeClass } from 'vs/base/browser/dom';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { List } from 'vs/base/browser/ui/list/listWidget';
-import { IDelegate, IRenderer, IListContextMenuEvent } from 'vs/base/browser/ui/list/list';
-import { VIEWLET_ID, SCMViewletActiveRepositoryContext } from 'vs/workbench/parts/scm/common/scm';
+import { IDelegate, IRenderer, IListEvent, IListContextMenuEvent } from 'vs/base/browser/ui/list/list';
+import { VIEWLET_ID } from 'vs/workbench/parts/scm/common/scm';
 import { FileLabel } from 'vs/workbench/browser/labels';
 import { CountBadge } from 'vs/base/browser/ui/countBadge/countBadge';
 import { ISCMService, ISCMRepository, ISCMResourceGroup, ISCMResource } from 'vs/workbench/services/scm/common/scm';
@@ -26,7 +26,7 @@ import { IEditorGroupService } from 'vs/workbench/services/group/common/groupSer
 import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { IContextViewService, IContextMenuService } from 'vs/platform/contextview/browser/contextView';
-import { IContextKeyService, ContextKeyExpr } from 'vs/platform/contextkey/common/contextkey';
+import { IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
 import { ICommandService } from 'vs/platform/commands/common/commands';
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { IMessageService } from 'vs/platform/message/common/message';
@@ -52,11 +52,13 @@ import * as platform from 'vs/base/common/platform';
 import { domEvent } from 'vs/base/browser/event';
 import { StandardKeyboardEvent } from 'vs/base/browser/keyboardEvent';
 import { KeyMod, KeyCode } from 'vs/base/common/keyCodes';
-import { RepositoriesView } from './views/repositoriesView';
 import { ILifecycleService } from 'vs/platform/lifecycle/common/lifecycle';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { Command } from 'vs/editor/common/modes';
 import { render as renderOcticons } from 'vs/base/browser/ui/octiconLabel/octiconLabel';
+import { CombinedSCMRepository, CombinedSCMProvider } from './scmCombo';
+
+const ENABLE_SCM_COMBO = false;
 
 // TODO@Joao
 // Need to subclass MenuItemActionItem in order to respect
@@ -67,6 +69,12 @@ class SCMMenuItemActionItem extends MenuItemActionItem {
 	onClick(event: MouseEvent): void {
 		event.preventDefault();
 		event.stopPropagation();
+
+		if (this._context instanceof CombinedSCMProvider) {
+			TPromise.join(this._context.providers.map(provider => this.actionRunner.run(this._commandAction, provider)))
+				.done(undefined, err => this._messageService.show(Severity.Error, err));
+			return;
+		}
 
 		this.actionRunner.run(this._commandAction, this._context)
 			.done(undefined, err => this._messageService.show(Severity.Error, err));
@@ -87,6 +95,8 @@ function identityProvider(r: ISCMResourceGroup | ISCMResource): string {
 interface IViewModel {
 	isRepositoryVisible(repository: ISCMRepository): boolean;
 	toggleRepositoryVisibility(repository: ISCMRepository, visible: boolean);
+	setRepositoriesVisible(repositories: ISCMRepository[]);
+	getPendingChangesCount(repository: ISCMRepository): number;
 }
 
 class ProvidersViewDescriptor implements IViewDescriptor {
@@ -108,10 +118,12 @@ class ProvidersListDelegate implements IDelegate<ISCMRepository> {
 }
 
 interface RepositoryTemplateData {
+	provider: HTMLElement;
 	checkbox: HTMLInputElement;
 	title: HTMLElement;
 	type: HTMLElement;
 	actionBar: ActionBar;
+	badge: CountBadge;
 	disposable: IDisposable;
 	templateDisposable: IDisposable;
 }
@@ -150,20 +162,23 @@ class ProviderRenderer implements IRenderer<ISCMRepository, RepositoryTemplateDa
 
 	constructor(
 		protected viewModel: IViewModel,
+		@IThemeService private themeService: IThemeService,
 		@ICommandService protected commandService: ICommandService
 	) { }
 
 	renderTemplate(container: HTMLElement): RepositoryTemplateData {
 		const provider = append(container, $('.scm-provider'));
 		const checkbox = append(provider, $('input', { type: 'checkbox', checked: 'true' })) as HTMLInputElement;
+		checkbox.style.display = 'none'; // TODO(sqs)
 		const name = append(provider, $('.name'));
 		const title = append(name, $('span.title'));
 		const type = append(name, $('span.type'));
 		const actionBar = new ActionBar(provider, { actionItemProvider: a => new StatusBarActionItem(a as StatusBarAction) });
-		const disposable = EmptyDisposable;
+		const badge = new CountBadge(append(provider, $('.badge')));
+		const disposable = combinedDisposable([attachBadgeStyler(badge, this.themeService)]);
 		const templateDisposable = combinedDisposable([actionBar]);
 
-		return { checkbox, title, type, actionBar, disposable, templateDisposable };
+		return { provider, checkbox, title, type, actionBar, badge, disposable, templateDisposable };
 	}
 
 	renderElement(repository: ISCMRepository, index: number, templateData: RepositoryTemplateData): void {
@@ -200,6 +215,16 @@ class ProviderRenderer implements IRenderer<ISCMRepository, RepositoryTemplateDa
 			actions.splice(0, actions.length, ...commands.map(c => new StatusBarAction(c, this.commandService)));
 			templateData.actionBar.clear();
 			templateData.actionBar.push(actions);
+
+			const count = this.viewModel.getPendingChangesCount(repository);
+			templateData.badge.setCount(count);
+			templateData.badge.setTitleFormat(count > 1 ? localize('repositoryPendingChanges', "{0} pending changes", count) : localize('repositoryPendingChange', "{0} pending change", count));
+
+			if (count > 0) {
+				addClass(templateData.provider, 'dirty');
+			} else {
+				removeClass(templateData.provider, 'dirty');
+			}
 		};
 
 		repository.provider.onDidChange(updateActions, null, disposables);
@@ -217,6 +242,7 @@ class ProviderRenderer implements IRenderer<ISCMRepository, RepositoryTemplateDa
 class ProvidersView extends CollapsibleView {
 
 	private list: List<ISCMRepository>;
+	private repositoryMenus = new Map<ISCMRepository, SCMMenus>();
 
 	constructor(
 		initialSize: number,
@@ -225,6 +251,8 @@ class ProvidersView extends CollapsibleView {
 		@IKeybindingService protected keybindingService: IKeybindingService,
 		@IContextMenuService protected contextMenuService: IContextMenuService,
 		@ISCMService protected scmService: ISCMService,
+		@IListService private listService: IListService,
+		@IThemeService private themeService: IThemeService,
 		@IInstantiationService private instantiationService: IInstantiationService
 	) {
 		super(initialSize, {
@@ -246,6 +274,13 @@ class ProvidersView extends CollapsibleView {
 		const renderer = this.instantiationService.createInstance(ProviderRenderer, this.viewModel);
 		this.list = new List<ISCMRepository>(container, delegate, [renderer]);
 
+		this.toDispose.push(attachListStyler(this.list, this.themeService));
+
+		this.list.onSelectionChange(this.onListSelectionChange, this, this.toDispose);
+		this.list.onContextMenu(this.onListContextMenu, this, this.toDispose);
+		this.toDispose.push(this.listService.register(this.list));
+		this.toDispose.push(this.list);
+
 		this.scmService.onDidAddRepository(this.onDidAddRepository, this, this.toDispose);
 		this.scmService.onDidRemoveRepository(this.onDidRemoveRepository, this, this.toDispose);
 		this.updateList();
@@ -259,13 +294,33 @@ class ProvidersView extends CollapsibleView {
 		this.list.layout(size);
 	}
 
+	setVisible(visible: boolean): TPromise<void> {
+		return super.setVisible(visible).then(() => {
+			if (this.list.length && this.list.getFocus().length === 0 && this.list.getSelection().length === 0) {
+				this.list.setFocus([0]);
+				this.list.setSelection([0]);
+			}
+		});
+	}
+
 	private updateList(): void {
+		const focused = this.list.getFocusedElements();
 		this.list.splice(0, this.list.length, this.scmService.repositories);
+		if (focused.length) {
+			const indexes = focused.map(repository => this.scmService.repositories.indexOf(repository)).filter(i => i !== -1);
+			this.list.setFocus(indexes);
+			this.list.setSelection(indexes);
+		}
 	}
 
 	private onDidAddRepository(repository: ISCMRepository): void {
+		const wasEmpty = this.list.length === 0;
 		this.updateList();
 		this.setBodySize(this.getExpandedBodySize());
+		if (wasEmpty) {
+			this.list.setFocus([0]);
+			this.list.setSelection([0]);
+		}
 	}
 
 	private onDidRemoveRepository(repository: ISCMRepository): void {
@@ -275,6 +330,28 @@ class ProvidersView extends CollapsibleView {
 
 	private getExpandedBodySize(): number {
 		return Math.min(5, this.scmService.repositories.length) * 22;
+	}
+
+	private getSCMMenus(repository: ISCMRepository): SCMMenus {
+		let menus = this.repositoryMenus.get(repository);
+		if (!menus) {
+			menus = this.instantiationService.createInstance(SCMMenus, repository.provider);
+			this.toDispose.push(menus);
+			this.repositoryMenus.set(repository, menus);
+		}
+		return menus;
+	}
+
+	private onListSelectionChange(e: IListEvent<ISCMRepository>): void {
+		this.viewModel.setRepositoriesVisible(e.elements);
+	}
+
+	private onListContextMenu(e: IListContextMenuEvent<ISCMRepository>): void {
+		this.contextMenuService.showContextMenu({
+			getAnchor: () => e.anchor,
+			getActions: () => TPromise.as(this.getSCMMenus(e.element).getTitleSecondaryActions()),
+			getActionsContext: () => e.element,
+		});
 	}
 }
 
@@ -439,7 +516,6 @@ class ProviderViewDescriptor implements IViewDescriptor {
 			: this._repository.provider.label;
 	}
 	get ctor(): any { return null; }
-	get when(): ContextKeyExpr { return SCMViewletActiveRepositoryContext.isEqualTo(this._repository.provider.id); }
 	get location(): ViewLocation { return ViewLocation.SCM; }
 	get order(): number { return 10; }
 
@@ -712,6 +788,8 @@ export class SCMViewlet extends PersistentViewsViewlet {
 	private repositoryToViewDescriptor = new Map<string, ProviderViewDescriptor>();
 	private disposables: IDisposable[] = [];
 
+	private combinedRepository: CombinedSCMRepository;
+
 	constructor(
 		@ITelemetryService telemetryService: ITelemetryService,
 		@ISCMService protected scmService: ISCMService,
@@ -736,19 +814,11 @@ export class SCMViewlet extends PersistentViewsViewlet {
 		this.menus = instantiationService.createInstance(SCMMenus, undefined);
 		this.menus.onDidChangeTitle(this.updateTitleArea, this, this.disposables);
 
-		this.registerViews();
-	}
-
-	private registerViews(): void {
-		const activeRepositoriesListViewDescriptor: IViewDescriptor = {
-			id: RepositoriesView.ID,
-			name: RepositoriesView.NAME,
-			location: ViewLocation.SCM,
-			ctor: RepositoriesView,
-			size: 50,
-			order: 0,
-		};
-		ViewsRegistry.registerViews([activeRepositoriesListViewDescriptor]);
+		if (ENABLE_SCM_COMBO) {
+			this.combinedRepository = new CombinedSCMRepository('git', localize('combinedRepository', "Combined"), scmService.repositories);
+			this.scmService.onDidAddRepository(r => this.combinedRepository.addRepository(r), this, this.disposables);
+			this.scmService.onDidRemoveRepository(r => this.combinedRepository.removeRepository(r), this, this.disposables);
+		}
 	}
 
 	private onDidAddRepository(repository: ISCMRepository): void {
@@ -780,7 +850,17 @@ export class SCMViewlet extends PersistentViewsViewlet {
 		this.scmService.onDidRemoveRepository(this.onDidRemoveRepository, this, this.disposables);
 		this.scmService.repositories.forEach(p => this.onDidAddRepository(p));
 
+		if (ENABLE_SCM_COMBO) {
+			this.onDidAddRepository(this.combinedRepository);
+		}
+
 		ViewsRegistry.registerViews([new ProvidersViewDescriptor()]);
+	}
+
+	setVisible(visible: boolean): TPromise<void> {
+		return super.setVisible(visible).then(() => {
+			toggleClass(this.getContainer().getHTMLElement(), 'empty', this.views.length === 0);
+		});
 	}
 
 	isRepositoryVisible(repository: ISCMRepository): boolean {
@@ -791,6 +871,22 @@ export class SCMViewlet extends PersistentViewsViewlet {
 	toggleRepositoryVisibility(repository: ISCMRepository, visible: boolean): void {
 		const view = this.repositoryToViewDescriptor.get(repository.provider.id);
 		this.toggleViewVisibility(view.id, visible);
+	}
+
+	setRepositoriesVisible(repositories: ISCMRepository[]) {
+		this.repositoryToViewDescriptor.forEach(view => {
+			const visible = repositories.indexOf(view.repository) !== -1;
+			if (this.isVisible()) {
+				this.toggleViewVisibility(view.id, visible);
+			}
+		});
+	}
+
+	getPendingChangesCount(repository: ISCMRepository): number {
+		if (typeof repository.provider.count === 'number') {
+			return repository.provider.count;
+		}
+		return repository.provider.resources.reduce<number>((r, g) => r + g.resourceCollection.resources.length, 0);
 	}
 
 	protected createView(viewDescriptor: IViewDescriptor, initialSize: number, options: IViewletViewOptions): IViewletView {
