@@ -187,11 +187,6 @@
         "category": "Git"
       },
       {
-        "command": "git.specifyComparison",
-        "title": "%command.specifyComparison%",
-        "category": "Git"
-      },
-      {
         "command": "git.addWorktree",
         "title": "%command.addWorktree%",
         "category": "Git"

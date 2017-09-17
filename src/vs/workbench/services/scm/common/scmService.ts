@@ -28,13 +28,12 @@ class SCMInput implements ISCMInput {
 	get onDidChange(): Event<string> { return this._onDidChange.event; }
 }
 
-class SCMRepository implements ISCMRepository {
+export class SCMRepository implements ISCMRepository {
 
 	private _onDidFocus = new Emitter<void>();
 	readonly onDidFocus: Event<void> = this._onDidFocus.event;
 
 	readonly input: ISCMInput = new SCMInput();
-	readonly specifier: ISCMInput = new SCMInput();
 
 	constructor(
 		public readonly provider: ISCMProvider,
@@ -113,8 +112,8 @@ export class SCMService implements ISCMService {
 	private updateFolderRepositoriesMap(): void {
 		this._folderRepositoriesMap = new TrieMap<ISCMRepository>(TrieMap.PathSplitter);
 		for (const repository of this._repositories) {
-			if (repository.provider.rootFolder) {
-				this._folderRepositoriesMap.insert(repository.provider.rootFolder.toString(), repository);
+			if (repository.provider.rootUri) {
+				this._folderRepositoriesMap.insert(repository.provider.rootUri.toString(), repository);
 			}
 		}
 	}

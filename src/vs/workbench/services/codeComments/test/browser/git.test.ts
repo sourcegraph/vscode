@@ -15,7 +15,7 @@ class FakeSCMProvider implements ISCMProvider {
 	readonly label: any;
 	readonly id: any;
 	readonly contextValue = 'git';
-	readonly rootFolder: any;
+	readonly rootUri: any;
 	readonly resources: any;
 	readonly onDidChangeResources: any;
 	readonly onDidChange: any;
@@ -60,7 +60,6 @@ class FakeSCMService implements ISCMService {
 		return {
 			provider: this.fakeProvider,
 			input: undefined,
-			specifier: undefined,
 			onDidFocus: undefined,
 			focus: () => void 0,
 			dispose: () => void 0,

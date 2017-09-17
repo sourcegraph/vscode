@@ -16,28 +16,6 @@
   ],
   "enableProposedApi": true,
   "contributes": {
-    "commands": [
-      {
-        "command": "github.pullRequests.quickopen",
-        "title": "%command.pullRequests.quickopen%",
-        "category": "GitHub"
-      }
-    ],
-    "menus": {
-      "commandPalette": [
-        {
-          "command": "github.pullRequests.quickopen",
-          "when": "config.git.enabled && gitOpenRepositoryCount != 0"
-        }
-      ],
-      "scm/title": [
-        {
-          "command": "github.pullRequests.quickopen",
-          "group": "github",
-          "when": "config.git.enabled && scmProvider == git"
-        }
-      ]
-    },
     "configuration": {
       "type": "object",
       "title": "GitHub",

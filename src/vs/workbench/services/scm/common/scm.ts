@@ -112,16 +112,15 @@ export interface ISCMProvider extends IDisposable {
 	readonly id: string;
 	readonly contextValue: string;
 
-	readonly rootFolder: URI;
 	readonly resources: ISCMResourceGroup[];
 	readonly onDidChangeResources: Event<void>;
 
+	readonly rootUri?: URI;
 	readonly count?: number;
 	readonly commitTemplate?: string;
 	readonly revision?: ISCMRevision;
 	readonly onDidChangeCommitTemplate?: Event<string>;
 	readonly acceptInputCommand?: Command;
-	readonly acceptSpecifierCommand?: Command;
 	readonly statusBarCommands?: Command[];
 	readonly setRevisionCommand?: Command;
 	readonly remoteResources?: URI[];
@@ -147,7 +146,6 @@ export interface ISCMRepository extends IDisposable {
 	readonly onDidFocus: Event<void>;
 	readonly provider: ISCMProvider;
 	readonly input: ISCMInput;
-	readonly specifier: ISCMInput;
 	focus(): void;
 }
 

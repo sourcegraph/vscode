@@ -9,11 +9,11 @@ import { TPromise } from 'vs/base/common/winjs.base';
 import URI from 'vs/base/common/uri';
 import Event, { Emitter } from 'vs/base/common/event';
 import { assign } from 'vs/base/common/objects';
-import { IDisposable, dispose, combinedDisposable } from 'vs/base/common/lifecycle';
+import { IDisposable, dispose } from 'vs/base/common/lifecycle';
 import { ISCMService, ISCMRepository, ISCMRevision, ICommandOptions, ISCMProvider, ISCMResource, ISCMResourceGroup, ISCMResourceDecorations, ISCMResourceCollection, ISCMResourceSplice } from 'vs/workbench/services/scm/common/scm';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { ICommandService } from 'vs/platform/commands/common/commands';
-import { ExtHostContext, MainThreadSCMShape, InputHandle, ExtHostSCMShape, SCMProviderFeatures, SCMRawResourceSplices, SCMGroupFeatures, MainContext, IExtHostContext } from '../node/extHost.protocol';
+import { ExtHostContext, MainThreadSCMShape, ExtHostSCMShape, SCMProviderFeatures, SCMRawResourceSplices, SCMGroupFeatures, MainContext, IExtHostContext } from '../node/extHost.protocol';
 import { Command } from 'vs/editor/common/modes';
 import { extHostNamedCustomer } from 'vs/workbench/api/electron-browser/extHostCustomers';
 
@@ -100,22 +100,20 @@ class MainThreadSCMProvider implements ISCMProvider {
 
 	get handle(): number { return this._handle; }
 	get label(): string { return this._label; }
+	get rootUri(): URI | undefined { return this._rootUri; }
 	get contextValue(): string { return this._contextValue; }
 	get revision(): ISCMRevision | undefined { return this.features.revision; }
-	get rootFolder(): URI | undefined { return this._rootFolder; }
 
 	get commitTemplate(): string | undefined { return this.features.commitTemplate; }
 	get acceptInputCommand(): Command | undefined { return this.features.acceptInputCommand; }
 	get acceptSpecifierCommand(): Command | undefined { return this.features.acceptSpecifierCommand; }
 	get statusBarCommands(): Command[] | undefined { return this.features.statusBarCommands; }
+	get count(): number | undefined { return this.features.count; }
 	get setRevisionCommand(): Command | undefined { return this.features.setRevisionCommand; }
 	get remoteResources(): URI[] | undefined { return this.features.remoteResources; }
 
 	private _onDidChangeCommitTemplate = new Emitter<string>();
 	get onDidChangeCommitTemplate(): Event<string> { return this._onDidChangeCommitTemplate.event; }
-
-	private _count: number | undefined = undefined;
-	get count(): number | undefined { return this._count; }
 
 	private _onDidChange = new Emitter<void>();
 	get onDidChange(): Event<void> { return this._onDidChange.event; }
@@ -125,16 +123,12 @@ class MainThreadSCMProvider implements ISCMProvider {
 		private _handle: number,
 		private _contextValue: string,
 		private _label: string,
-		private _rootFolder: URI | undefined,
+		private _rootUri: URI | undefined,
 		@ISCMService scmService: ISCMService,
 		@ICommandService private commandService: ICommandService
 	) { }
 
 	$updateSourceControl(features: SCMProviderFeatures): void {
-		if ('count' in features) {
-			this._count = features.count;
-		}
-
 		this.features = assign(this.features, features);
 		this._onDidChange.fire();
 
@@ -285,14 +279,13 @@ export class MainThreadSCM implements MainThreadSCMShape {
 		this._disposables = dispose(this._disposables);
 	}
 
-	$registerSourceControl(handle: number, id: string, label: string, rootFolder: URI): void {
-		const provider = new MainThreadSCMProvider(this._proxy, handle, id, label, rootFolder, this.scmService, this.commandService);
+	$registerSourceControl(handle: number, id: string, label: string, rootUri: string | undefined): void {
+		const provider = new MainThreadSCMProvider(this._proxy, handle, id, label, rootUri && URI.parse(rootUri), this.scmService, this.commandService);
 		const repository = this.scmService.registerSCMProvider(provider);
 		this._repositories[handle] = repository;
 
-		const inputDisposable = repository.input.onDidChange(value => this._proxy.$onInputBoxValueChange(handle, InputHandle.InputBox, value));
-		const specifierDisposable = repository.specifier.onDidChange(value => this._proxy.$onInputBoxValueChange(handle, InputHandle.SpecifierBox, value));
-		this._inputDisposables[handle] = combinedDisposable([inputDisposable, specifierDisposable]);
+		const inputDisposable = repository.input.onDidChange(value => this._proxy.$onInputBoxValueChange(handle, value));
+		this._inputDisposables[handle] = inputDisposable;
 	}
 
 	$updateSourceControl(handle: number, features: SCMProviderFeatures): void {
@@ -375,16 +368,13 @@ export class MainThreadSCM implements MainThreadSCMShape {
 		provider.$unregisterGroup(handle);
 	}
 
-	$setInputBoxValue(sourceControlHandle: number, inputHandle: InputHandle, value: string): void {
+	$setInputBoxValue(sourceControlHandle: number, value: string): void {
 		const repository = this._repositories[sourceControlHandle];
 
 		if (!repository) {
 			return;
 		}
 
-		switch (inputHandle) {
-			case InputHandle.InputBox: repository.input.value = value; break;
-			case InputHandle.SpecifierBox: repository.specifier.value = value; break;
-		}
+		repository.input.value = value;
 	}
 }

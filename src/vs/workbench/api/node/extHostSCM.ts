@@ -13,11 +13,10 @@ import { asWinJsPromise } from 'vs/base/common/async';
 import { TrieMap } from 'vs/base/common/map';
 import { IExtensionDescription } from 'vs/platform/extensions/common/extensions';
 import { ExtHostCommands } from 'vs/workbench/api/node/extHostCommands';
-import { MainContext, MainThreadSCMShape, SCMRawResource, SCMRawResourceSplice, SCMRawResourceSplices, IMainContext, InputHandle } from './extHost.protocol';
+import { MainContext, MainThreadSCMShape, SCMRawResource, SCMRawResourceSplice, SCMRawResourceSplices, IMainContext } from './extHost.protocol';
 import { sortedDiff } from 'vs/base/common/arrays';
 import { comparePaths } from 'vs/base/common/comparers';
 import * as vscode from 'vscode';
-import * as types from 'vs/base/common/types';
 
 type ProviderHandle = number;
 type GroupHandle = number;
@@ -119,7 +118,7 @@ export class ExtHostSCMInputBox {
 	}
 
 	set value(value: string) {
-		this._proxy.$setInputBoxValue(this._sourceControlHandle, this._inputHandle, value);
+		this._proxy.$setInputBoxValue(this._sourceControlHandle, value);
 		this.updateValue(value);
 	}
 
@@ -129,7 +128,7 @@ export class ExtHostSCMInputBox {
 		return this._onDidChange.event;
 	}
 
-	constructor(private _proxy: MainThreadSCMShape, private _sourceControlHandle: number, private _inputHandle: InputHandle) {
+	constructor(private _proxy: MainThreadSCMShape, private _sourceControlHandle: number) {
 		// noop
 	}
 
@@ -289,11 +288,12 @@ class ExtHostSourceControl implements vscode.SourceControl {
 		return this._label;
 	}
 
+	get rootUri(): vscode.Uri | undefined {
+		return this._rootUri;
+	}
+
 	private _inputBox: ExtHostSCMInputBox;
 	get inputBox(): ExtHostSCMInputBox { return this._inputBox; }
-
-	private _specifierBox: ExtHostSCMInputBox;
-	get specifierBox(): ExtHostSCMInputBox { return this._specifierBox; }
 
 	public commandExecutor?: vscode.CommandExecutor;
 
@@ -343,19 +343,6 @@ class ExtHostSourceControl implements vscode.SourceControl {
 		this._proxy.$updateSourceControl(this.handle, { acceptInputCommand: internal });
 	}
 
-	private _acceptSpecifierCommand: vscode.Command | undefined = undefined;
-
-	get acceptSpecifierCommand(): vscode.Command | undefined {
-		return this._acceptSpecifierCommand;
-	}
-
-	set acceptSpecifierCommand(acceptSpecifierCommand: vscode.Command | undefined) {
-		this._acceptSpecifierCommand = acceptSpecifierCommand;
-
-		const internal = this._commands.converter.toInternal(acceptSpecifierCommand);
-		this._proxy.$updateSourceControl(this.handle, { acceptSpecifierCommand: internal });
-	}
-
 	private _statusBarCommands: vscode.Command[] | undefined = undefined;
 
 	get statusBarCommands(): vscode.Command[] | undefined {
@@ -367,10 +354,6 @@ class ExtHostSourceControl implements vscode.SourceControl {
 
 		const internal = (statusBarCommands || []).map(c => this._commands.converter.toInternal(c));
 		this._proxy.$updateSourceControl(this.handle, { statusBarCommands: internal });
-	}
-
-	get rootFolder(): vscode.Uri | undefined {
-		return this._rootFolder;
 	}
 
 	private _revision: vscode.SCMRevision | undefined = undefined;
@@ -417,11 +400,10 @@ class ExtHostSourceControl implements vscode.SourceControl {
 		private _commands: ExtHostCommands,
 		private _id: string,
 		private _label: string,
-		private _rootFolder: URI,
+		private _rootUri?: vscode.Uri
 	) {
-		this._inputBox = new ExtHostSCMInputBox(this._proxy, this.handle, InputHandle.InputBox);
-		this._specifierBox = new ExtHostSCMInputBox(this._proxy, this.handle, InputHandle.SpecifierBox);
-		this._proxy.$registerSourceControl(this.handle, _id, _label, _rootFolder);
+		this._inputBox = new ExtHostSCMInputBox(this._proxy, this.handle);
+		this._proxy.$registerSourceControl(this.handle, _id, _label, _rootUri && _rootUri.toString());
 	}
 
 	private updatedResourceGroups = new Set<ExtHostSourceControlResourceGroup>();
@@ -475,7 +457,7 @@ class ExtHostSourceControl implements vscode.SourceControl {
 	}
 }
 
-type SourceControlRootFolder = { handle: number, rootFolder: string };
+type SourceControlRootFolder = { handle: number, rootUri: vscode.Uri };
 type SourceControlHandle = { handle: number };
 
 export class ExtHostSCM {
@@ -549,18 +531,13 @@ export class ExtHostSCM {
 		});
 	}
 
-	createSourceControl(extension: IExtensionDescription, id: string, label: string): vscode.SourceControl;
-	createSourceControl(extension: IExtensionDescription, id: string, options: vscode.SourceControlOptions): vscode.SourceControl;
-	createSourceControl(extension: IExtensionDescription, id: string, arg: string | vscode.SourceControlOptions): vscode.SourceControl {
-		if (types.isString(arg)) {
-			arg = { label: arg };
-		}
+	createSourceControl(extension: IExtensionDescription, id: string, label: string, rootUri: vscode.Uri | undefined): vscode.SourceControl {
 		const handle = ExtHostSCM._handlePool++;
-		const sourceControl = new ExtHostSourceControl(this._proxy, this._commands, id, arg.label, arg.rootFolder as URI);
+		const sourceControl = new ExtHostSourceControl(this._proxy, this._commands, id, label, rootUri);
 		this._sourceControls.set(handle, sourceControl);
 
-		if (arg.rootFolder) {
-			this._folderSourceControls.push({ handle, rootFolder: arg.rootFolder.toString() });
+		if (rootUri) {
+			this._folderSourceControls.push({ handle, rootUri });
 			this.updateFolderSourceControlsMap();
 		}
 
@@ -593,18 +570,14 @@ export class ExtHostSCM {
 		});
 	}
 
-	$onInputBoxValueChange(sourceControlHandle: number, inputHandle: InputHandle, value: string): TPromise<void> {
+	$onInputBoxValueChange(sourceControlHandle: number, value: string): TPromise<void> {
 		const sourceControl = this._sourceControls.get(sourceControlHandle);
 
 		if (!sourceControl) {
 			return TPromise.as(null);
 		}
 
-		switch (inputHandle) {
-			case InputHandle.InputBox: sourceControl.inputBox.$onInputBoxValueChange(value); break;
-			case InputHandle.SpecifierBox: sourceControl.specifierBox.$onInputBoxValueChange(value); break;
-		}
-
+		sourceControl.inputBox.$onInputBoxValueChange(value);
 		return TPromise.as(null);
 	}
 
@@ -644,8 +617,8 @@ export class ExtHostSCM {
 
 	private updateFolderSourceControlsMap(): void {
 		this._folderSourceControlsMap = new TrieMap<SourceControlHandle>(TrieMap.PathSplitter);
-		for (const { handle, rootFolder } of this._folderSourceControls) {
-			this._folderSourceControlsMap.insert(rootFolder, { handle });
+		for (const { handle, rootUri } of this._folderSourceControls) {
+			this._folderSourceControlsMap.insert(rootUri.toString(), { handle });
 		}
 	}
 }

@@ -192,20 +192,14 @@ export class CommandCenter {
 	}
 
 	private async _openResource(resource: Resource, preview?: boolean, preserveFocus?: boolean, preserveSelection?: boolean): Promise<void> {
-		let left = this.getLeftResource(resource);
-		let right = this.getRightResource(resource);
+		const left = this.getLeftResource(resource);
+		const right = this.getRightResource(resource);
 		const title = this.getTitle(resource);
 
 		if (!right) {
-			if (!left) {
-				// TODO
-				console.error('oh no');
-				return;
-			}
-			// File was deleted so there's no right-hand side to show. Treat the left ("before")
-			// as the main document.
-			right = left;
-			left = undefined;
+			// TODO
+			console.error('oh no');
+			return;
 		}
 
 		const opts: TextDocumentShowOptions = {
@@ -230,20 +224,6 @@ export class CommandCenter {
 	}
 
 	private getLeftResource(resource: Resource): Uri | undefined {
-		const repository = this.model.getRepository(resource.resourceUri);
-
-		if (!repository) {
-			return;
-		}
-
-		const uriString = resource.resourceUri.toString();
-		if (repository.committedGroup.resourceStates.find(r => r.resourceUri.toString() === uriString)) {
-			if (resource.type === Status.ADDED) {
-				return;
-			}
-			return toGitUri(resource.original, repository.compareLeft!);
-		}
-
 		switch (resource.type) {
 			case Status.INDEX_MODIFIED:
 			case Status.INDEX_RENAMED:
@@ -258,24 +238,6 @@ export class CommandCenter {
 	}
 
 	private getRightResource(resource: Resource): Uri | undefined {
-		const repository = this.model.getRepository(resource.resourceUri);
-
-		if (!repository) {
-			return;
-		}
-
-		const uriString = resource.resourceUri.toString();
-
-		if (repository.committedGroup.resourceStates.find(r => r.resourceUri.toString() === uriString)) {
-			if (resource.type === Status.DELETED) {
-				return;
-			}
-			if (repository.compareRight) {
-				return toGitUri(resource.resourceUri, repository.compareRight || '');
-			}
-			return resource.resourceUri;
-		}
-
 		switch (resource.type) {
 			case Status.INDEX_MODIFIED:
 			case Status.INDEX_ADDED:
@@ -291,6 +253,13 @@ export class CommandCenter {
 			case Status.MODIFIED:
 			case Status.UNTRACKED:
 			case Status.IGNORED:
+				const repository = this.model.getRepository(resource.resourceUri);
+
+				if (!repository) {
+					return;
+				}
+
+				const uriString = resource.resourceUri.toString();
 				const [indexStatus] = repository.indexGroup.resourceStates.filter(r => r.resourceUri.toString() === uriString);
 
 				if (indexStatus && indexStatus.renameResourceUri) {
@@ -307,18 +276,6 @@ export class CommandCenter {
 
 	private getTitle(resource: Resource): string {
 		const basename = path.basename(resource.resourceUri.fsPath);
-
-		const repository = this.model.getRepository(resource.resourceUri);
-		const uriString = resource.resourceUri.toString();
-
-		if (repository && repository.committedGroup.resourceStates.find(r => r.resourceUri.toString() === uriString)) {
-			if (resource.type === Status.ADDED) {
-				return `${basename} (${repository.compareRight || 'Working Tree'})`;
-			} else if (resource.type === Status.DELETED) {
-				return `${basename} (${repository.compareLeft})`;
-			}
-			return `${basename} (${repository.compareLeft} ⟷ ${repository.compareRight || 'Working Tree'})`;
-		}
 
 		switch (resource.type) {
 			case Status.INDEX_MODIFIED:
@@ -1010,32 +967,6 @@ export class CommandCenter {
 		await choice.run(repository);
 	}
 
-	@command('git.specifyComparisonWithInput', { repository: true })
-	async specifyComparisonWithInput(repository: Repository): Promise<void> {
-		return await repository.specifyComparison(repository.specifierBox.value);
-	}
-
-	@command('git.specifyComparison', { repository: true })
-	async specifyComparison(repository: Repository, revisionOrRangeSpecifier?: string): Promise<void> {
-		if (typeof revisionOrRangeSpecifier !== 'string') {
-			const input = await window.showInputBox({
-				prompt: localize('specifier', "Specify Git revision or range (or blank to compare vs. working tree)"),
-				value: repository.specifierBox.value,
-				ignoreFocusOut: true,
-			});
-
-			if (typeof input !== 'string') {
-				return;
-			}
-
-			revisionOrRangeSpecifier = input;
-		}
-
-		repository.specifierBox.value = revisionOrRangeSpecifier;
-
-		return await repository.specifyComparison(revisionOrRangeSpecifier);
-	}
-
 	@command('git.worktreePrune', { repository: true })
 	async worktreePrune(repository: Repository): Promise<void> {
 		await repository.worktreePrune();
@@ -1574,8 +1505,7 @@ export class CommandCenter {
 			}
 
 			return repository.workingTreeGroup.resourceStates.filter(r => r.resourceUri.toString() === uriString)[0]
-				|| repository.indexGroup.resourceStates.filter(r => r.resourceUri.toString() === uriString)[0]
-				|| repository.committedGroup.resourceStates.filter(r => r.resourceUri.toString() === uriString)[0];
+				|| repository.indexGroup.resourceStates.filter(r => r.resourceUri.toString() === uriString)[0];
 		}
 	}
 

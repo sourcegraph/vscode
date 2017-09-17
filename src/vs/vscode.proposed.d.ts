@@ -297,20 +297,6 @@ declare module 'vscode' {
 	export interface SourceControl {
 
 		/**
-		 * The [input box](#SourceControlInputBox) that specifies the resources for this
-		 * source control, typically containing a revision range.
-		 */
-		readonly specifierBox: SourceControlInputBox;
-
-		/**
-		 * Optional accept specifier command.
-		 *
-		 * This command will be invoked when the user accepts the value
-		 * in the Source Control specifier input.
-		 */
-		acceptSpecifierCommand?: Command;
-
-		/**
 		 * The root (top-level) folder of the source control repository.
 		 */
 		readonly rootFolder?: Uri;
@@ -363,15 +349,6 @@ declare module 'vscode' {
 	}
 
 	export namespace scm {
-
-		/**
-		 * Creates a new [source control](#SourceControl) instance.
-		 *
-		 * @param id A unique `id` for the source control. Something short, eg: `git`.
-		 * @param options Options for creating the source control.
-		 * @return An instance of [source control](#SourceControl).
-		 */
-		export function createSourceControl(id: string, options: SourceControlOptions): SourceControl;
 
 		/**
 		 * Returns the source control for the given resource (by traversing up the directory
