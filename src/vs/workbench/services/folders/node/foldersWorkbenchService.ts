@@ -366,7 +366,7 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 		const uris = anyFolders.map(folder => folder instanceof URI ? folder : folder.resource);
 		return this.workspaceEditingService.addFolders(uris)
 			.then(() => this.configurationService.reloadConfiguration())
-			.then(() => TPromise.join(uris.map(this.resourceResolverService.resolveResource)));
+			.then(() => TPromise.join(uris.map(uri => this.resourceResolverService.resolveResource(uri))));
 	}
 
 	public removeFoldersAsWorkspaceRootFolders(folders: IFolder[]): TPromise<void> {
