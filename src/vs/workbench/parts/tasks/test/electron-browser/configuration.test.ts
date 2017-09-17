@@ -122,7 +122,7 @@ class CommandConfigurationBuilder {
 			runtime: Tasks.RuntimeType.Process,
 			args: [],
 			options: {
-				cwd: '${workspaceRoot}'
+				cwd: '${workspaceFolder}'
 			},
 			presentation: this.presentationBuilder.result,
 			suppressTaskName: false
@@ -243,7 +243,7 @@ class ProblemMatcherBuilder {
 			applyTo: ApplyToKind.allDocuments,
 			severity: undefined,
 			fileLocation: FileLocationKind.Relative,
-			filePrefix: '${cwd}',
+			filePrefix: '${workspaceFolder}',
 			pattern: undefined
 		};
 	}
@@ -726,7 +726,7 @@ suite('Tasks version 0.1.0', () => {
 			task('tsc', 'tsc').
 			group(Tasks.TaskGroup.Build).
 			command().suppressTaskName(true).
-			options({ cwd: '${workspaceRoot}', env: { key: 'value' } });
+			options({ cwd: '${workspaceFolder}', env: { key: 'value' } });
 		testConfiguration(
 			{
 				version: '0.1.0',
