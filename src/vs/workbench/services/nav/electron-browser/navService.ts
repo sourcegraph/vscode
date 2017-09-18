@@ -27,7 +27,12 @@ import * as querystring from 'querystring';
 import { parseSelection, formatSelection } from 'vs/base/common/urlRoutes';
 import { getCodeEditor } from 'vs/editor/common/services/codeEditorService';
 import { ISelection } from 'vs/editor/common/core/selection';
+import { IMessageService } from 'vs/platform/message/common/message';
+import Severity from 'vs/base/common/severity';
 import { EDITOR_CONTRIBUTION_ID as CODE_COMMENTS_CONTRIBUTION_ID } from 'vs/editor/common/services/codeCommentsService';
+import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
+// tslint:disable-next-line:import-patterns
+import { VIEWLET_ID as EXPLORER_VIEWLET_ID } from 'vs/workbench/parts/files/common/files';
 
 type HandledURI = {
 	repo?: string;
@@ -48,6 +53,8 @@ export class NavService extends Disposable implements INavService {
 	public get onDidNavigate(): Event<URI | undefined> { return this._onDidNavigate.event; }
 
 	constructor(
+		@IViewletService private viewletService: IViewletService,
+		@IMessageService private messageService: IMessageService,
 		@IWorkbenchEditorService private editorService: IWorkbenchEditorService,
 		@IHistoryService private historyService: IHistoryService,
 		@ISCMService private scmService: ISCMService,
@@ -93,7 +100,22 @@ export class NavService extends Disposable implements INavService {
 		await this.extensionService.activateByEvent('*');
 
 		const resource = URI.parse(`${query.vcs}+${query.repo}`);
-		const [root] = await this.foldersWorkbenchService.addFoldersAsWorkspaceRootFolders([resource]);
+
+		let addFolderCompleted = false;
+		const addFolderPromise = this.foldersWorkbenchService.addFoldersAsWorkspaceRootFolders([resource]).then(([uri]) => {
+			addFolderCompleted = true;
+			return uri;
+		});
+
+		// Show message only if adding the folder takes longer than 300ms.
+		TPromise.timeout(300).then(() => {
+			if (!addFolderCompleted) {
+				const dismissMessage = this.messageService.show(Severity.Info, nls.localize('resolvingResource', "Resolving {0}...", query.repo));
+				addFolderPromise.done(() => dismissMessage());
+			}
+		});
+
+		const root = await addFolderPromise;
 
 		// TODO(sqs): handle revision, need to avoid clobbering git state if != current revision
 		if (!query.path) {
@@ -154,6 +176,8 @@ export class NavService extends Disposable implements INavService {
 			const codeCommentsContribution = control.getContribution(CODE_COMMENTS_CONTRIBUTION_ID);
 			codeCommentsContribution.restoreViewState({ openThreadIds: [threadId], revealThreadId: threadId });
 		}
+
+		this.viewletService.openViewlet(EXPLORER_VIEWLET_ID);
 	}
 
 	public getLocation(): URI {
