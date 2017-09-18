@@ -30,6 +30,8 @@ import { TAB_ACTIVE_FOREGROUND, TAB_INACTIVE_FOREGROUND } from 'vs/workbench/com
 import { listHoverBackground } from 'vs/platform/theme/common/colorRegistry';
 import { renderComment } from 'vs/workbench/parts/codeComments/browser/renderComment';
 import { CodeCommentsController } from 'vs/workbench/parts/codeComments/electron-browser/codeCommentsController';
+import { Button } from 'vs/base/browser/ui/button/button';
+import { attachButtonStyler } from 'vs/platform/theme/common/styler';
 
 /**
  * Renders code comments in a viewlet.
@@ -57,6 +59,8 @@ export class CodeCommentsViewlet extends Viewlet {
 	private scrollContainer: HTMLElement;
 	private title: string;
 	private actions: IAction[] = [];
+	// Temporary to leave as true until we add auth in.
+	private authed = true;
 
 	/**
 	 * True if the threads list is rendered.
@@ -182,11 +186,37 @@ export class CodeCommentsViewlet extends Viewlet {
 	 * TODO: refactor thread list view into separate class like CreateThreadView and ThreadView.
 	 */
 	private render(modelUri: URI | undefined, options: { refreshData?: boolean }): void {
+		if (!this.authed) {
+			this.renderAuthenticationView();
+			return;
+		}
+
 		if (!modelUri) {
 			this.renderCommentsNotAvailable();
 			return;
 		}
 		this.renderRecentThreadsView(modelUri, options);
+	}
+
+	private renderAuthenticationView(): void {
+		this.title = localize('comment', "Code Comments");
+		this.actions = [];
+		this.updateTitleArea();
+		this.renderDisposables = dispose(this.renderDisposables);
+		clearNode(this.list);
+		let container = $('div').addClass('auth-view');
+		container.appendTo(this.list);
+		let titleDiv = $('div.section').appendTo(container);
+		$('h4').text(localize('codeCommentsAuthentication', "Sign in to view comments")).appendTo(titleDiv);
+		$('p').text(localize('authExplaination', "You must be signed into your Sourcegraph account to use code comments.")).appendTo(titleDiv);
+
+		let section = $('div.section').appendTo(container);
+		const signInButton = new Button(section);
+		attachButtonStyler(signInButton, this.themeService);
+		signInButton.label = localize('signInButtonLabel', 'Sign in');
+		signInButton.addListener('click', () => {
+			this.telemetryService.publicLog('codeComments.signupButtonClicked');
+		});
 	}
 
 	private renderCommentsNotAvailable(): void {

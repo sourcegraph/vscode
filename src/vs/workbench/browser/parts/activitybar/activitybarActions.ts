@@ -303,7 +303,6 @@ export class ViewletActionItem extends ActivityActionItem {
 		super(action, { draggable: true }, themeService);
 
 		this.cssClass = action.class;
-
 		if (!ViewletActionItem.manageExtensionAction) {
 			ViewletActionItem.manageExtensionAction = instantiationService.createInstance(ManageExtensionAction);
 		}

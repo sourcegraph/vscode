@@ -32,6 +32,7 @@ import { IStorageService, StorageScope } from 'vs/platform/storage/common/storag
 import { IUpdateService, State as UpdateState } from 'vs/platform/update/common/update';
 import * as semver from 'semver';
 import { OS, isLinux, isWindows } from 'vs/base/common/platform';
+import { VIEWLET_ID } from 'vs/workbench/parts/management/common/management';
 
 class ApplyUpdateAction extends Action {
 	constructor( @IUpdateService private updateService: IUpdateService) {
@@ -363,7 +364,7 @@ export class UpdateContribution implements IGlobalActivity {
 
 		if (isUpdateAvailable) {
 			const badge = new NumberBadge(1, () => nls.localize('updateIsReady', "New {0} update available.", product.nameShort));
-			this.badgeDisposable = this.activityBarService.showActivity(this.id, badge);
+			this.badgeDisposable = this.activityBarService.showActivity(VIEWLET_ID, badge);
 		}
 	}
 

@@ -35,8 +35,9 @@ import 'vs/workbench/browser/parts/quickopen/quickopen.contribution';
 import 'vs/workbench/parts/quickopen/browser/quickopen.contribution';
 import 'vs/workbench/browser/parts/editor/editorPicker';
 
-import 'vs/workbench/parts/workspace/electron-browser/workspace.contribution';
-import 'vs/workbench/parts/workspace/electron-browser/workspaceViewlet'; // can be packaged separately
+
+import 'vs/workbench/parts/management/electron-browser/management.contribution'; // can be packaged separately
+import 'vs/workbench/parts/management/electron-browser/managementViewlet';
 
 import 'vs/workbench/browser/parts/navbar/navbar.contribution';
 

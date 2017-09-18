@@ -11,6 +11,7 @@ import { IViewConstructorSignature } from 'vs/workbench/browser/parts/views/view
 export class ViewLocation {
 
 	static readonly Workspace = new ViewLocation('workspace');
+	static readonly Management = new ViewLocation('management');
 	static readonly Explorer = new ViewLocation('explorer');
 	static readonly Debug = new ViewLocation('debug');
 	static readonly Extensions = new ViewLocation('extensions');
