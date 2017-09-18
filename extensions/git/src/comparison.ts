@@ -27,7 +27,7 @@ export class ComparisonResource extends Resource implements SourceControlResourc
 	}
 }
 
-type ParsedUnresolvedComparisonArgs =
+export type ParsedUnresolvedComparisonArgs =
 	[string] | // diff against working tree
 	[string, string] | // diff between two arbitrary commits
 	{ mergeBase: true, left: string, right: string }; // diff a...b
