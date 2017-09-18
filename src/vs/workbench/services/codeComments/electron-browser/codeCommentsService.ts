@@ -152,6 +152,7 @@ export class FileComments extends Disposable implements IFileComments {
 			this.updateDisplayRanges();
 		}));
 
+		// TODO(nick): refresh when auth changes too
 		this.disposable(any(
 			scmService.onDidAddRepository,
 			scmService.onDidRemoveRepository,

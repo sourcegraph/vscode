@@ -16,6 +16,7 @@ import { ICodeCommentsService } from 'vs/editor/common/services/codeCommentsServ
 import { CodeCommentsController } from 'vs/workbench/parts/codeComments/electron-browser/codeCommentsController';
 import { KeyCode, KeyMod } from 'vs/base/common/keyCodes';
 import { EditorContextKeys } from 'vs/editor/common/editorContextKeys';
+import { CommentsContextKeys } from 'vs/workbench/parts/codeComments/browser/commentsContextKeys';
 
 /**
  * Action to open the code comments viewlet.
@@ -48,7 +49,7 @@ export class CreateCodeCommentAction extends EditorAction {
 			id: CreateCodeCommentAction.ID,
 			label: CREATE_CODE_COMMENT_ACTION_LABEL,
 			alias: 'Comment',
-			precondition: null,
+			precondition: CommentsContextKeys.canComment,
 			kbOpts: {
 				kbExpr: EditorContextKeys.textFocus,
 				primary: KeyMod.CtrlCmd | KeyMod.Alt | KeyCode.KEY_M,

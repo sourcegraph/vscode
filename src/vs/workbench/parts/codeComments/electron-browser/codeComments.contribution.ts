@@ -11,6 +11,7 @@ import * as Constants from 'vs/workbench/parts/codeComments/common/constants';
 import { ViewletRegistry, Extensions as ViewletExtensions, ViewletDescriptor } from 'vs/workbench/browser/viewlet';
 import { IWorkbenchActionRegistry, Extensions as ActionExtensions } from 'vs/workbench/common/actions';
 import 'vs/workbench/parts/codeComments/electron-browser/codeCommentsController';
+import 'vs/workbench/parts/codeComments/browser/commentsContextKeys';
 import { registerSingleton } from 'vs/platform/instantiation/common/extensions';
 import { ICodeCommentsService } from 'vs/editor/common/services/codeCommentsService';
 import { CodeCommentsService } from 'vs/workbench/services/codeComments/electron-browser/codeCommentsService';
