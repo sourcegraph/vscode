@@ -662,7 +662,7 @@ class ProviderView extends CollapsibleView {
 		this.inputBox.layout();
 
 		const editorHeight = this.inputBox.height;
-		const listHeight = height - (editorHeight + 12 /* margin */);
+		const listHeight = height - (editorHeight > 0 ? editorHeight + 12 /* margin */ : 0);
 		this.listContainer.style.height = `${listHeight}px`;
 		this.list.layout(listHeight);
 
@@ -742,6 +742,8 @@ class ProviderView extends CollapsibleView {
 	}
 
 	private updateInputBox(): void {
+		this.inputBoxContainer.hidden = !this.repository.provider.acceptInputCommand;
+
 		if (typeof this.repository.provider.commitTemplate === 'undefined') {
 			return;
 		}
