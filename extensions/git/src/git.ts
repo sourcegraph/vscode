@@ -1204,6 +1204,11 @@ export class Repository {
 		return { hash: match[1], message: match[2] };
 	}
 
+	async getMergeBase(args: string[]): Promise<string[]> {
+		const result = await this.run(['merge-base', ...args]);
+		return result.stdout.trim().split('\n');
+	}
+
 	async revParse(args: string[]): Promise<string[]> {
 		const result = await this.run(['rev-parse', '--symbolic', ...args]);
 		return result.stdout.trim().split('\n');
