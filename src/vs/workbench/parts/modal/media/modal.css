@@ -42,6 +42,10 @@
 	letter-spacing: 1px;
 }
 
+.modal-body .modal-contents form {
+	outline: none;
+}
+
 .modal-body .modal-contents form label {
 	font-size: 14px;
 	line-height: 24px;
