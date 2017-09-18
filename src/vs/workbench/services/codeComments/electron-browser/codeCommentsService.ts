@@ -520,6 +520,9 @@ export class ThreadComments extends Disposable implements IThreadComments {
 	}
 
 	public submitDraftReply(): TPromise<void> {
+		if (!this.draftReply.length) {
+			return TPromise.wrapError(new Error(localize('emptyCommentError', "Comment can not be empty.")));
+		}
 		return this.operation(() => TPromise.join<any>([
 			this.git.getUserName(),
 			this.git.getUserEmail(),
