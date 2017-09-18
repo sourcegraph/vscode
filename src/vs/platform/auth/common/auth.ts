@@ -45,11 +45,6 @@ export interface IUser {
 	readonly id: string;
 
 	/**
-	 * handle is a display handle for a user.
-	 */
-	readonly handle?: string;
-
-	/**
 	 * avatarUrl is the URL to the user's profile avatar.
 	 */
 	readonly avatarUrl?: string;

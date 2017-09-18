@@ -92,7 +92,7 @@ export class SignInModal extends Modal {
 					.text(localize('sg.signInForm.currentUserText', "You are currently signed in as: ")))
 				.append($('span')
 					.addClass('current-user-value')
-					.text(this.authService.currentUser.handle))
+					.text(this.authService.currentUser.email))
 				.appendTo($form);
 		}
 

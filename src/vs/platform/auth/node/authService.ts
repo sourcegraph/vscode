@@ -37,7 +37,6 @@ class User extends Disposable implements IUser {
 	constructor(
 		@ITelemetryService private telemetryService: ITelemetryService,
 		public id: string,
-		public handle?: string,
 		public avatarUrl?: string,
 		public email?: string,
 		public orgs?: IOrg[]
@@ -67,7 +66,6 @@ class User extends Disposable implements IUser {
 			auth: {
 				user: {
 					id: this.id,
-					handle: this.handle,
 					email: this.email,
 					orgs: this.orgs,
 				},
@@ -132,7 +130,6 @@ export class AuthService extends Disposable implements IAuthService {
 				root {
 					currentUser {
 						id
-						handle
 						avatarURL
 						email
 					}
@@ -140,7 +137,6 @@ export class AuthService extends Disposable implements IAuthService {
 			}`, {}).then(userData => {
 					this._currentUser = new User(this.telemetryService,
 						userData.currentUser.id,
-						userData.currentUser.handle,
 						userData.currentUser.avatarURL,
 						userData.currentUser.email
 						// TODO(Dan): uncomment once orgs backend & GraphQL API are updated
