@@ -60,14 +60,7 @@ const runText = localize('run', "Run");
 async function onWorkspaceFolderAdded(e: vscode.WorkspaceFoldersChangeEvent) {
 	// timeout appears necessary to wait for config to load. See https://github.com/Microsoft/vscode/issues/34254.
 	setTimeout(() => e.added.forEach(async added => {
-		const choice = await vscode.window.showInformationMessage(
-			localize('runTasksToAutoInitializeWorkspaceFolder', "Run tasks to auto-initialize new workspace folder?") + ' (' + path.basename(added.uri.fsPath) + ')',
-			runText,
-		);
-		if (choice !== runText) {
-			return;
-		}
-		initializeWorkspaceFolder(added);
+		initializeWorkspaceFolder(added, true);
 	}), 0);
 }
 
@@ -85,10 +78,20 @@ async function initializeWorkspaceFolderCmd(workspaceFolder?: vscode.WorkspaceFo
  * initializeWorkspaceFolder ensures that the development environment in @param workspaceFolder is initialized. Returns true
  * if and only if initialization process was actually run.
  */
-async function initializeWorkspaceFolder(workspaceFolder: vscode.WorkspaceFolder): Promise<boolean> {
+async function initializeWorkspaceFolder(workspaceFolder: vscode.WorkspaceFolder, prompt?: boolean): Promise<boolean> {
 	const tasks = getInitializeWorkspaceFolderTasks(workspaceFolder);
 	if (tasks.length === 0) {
 		return false;
+	}
+
+	if (prompt) {
+		const choice = await vscode.window.showInformationMessage(
+			localize('runTasksToAutoInitializeWorkspaceFolder', "Run tasks to auto-initialize new workspace folder?") + ' (' + path.basename(workspaceFolder.uri.fsPath) + ')',
+			runText,
+		);
+		if (choice !== runText) {
+			return false;
+		}
 	}
 
 	try {
