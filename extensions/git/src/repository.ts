@@ -6,7 +6,7 @@
 'use strict';
 
 import { Uri, Command, EventEmitter, Event, scm, SourceControl, SourceControlInputBox, CommandOptions, SourceControlResourceGroup, SourceControlResourceState, SourceControlResourceDecorations, Disposable, ProgressLocation, window, workspace, WorkspaceEdit } from 'vscode';
-import { Repository as BaseRepository, Ref, Branch, Remote, Commit, GitErrorCodes, Stash, RefType } from './git';
+import { Repository as BaseRepository, Ref, Branch, Remote, Commit, GitErrorCodes, Stash, RefType, IFileDiff } from './git';
 import { anyEvent, filterEvent, eventToPromise, dispose, find } from './util';
 import { memoize, throttle, debounce } from './decorators';
 import { toGitUri } from './uri';
@@ -191,10 +191,10 @@ export class Resource implements SourceControlResourceState {
 	}
 
 	constructor(
-		private _resourceGroupType: ResourceGroupType,
-		private _resourceUri: Uri,
-		private _type: Status,
-		private _renameResourceUri?: Uri
+		protected _resourceGroupType: ResourceGroupType,
+		protected _resourceUri: Uri,
+		protected _type: Status,
+		protected _renameResourceUri?: Uri
 	) { }
 }
 
@@ -222,6 +222,9 @@ export enum Operation {
 	ExecuteCommand = 1 << 20,
 	AddWorktree = 1 << 21,
 	WorktreePrune = 1 << 23,
+	Diff = 1 << 24,
+	MergeBase = 1 << 25,
+	RevParse = 1 << 26,
 }
 
 // function getOperationName(operation: Operation): string {
@@ -250,6 +253,9 @@ function isReadOnly(operation: Operation): boolean {
 	switch (operation) {
 		case Operation.Show:
 		case Operation.GetCommitTemplate:
+		case Operation.Diff:
+		case Operation.MergeBase:
+		case Operation.RevParse:
 			return true;
 		default:
 			return false;
@@ -339,15 +345,6 @@ export class Repository implements Disposable {
 
 	private _workingTreeGroup: SourceControlResourceGroup;
 	get workingTreeGroup(): GitResourceGroup { return this._workingTreeGroup as GitResourceGroup; }
-
-	private _compareLeft: string | undefined;
-	private _compareRight: string | undefined;
-	get compareLeft(): string | undefined {
-		return this._compareLeft;
-	}
-	get compareRight(): string | undefined {
-		return this._compareRight;
-	}
 
 	private _HEAD: Branch | undefined;
 	get HEAD(): Branch | undefined {
@@ -576,6 +573,18 @@ export class Repository implements Disposable {
 
 	async worktreePrune(): Promise<void> {
 		await this.run(Operation.WorktreePrune, () => this.repository.worktreePrune());
+	}
+
+	async getDiff(args: string[]): Promise<{ diff: IFileDiff[], didHitLimit: boolean }> {
+		return await this.run(Operation.Diff, () => this.repository.getDiff(args));
+	}
+
+	async getMergeBase(args: string[]): Promise<string[]> {
+		return await this.run(Operation.MergeBase, () => this.repository.getMergeBase(args));
+	}
+
+	async revParse(args: string[]): Promise<string[]> {
+		return await this.run(Operation.RevParse, () => this.repository.revParse(args));
 	}
 
 	async getCommit(ref: string): Promise<Commit> {

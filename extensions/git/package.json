@@ -187,6 +187,30 @@
         "category": "Git"
       },
       {
+        "command": "git.openComparison",
+        "title": "%command.openComparison%",
+        "category": "Git"
+      },
+      {
+        "command": "git.changeComparison",
+        "title": "%command.changeComparison%",
+        "category": "Git"
+      },
+      {
+        "command": "git.refreshComparison",
+        "title": "%command.refreshComparison%",
+        "category": "Git",
+        "icon": {
+          "light": "resources/icons/light/refresh.svg",
+          "dark": "resources/icons/dark/refresh.svg"
+        }
+      },
+      {
+        "command": "git.closeComparison",
+        "title": "%command.closeComparison%",
+        "category": "Git"
+      },
+      {
         "command": "git.addWorktree",
         "title": "%command.addWorktree%",
         "category": "Git"
@@ -379,6 +403,22 @@
         {
           "command": "git.checkout",
           "when": "config.git.enabled && gitOpenRepositoryCount != 0"
+        },
+        {
+          "command": "git.openComparison",
+          "when": "config.git.enabled && gitOpenRepositoryCount != 0"
+        },
+        {
+          "command": "git.changeComparison",
+          "when": "config.git.enabled && gitOpenComparisonCount != 0"
+        },
+        {
+          "command": "git.refreshComparison",
+          "when": "config.git.enabled && gitOpenComparisonCount != 0"
+        },
+        {
+          "command": "git.closeComparison",
+          "when": "config.git.enabled && gitOpenComparisonCount != 0"
         },
         {
           "command": "git.addWorktree",
@@ -578,6 +618,11 @@
           "when": "config.git.enabled && scmProvider == git"
         },
         {
+          "command": "git.openComparison",
+          "group": "6_misc",
+          "when": "config.git.enabled && scmProvider == git"
+        },
+        {
           "command": "git.addWorktree",
           "group": "6_misc",
           "when": "config.git.enabled && scmProvider == git"
@@ -586,6 +631,21 @@
           "command": "git.showOutput",
           "group": "7_repository",
           "when": "config.git.enabled && scmProvider == git"
+        },
+        {
+          "command": "git.changeComparison",
+          "group": "1_compare",
+          "when": "config.git.enabled && scmProvider == gitcomparison"
+        },
+        {
+          "command": "git.refreshComparison",
+          "group": "navigation",
+          "when": "config.git.enabled && scmProvider == gitcomparison"
+        },
+        {
+          "command": "git.closeComparison",
+          "group": "2_close",
+          "when": "config.git.enabled && scmProvider == gitcomparison"
         }
       ],
       "scm/resourceGroup/context": [
@@ -803,6 +863,11 @@
         "git.ignoreLimitWarning": {
           "type": "boolean",
           "description": "%config.ignoreLimitWarning%",
+          "default": false
+        },
+        "git.ignoreComparisonLimitWarning": {
+          "type": "boolean",
+          "description": "%config.ignoreComparisonLimitWarning%",
           "default": false
         },
         "git.defaultCloneDirectory": {

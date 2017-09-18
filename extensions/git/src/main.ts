@@ -42,6 +42,11 @@ async function init(context: ExtensionContext, disposables: Disposable[]): Promi
 	model.onDidCloseRepository(onRepository, null, disposables);
 	onRepository();
 
+	const onComparison = () => commands.executeCommand('setContext', 'gitOpenComparisonCount', `${model.comparisons.length}`);
+	model.onDidOpenComparison(onComparison, null, disposables);
+	model.onDidCloseComparison(onComparison, null, disposables);
+	onComparison();
+
 	if (!enabled) {
 		const commandCenter = new CommandCenter(git, model, outputChannel, telemetryReporter);
 		disposables.push(commandCenter);
