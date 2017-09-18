@@ -33,6 +33,22 @@
 	flex-wrap: wrap;
 }
 
+.scm-viewlet .panel-header {
+	display: flex;
+}
+
+.scm-viewlet .actions {
+	flex: 1;
+	text-align: right;
+	margin-right: 12px;
+}
+
+.scm-viewlet .actions .action-label {
+	width: 16px;
+	height: 16px;
+	margin: 2px 0 0 5px;
+}
+
 .scm-viewlet .scm-provider:not(.dirty) .badge {
 	display: none;
 }
