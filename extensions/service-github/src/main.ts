@@ -171,7 +171,7 @@ async function showCreateGitHubTokenWalkthrough(): Promise<boolean> {
 	}
 
 	const token = await vscode.window.showInputBox({
-		prompt: localize('tokenPrompt', "GitHub Personal Access Token"),
+		prompt: localize('tokenPrompt', "GitHub Personal Access Token (with 'repo' scope)"),
 		ignoreFocusOut: true,
 	});
 	if (token) {
