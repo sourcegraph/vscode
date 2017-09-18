@@ -5,7 +5,7 @@
 
 'use strict';
 
-import Event, { Emitter, filterEvent } from 'vs/base/common/event';
+import Event, { Emitter, filterEvent, toPromise } from 'vs/base/common/event';
 import * as paths from 'vs/base/common/paths';
 import * as arrays from 'vs/base/common/arrays';
 import { localize } from 'vs/nls';
@@ -366,7 +366,24 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 		const uris = anyFolders.map(folder => folder instanceof URI ? folder : folder.resource);
 		return this.workspaceEditingService.addFolders(uris)
 			.then(() => this.configurationService.reloadConfiguration())
-			.then(() => TPromise.join(uris.map(uri => this.resourceResolverService.resolveResource(uri))));
+			.then(() => TPromise.join(uris.map(uri => this.resourceResolverService.resolveResource(uri))))
+			.then(uris => {
+				return TPromise.join(uris.map(resource => this.waitForRepository(resource))).then(() => uris);
+			});
+	}
+
+	private waitForRepository(resource: URI): TPromise<void> {
+		const ready = () => {
+			if (this.contextService.getWorkbenchState() !== WorkbenchState.WORKSPACE) {
+				return false;
+			}
+			return !!this.scmService.getRepositoryForResource(resource);
+		};
+
+		if (ready()) {
+			return TPromise.as(void 0);
+		}
+		return toPromise(filterEvent(this.onChange, () => ready()));
 	}
 
 	public removeFoldersAsWorkspaceRootFolders(folders: IFolder[]): TPromise<void> {
