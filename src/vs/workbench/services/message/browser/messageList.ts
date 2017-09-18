@@ -281,7 +281,7 @@ export class MessageList {
 	}
 
 	private renderMessage(message: IMessageEntry, container: Builder, total: number, delta: number): void {
-		this.telemetryService.publicLog('MessageRendered', { message: { severity: message.severity, text: message.text } });
+		this.telemetryService.publicLog('MessageRendered', { editorMessage: { severity: message.severity, text: message.text } });
 
 		container.li({ class: 'message-list-entry message-list-entry-with-action' }, li => {
 
