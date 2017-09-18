@@ -297,11 +297,6 @@ declare module 'vscode' {
 	export interface SourceControl {
 
 		/**
-		 * The root (top-level) folder of the source control repository.
-		 */
-		readonly rootFolder?: Uri;
-
-		/**
 		 * The current SCM revision of the source control. Can be undefined if the source
 		 * control has not yet determined its revision or does not implement revision
 		 * determination. The extension should update this property's value whenever it
@@ -331,21 +326,6 @@ declare module 'vscode' {
 		remoteResources?: Uri[];
 
 		commandExecutor?: CommandExecutor;
-	}
-
-	/**
-	 * Options specified when creating a source control.
-	 */
-	export interface SourceControlOptions {
-		/**
-		 * A human-readable string for the source control. Eg: `Git`.
-		 */
-		label: string;
-
-		/**
-		 * The root (top-level) folder of the source control repository.
-		 */
-		rootFolder?: Uri;
 	}
 
 	export namespace scm {
