@@ -81,12 +81,8 @@ export class NavService extends Disposable implements INavService {
 			location = location.with({ query: location.query.replace(/\+/g, '%2B') });
 		}
 		const query = querystring.parse<HandledURI>(location.query);
-		if (!query.repo) {
+		if (!query.repo || !query.vcs) {
 			return Promise.resolve(void 0);
-		}
-
-		if (!query.vcs) {
-			query.vcs = 'git';
 		}
 
 		// Wait for all extensions to register resource resolvers.
