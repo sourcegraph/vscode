@@ -106,14 +106,16 @@ export class SCMService implements ISCMService {
 	}
 
 	getRepositoryForResource(resource: URI): ISCMRepository | undefined {
-		return this._folderRepositoriesMap.findSubstr(resource.toString());
+		// HACK(keegan) upstream uses resource.toString(), but we use fsPath to deal with invalid URIs missing scheme being passed in. Will probably be fixed upstream soon.
+		return this._folderRepositoriesMap.findSubstr(resource.fsPath);
 	}
 
 	private updateFolderRepositoriesMap(): void {
 		this._folderRepositoriesMap = new TrieMap<ISCMRepository>(TrieMap.PathSplitter);
 		for (const repository of this._repositories) {
 			if (repository.provider.rootUri) {
-				this._folderRepositoriesMap.insert(repository.provider.rootUri.toString(), repository);
+				// HACK(keegan) upstream uses resource.toString(), but we use fsPath to deal with invalid URIs missing scheme being passed in. Will probably be fixed upstream soon.
+				this._folderRepositoriesMap.insert(repository.provider.rootUri.fsPath, repository);
 			}
 		}
 	}
