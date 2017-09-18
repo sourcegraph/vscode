@@ -29,6 +29,15 @@ import { getCodeEditor } from 'vs/editor/common/services/codeEditorService';
 import { ISelection } from 'vs/editor/common/core/selection';
 import { EDITOR_CONTRIBUTION_ID as CODE_COMMENTS_CONTRIBUTION_ID } from 'vs/editor/common/services/codeCommentsService';
 
+type HandledURI = {
+	repo?: string;
+	vcs?: 'git';
+	revision?: string;
+	path?: string;
+	selection?: string | string[];
+	thread?: string;
+};
+
 export class NavService extends Disposable implements INavService {
 
 	public _serviceBrand: any;
@@ -65,15 +74,6 @@ export class NavService extends Disposable implements INavService {
 		if (location.scheme === 'https' && location.authority === 'about.sourcegraph.com' && location.path.indexOf('/open-native') === 0) {
 			location = URI.parse(`${product.urlProtocol}:${decodeURIComponent(location.fragment)}`);
 		}
-
-		type HandledURI = {
-			repo?: string;
-			vcs?: 'git';
-			revision?: string;
-			path?: string;
-			selection?: string | string[];
-			thread?: string;
-		};
 
 		// Without this, a %2B in the querystring will be decoded into a
 		// space. We want it to be decoded into a '+'.
@@ -184,26 +184,24 @@ export class NavService extends Disposable implements INavService {
 		return repository.provider.executeCommand(['ls-remote', '--get-url']).then(stdout => {
 			return stdout.trim();
 		}, () => '').then(remote => {
-			if (!remote) {
-				remote = repository.provider.remoteResources[0].toString();
-			}
+			const query: HandledURI = {
+				repo: remote || repository.provider.remoteResources[0].toString(),
+				vcs: 'git',
+				path: paths.relative(repository.provider.rootUri.fsPath, resource.fsPath),
+			};
 
 			// Get the selection directly from the editor because the history service only records
 			// positions, not selections.
-			let selection: string | undefined = undefined;
 			const control = getCodeEditor(this.editorService.getActiveEditor());
 			if (control) {
-				selection = control.getSelections().map(formatSelection).filter(s => !!s).join(',');
+				query.selection = control.getSelections().map(formatSelection).filter(s => !!s).join(',') || undefined;
 			}
-			const query = [
-				`repo=${encodeURIComponent(remote)}`,
-				'vcs=git',
-				repository.provider.revision ? `revision=${encodeURIComponent(repository.provider.revision.specifier)}` : undefined,
-				`path=${encodeURIComponent(paths.relative(repository.provider.rootUri.fsPath, resource.fsPath))}`,
-				selection ? `selection=${selection}` : undefined,
-			].filter(v => !!v);
-			// const uri = URI.from({ scheme: product.urlProtocol, path: 'open', query })
-			return 'https://about.sourcegraph.com/open-native#open?' + query.join('&');
+			if (repository.provider.revision) {
+				query.revision = repository.provider.revision.specifier;
+			}
+
+			const queryParts = Object.keys(query).filter(k => !!query[k]).map(k => k + '=' + encodeURIComponent(query[k]));
+			return 'https://about.sourcegraph.com/open-native#open?' + queryParts.join('&');
 		});
 	}
 
