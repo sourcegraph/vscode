@@ -55,7 +55,7 @@ async function downloadDependentsForWorkspaceFolder(workspaceFolder: vscode.Work
 		};
 	});
 	if (packages.length === 0) {
-		vscode.window.showWarningMessage(localize('foundNoDependablePackages', "Found no packages that can be depended on in ") + workspaceFolder.uri.fsPath);
+		vscode.window.showWarningMessage(localize('foundNoDependablePackages', "Found no packages that can be depended on in {0}", workspaceFolder.uri.fsPath));
 		return;
 	}
 	let pkgChoice: PackageQuery | undefined;
