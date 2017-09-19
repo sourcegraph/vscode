@@ -33,9 +33,14 @@ export abstract class ContextWidget extends Widget {
 		this._domNode = document.createElement('div');
 		this._domNode.className = 'monaco-editor-context-content';
 
-		this.scrollbar = new DomScrollableElement(this._domNode, {});
-		this._register(this.scrollbar);
-		this._containerDomNode.appendChild(this.scrollbar.getDomNode());
+		const SCROLL = false;
+		if (SCROLL) {
+			this.scrollbar = new DomScrollableElement(this._domNode, {});
+			this._register(this.scrollbar);
+			this._containerDomNode.appendChild(this.scrollbar.getDomNode());
+		} else {
+			this._containerDomNode.appendChild(this._domNode);
+		}
 
 		this._register(this.editor.onDidChangeConfiguration((e: IConfigurationChangedEvent) => {
 			if (e.fontInfo) {
@@ -52,7 +57,9 @@ export abstract class ContextWidget extends Widget {
 		this._domNode.appendChild(node);
 		this.updateFont();
 
-		this.scrollbar.scanDomNode();
+		if (this.scrollbar) {
+			this.scrollbar.scanDomNode();
+		}
 	}
 
 	public show(): void {
