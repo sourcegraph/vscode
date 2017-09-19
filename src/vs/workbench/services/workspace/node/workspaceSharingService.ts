@@ -48,17 +48,17 @@ export class WorkspaceSharingService implements IWorkspaceSharingService {
 	}
 
 	public export(target: URI): TPromise<void> {
-		const roots = this.contextService.getWorkspace().folders;
+		const folders = this.contextService.getWorkspace().folders;
 
-		return TPromise.join(roots.map(root => {
+		return TPromise.join(folders.map(folder => {
 			// For each root try and resolve it via the FolderCatalogService, since they will provide
 			// the most useful links for cloning. If that fails, we use resolveShareableFallback which
 			// just returns the git clone URL.
-			if (root.scheme !== Schemas.file) {
-				return TPromise.as(root);
+			if (folder.uri.scheme !== Schemas.file) {
+				return TPromise.as(folder.uri);
 			}
-			return this.folderCatalogService.resolveLocalFolderResources(root.fsPath).then(uris => {
-				return uris.length > 0 ? TPromise.as(uris[0]) : resolveCloneURI(root);
+			return this.folderCatalogService.resolveLocalFolderResources(folder.uri.fsPath).then(uris => {
+				return uris.length > 0 ? TPromise.as(uris[0]) : resolveCloneURI(folder.uri);
 			});
 		})).then(uris => {
 			const storedWorkspace: IStoredWorkspace = {

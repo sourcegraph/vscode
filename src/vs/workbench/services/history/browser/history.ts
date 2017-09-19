@@ -760,7 +760,7 @@ export class HistoryService extends BaseHistoryService implements IHistoryServic
 
 		const entriesRaw = this.storageService.get(HistoryService.STORAGE_KEY, StorageScope.WORKSPACE);
 		if (entriesRaw) {
-			entries = JSON.parse(entriesRaw);
+			entries = JSON.parse(entriesRaw).filter(entry => !!entry);
 		}
 
 		const registry = Registry.as<IEditorRegistry>(Extensions.Editors);
@@ -801,11 +801,11 @@ export class HistoryService extends BaseHistoryService implements IHistoryServic
 			const resourceInput = input as IResourceInput;
 			const resourceWorkspace = this.contextService.getWorkspaceFolder(resourceInput.resource);
 			if (resourceWorkspace) {
-				return resourceWorkspace;
+				return resourceWorkspace.uri;
 			}
 		}
 
 		// fallback to first workspace
-		return this.contextService.getWorkspace().folders[0];
+		return this.contextService.getWorkspace().folders[0].uri;
 	}
 }

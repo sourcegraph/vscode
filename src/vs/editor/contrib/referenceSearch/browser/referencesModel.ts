@@ -11,6 +11,7 @@ import { basename, dirname } from 'vs/base/common/paths';
 import { IDisposable, dispose, IReference } from 'vs/base/common/lifecycle';
 import * as strings from 'vs/base/common/strings';
 import URI from 'vs/base/common/uri';
+import { defaultGenerator } from 'vs/base/common/idGenerator';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { Range, IRange } from 'vs/editor/common/core/range';
 import { Location } from 'vs/editor/common/modes';
@@ -26,15 +27,7 @@ export class OneReference {
 		private _range: IRange,
 		private _eventBus: EventEmitter
 	) {
-		this._id = this._generateStableId();
-	}
-
-	private _generateStableId(): string {
-		return this.uri.toString() + ':' + this._toString(this.range);
-	}
-
-	private _toString(range: IRange): string {
-		return [range.startLineNumber, range.startColumn, range.endLineNumber, range.endColumn].join(':');
+		this._id = defaultGenerator.nextId();
 	}
 
 	public get id(): string {
@@ -67,7 +60,7 @@ export class OneReference {
 
 	public set range(value: IRange) {
 		this._range = value;
-		this._eventBus.emit('range/changed', this);
+		this._eventBus.emit('ref/changed', this);
 	}
 
 	public getAriaMessage(): string {
@@ -208,33 +201,12 @@ export class ReferencesModel implements IDisposable {
 	private _references: OneReference[] = [];
 	private _eventBus = new EventEmitter();
 
-	onDidChangeReferenceRange: Event<OneReference> = fromEventEmitter<OneReference>(this._eventBus, 'range/changed');
-	onDidChangeReferences: Event<OneReference> = fromEventEmitter<OneReference>(this._eventBus, 'refs/changed');
+	onDidChangeReferenceRange: Event<OneReference> = fromEventEmitter<OneReference>(this._eventBus, 'ref/changed');
 
-	constructor(references: Location[], private currentWorkspacePath: string) {
-		this._setReferences(references, false);
-	}
-
-	public setReferences(references: Location[]) {
-		this._setReferences(references, true);
-	}
-
-	private _setReferences(references: Location[], notify: boolean) {
-		this._groups = dispose(this._groups);
-		this._references = [];
+	constructor(references: Location[]) {
 
 		// grouping and sorting
-		references.sort((a: Location, b: Location) => {
-			const aInWorkspace = a.uri.path.indexOf(this.currentWorkspacePath) === 0;
-			const bInWorkspace = b.uri.path.indexOf(this.currentWorkspacePath) === 0;
-			// Sort references in current workspace before references in other workspaces.
-			if (aInWorkspace && !bInWorkspace) {
-				return -1;
-			} else if (bInWorkspace && !aInWorkspace) {
-				return 1;
-			}
-			return ReferencesModel._compareReferences(a, b);
-		});
+		references.sort(ReferencesModel._compareReferences);
 
 		let current: FileReferences;
 		for (let ref of references) {
@@ -252,9 +224,6 @@ export class ReferencesModel implements IDisposable {
 				this._references.push(oneRef);
 				current.children.push(oneRef);
 			}
-		}
-		if (notify) {
-			this._eventBus.emit('refs/changed', this);
 		}
 	}
 

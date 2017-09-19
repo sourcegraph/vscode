@@ -20,6 +20,7 @@ import { ILifecycleService } from 'vs/platform/lifecycle/electron-main/lifecycle
 import { IWindowsMainService, ISharedProcess } from 'vs/platform/windows/electron-main/windows';
 import { IHistoryMainService, IRecentlyOpened } from 'vs/platform/history/common/history';
 import { IWorkspaceIdentifier } from 'vs/platform/workspaces/common/workspaces';
+import { ICommandAction } from 'vs/platform/actions/common/actions';
 
 export class WindowsService implements IWindowsService, IDisposable {
 
@@ -110,6 +111,16 @@ export class WindowsService implements IWindowsService, IDisposable {
 		return TPromise.as(null);
 	}
 
+	updateTouchBar(windowId: number, items: ICommandAction[][]): TPromise<void> {
+		const codeWindow = this.windowsMainService.getWindowById(windowId);
+
+		if (codeWindow) {
+			codeWindow.updateTouchBar(items);
+		}
+
+		return TPromise.as(null);
+	}
+
 	closeWorkspace(windowId: number): TPromise<void> {
 		const codeWindow = this.windowsMainService.getWindowById(windowId);
 
@@ -130,21 +141,21 @@ export class WindowsService implements IWindowsService, IDisposable {
 		return TPromise.as(null);
 	}
 
-	createAndOpenWorkspace(windowId: number, folders?: string[], path?: string): TPromise<void> {
+	createAndOpenWorkspace(windowId: number, folders?: string[], path?: string): TPromise<IWorkspaceIdentifier> {
 		const codeWindow = this.windowsMainService.getWindowById(windowId);
 
 		if (codeWindow) {
-			this.windowsMainService.createAndOpenWorkspace(codeWindow, folders, path);
+			return this.windowsMainService.createAndOpenWorkspace(codeWindow, folders, path);
 		}
 
 		return TPromise.as(null);
 	}
 
-	saveAndOpenWorkspace(windowId: number, path: string): TPromise<void> {
+	saveAndOpenWorkspace(windowId: number, path: string): TPromise<IWorkspaceIdentifier> {
 		const codeWindow = this.windowsMainService.getWindowById(windowId);
 
 		if (codeWindow) {
-			this.windowsMainService.saveAndOpenWorkspace(codeWindow, path);
+			return this.windowsMainService.saveAndOpenWorkspace(codeWindow, path);
 		}
 
 		return TPromise.as(null);

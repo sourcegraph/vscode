@@ -42,7 +42,6 @@ import { IModelDecorationsChangedEvent } from 'vs/editor/common/model/textModelE
 import { IEditorOptions } from 'vs/editor/common/config/editorOptions';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 import { ModelDecorationOptions } from 'vs/editor/common/model/textModelWithDecorations';
-import { ProgressBar } from 'vs/base/browser/ui/progressbar/progressbar';
 import URI from 'vs/base/common/uri';
 
 class DecorationsManager implements IDisposable {
@@ -570,7 +569,6 @@ export class ReferenceWidget extends PeekViewWidget {
 	private _previewNotAvailableMessage: Model;
 	private _previewContainer: Builder;
 	private _messageContainer: Builder;
-	private _progressBar: ProgressBar;
 
 	constructor(
 		editor: ICodeEditor,
@@ -597,11 +595,6 @@ export class ReferenceWidget extends PeekViewWidget {
 			primaryHeadingColor: theme.getColor(peekViewTitleForeground),
 			secondaryHeadingColor: theme.getColor(peekViewTitleInfoForeground)
 		});
-		if (this._progressBar) {
-			this._progressBar.style({
-				progressBarBackground: theme.getColor(peekViewBorder),
-			});
-		}
 	}
 
 	public dispose(): void {
@@ -634,10 +627,6 @@ export class ReferenceWidget extends PeekViewWidget {
 		}
 	}
 
-	public getProgressBar(): ProgressBar {
-		return this._progressBar;
-	}
-
 	protected _fillBody(containerElement: HTMLElement): void {
 		var container = $(containerElement);
 
@@ -646,11 +635,6 @@ export class ReferenceWidget extends PeekViewWidget {
 		// message pane
 		container.div({ 'class': 'messages' }, div => {
 			this._messageContainer = div.hide();
-		});
-
-		// progress
-		container.div({}, div => {
-			this._progressBar = new ProgressBar(div, { progressBarBackground: this._themeService.getTheme().getColor(peekViewBorder) });
 		});
 
 		// editor
@@ -765,15 +749,6 @@ export class ReferenceWidget extends PeekViewWidget {
 
 		// listen on model changes
 		this._disposeOnNewModel.push(this._model.onDidChangeReferenceRange(reference => this._tree.refresh(reference)));
-		this._disposeOnNewModel.push(this._model.onDidChangeReferences(reference => this._tree.refresh().then(() => this._tree.layout())));
-
-		// listen on selection and focus
-		this._disposeOnNewModel.push(this._tree.addListener(Controller.Events.FOCUSED, (element) => {
-			if (element instanceof OneReference) {
-				this._revealReference(element);
-				this._onDidSelectReference.fire({ element, kind: 'show', source: 'tree' });
-			}
-		}));
 
 		// listen on selection and focus
 		this._disposeOnNewModel.push(this._tree.addListener(Controller.Events.FOCUSED, (element) => {
@@ -813,7 +788,9 @@ export class ReferenceWidget extends PeekViewWidget {
 		this._tree.layout();
 		this.focus();
 
-		return this._tree.setInput(this._model);
+		// pick input and a reference to begin with
+		const input = this._model.groups.length === 1 ? this._model.groups[0] : this._model;
+		return this._tree.setInput(input);
 	}
 
 	private _getFocusedReference(): OneReference {

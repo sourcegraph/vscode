@@ -37,6 +37,7 @@ export interface IWorkspaceIdentifier {
 
 export interface IStoredWorkspaceFolder {
 	path: string;
+	name?: string;
 }
 
 export interface IStoredWorkspace {
