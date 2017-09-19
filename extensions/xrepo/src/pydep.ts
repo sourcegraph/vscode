@@ -11,6 +11,9 @@ import * as os from 'os';
 const toolsDir = path.join(os.homedir(), '.sourcegraph', 'tools');
 const pythonEnvDir = path.join(toolsDir, 'pythonEnv');
 
+/**
+ * SetupPy represents a setup.py configuration as read by the pydep-run.py command.
+ */
 export interface SetupPy {
 	scripts: string[] | null;
 	repo_url: string | null;
@@ -35,14 +38,20 @@ export async function pyDepList(dir: string): Promise<SetupPy[]> {
 	}
 }
 
-let pydep_: Promise<string> | null = null;
+let pydep: Promise<string> | null = null;
 
-async function getPyDep(): Promise<string> {
-	if (pydep_) {
-		return pydep_;
+function getPyDep(): Promise<string> {
+	if (pydep) {
+		return pydep;
 	}
-	const p = await ensurePyDep();
-	pydep_ = Promise.resolve(p);
+
+	const p = ensurePyDep();
+	pydep = p;
+	p.then(undefined, () => {
+		if (pydep === p) {
+			pydep = null;
+		}
+	});
 	return p;
 }
 
@@ -51,14 +60,20 @@ async function ensurePyDep(): Promise<string> {
 	return path.join(pythonEnvDir, 'bin', 'pydep-run.py');
 }
 
-let python_: Promise<string> | null = null;
+let pythonInterpreter: Promise<string> | null = null;
 
-async function getPython(): Promise<string> {
-	if (python_) {
-		return python_;
+function getPython(): Promise<string> {
+	if (pythonInterpreter) {
+		return pythonInterpreter;
 	}
-	const p = await ensurePython();
-	python_ = Promise.resolve(p);
+
+	const p = ensurePython();
+	pythonInterpreter = p;
+	p.then(undefined, () => {
+		if (pythonInterpreter === p) {
+			pythonInterpreter = null;
+		}
+	});
 	return p;
 }
 

@@ -29,7 +29,7 @@ export async function downloadDependents(workspaceFolder?: vscode.WorkspaceFolde
 		if (!choice) {
 			return;
 		}
-		workspaceFolder = wsFolders.filter(f => f.uri.fsPath === choice)[0];
+		workspaceFolder = wsFolders.find(f => f.uri.fsPath === choice);
 	}
 	if (!workspaceFolder) {
 		vscode.window.showErrorMessage(localize('noWorkspaceFolders', "Cannot download dependents, because there are no folders in your workspace"));

@@ -438,7 +438,7 @@ export function registerCommands(): void {
 		const remoteService = accessor.get(IRemoteService);
 
 		const otherArgs: string[] = [];
-		for (let k in pkgData) {
+		for (let k of Object.keys(pkgData)) {
 			otherArgs.push(`, ${k}: ${JSON.stringify(pkgData[k])}`);
 		}
 
