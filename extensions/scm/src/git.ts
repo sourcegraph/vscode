@@ -24,7 +24,7 @@ export class GitRepository implements Repository {
 	constructor(
 		public readonly sourceControl: vscode.SourceControl,
 	) {
-		const root = sourceControl.rootFolder;
+		const root = sourceControl.rootUri;
 		if (!root) {
 			throw new Error(`source control ${sourceControl.id} has no root`);
 		}

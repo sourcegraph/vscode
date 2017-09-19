@@ -457,7 +457,7 @@ class ExtHostSourceControl implements vscode.SourceControl {
 	}
 }
 
-type SourceControlRootFolder = { handle: number, rootUri: vscode.Uri };
+type SourceControlRoot = { handle: number, rootUri: vscode.Uri };
 type SourceControlHandle = { handle: number };
 
 export class ExtHostSCM {
@@ -472,17 +472,17 @@ export class ExtHostSCM {
 	get onDidChangeActiveProvider(): Event<vscode.SourceControl> { return this._onDidChangeActiveProvider.event; }
 
 	/**
-	 * All associations between a root folder and the source control that provides SCM
+	 * All associations between a root URI and the source control that provides SCM
 	 * information about resources inside the folder.
 	 */
-	private _folderSourceControls: SourceControlRootFolder[] = [];
+	private _sourceControlRoots: SourceControlRoot[] = [];
 
 	/**
-	 * Map of source control root folders to the source control that is used to provide
-	 * SCM information about resources inside the folder. This data structure is kept in
+	 * Map of source control root URIs to the source control that is used to provide
+	 * SCM information about resources under the URI. This data structure is kept in
 	 * sync with the equivalent map in the main process.
 	 */
-	private _folderSourceControlsMap: TrieMap<SourceControlHandle>;
+	private _sourceControlRootsMap: TrieMap<SourceControlHandle>;
 
 	constructor(
 		mainContext: IMainContext,
@@ -537,7 +537,7 @@ export class ExtHostSCM {
 		this._sourceControls.set(handle, sourceControl);
 
 		if (rootUri) {
-			this._folderSourceControls.push({ handle, rootUri });
+			this._sourceControlRoots.push({ handle, rootUri });
 			this.updateFolderSourceControlsMap();
 		}
 
@@ -608,7 +608,7 @@ export class ExtHostSCM {
 	}
 
 	getSourceControlForResource(resource: vscode.Uri): vscode.SourceControl | undefined {
-		const handle = this._folderSourceControlsMap.findSubstr(resource.toString());
+		const handle = this._sourceControlRootsMap.findSubstr(resource.toString());
 		if (!handle) {
 			return undefined;
 		}
@@ -616,9 +616,9 @@ export class ExtHostSCM {
 	}
 
 	private updateFolderSourceControlsMap(): void {
-		this._folderSourceControlsMap = new TrieMap<SourceControlHandle>(TrieMap.PathSplitter);
-		for (const { handle, rootUri } of this._folderSourceControls) {
-			this._folderSourceControlsMap.insert(rootUri.toString(), { handle });
+		this._sourceControlRootsMap = new TrieMap<SourceControlHandle>(TrieMap.PathSplitter);
+		for (const { handle, rootUri } of this._sourceControlRoots) {
+			this._sourceControlRootsMap.insert(rootUri.toString(), { handle });
 		}
 	}
 }

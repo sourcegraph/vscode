@@ -35,11 +35,11 @@ export function getResourceInfo(resource: vscode.Uri): IResourceInfo | undefined
 	if (!repo) {
 		return;
 	}
-	if (!repo.sourceControl.revision || !repo.sourceControl.revision.id || !repo.sourceControl.rootFolder) {
+	if (!repo.sourceControl.revision || !repo.sourceControl.revision.id || !repo.sourceControl.rootUri) {
 		return;
 	}
 
-	const path = toRelativePath(repo.sourceControl.rootFolder, resource);
+	const path = toRelativePath(repo.sourceControl.rootUri, resource);
 	if (!path) {
 		return;
 	}
@@ -75,10 +75,10 @@ export function repositoryForResource(resource: vscode.Uri): Repository | undefi
 const repositories: Repository[] = [];
 
 function createRepository(sourceControl: vscode.SourceControl): Repository | undefined {
-	if (!sourceControl.rootFolder) {
+	if (!sourceControl.rootUri) {
 		return;
 	}
-	if (sourceControl.rootFolder.scheme !== 'file') {
+	if (sourceControl.rootUri.scheme !== 'file') {
 		return;
 	}
 

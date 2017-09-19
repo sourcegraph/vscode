@@ -68,12 +68,12 @@ export function activate(context: vscode.ExtensionContext) {
 			const { resource, sourceControl } = args;
 
 
-			if (!sourceControl.rootFolder) {
+			if (!sourceControl.rootUri) {
 				vscode.window.showErrorMessage(localize('noRootFolder', "Unable to determine the repository's root folder."));
 				return;
 			}
 
-			vscode.commands.executeCommand('_workbench.addRoots', [sourceControl.rootFolder]).then(
+			vscode.commands.executeCommand('_workbench.addRoots', [sourceControl.rootUri]).then(
 				() => void 0,
 				err => {
 					vscode.window.showErrorMessage(localize('addRootsFailed', "Adding root folder {0} failed: {1}.", sourceControl!.toString(), err));
@@ -118,7 +118,7 @@ function normalizeRemoteURL(remote: vscode.Uri): vscode.Uri {
 function parseGitHubRepo(resource: vscode.Uri, remote: vscode.Uri, sourceControl: vscode.SourceControl): { repo: string, path: string, revision: string } {
 	// GitHub repositories always have 2 path components after the hostname.
 	const repo = remote.authority + remote.path.split('/', 3).join('/');
-	const filePath = sourceControl.rootFolder ? path.relative(sourceControl.rootFolder.fsPath, resource.fsPath) : '';
+	const filePath = sourceControl.rootUri ? path.relative(sourceControl.rootUri.fsPath, resource.fsPath) : '';
 	const revision = sourceControl.revision && sourceControl.revision.id ? sourceControl.revision.id : 'HEAD';
 	return { repo, path: filePath, revision };
 }
