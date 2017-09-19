@@ -7,7 +7,7 @@
 import * as nls from 'vs/nls';
 import { KeyCode, KeyMod } from 'vs/base/common/keyCodes';
 import URI from 'vs/base/common/uri';
-import { PPromise, TPromise } from 'vs/base/common/winjs.base';
+import { TPromise } from 'vs/base/common/winjs.base';
 import { IEditorService } from 'vs/platform/editor/common/editor';
 import { CommandsRegistry, ICommandHandler } from 'vs/platform/commands/common/commands';
 import { IContextKeyService, ContextKeyExpr } from 'vs/platform/contextkey/common/contextkey';
@@ -23,7 +23,6 @@ import { ReferencesModel } from './referencesModel';
 import { asWinJsPromise } from 'vs/base/common/async';
 import { onUnexpectedExternalError } from 'vs/base/common/errors';
 import { EditorContextKeys } from 'vs/editor/common/editorContextKeys';
-import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
 import { EmbeddedCodeEditorWidget } from 'vs/editor/browser/widget/embeddedCodeEditorWidget';
 
 const defaultReferenceSearchOptions: RequestOptions = {
@@ -84,7 +83,7 @@ export class ReferenceAction extends EditorAction {
 		}
 		let range = editor.getSelection();
 		let model = editor.getModel();
-		let references = provideReferences(model, range.getStartPosition());
+		let references = provideReferences(model, range.getStartPosition()).then(references => new ReferencesModel(references));
 		controller.toggleWidget(range, references, defaultReferenceSearchOptions);
 	}
 }
@@ -110,7 +109,7 @@ let findReferencesCommand: ICommandHandler = (accessor: ServicesAccessor, resour
 			return undefined;
 		}
 
-		const references = provideReferences(control.getModel(), Position.lift(position));
+		let references = provideReferences(control.getModel(), Position.lift(position)).then(references => new ReferencesModel(references));
 		let range = new Range(position.lineNumber, position.column, position.lineNumber, position.column);
 		return TPromise.as(controller.toggleWidget(range, references, defaultReferenceSearchOptions));
 	});
@@ -120,8 +119,6 @@ let showReferencesCommand: ICommandHandler = (accessor: ServicesAccessor, resour
 	if (!(resource instanceof URI)) {
 		throw new Error('illegal argument, uri expected');
 	}
-
-	const currentWorkspacePath = accessor.get(IWorkspaceContextService).getWorkspace().folders[0].path;
 
 	return accessor.get(IEditorService).openEditor({ resource: resource }).then(editor => {
 
@@ -137,7 +134,7 @@ let showReferencesCommand: ICommandHandler = (accessor: ServicesAccessor, resour
 
 		return TPromise.as(controller.toggleWidget(
 			new Range(position.lineNumber, position.column, position.lineNumber, position.column),
-			TPromise.as(new ReferencesModel(references, currentWorkspacePath)),
+			TPromise.as(new ReferencesModel(references)),
 			defaultReferenceSearchOptions)).then(() => true);
 	});
 };
@@ -193,41 +190,31 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 });
 
 
-export function provideReferences(model: editorCommon.IReadOnlyModel, position: Position): PPromise<void, Location[]> {
-	let promise: TPromise<void>;
-	return new PPromise<void, Location[]>((complete, error, progress) => {
-		// collect references from all providers
-		const promises = ReferenceProviderRegistry.ordered(model).map(provider => {
-			let gotProgress: TPromise<void>;
-			return asWinJsPromise((token) => {
-				return provider.provideReferences(model, position, { includeDeclaration: true }, token, locations => {
-					gotProgress = TPromise.timeout(0).then(() => progress(locations));
-				});
-			}).then(result => {
-				if (gotProgress) {
-					// If we got progress, then the final result just has duplicate data.
-					// Wait for progress promise to resolve before resolving the entire promise.
-					return gotProgress;
-				}
-				if (Array.isArray(result)) {
-					// The timeout is necessary to get this to work when provideReferences returns synchronously (e.g. tests).
-					// This timeout wouldn't be necessary if TPromise implemented A+ spec (https://promisesaplus.com/#point-67), but it doesn't :(
-					// Without the timeout, the progress handler will get called before there is a progress listener if provideReferences returns synchronously.
-					return TPromise.timeout(0).then(() => progress(result));
-				}
-				return undefined;
-			}, err => {
-				onUnexpectedExternalError(err);
-			});
+export function provideReferences(model: editorCommon.IReadOnlyModel, position: Position): TPromise<Location[]> {
+
+	// collect references from all providers
+	const promises = ReferenceProviderRegistry.ordered(model).map(provider => {
+		return asWinJsPromise((token) => {
+			return provider.provideReferences(model, position, { includeDeclaration: true }, token);
+		}).then(result => {
+			if (Array.isArray(result)) {
+				return <Location[]>result;
+			}
+			return undefined;
+		}, err => {
+			onUnexpectedExternalError(err);
 		});
+	});
 
-		promise = TPromise.join(promises).then(() => complete(void 0));
-	}, () => promise.cancel());
+	return TPromise.join(promises).then(references => {
+		let result: Location[] = [];
+		for (let ref of references) {
+			if (ref) {
+				result.push(...ref);
+			}
+		}
+		return result;
+	});
 }
 
-function provideReferencesCommand(model: editorCommon.IReadOnlyModel, position: Position): TPromise<Location[]> {
-	const values: Location[] = [];
-	return provideReferences(model, position).then(() => values, undefined, progress => values.push(...progress));
-}
-
-CommonEditorRegistry.registerDefaultLanguageCommand('_executeReferenceProvider', provideReferencesCommand);
+CommonEditorRegistry.registerDefaultLanguageCommand('_executeReferenceProvider', provideReferences);

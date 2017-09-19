@@ -25,7 +25,6 @@ import { ContextKeyExpr } from 'vs/platform/contextkey/common/contextkey';
 import { MessageController } from './messageController';
 import * as corePosition from 'vs/editor/common/core/position';
 import { EditorContextKeys } from 'vs/editor/common/editorContextKeys';
-import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
 import { IProgressService } from 'vs/platform/progress/common/progress';
 
 export class DefinitionActionConfig {
@@ -53,7 +52,6 @@ export class DefinitionAction extends EditorAction {
 		const messageService = accessor.get(IMessageService);
 		const editorService = accessor.get(IEditorService);
 		const progressService = accessor.get(IProgressService);
-		const currentWorkspacePath = accessor.get(IWorkspaceContextService).getWorkspace().folders[0].path;
 
 		const model = editor.getModel();
 		const pos = editor.getPosition();
@@ -101,7 +99,7 @@ export class DefinitionAction extends EditorAction {
 
 			} else {
 				// handle multile results
-				this._onResult(editorService, editor, new ReferencesModel(result, currentWorkspacePath));
+				this._onResult(editorService, editor, new ReferencesModel(result));
 			}
 
 		}, (err) => {
@@ -370,3 +368,4 @@ export class PeekTypeDefinitionAction extends TypeDefinitionAction {
 		});
 	}
 }
+

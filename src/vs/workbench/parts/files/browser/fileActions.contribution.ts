@@ -26,6 +26,7 @@ import { ContextKeyExpr } from 'vs/platform/contextkey/common/contextkey';
 import { KeybindingsRegistry } from 'vs/platform/keybinding/common/keybindingsRegistry';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 import { explorerItemToFileResource, ExplorerFocusCondition, FilesExplorerFocusCondition } from 'vs/workbench/parts/files/common/files';
+import URI from 'vs/base/common/uri';
 
 class FilesViewerActionContributor extends ActionBarContributor {
 
@@ -95,11 +96,9 @@ class FilesViewerActionContributor extends ActionBarContributor {
 			let action: Action = this.instantiationService.createInstance(AddRootFolderAction, AddRootFolderAction.ID, AddRootFolderAction.LABEL);
 			action.order = 52;
 			actions.push(action);
-			if (this.contextService.getWorkspace().folders.length > 1) {
-				action = this.instantiationService.createInstance(RemoveRootFolderAction, stat.resource, RemoveRootFolderAction.ID, RemoveRootFolderAction.LABEL);
-				action.order = 53;
-				actions.push(action);
-			}
+			action = this.instantiationService.createInstance(RemoveRootFolderAction, stat.resource, RemoveRootFolderAction.ID, RemoveRootFolderAction.LABEL);
+			action.order = 53;
+			actions.push(action);
 			actions.push(new Separator(null, 54));
 		}
 
@@ -340,5 +339,13 @@ function appendSaveConflictEditorTitleAction(id: string, title: string, iconClas
 		when: ContextKeyExpr.equals(CONFLICT_RESOLUTION_CONTEXT, true),
 		group: 'navigation',
 		order
+	});
+}
+
+// Touch Bar
+if (isMacintosh) {
+	MenuRegistry.appendMenuItem(MenuId.TouchBarContext, {
+		command: { id: GlobalNewUntitledFileAction.ID, title: GlobalNewUntitledFileAction.LABEL, iconPath: URI.parse(require.toUrl('vs/workbench/parts/files/browser/media/new-file-tb.png')).fsPath },
+		group: '1_modification'
 	});
 }

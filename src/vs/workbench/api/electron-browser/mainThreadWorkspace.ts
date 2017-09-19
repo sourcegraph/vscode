@@ -8,13 +8,9 @@ import { isPromiseCanceledError } from 'vs/base/common/errors';
 import URI from 'vs/base/common/uri';
 import { ISearchService, QueryType, ISearchQuery, ISearchProgressItem, ISearchComplete } from 'vs/platform/search/common/search';
 import { IWorkspaceContextService, WorkbenchState } from 'vs/platform/workspace/common/workspace';
-import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { ITextFileService } from 'vs/workbench/services/textfile/common/textfiles';
-import { ICommonCodeEditor, isCommonCodeEditor } from 'vs/editor/common/editorCommon';
-import { bulkEdit, IResourceEdit } from 'vs/editor/common/services/bulkEdit';
 import { TPromise, PPromise } from 'vs/base/common/winjs.base';
 import { MainThreadWorkspaceShape, ExtHostWorkspaceShape, ExtHostContext, MainContext, IExtHostContext } from '../node/extHost.protocol';
-import { ITextModelService } from 'vs/editor/common/services/resolverService';
 import { IFileService } from 'vs/platform/files/common/files';
 import { IDisposable, dispose, combinedDisposable } from 'vs/base/common/lifecycle';
 import { RemoteFileService } from 'vs/workbench/services/files/electron-browser/remoteFileService';
@@ -36,15 +32,13 @@ export class MainThreadWorkspace implements MainThreadWorkspaceShape {
 		@ISearchService private readonly _searchService: ISearchService,
 		@IWorkspaceContextService private readonly _contextService: IWorkspaceContextService,
 		@ITextFileService private readonly _textFileService: ITextFileService,
-		@IWorkbenchEditorService private readonly _editorService: IWorkbenchEditorService,
-		@ITextModelService private readonly _textModelResolverService: ITextModelService,
+		@IExperimentService private experimentService: IExperimentService,
 		@IResourceResolverService private readonly _resourceResolverService: IResourceResolverService,
 		@IFolderCatalogService private readonly _folderCatalogService: IFolderCatalogService,
-		@IExperimentService private experimentService: IExperimentService,
 		@IFileService private readonly _fileService: IFileService
 	) {
 		this._proxy = extHostContext.get(ExtHostContext.ExtHostWorkspace);
-		this._contextService.onDidChangeWorkspaceFolders(this._onDidChangeWorkspace, this, this._toDispose);
+		this._contextService.onDidChangeWorkbenchState(this._onDidChangeWorkspaceState, this, this._toDispose);
 	}
 
 	dispose(): void {
@@ -60,7 +54,7 @@ export class MainThreadWorkspace implements MainThreadWorkspaceShape {
 
 	// --- workspace ---
 
-	private _onDidChangeWorkspace(): void {
+	private _onDidChangeWorkspaceState(): void {
 		this._proxy.$acceptWorkspaceData(this._contextService.getWorkbenchState() === WorkbenchState.EMPTY ? null : this._contextService.getWorkspace());
 	}
 
@@ -72,7 +66,7 @@ export class MainThreadWorkspace implements MainThreadWorkspaceShape {
 			return undefined;
 		}
 		const query: ISearchQuery = {
-			folderQueries: workspace.folders.map(root => ({ folder: root })),
+			folderQueries: workspace.folders.map(folder => ({ folder: folder.uri })),
 			type: QueryType.File,
 			maxResults,
 			includePattern: { [include]: true },
@@ -113,21 +107,6 @@ export class MainThreadWorkspace implements MainThreadWorkspaceShape {
 		return this._textFileService.saveAll(includeUntitled).then(result => {
 			return result.results.every(each => each.success === true);
 		});
-	}
-
-	$applyWorkspaceEdit(edits: IResourceEdit[]): TPromise<boolean> {
-
-		let codeEditor: ICommonCodeEditor;
-		let editor = this._editorService.getActiveEditor();
-		if (editor) {
-			let candidate = editor.getControl();
-			if (isCommonCodeEditor(candidate)) {
-				codeEditor = candidate;
-			}
-		}
-
-		return bulkEdit(this._textModelResolverService, codeEditor, edits, this._fileService)
-			.then(() => true);
 	}
 
 	// --- EXPERIMENT: workspace provider

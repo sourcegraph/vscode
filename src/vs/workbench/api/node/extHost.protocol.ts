@@ -26,7 +26,6 @@ import { IProgressOptions, IProgressStep } from 'vs/platform/progress/common/pro
 
 import * as editorCommon from 'vs/editor/common/editorCommon';
 import * as modes from 'vs/editor/common/modes';
-import { IResourceEdit } from 'vs/editor/common/services/bulkEdit';
 import { ITextSource } from 'vs/editor/common/model/textSource';
 
 import { ConfigurationTarget } from 'vs/workbench/services/configuration/common/configurationEditing';
@@ -52,6 +51,7 @@ import { ITreeItem } from 'vs/workbench/common/views';
 import { ThemeColor } from 'vs/platform/theme/common/themeService';
 import { IDisposable } from 'vs/base/common/lifecycle';
 import { SerializedError } from 'vs/base/common/errors';
+import { WorkspaceFolder } from 'vs/platform/workspace/common/workspace';
 
 export interface IEnvironment {
 	isExtensionDevelopmentDebug: boolean;
@@ -68,7 +68,7 @@ export interface IEnvironment {
 export interface IWorkspaceData {
 	id: string;
 	name: string;
-	folders: URI[];
+	folders: WorkspaceFolder[];
 }
 
 export interface IInitData {
@@ -192,6 +192,16 @@ export interface ITextDocumentShowOptions {
 	selection?: IRange;
 }
 
+export interface IWorkspaceResourceEdit {
+	resource: URI;
+	modelVersionId?: number;
+	edits: {
+		range?: IRange;
+		newText: string;
+		newEol?: editorCommon.EndOfLineSequence;
+	}[];
+}
+
 export interface MainThreadEditorsShape extends IDisposable {
 	$tryShowTextDocument(resource: URI, options: ITextDocumentShowOptions): TPromise<string>;
 	$registerTextEditorDecorationType(key: string, options: editorCommon.IDecorationRenderOptions): void;
@@ -203,6 +213,7 @@ export interface MainThreadEditorsShape extends IDisposable {
 	$tryRevealRange(id: string, range: IRange, revealType: TextEditorRevealType): TPromise<any>;
 	$trySetSelections(id: string, selections: ISelection[]): TPromise<any>;
 	$tryApplyEdits(id: string, modelVersionId: number, edits: editorCommon.ISingleEditOperation[], opts: IApplyEditsOptions): TPromise<boolean>;
+	$tryApplyWorkspaceEdit(workspaceResourceEdits: IWorkspaceResourceEdit[]): TPromise<boolean>;
 	$tryInsertSnippet(id: string, template: string, selections: IRange[], opts: IUndoStopOptions): TPromise<any>;
 	$getDiffInformation(id: string): TPromise<editorCommon.ILineChange[]>;
 }
@@ -227,15 +238,6 @@ export interface MainThreadLanguageFeaturesShape extends IDisposable {
 	$registerHoverProvider(handle: number, selector: vscode.DocumentSelector): TPromise<any>;
 	$registerDocumentHighlightProvider(handle: number, selector: vscode.DocumentSelector): TPromise<any>;
 	$registerReferenceSupport(handle: number, selector: vscode.DocumentSelector): TPromise<any>;
-	/**
- * While the main thread is waiting for a call to ExtHostLanguageFeaturesShape.$provideReferences to resolve,
- * the extension may call this method to notify the main thread of intermediate results.
- * This function is an implementation detail since it is not possible to serialize callbacks (functions) over the
- * communication channel between the extension host and the main thread.
- *
- * vscode.d.ts exposes a higher level API with a progress callback.
- */
-	$notifyProvideReferencesProgress(handle: number, progressHandle: number, locations: modes.Location[]): TPromise<any>;
 	$registerQuickFixSupport(handle: number, selector: vscode.DocumentSelector): TPromise<any>;
 	$registerDocumentFormattingSupport(handle: number, selector: vscode.DocumentSelector): TPromise<any>;
 	$registerRangeFormattingSupport(handle: number, selector: vscode.DocumentSelector): TPromise<any>;
@@ -313,7 +315,6 @@ export interface MainThreadWorkspaceShape extends IDisposable {
 	$startSearch(include: string, exclude: string, maxResults: number, requestId: number): Thenable<URI[]>;
 	$cancelSearch(requestId: number): Thenable<boolean>;
 	$saveAll(includeUntitled?: boolean): Thenable<boolean>;
-	$applyWorkspaceEdit(edits: IResourceEdit[]): TPromise<boolean>;
 
 	$registerFileSystemProvider(handle: number, scheme: string): void;
 	$unregisterFileSystemProvider(handle: number): void;
@@ -546,7 +547,7 @@ export interface ExtHostLanguageFeaturesShape {
 	$provideTypeDefinition(handle: number, resource: URI, position: IPosition): TPromise<modes.Definition>;
 	$provideHover(handle: number, resource: URI, position: IPosition): TPromise<modes.Hover>;
 	$provideDocumentHighlights(handle: number, resource: URI, position: IPosition): TPromise<modes.DocumentHighlight[]>;
-	$provideReferences(handle: number, progressHandle: number, resource: URI, position: IPosition, context: modes.ReferenceContext): TPromise<modes.Location[]>;
+	$provideReferences(handle: number, resource: URI, position: IPosition, context: modes.ReferenceContext): TPromise<modes.Location[]>;
 	$provideCodeActions(handle: number, resource: URI, range: IRange): TPromise<modes.Command[]>;
 	$provideDocumentFormattingEdits(handle: number, resource: URI, options: modes.FormattingOptions): TPromise<editorCommon.ISingleEditOperation[]>;
 	$provideDocumentRangeFormattingEdits(handle: number, resource: URI, range: IRange, options: modes.FormattingOptions): TPromise<editorCommon.ISingleEditOperation[]>;

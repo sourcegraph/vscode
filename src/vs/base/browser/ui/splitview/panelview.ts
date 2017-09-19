@@ -331,7 +331,6 @@ export class PanelView implements IDisposable {
 
 		this.panelItems.splice(index, 0, panelItem);
 		this.splitview.addView(panel, size, index);
-		console.log(this.splitview);
 	}
 
 	removePanel(panel: Panel): void {

@@ -5,12 +5,10 @@
 'use strict';
 
 import * as nls from 'vs/nls';
-import { alert } from 'vs/base/browser/ui/aria/aria';
 import { onUnexpectedError } from 'vs/base/common/errors';
 import { IDisposable, dispose } from 'vs/base/common/lifecycle';
 import Severity from 'vs/base/common/severity';
-import { PPromise, TPromise } from 'vs/base/common/winjs.base';
-import { Location } from 'vs/editor/common/modes';
+import { TPromise } from 'vs/base/common/winjs.base';
 import { IEditorService } from 'vs/platform/editor/common/editor';
 import { fromPromise, stopwatch } from 'vs/base/common/event';
 import { IInstantiationService, optional } from 'vs/platform/instantiation/common/instantiation';
@@ -86,10 +84,7 @@ export class ReferencesController implements editorCommon.IEditorContribution {
 		this._editor = null;
 	}
 
-	/**
-	 * @param modelPromise either a PPromise<void, Location[]> or a TPromise<ReferencesMode>.
-	 */
-	public toggleWidget(range: Range, modelPromise: PPromise<ReferencesModel | void, Location[]>, options: RequestOptions): void {
+	public toggleWidget(range: Range, modelPromise: TPromise<ReferencesModel>, options: RequestOptions): void {
 
 		// close current widget and return early is position didn't change
 		let widgetPosition: Position;
@@ -149,7 +144,8 @@ export class ReferencesController implements editorCommon.IEditorContribution {
 
 		const requestId = ++this._requestIdPool;
 
-		const handleModel = (model: ReferencesModel, done: boolean) => {
+		const promise = modelPromise.then(model => {
+
 			// still current request? widget still open?
 			if (requestId !== this._requestIdPool || !this._widget) {
 				return undefined;
@@ -175,10 +171,6 @@ export class ReferencesController implements editorCommon.IEditorContribution {
 			// show widget
 			return this._widget.setModel(this._model).then(() => {
 
-				if (done) {
-					this._widget.getProgressBar().done();
-				}
-
 				// set title
 				this._widget.setMetaTitle(options.getMetaTitle(this._model));
 
@@ -192,44 +184,9 @@ export class ReferencesController implements editorCommon.IEditorContribution {
 				return undefined;
 			});
 
-		};
-
-		this._widget.getProgressBar().infinite().getContainer().show();
-		let firstUpdate = true;
-		const aggregatedLocations: Location[] = [];
-		const promise = modelPromise.then(result => {
-			if (result instanceof ReferencesModel) {
-				return handleModel(result, true);
-			}
-			if (firstUpdate) {
-				// Didn't receive any non-empty progress events.
-				const currentWorkspacePath = this._contextService.getWorkspace().folders[0].path;
-				return handleModel(new ReferencesModel([], currentWorkspacePath), true);
-			}
-			// Received all results via progress so we can ignore the final result.
-			this._widget.getProgressBar().done();
-			return TPromise.wrap(void 0);
 		}, error => {
 			this._messageService.show(Severity.Error, error);
-		}, newLocations => {
-			// still current request? widget still open?
-			if (requestId !== this._requestIdPool || !this._widget) {
-				promise.cancel();
-				return;
-			}
-			if (!newLocations.length) {
-				return;
-			}
-			aggregatedLocations.push(...newLocations);
-			if (firstUpdate) {
-				firstUpdate = false;
-				const currentWorkspacePath = this._contextService.getWorkspace().folders[0].path;
-				const model = new ReferencesModel(aggregatedLocations, currentWorkspacePath);
-				handleModel(model, false);
-				return;
-			}
-			this._model.setReferences(aggregatedLocations);
-		}).then(() => alert(this._model.getAriaMessage()));
+		});
 
 		const onDone = stopwatch(fromPromise(promise));
 		const mode = this._editor.getModel().getLanguageIdentifier().language;

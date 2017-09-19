@@ -37,13 +37,13 @@
 	display: flex;
 }
 
-.scm-viewlet .actions {
+.scm-viewlet .panel-header .actions {
 	flex: 1;
 	text-align: right;
 	margin-right: 12px;
 }
 
-.scm-viewlet .actions .action-label {
+.scm-viewlet .panel-header .actions .action-label {
 	width: 16px;
 	height: 16px;
 	margin: 2px 0 0 5px;

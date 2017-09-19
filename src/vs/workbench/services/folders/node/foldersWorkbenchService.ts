@@ -244,7 +244,7 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 
 	public getCurrentWorkspaceFolders(): TPromise<IFolder[]> {
 		const folders = (this.contextService.getWorkbenchState() === WorkbenchState.WORKSPACE ? this.contextService.getWorkspace().folders : []);
-		return TPromise.as(this.populateCatalogInfo(folders.map(root => new Folder(this, this.stateProvider, root))));
+		return TPromise.as(this.populateCatalogInfo(folders.map(folder => new Folder(this, this.stateProvider, folder.uri))));
 	}
 
 	/**
@@ -442,13 +442,13 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 			return undefined;
 		}
 
-		for (const root of this.contextService.getWorkspace().folders) {
-			const repository = this.scmService.getRepositoryForResource(root);
+		for (const folder of this.contextService.getWorkspace().folders) {
+			const repository = this.scmService.getRepositoryForResource(folder.uri);
 			if (repository && repository.provider && repository.provider.remoteResources) {
 				for (const remoteResource of repository.provider.remoteResources) {
 					if (catalogFolder.resource.toString() === remoteResource.toString() ||
 						remoteResourcesProbablyEquivalent(catalogFolder.cloneUrl, remoteResource)) {
-						return root;
+						return folder.uri;
 					}
 				}
 			}

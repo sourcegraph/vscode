@@ -253,23 +253,16 @@ class ReferenceAdapter {
 		this._provider = provider;
 	}
 
-	provideReferences(resource: URI, position: IPosition, context: modes.ReferenceContext, progress: (locations: modes.Location[]) => void): TPromise<modes.Location[]> {
-		const doc = this._documents.getDocumentData(resource).document;
-		const pos = TypeConverters.toPosition(position);
+	provideReferences(resource: URI, position: IPosition, context: modes.ReferenceContext): TPromise<modes.Location[]> {
+		let doc = this._documents.getDocumentData(resource).document;
+		let pos = TypeConverters.toPosition(position);
 
-		const convertLocations = (locations: vscode.Location[]) => {
-			if (Array.isArray(locations)) {
-				return locations.map(TypeConverters.location.from);
+		return asWinJsPromise(token => this._provider.provideReferences(doc, pos, context, token)).then(value => {
+			if (Array.isArray(value)) {
+				return value.map(TypeConverters.location.from);
 			}
 			return undefined;
-		};
-		const convertedProgress = (locations: vscode.Location[]) => {
-			const convertedLocations = convertLocations(locations);
-			if (convertedLocations) {
-				progress(convertedLocations);
-			}
-		};
-		return asWinJsPromise(token => this._provider.provideReferences(doc, pos, context, token, convertedProgress)).then(convertLocations);
+		});
 	}
 }
 
@@ -905,11 +898,8 @@ export class ExtHostLanguageFeatures implements ExtHostLanguageFeaturesShape {
 		return this._createDisposable(handle);
 	}
 
-	$provideReferences(handle: number, progressHandle: number, resource: URI, position: IPosition, context: modes.ReferenceContext): TPromise<modes.Location[]> {
-		const progress = (locations: modes.Location[]) => {
-			this._proxy.$notifyProvideReferencesProgress(handle, progressHandle, locations);
-		};
-		return this._withAdapter(handle, ReferenceAdapter, adapter => adapter.provideReferences(resource, position, context, progress));
+	$provideReferences(handle: number, resource: URI, position: IPosition, context: modes.ReferenceContext): TPromise<modes.Location[]> {
+		return this._withAdapter(handle, ReferenceAdapter, adapter => adapter.provideReferences(resource, position, context));
 	}
 
 	// --- quick fix
