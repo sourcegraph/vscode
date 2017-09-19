@@ -90,7 +90,7 @@ export class NavService extends Disposable implements INavService {
 		}
 
 		// Extract the non-shareable URI from a shareable about.sourcegraph.com URL.
-		if (location.scheme === 'https' && location.authority === 'about.sourcegraph.com' && location.path.indexOf('/open-native') === 0) {
+		if (location.scheme === 'https' && location.authority === 'about.sourcegraph.com' && location.path.indexOf('/open') === 0) {
 			location = URI.parse(`${product.urlProtocol}:${decodeURIComponent(location.fragment)}`);
 		}
 
@@ -233,7 +233,7 @@ export class NavService extends Disposable implements INavService {
 			}
 
 			const queryParts = Object.keys(query).filter(k => !!query[k]).map(k => k + '=' + encodeURIComponent(query[k]));
-			return 'https://about.sourcegraph.com/open-native#open?' + queryParts.join('&');
+			return 'https://about.sourcegraph.com/open#open?' + queryParts.join('&');
 		});
 	}
 
