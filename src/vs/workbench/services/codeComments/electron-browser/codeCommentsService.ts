@@ -26,6 +26,7 @@ import { dispose, IDisposable } from 'vs/base/common/lifecycle';
 import { StrictResourceMap } from 'vs/base/common/map';
 import { IMessageService, Severity } from 'vs/platform/message/common/message';
 import { IModelContentChangedEvent } from 'vs/editor/common/model/textModelEvents';
+import { InterruptibleDelayer } from 'vs/base/common/async';
 export { Event }
 
 /**
@@ -301,42 +302,33 @@ export class FileComments extends Disposable implements IFileComments {
 		});
 	}
 
-	/**
-	 * True if the file content has changed while display ranges are being computed.
-	 * This signals updateDisplayRanges to exit quickly and restart.
-	 */
-	private needsUpdateDisplayRanges = false;
-
-	/**
-	 * A promise that is set when display ranges are being updated
-	 * and resolves when display ranges are done updating.
-	 */
-	private updatingDisplayRanges: TPromise<void> | undefined;
+	private updateDisplayRangeDelayer = new InterruptibleDelayer<void>(1000);
 
 	private updateDisplayRanges(): TPromise<void> {
-		this.needsUpdateDisplayRanges = true;
-		if (this.updatingDisplayRanges) {
-			return this.updatingDisplayRanges;
-		}
+		return this.updateDisplayRangeDelayer.trigger(() => {
+			return this.updateDisplayRangesUnthrottled();
+		});
+	}
 
-		this.needsUpdateDisplayRanges = false;
-		const updatingDisplayRanges = this.getDocumentId()
-			.then(documentId => TPromise.join(
-				this.threads
-					.filter(uniqueFilter(thread => thread.revision))
-					.map(thread => this.instantiationService.invokeFunction(resolveContent, this.git, documentId, thread.revision))
-			))
+	private updateDisplayRangesUnthrottled(): TPromise<void> {
+		return this.getDocumentId()
+			.then(documentId => {
+				return TPromise.join(
+					this.threads
+						.filter(thread => !thread.archived)
+						.filter(uniqueFilter(thread => thread.revision))
+						.map(thread => this.instantiationService.invokeFunction(resolveContent, this.git, documentId, thread.revision))
+				);
+			})
 			.then(revContents => {
-				if (this.needsUpdateDisplayRanges) {
-					this.updatingDisplayRanges = undefined;
-					return this.updateDisplayRanges();
-				}
 				if (!this.modelWatcher.model) {
-					return TPromise.wrap<void>(undefined);
+					return;
 				}
+
 				const diffs = revContents.reduce((diffs, revContent) => {
 					const originalLines = RawTextSource.fromString(revContent.content).lines;
 					const modifiedLines = this.modelWatcher.model.getLinesContent();
+					// TODO(nick): this is slow and CPU intensive. Can we run in a background thread?
 					diffs.set(revContent.revision, new Diff(originalLines, modifiedLines));
 					return diffs;
 				}, new Map<string, Diff>());
@@ -348,15 +340,7 @@ export class FileComments extends Disposable implements IFileComments {
 					}
 				}
 				this.didChangeThreads.fire();
-				return TPromise.wrap<void>(undefined);
 			});
-		this.updatingDisplayRanges = updatingDisplayRanges;
-		updatingDisplayRanges.done(() => {
-			this.updatingDisplayRanges = undefined;
-		}, error => {
-			this.updatingDisplayRanges = undefined;
-		});
-		return updatingDisplayRanges;
 	}
 }
 

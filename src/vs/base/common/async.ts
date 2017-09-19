@@ -239,6 +239,71 @@ export class Delayer<T> {
 }
 
 /**
+ * Similar to Delayer except that the current task is canceled
+ * when a new task is submitted.
+ *
+ * This is useful if new tasks render the result of the pending task irrelevant,
+ * especially if the pending task is and expensive multi-part operation.
+ */
+export class InterruptibleDelayer<T> {
+
+	private pendingTask: () => TPromise<T>;
+	private runningTask: TPromise<void>;
+
+	private taskWrapper: TPromise<T>;
+	private resolveTask: (value: T) => void;
+	private rejectTask: (reason: any) => void;
+
+	constructor(
+		private delay: number,
+	) { }
+
+	public trigger(task: () => TPromise<T>): TPromise<T> {
+		this.cancel();
+		this.pendingTask = task;
+
+		if (!this.taskWrapper) {
+			this.taskWrapper = new TPromise<T>((resolve, reject) => {
+				this.resolveTask = resolve;
+				this.rejectTask = reject;
+			}, () => {
+				this.cancel();
+			});
+		}
+
+		this.runningTask = TPromise.timeout(this.delay)
+			.then(() => this.pendingTask())
+			.then(result => {
+				this.resolveTask(result);
+			}, err => {
+				if (errors.isPromiseCanceledError(err)) {
+					return;
+				}
+				this.rejectTask(err);
+			});
+		this.runningTask.done(() => this.didComplete(), () => this.didComplete());
+		return this.taskWrapper;
+	}
+
+	private didComplete(): void {
+		this.runningTask = undefined;
+		this.taskWrapper = undefined;
+		this.resolveTask = undefined;
+		this.rejectTask = undefined;
+		this.pendingTask = undefined;
+	}
+
+	public cancel(): void {
+		this.pendingTask = undefined;
+		if (this.runningTask) {
+			this.runningTask.cancel();
+			this.runningTask = undefined;
+		}
+	}
+}
+
+
+/**
  * A helper to delay execution of a task that is being requested often, while
  * preventing accumulation of consecutive executions, while the task runs.
  *
