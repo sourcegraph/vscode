@@ -314,9 +314,9 @@ class MainPanel extends ViewletPanel {
 	}
 
 	private updateBodySize(): void {
-		const size = Math.min(5, this.repositories.length) * 22;
+		const size = Math.min(7, this.repositories.length) * 22;
 		this.minimumBodySize = size;
-		this.maximumBodySize = size;
+		this.maximumBodySize = Math.max(1, this.repositories.length) * 22;
 	}
 
 	private getSCMMenus(repository: ISCMRepository): SCMMenus {
