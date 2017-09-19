@@ -6,6 +6,7 @@
 
 import * as vscode from 'vscode';
 import * as nls from 'vscode-nls';
+import * as path from 'path';
 import { PackageQuery, PackageData } from './types';
 import * as go from './go';
 import * as typescript from './typescript';
@@ -23,13 +24,19 @@ export async function downloadDependents(workspaceFolder?: vscode.WorkspaceFolde
 	}
 	if (!workspaceFolder && vscode.workspace.workspaceFolders) {
 		const wsFolders = vscode.workspace.workspaceFolders;
-		const choice = await vscode.window.showQuickPick(wsFolders.map(f => f.uri.fsPath), {
+		const options = wsFolders.map(f => {
+			return {
+				label: path.basename(f.uri.fsPath),
+				description: f.uri.fsPath,
+			};
+		});
+		const choice = await vscode.window.showQuickPick(options, {
 			placeHolder: localize('selectFolder', "Select a folder"),
 		});
 		if (!choice) {
 			return;
 		}
-		workspaceFolder = wsFolders.find(f => f.uri.fsPath === choice);
+		workspaceFolder = wsFolders.find(f => f.uri.fsPath === choice.description);
 	}
 	if (!workspaceFolder) {
 		vscode.window.showErrorMessage(localize('noWorkspaceFolders', "Cannot download dependents, because there are no folders in your workspace"));
