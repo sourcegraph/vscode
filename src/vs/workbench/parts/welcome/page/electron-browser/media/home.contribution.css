@@ -4,6 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 .home-activity {
-	-webkit-mask: url('home.svg') no-repeat 50% 50%;
+	-webkit-mask: url('../../../../../../../../node_modules/@sourcegraph/icons/svg/Home.svg') no-repeat 50% 50%;
 	-webkit-mask-size: 22px;
 }
