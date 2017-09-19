@@ -120,6 +120,7 @@ query {
 	vscode.commands.registerCommand('github.pullRequests.quickopen', async (sourceControl: vscode.SourceControl) => {
 		const ok = await checkGitHubToken();
 		if (!ok) {
+			showCreateGitHubTokenWalkthrough();
 			return;
 		}
 
