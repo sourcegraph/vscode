@@ -7,7 +7,6 @@
 import { execFile, pathExists } from './nodeutil';
 import * as path from 'path';
 import * as os from 'os';
-import * as nls from 'vscode-nls';
 
 const toolsDir = path.join(os.homedir(), '.sourcegraph', 'tools');
 const pythonEnvDir = path.join(toolsDir, 'pythonEnv');
