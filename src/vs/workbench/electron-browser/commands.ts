@@ -22,6 +22,7 @@ import URI from 'vs/base/common/uri';
 import { IEditorOptions, Position as EditorPosition } from 'vs/platform/editor/common/editor';
 import { IWorkspaceEditingService } from 'vs/workbench/services/workspace/common/workspaceEditing';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
+import { IRemoteService, requestGraphQL } from 'vs/platform/remote/node/remote';
 
 // --- List Commands
 
@@ -431,5 +432,34 @@ export function registerCommands(): void {
 			// Wait for workspace to reload and detect its newly added root.
 			return configurationService.reloadConfiguration();
 		});
+	});
+
+	CommandsRegistry.registerCommand('_workbench.getDependents', function (accessor: ServicesAccessor, lang: string, pkgData: { [k: string]: string }) {
+		const remoteService = accessor.get(IRemoteService);
+
+		const otherArgs: string[] = [];
+		for (let k in pkgData) {
+			otherArgs.push(`, ${k}: ${JSON.stringify(pkgData[k])}`);
+		}
+
+		return requestGraphQL<any>(remoteService, `query Dependents() {
+			root {
+				dependents(lang: "${lang}", limit: 10${otherArgs.join('')}) {
+					id
+					type
+					name
+					commit
+					repoURL
+					version
+					repo {
+						id
+						uri
+						description
+						language
+						fork
+					}
+				}
+			}
+		}`, {}).then(data => data.dependents);
 	});
 }
