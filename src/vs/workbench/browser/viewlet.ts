@@ -15,6 +15,8 @@ import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
 import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { IViewlet } from 'vs/workbench/common/viewlet';
 import { Composite, CompositeDescriptor, CompositeRegistry } from 'vs/workbench/browser/composite';
+import { IConstructorSignature0 } from 'vs/platform/instantiation/common/instantiation';
+import { IGlobalActivity } from 'vs/workbench/common/activity';
 
 export abstract class Viewlet extends Composite implements IViewlet {
 
@@ -151,7 +153,7 @@ export class ViewletDescriptor extends CompositeDescriptor<Viewlet> {
 		name: string,
 		cssClass?: string,
 		order?: number,
-		private _extensionId?: string
+		protected _extensionId?: string
 	) {
 		super(moduleId, ctorName, id, name, cssClass, order);
 
@@ -166,7 +168,18 @@ export class ViewletDescriptor extends CompositeDescriptor<Viewlet> {
 }
 
 export class GlobalViewletDescriptor extends ViewletDescriptor {
-
+	constructor(
+		moduleId: string,
+		ctorName: string,
+		id: string,
+		name: string,
+		cssClass?: string,
+		order?: number,
+		public globalActivity?: IConstructorSignature0<IGlobalActivity>,
+		protected _extensionId?: string
+	) {
+		super(moduleId, ctorName, id, name, cssClass, order);
+	}
 }
 
 export const Extensions = {

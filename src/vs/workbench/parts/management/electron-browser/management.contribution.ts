@@ -13,6 +13,7 @@ import { IConfigurationRegistry, Extensions as ConfigurationExtensions } from 'v
 import { VIEWLET_ID } from 'vs/workbench/parts/management/common/management';
 import { Extensions as WorkbenchExtensions } from 'vs/workbench/common/contributions';
 import { ManagementUpdater } from 'vs/workbench/parts/management/electron-browser/managementActivity';
+import { UpdateContribution } from 'vs/workbench/parts/update/electron-browser/update';
 
 // Register WorkbenchContributiont for updating the badge on the global activity.
 Registry.as(WorkbenchExtensions.Workbench)
@@ -36,6 +37,7 @@ let descriptor = new GlobalViewletDescriptor(
 	localize('management', "Management"),
 	'management',
 	80,
+	UpdateContribution
 );
 
 Registry.as<GlobalViewletRegistry>(ViewletExtensions.Viewlets)

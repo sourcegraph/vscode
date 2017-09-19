@@ -5,14 +5,17 @@
 
 import nls = require('vs/nls');
 import { ActivityActionItem, ViewletActionItem, ViewletActivityAction } from 'vs/workbench/browser/parts/activitybar/activitybarActions';
-import { IActivity } from 'vs/workbench/common/activity';
+import { IActivity, IGlobalActivity } from 'vs/workbench/common/activity';
 import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
 import { IActivityBarService } from 'vs/workbench/services/activity/common/activityBarService';
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { IViewletService, } from 'vs/workbench/services/viewlet/browser/viewlet';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
-import { ViewletDescriptor } from 'vs/workbench/browser/viewlet';
+import { GlobalViewletDescriptor, ViewletDescriptor } from 'vs/workbench/browser/viewlet';
+import DOM = require('vs/base/browser/dom');
+import { IAction } from 'vs/base/common/actions';
+import { TPromise } from 'vs/base/common/winjs.base';
 
 /**
  * GlobalViewletActionItem creates a viewlet action item in the global activity bar. This is useful if a user wishes to
@@ -21,6 +24,7 @@ import { ViewletDescriptor } from 'vs/workbench/browser/viewlet';
 export class GlobalViewletActionItem extends ActivityActionItem {
 	private viewletActivity: IActivity;
 	private cssClass: string;
+	private globalActivity: IGlobalActivity;
 
 	constructor(
 		private action: ViewletActivityAction,
@@ -28,7 +32,7 @@ export class GlobalViewletActionItem extends ActivityActionItem {
 		@IActivityBarService private activityBarService: IActivityBarService,
 		@IKeybindingService private keybindingService: IKeybindingService,
 		@IViewletService private viewletService: IViewletService,
-		@IInstantiationService instantiationService: IInstantiationService,
+		@IInstantiationService private instantiationService: IInstantiationService,
 		@IThemeService themeService: IThemeService
 	) {
 		super(action, { draggable: false }, themeService);
@@ -42,6 +46,11 @@ export class GlobalViewletActionItem extends ActivityActionItem {
 				this.action.checked = true;
 			}
 		});
+
+		if (this.action.descriptor instanceof GlobalViewletDescriptor && this.action.descriptor.globalActivity) {
+			this.globalActivity = this.instantiationService.createInstance(this.action.descriptor.globalActivity);
+		}
+
 	}
 
 	private getKeybindingLabel(id: string): string {
@@ -76,7 +85,24 @@ export class GlobalViewletActionItem extends ActivityActionItem {
 
 	public render(container: HTMLElement): void {
 		super.render(container);
+		this.$container.on('contextmenu', e => {
+			DOM.EventHelper.stop(e, true);
+
+			this.showContextMenu(container);
+		});
+
 		this.updateStyles();
+	}
+
+	private showContextMenu(container: HTMLElement): void {
+		if (this.globalActivity) {
+			const actions: IAction[] = this.globalActivity.getActions();
+			this.contextMenuService.showContextMenu({
+				getAnchor: () => container,
+				getActionsContext: () => this.viewlet,
+				getActions: () => TPromise.as(actions)
+			});
+		}
 	}
 
 	public focus(): void {
