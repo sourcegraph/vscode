@@ -9,6 +9,7 @@ import nls = require('vs/nls');
 import URI from 'vs/base/common/uri';
 import { TPromise } from 'vs/base/common/winjs.base';
 import * as paths from 'vs/base/common/paths';
+import { Schemas } from 'vs/base/common/network';
 import types = require('vs/base/common/types');
 import { Disposable } from 'vs/base/common/lifecycle';
 import product from 'vs/platform/node/product';
@@ -77,6 +78,17 @@ export class NavService extends Disposable implements INavService {
 	}
 
 	private async doHandle(location: URI): Promise<void> {
+		if (location.scheme === Schemas.file) {
+			await this.editorService.openEditor({
+				resource: location,
+				options: {
+					pinned: true,
+					revealIfVisible: true,
+				},
+			} as IResourceInput);
+			return;
+		}
+
 		// Extract the non-shareable URI from a shareable about.sourcegraph.com URL.
 		if (location.scheme === 'https' && location.authority === 'about.sourcegraph.com' && location.path.indexOf('/open-native') === 0) {
 			location = URI.parse(`${product.urlProtocol}:${decodeURIComponent(location.fragment)}`);
