@@ -147,6 +147,10 @@
 			"project": "vscode-workbench"
 		},
 		{
+			"name": "vs/workbench/parts/webbrowser",
+			"project": "vscode-workbench"
+		},
+		{
 			"name": "vs/workbench/parts/welcome",
 			"project": "vscode-workbench"
 		},

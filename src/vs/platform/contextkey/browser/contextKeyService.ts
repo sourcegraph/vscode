@@ -11,7 +11,7 @@ import { IContextKey, IContext, IContextKeyServiceTarget, IContextKeyService, SE
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import Event, { Emitter, debounceEvent } from 'vs/base/common/event';
 
-const KEYBINDING_CONTEXT_ATTR = 'data-keybinding-context';
+export const KEYBINDING_CONTEXT_ATTR = 'data-keybinding-context';
 
 export class Context implements IContext {
 

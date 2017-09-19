@@ -134,6 +134,7 @@ export class CodeApplication {
 		const isValidWebviewSource = (source: string) =>
 			!source || (URI.parse(source.toLowerCase()).toString() as any).startsWith(URI.file(this.environmentService.appRoot.toLowerCase()).toString());
 
+		const navigableWebContents = new Set<number>(); // allow navigation for these webcontents
 		app.on('web-contents-created', (event, contents) => {
 			contents.on('will-attach-webview', (event: Electron.Event, webPreferences, params) => {
 				delete webPreferences.preload;
@@ -150,9 +151,20 @@ export class CodeApplication {
 			});
 
 			contents.on('will-navigate', event => {
+				if (navigableWebContents.has(contents.id)) {
+					return;
+				}
 				this.logService.error('webContents#will-navigate: Prevented webcontent navigation');
 				event.preventDefault();
 			});
+
+			const webContentsId = contents.id;
+			contents.on('destroyed', () => {
+				navigableWebContents.delete(webContentsId);
+			});
+		});
+		ipc.on('web-contents-allow-navigation', (event, webContentsId: number) => {
+			navigableWebContents.add(webContentsId);
 		});
 
 		let macOpenFiles: string[] = [];
