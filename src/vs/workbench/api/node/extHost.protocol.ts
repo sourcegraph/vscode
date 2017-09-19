@@ -238,15 +238,6 @@ export interface MainThreadLanguageFeaturesShape extends IDisposable {
 	$registerHoverProvider(handle: number, selector: vscode.DocumentSelector): TPromise<any>;
 	$registerDocumentHighlightProvider(handle: number, selector: vscode.DocumentSelector): TPromise<any>;
 	$registerReferenceSupport(handle: number, selector: vscode.DocumentSelector): TPromise<any>;
-	/**
- * While the main thread is waiting for a call to ExtHostLanguageFeaturesShape.$provideReferences to resolve,
- * the extension may call this method to notify the main thread of intermediate results.
- * This function is an implementation detail since it is not possible to serialize callbacks (functions) over the
- * communication channel between the extension host and the main thread.
- *
- * vscode.d.ts exposes a higher level API with a progress callback.
- */
-	$notifyProvideReferencesProgress(handle: number, progressHandle: number, locations: modes.Location[]): TPromise<any>;
 	$registerQuickFixSupport(handle: number, selector: vscode.DocumentSelector): TPromise<any>;
 	$registerDocumentFormattingSupport(handle: number, selector: vscode.DocumentSelector): TPromise<any>;
 	$registerRangeFormattingSupport(handle: number, selector: vscode.DocumentSelector): TPromise<any>;
@@ -556,7 +547,7 @@ export interface ExtHostLanguageFeaturesShape {
 	$provideTypeDefinition(handle: number, resource: URI, position: IPosition): TPromise<modes.Definition>;
 	$provideHover(handle: number, resource: URI, position: IPosition): TPromise<modes.Hover>;
 	$provideDocumentHighlights(handle: number, resource: URI, position: IPosition): TPromise<modes.DocumentHighlight[]>;
-	$provideReferences(handle: number, progressHandle: number, resource: URI, position: IPosition, context: modes.ReferenceContext): TPromise<modes.Location[]>;
+	$provideReferences(handle: number, resource: URI, position: IPosition, context: modes.ReferenceContext): TPromise<modes.Location[]>;
 	$provideCodeActions(handle: number, resource: URI, range: IRange): TPromise<modes.Command[]>;
 	$provideDocumentFormattingEdits(handle: number, resource: URI, options: modes.FormattingOptions): TPromise<editorCommon.ISingleEditOperation[]>;
 	$provideDocumentRangeFormattingEdits(handle: number, resource: URI, range: IRange, options: modes.FormattingOptions): TPromise<editorCommon.ISingleEditOperation[]>;

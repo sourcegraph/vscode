@@ -368,3 +368,4 @@ export class PeekTypeDefinitionAction extends TypeDefinitionAction {
 		});
 	}
 }
+
