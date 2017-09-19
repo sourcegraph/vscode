@@ -442,6 +442,17 @@ export function registerCommands(): void {
 			otherArgs.push(`, ${k}: ${JSON.stringify(pkgData[k])}`);
 		}
 
+		// We issue a query that looks like:
+		//
+		// root {
+		//   dependents(lang: $lang, limit: 10, name: $name, version: $version) {
+		//	   ...
+		//   }
+		// }
+		//
+		// All arguments after `limit` are based on the pkgData parameter, which includes
+		// a set of properties used to identify a package. For a full list of properites,
+		// look at the GraphQL schema definition on the server. (https://sourcegraph.com/.api/graphql).
 		return requestGraphQL<any>(remoteService, `query Dependents() {
 			root {
 				dependents(lang: "${lang}", limit: 10${otherArgs.join('')}) {
