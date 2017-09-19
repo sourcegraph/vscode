@@ -96,11 +96,9 @@ class FilesViewerActionContributor extends ActionBarContributor {
 			let action: Action = this.instantiationService.createInstance(AddRootFolderAction, AddRootFolderAction.ID, AddRootFolderAction.LABEL);
 			action.order = 52;
 			actions.push(action);
-			if (this.contextService.getWorkspace().folders.length > 1) {
-				action = this.instantiationService.createInstance(RemoveRootFolderAction, stat.resource, RemoveRootFolderAction.ID, RemoveRootFolderAction.LABEL);
-				action.order = 53;
-				actions.push(action);
-			}
+			action = this.instantiationService.createInstance(RemoveRootFolderAction, stat.resource, RemoveRootFolderAction.ID, RemoveRootFolderAction.LABEL);
+			action.order = 53;
+			actions.push(action);
 			actions.push(new Separator(null, 54));
 		}
 
