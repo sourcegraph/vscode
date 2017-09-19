@@ -7,6 +7,8 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { walk } from './util';
+import { pyDepList, SetupPy } from './pydep';
+import { PackageData } from './types';
 
 /**
  * Package descriptor. This is empty for now, but is here for consistency with the other languages and
@@ -30,7 +32,6 @@ export async function getSourceLocation(uri: vscode.Uri, selection: vscode.Selec
 	const finfo = await definitionInfo(uri, selection);
 	return finfo ? getDefSourceLocation(finfo) : [new vscode.Location(uri, selection)];
 }
-
 
 /**
  * Returns the canonical source location(s) that match the definition metadata descriptor.
@@ -89,4 +90,43 @@ async function definitionInfo(uri: vscode.Uri, selection: vscode.Selection): Pro
 	}
 	const relpath = relCmps.join(path.sep);
 	return { modulePath: relpath, selection: selection };
+}
+
+export class PythonPackageData implements PackageData {
+	constructor(public lang: string, public packageInfo: { [k: string]: string }, public dependencies?: { [k: string]: string }[]) { }
+	toDisplayString(): string {
+		return `Python Package: ${this.packageInfo['name']}`;
+	}
+}
+
+export async function getPackages(dir: string): Promise<PackageData[]> {
+	// The Python language server that does the server-side indexing treats language-level packages and modules
+	// (using the last path component as the identifier) instead of Pip packages, and we mimic that choice here.
+	// In the future, we may want to reconsider.
+	const pkgData: PackageData[] = [];
+	let setupPys: SetupPy[] | undefined;
+	try {
+		setupPys = await pyDepList(dir);
+	} catch (e) {
+		throw new Error(`Failed to compute Python packages: ${e.message}`);
+	}
+	for (const setupPy of setupPys!) {
+		if (setupPy.packages) {
+			for (const pkg of setupPy.packages) {
+				const cmps = pkg.split('.');
+				pkgData.push(new PythonPackageData('python', { name: cmps[cmps.length - 1] }));
+			}
+		}
+		if (setupPy.py_modules) {
+			for (const module of setupPy.py_modules) {
+				const cmps = module.split('.');
+				pkgData.push(new PythonPackageData('python', { name: cmps[cmps.length - 1] }));
+			}
+		}
+		const pipName = setupPy.name || setupPy.project_name;
+		if (!setupPy.packages && !setupPy.py_modules && pipName) {
+			pkgData.push(new PythonPackageData('python', { name: pipName }));
+		}
+	}
+	return pkgData;
 }
