@@ -196,7 +196,7 @@ export class CodeMenu {
 
 		let newContextbarVisible = config && config.workbench && config.workbench.contextBar && config.workbench.contextBar.visible;
 		if (typeof newContextbarVisible !== 'boolean') {
-			newContextbarVisible = false;
+			newContextbarVisible = true;
 		}
 		if (newContextbarVisible !== this.currentContextbarVisible) {
 			this.currentContextbarVisible = newContextbarVisible;
