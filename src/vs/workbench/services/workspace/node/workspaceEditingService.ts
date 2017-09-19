@@ -53,25 +53,23 @@ export class WorkspaceEditingService implements IWorkspaceEditingService {
 		const currentWorkspaceFolderUris = currentWorkspaceFolders.map(folder => folder.uri);
 		const currentStoredFolders = currentWorkspaceFolders.map(folder => folder.raw);
 
-		const storedFoldersToAdd: IStoredWorkspaceFolder[] = [];
-
 		const workspaceConfigFolder = dirname(this.contextService.getWorkspace().configuration.fsPath);
 
-		foldersToAdd.forEach(foldersToAdd => {
-			if (this.contains(currentWorkspaceFolderUris, foldersToAdd)) {
-				return; // already existing
+		const storedFoldersToAdd: TPromise<IStoredWorkspaceFolder[]> = TPromise.join(foldersToAdd
+			.filter(folder => {
+				return !this.contains(currentWorkspaceFolderUris, folder);
+			})
+			.map(folder => this.resourceResolverService.resolveResource(folder).then(folder => ({
+				path: massageFolderPathForWorkspace(folder.fsPath, workspaceConfigFolder, currentStoredFolders)
+			})))
+		);
+
+		return storedFoldersToAdd.then(storedFoldersToAdd => {
+			if (storedFoldersToAdd.length > 0) {
+				return this.doSetFolders([...currentStoredFolders, ...storedFoldersToAdd]);
 			}
-
-			storedFoldersToAdd.push({
-				path: massageFolderPathForWorkspace(foldersToAdd.fsPath, workspaceConfigFolder, currentStoredFolders)
-			});
+			return TPromise.as(void 0);
 		});
-
-		if (storedFoldersToAdd.length > 0) {
-			return this.doSetFolders([...currentStoredFolders, ...storedFoldersToAdd]);
-		}
-
-		return TPromise.as(void 0);
 	}
 
 	public removeFolders(foldersToRemove: URI[]): TPromise<void> {
