@@ -78,7 +78,6 @@ export abstract class ViewletPanel extends Panel {
 
 		this.disposables.push(this.toolbar);
 		this.updateActions();
-		console.log('TTTTT', this.toolbar);
 	}
 
 	protected renderHeaderTitle(container: HTMLElement): void {
