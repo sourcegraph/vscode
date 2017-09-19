@@ -34,8 +34,6 @@ declare namespace GQL {
     __typename: "Root";
     repository: IRepository | null;
     repositories: Array<IRepository>;
-    remoteRepositories: Array<IRemoteRepository>;
-    remoteStarredRepositories: Array<IRemoteRepository>;
     symbols: Array<ISymbol>;
     currentUser: IUser | null;
     activeRepos: IActiveRepoResults;
@@ -261,20 +259,6 @@ declare namespace GQL {
   /*
     description: null
   */
-  interface IRemoteRepository {
-    __typename: "RemoteRepository";
-    uri: string;
-    description: string;
-    language: string;
-    fork: boolean;
-    private: boolean;
-    createdAt: string;
-    pushedAt: string;
-  }
-
-  /*
-    description: null
-  */
   interface ISymbol {
     __typename: "Symbol";
     repository: IRepository;
@@ -293,6 +277,7 @@ declare namespace GQL {
     avatarURL: string | null;
     email: string | null;
     orgs: Array<IOrg>;
+    orgMemberships: Array<IOrgMember>;
   }
 
   /*

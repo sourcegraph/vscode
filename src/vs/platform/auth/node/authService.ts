@@ -8,7 +8,7 @@ import { localize } from 'vs/nls';
 import URI from 'vs/base/common/uri';
 import { Disposable } from 'vs/base/common/lifecycle';
 import Event, { Emitter } from 'vs/base/common/event';
-import { IAuthService, IOrg, IUser } from 'vs/platform/auth/common/auth';
+import { IAuthService, IOrg, IUser, IOrgMember } from 'vs/platform/auth/common/auth';
 import { IRemoteService, IRemoteConfiguration, requestGraphQL } from 'vs/platform/remote/node/remote';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
@@ -19,70 +19,14 @@ import { ModalIdentifiers } from 'vs/workbench/parts/modal/modal';
 
 export { Event }
 
-interface UserResponse {
-	currentUser: GQL.IUser;
-}
-
-enum UserChangedEventTypes {
-	SignedIn,
-	SignedOut,
-	ProfileChanged
-}
-
-class User extends Disposable implements IUser {
-	private _currentOrg?: IOrg;
-	private _onDidChangeCurrentOrg = this._register(new Emitter<void>());
-	public onDidChangeCurrentOrg = this._onDidChangeCurrentOrg.event;
-
-	constructor(
-		@ITelemetryService private telemetryService: ITelemetryService,
-		public id: string,
-		public avatarUrl?: string,
-		public email?: string,
-		public orgs?: IOrg[]
-	) {
-		super();
-		if (this.orgs) {
-			this._currentOrg = this.orgs[0];
-		}
-	}
-
-	public get currentOrg(): IOrg | undefined {
-		return this._currentOrg;
-	}
-
-	// TODO(Dan): find a place to call this once orgs backend & GraphQL API are complete/available
-	// private didChangeCurrentOrg(): void {
-	// 	this.telemetryService.publicLog('CurrentOrgChanged', this.getTelemetryData());
-
-	// 	this._onDidChangeCurrentOrg.fire();
-	// }
-
-	/**
-	 * Data for telemetry
-	 */
-	public getTelemetryData(): any {
-		return {
-			auth: {
-				user: {
-					id: this.id,
-					email: this.email,
-					orgs: this.orgs,
-				},
-				org: this.currentOrg
-			}
-		};
-	}
-}
-
 /**
  * This service exposes the currently authenticated user and organization context.
  */
 export class AuthService extends Disposable implements IAuthService {
 	_serviceBrand: any;
 
-	private _onDidChangeCurrentUser = this._register(new Emitter<void>());
-	public onDidChangeCurrentUser = this._onDidChangeCurrentUser.event;
+	private didChangeCurrentUser = this._register(new Emitter<void>());
+	public onDidChangeCurrentUser = this.didChangeCurrentUser.event;
 
 	private _currentUser?: User;
 
@@ -104,9 +48,7 @@ export class AuthService extends Disposable implements IAuthService {
 
 		// Load user profile data from remote endpoint on initial load
 		this._register(this.configurationService.onDidUpdateConfiguration(() => this.onDidUpdateConfiguration()));
-
 		this.onDidUpdateConfiguration();
-
 	}
 
 	public get currentUser(): IUser | undefined {
@@ -123,43 +65,47 @@ export class AuthService extends Disposable implements IAuthService {
 	private onDidUpdateConfiguration() {
 		const config = this.configurationService.getConfiguration<IRemoteConfiguration>();
 		// Only re-request user data, fire an event, and log telemetry if the cookie actually changed
-		if (this._currentSessionId !== config.remote.cookie) {
-			this._currentSessionId = config.remote.cookie;
-			// Request updated user profile information
-			requestGraphQL<UserResponse>(this.remoteService, `query CurrentUser() {
+		if (this._currentSessionId === config.remote.cookie) {
+			return;
+		}
+		this._currentSessionId = config.remote.cookie;
+		// Request updated user profile information
+		requestGraphQL<{ currentUser: GQL.IUser }>(this.remoteService, `query CurrentUser {
 				root {
 					currentUser {
 						id
 						avatarURL
 						email
+						orgMemberships {
+							id
+							username
+							email
+							displayName
+							avatarURL
+							org {
+								id
+								name
+							}
+						}
 					}
 				}
-			}`, {}).then(userData => {
-					this._currentUser = new User(this.telemetryService,
-						userData.currentUser.id,
-						userData.currentUser.avatarURL,
-						userData.currentUser.email
-						// TODO(Dan): uncomment once orgs backend & GraphQL API are updated
-						// orgs: userData.currentUser.orgs,
-						// currentOrg: userData.currentUser.orgs ? userData.currentUser.orgs[0] : null
-					);
+			}`, {}).then(response => {
+				this._currentUser = new User(response.currentUser, this.telemetryService);
+				this.fireDidChangeCurrentUser(UserChangedEventTypes.SignedIn);
+			}, () => {
+				// If user is already signed in, notify them that their signout was successful and log telemetry.
+				// If not, it's possible they ran into this failed request during app launch.
+				if (this.currentUser) {
+					this.telemetryService.publicLog('LogoutClicked');
+					this.messageService.show(Severity.Info, localize('remote.auth.signedOutConfirmation', "Your editor has been signed out of Sourcegraph. Visit {0} to end your web session.", urlToSignOut(this.configurationService)));
+				}
 
-					this.didChangeCurrentUser(UserChangedEventTypes.SignedIn);
-				}, () => {
-					// If user is already signed in, notify them that their signout was successful and log telemetry.
-					// If not, it's possible they ran into this failed request during app launch.
-					if (this.currentUser) {
-						this.telemetryService.publicLog('LogoutClicked');
-						this.messageService.show(Severity.Info, localize('remote.auth.signedOutConfirmation', "Your editor has been signed out of Sourcegraph. Visit {0} to end your web session.", urlToSignOut(this.configurationService)));
-					}
-
-					// Delete user from memory
-					this._currentUser = undefined;
-					this._currentSessionId = undefined;
-					// Fire event
-					this.didChangeCurrentUser(UserChangedEventTypes.SignedOut);
-				});
-		}
+				// Delete user from memory
+				this._currentUser = undefined;
+				this._currentSessionId = undefined;
+				// Fire event
+				this.fireDidChangeCurrentUser(UserChangedEventTypes.SignedOut);
+			});
 	}
 
 	/**
@@ -186,7 +132,7 @@ export class AuthService extends Disposable implements IAuthService {
 		});
 	}
 
-	private didChangeCurrentUser(type: UserChangedEventTypes): void {
+	private fireDidChangeCurrentUser(type: UserChangedEventTypes): void {
 		switch (type) {
 			case UserChangedEventTypes.SignedIn:
 				this.telemetryService.publicLog('CurrentUserSignedIn', this._currentUser.getTelemetryData());
@@ -199,7 +145,82 @@ export class AuthService extends Disposable implements IAuthService {
 				break;
 		}
 
-		this._onDidChangeCurrentUser.fire();
+		this.didChangeCurrentUser.fire();
+	}
+}
+
+enum UserChangedEventTypes {
+	SignedIn,
+	SignedOut,
+	ProfileChanged
+}
+
+class User extends Disposable implements IUser {
+	public readonly id: string;
+	public readonly email: string;
+	public readonly avatarUrl: string | undefined;
+	public readonly orgMemberships: OrgMember[];
+
+	constructor(user: GQL.IUser, @ITelemetryService private telemetryService: ITelemetryService) {
+		super();
+		this.id = user.id;
+		this.email = user.email;
+		this.avatarUrl = user.avatarURL;
+		this.orgMemberships = user.orgMemberships.map(m => new OrgMember(m));
+		this._currentOrgMember = this.orgMemberships[0];
+	}
+
+	private _currentOrgMember: OrgMember | undefined;
+	private didChangeCurrentOrgMember = this._register(new Emitter<void>());
+	public onDidChangeCurrentOrgMember = this.didChangeCurrentOrgMember.event;
+	public get currentOrgMember(): OrgMember | undefined { return this._currentOrgMember; }
+	public set currentOrgMember(orgMember: OrgMember) {
+		if (this._currentOrgMember !== orgMember) {
+			this._currentOrgMember = orgMember;
+			this.didChangeCurrentOrgMember.fire();
+			this.telemetryService.publicLog('CurrentOrgMemberChanged', this.getTelemetryData());
+		}
+	}
+
+	public getTelemetryData(): any {
+		return {
+			auth: {
+				user: {
+					id: this.id,
+					email: this.email,
+					orgMemberships: this.orgMemberships,
+				},
+				currentOrgMember: this.currentOrgMember,
+			}
+		};
+	}
+}
+
+class OrgMember implements IOrgMember {
+	public readonly id: number;
+	public readonly email: string;
+	public readonly username: string;
+	public readonly displayName: string;
+	public readonly avatarUrl: string;
+	public readonly org: Org;
+
+	constructor(member: GQL.IOrgMember) {
+		this.id = member.id;
+		this.email = member.email;
+		this.username = member.username;
+		this.displayName = member.displayName;
+		this.avatarUrl = member.avatarURL;
+		this.org = new Org(member.org);
+	}
+}
+
+class Org implements IOrg {
+	public readonly id: number;
+	public readonly name: string;
+
+	constructor(org: GQL.IOrg) {
+		this.id = org.id;
+		this.name = org.name;
 	}
 }
 

@@ -55,7 +55,7 @@ export class CommentsContextKeyManager extends Disposable implements IEditorCont
 	private didChangeCurrentUser(): void {
 		this.toDisposeOnDidChangeCurrentUser = dispose(this.toDisposeOnDidChangeCurrentUser);
 		if (this.authService.currentUser) {
-			this.toDisposeOnDidChangeCurrentUser.push(this.authService.currentUser.onDidChangeCurrentOrg(this.checkCanComment, this));
+			this.toDisposeOnDidChangeCurrentUser.push(this.authService.currentUser.onDidChangeCurrentOrgMember(this.checkCanComment, this));
 		}
 		this.checkCanComment();
 	}

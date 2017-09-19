@@ -36,8 +36,6 @@ export interface IAuthService {
 	signOut(): void;
 }
 
-
-
 export interface IUser {
 	/**
 	 * id is the Sourcegraph unique ID for a user.
@@ -47,28 +45,40 @@ export interface IUser {
 	/**
 	 * avatarUrl is the URL to the user's profile avatar.
 	 */
-	readonly avatarUrl?: string;
+	readonly avatarUrl: string | undefined;
 
 	/**
 	 * email is the user's primary email.
 	 */
-	readonly email?: string;
+	readonly email: string;
 
 	/**
-	 * orgs is a list of the Sourcegraph organizations a user is a member of.
+	 * The org memberships of this user.
 	 */
-	readonly orgs?: IOrg[];
+	readonly orgMemberships: IOrgMember[];
 
 	/**
 	 * The current org that the user has selected.
 	 */
-	readonly currentOrg?: IOrg;
+	readonly currentOrgMember: IOrgMember | undefined;
 
 	/**
 	 * Event that fires when the current user changes their current org. Note,
 	 * this fires whenever the user signs in or signs out.
 	 */
-	readonly onDidChangeCurrentOrg: Event<void>;
+	readonly onDidChangeCurrentOrgMember: Event<void>;
+}
+
+/**
+ * The user's profile inside of an org.
+ */
+export interface IOrgMember {
+	readonly id: number;
+	readonly email: string;
+	readonly username: string;
+	readonly displayName: string;
+	readonly avatarUrl: string | undefined;
+	readonly org: IOrg;
 }
 
 export interface IOrg {
