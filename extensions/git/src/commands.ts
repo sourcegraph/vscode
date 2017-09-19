@@ -340,10 +340,11 @@ export class CommandCenter {
 	}
 
 	@command('git.clone')
-	async clone(): Promise<void> {
+	async clone(initialValue?: string): Promise<void> {
 		const url = await window.showInputBox({
 			prompt: localize('repourl', "Repository URL"),
-			ignoreFocusOut: true
+			ignoreFocusOut: true,
+			value: initialValue,
 		});
 
 		if (!url) {
@@ -380,7 +381,7 @@ export class CommandCenter {
 			const openFolder = result === open;
 			this.telemetryReporter.sendTelemetryEvent('clone', { outcome: 'success' }, { openFolder: openFolder ? 1 : 0 });
 			if (openFolder) {
-				commands.executeCommand('vscode.openFolder', Uri.file(repositoryPath));
+				commands.executeCommand('_workbench.addRoots', [Uri.file(repositoryPath)]);
 			}
 		} catch (err) {
 			if (/already exists and is not an empty directory/.test(err && err.stderr || '')) {
