@@ -62,8 +62,8 @@ export class CodeHostView extends CollapsibleView {
 		DOM.addClass(container, 'management-view');
 
 		let titleDiv = $('div.section').appendTo(container);
-		$('h4').text(nls.localize('codeHostHeaderTitle', "Connect your Code Hosts")).appendTo(titleDiv);
-		$('p').text(nls.localize('codeHostSubtext', "Add or update your personal access token to enable remote repository search.")).appendTo(titleDiv);
+		$('h4').text(nls.localize('codeHostHeaderTitle', "Connect to Code Hosts")).appendTo(titleDiv);
+		$('p').text(nls.localize('codeHostSubtext', "A GitHub personal access token or Bitbucket app password is required to enable remote repository search.")).appendTo(titleDiv);
 
 		let section = $('div.section').appendTo(container);
 
@@ -88,7 +88,7 @@ export class CodeHostView extends CollapsibleView {
 		attachButtonStyler(button, this.themeService);
 		button.addListener('click', () => {
 			this.telemetryService.publicLog('management.addGitHubTokenClicked');
-			this.commandService.executeCommand('github.showCreateAccessTokenWalkthrough');
+			this.commandService.executeCommand('github.showCreateAccessTokenWalkthrough', true);
 		});
 
 		return button;
@@ -101,18 +101,18 @@ export class CodeHostView extends CollapsibleView {
 
 		button.addListener('click', () => {
 			this.telemetryService.publicLog('management.addBitbucketAppClicked');
-			this.commandService.executeCommand('bitbucket.showBitbucketAppPasswordWalkthrough');
+			this.commandService.executeCommand('bitbucket.showBitbucketAppPasswordWalkthrough', true);
 		});
 
 		return button;
 	}
 
 	private async setGitHubButtonLabel(button: Button, hasToken: boolean): TPromise<void> {
-		button.label = hasToken ? nls.localize('updateGitHubAccessToken', "Update GitHub Token") : nls.localize('addGitHubAccessToken', "Add GitHub Token");
+		button.label = hasToken ? nls.localize('updateGitHubAccessToken', "Update GitHub token") : nls.localize('addGitHubAccessToken', "Add GitHub token");
 	}
 
 	private async setBitbucketAppPasswordLabel(button: Button, hasToken: boolean): TPromise<void> {
-		button.label = hasToken ? nls.localize('updateBitbucketAccessToken', "Update Bitbucket App") : nls.localize('addBitbucketAccessToken', "Add Bitbucket App");
+		button.label = hasToken ? nls.localize('updateBitbucketAccessToken', "Update Bitbucket app password") : nls.localize('addBitbucketAccessToken', "Set Bitbucket app password");
 	}
 
 	private async updateButtonLabelsForConfigEvent(e: IConfigurationServiceEvent): TPromise<void> {

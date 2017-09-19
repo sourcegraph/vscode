@@ -25,8 +25,8 @@ export function activate(context: vscode.ExtensionContext): void {
 		return checkGitHubToken();
 	});
 
-	vscode.commands.registerCommand('github.showCreateAccessTokenWalkthrough', async (args) => {
-		return await showCreateGitHubTokenWalkthrough();
+	vscode.commands.registerCommand('github.showCreateAccessTokenWalkthrough', async (skipInfoMessage) => {
+		return await showCreateGitHubTokenWalkthrough(skipInfoMessage);
 	});
 
 	const repoFields = [
@@ -235,7 +235,7 @@ function resourceToNameAndOwner(resource: vscode.Uri): { owner: string, name: st
  * the error).
  */
 function showErrorImmediately<T>(error: string): T | Thenable<T> {
-	return vscode.commands.executeCommand('workbench.action.closeMessages').then(() => {
+	return vscode.commands.executeCommand('workbench.action.closeQuickOpen').then(() => vscode.commands.executeCommand('workbench.action.closeMessages').then(() => {
 		const resetTokenItem: vscode.MessageItem = { title: localize('resetToken', "Reset Token") };
 		const cancelItem: vscode.MessageItem = { title: localize('cancel', "Cancel"), isCloseAffordance: true };
 		vscode.window.showErrorMessage(error, resetTokenItem, cancelItem)
@@ -252,28 +252,33 @@ function showErrorImmediately<T>(error: string): T | Thenable<T> {
 			});
 
 		return Promise.reject(error);
-	});
+	}));
 }
 
 /**
  * Shows the GitHub token creation walkthrough and returns if a GitHub token was added.
  */
-async function showCreateGitHubTokenWalkthrough(): Promise<boolean> {
+async function showCreateGitHubTokenWalkthrough(skipInfoMessage?: boolean): Promise<boolean> {
 	// Close quickopen so the user sees our message.
+	await vscode.commands.executeCommand('workbench.action.closeQuickOpen');
 	await vscode.commands.executeCommand('workbench.action.closeMessages');
 
 	const createTokenItem: vscode.MessageItem = { title: localize('createToken', "Create Token on GitHub.com") };
 	const enterTokenItem: vscode.MessageItem = { title: localize('enterToken', "Enter Token") };
 	const cancelItem: vscode.MessageItem = { title: localize('cancel', "Cancel"), isCloseAffordance: true };
-	const value = await vscode.window.showInformationMessage(
-		localize('noGitHubToken', "A GitHub personal access token is required to search for repositories."),
-		{ modal: false },
-		createTokenItem, enterTokenItem, cancelItem,
-	);
-	if (value === createTokenItem) {
+	if (skipInfoMessage) {
 		await vscode.commands.executeCommand('vscode.open', vscode.Uri.parse('https://github.com/settings/tokens/new'));
-	} else if (!value || value === cancelItem) {
-		return false;
+	} else {
+		const value = await vscode.window.showInformationMessage(
+			localize('noGitHubToken', "A GitHub personal access token is required to search for repositories."),
+			{ modal: false },
+			createTokenItem, enterTokenItem, cancelItem,
+		);
+		if (value === createTokenItem) {
+			await vscode.commands.executeCommand('vscode.open', vscode.Uri.parse('https://github.com/settings/tokens/new'));
+		} else if (!value || value === cancelItem) {
+			return false;
+		}
 	}
 
 	const token = await vscode.window.showInputBox({

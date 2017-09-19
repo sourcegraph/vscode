@@ -29,8 +29,8 @@ export function activate(context: vscode.ExtensionContext): void {
 		return checkBitbucketAppPassword();
 	});
 
-	vscode.commands.registerCommand('bitbucket.showBitbucketAppPasswordWalkthrough', async (args) => {
-		return await showBitbucketAppPasswordWalkthrough();
+	vscode.commands.registerCommand('bitbucket.showBitbucketAppPasswordWalkthrough', async (skipInfoMessage) => {
+		return await showBitbucketAppPasswordWalkthrough(skipInfoMessage);
 	});
 
 	context.subscriptions.push(vscode.workspace.registerFolderCatalogProvider(vscode.Uri.parse(`${BITBUCKET_CLOUD_SCHEME}://bitbucket.org`), {
@@ -102,7 +102,7 @@ function resourceToApiPath(resource: vscode.Uri): string {
  * the error).
  */
 function showErrorImmediately<T>(error: string): T | Thenable<T> {
-	return vscode.commands.executeCommand('workbench.action.closeMessages').then(async () => {
+	return vscode.commands.executeCommand('workbench.action.closeQuickOpen').then(() => vscode.commands.executeCommand('workbench.action.closeMessages').then(async () => {
 		const resetAppPassword: vscode.MessageItem = { title: localize('resetAppPassword', "Reset App Password") };
 		const disableItem: vscode.MessageItem = { title: localize('disable', "Disable Bitbucket integration"), isCloseAffordance: true };
 		await vscode.window.showErrorMessage(error, resetAppPassword, disableItem)
@@ -128,29 +128,34 @@ function showErrorImmediately<T>(error: string): T | Thenable<T> {
 			});
 
 		return Promise.reject(error);
-	});
+	}));
 }
 
 /**
  * Shows the Bitbucket app password creation walkthrough and returns if a Bitbucket app password was added.
  */
-async function showBitbucketAppPasswordWalkthrough(): Promise<boolean> {
+async function showBitbucketAppPasswordWalkthrough(skipInfoMessage?: boolean): Promise<boolean> {
 	// Close quickopen so the user sees our message.
 	const config = vscode.workspace.getConfiguration('bitbucket.cloud');
+	await vscode.commands.executeCommand('workbench.action.closeQuickOpen');
 	await vscode.commands.executeCommand('workbench.action.closeMessages');
 
 	const createAppPasswordItem: vscode.MessageItem = { title: localize('createAppPassword', "Create App Password on Bitbucket") };
 	const enterAppPasswordItem: vscode.MessageItem = { title: localize('enterAppPassword', "Enter App Password") };
 	const cancelItem: vscode.MessageItem = { title: localize('cancel', "Cancel"), isCloseAffordance: true };
-	const value = await vscode.window.showInformationMessage(
-		localize('noBitbucketAppPassword', "A Bitbucket app password is required to search for repositories."),
-		{ modal: false },
-		createAppPasswordItem, enterAppPasswordItem, cancelItem,
-	);
-	if (value === createAppPasswordItem) {
+	if (skipInfoMessage) {
 		await vscode.commands.executeCommand('vscode.open', vscode.Uri.parse('https://bitbucket.org/account'));
-	} else if (!value || value === cancelItem) {
-		return false;
+	} else {
+		const value = await vscode.window.showInformationMessage(
+			localize('noBitbucketAppPassword', "A Bitbucket app password is required to search for repositories."),
+			{ modal: false },
+			createAppPasswordItem, enterAppPasswordItem, cancelItem,
+		);
+		if (value === createAppPasswordItem) {
+			await vscode.commands.executeCommand('vscode.open', vscode.Uri.parse('https://bitbucket.org/account'));
+		} else if (!value || value === cancelItem) {
+			return false;
+		}
 	}
 
 	const username = await vscode.window.showInputBox({
