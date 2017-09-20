@@ -28,6 +28,11 @@ class MockWorkspaceFolderProvider {
 
 suite('Labels', () => {
 	test('path label, multiple roots - not windows', () => {
+		if (platform.isWindows) {
+			assert.ok(true);
+			return;
+		}
+
 		const ws = new MockWorkspaceFolderProvider([
 			{ uri: URI.file('/home/a/b/c') },
 			{ uri: URI.file('/home/x/c') },
@@ -44,6 +49,30 @@ suite('Labels', () => {
 		assert.deepEqual(labels.getPathLabel(URI.file('/home/x/b/c/d/e/f/file'), ws, home), 'x/b/c/d/e/f/file');
 		assert.deepEqual(labels.getPathLabel(URI.file('/nothome/a/b/c/file'), ws, home), 'nothome/a/b/c/file');
 		assert.deepEqual(labels.getPathLabel(URI.file('/home/notinworkspace/file'), ws, home), '~/notinworkspace/file');
+	});
+
+	test('path label, multiple roots - windows', () => {
+		if (!platform.isWindows) {
+			assert.ok(true);
+			return;
+		}
+
+		const ws = new MockWorkspaceFolderProvider([
+			{ uri: URI.file('c:\\home\\a\\b\\c') },
+			{ uri: URI.file('c:\\home\\x\\c') },
+			{ uri: URI.file('c:\\home\\a\\b\\d') },
+			{ uri: URI.file('c:\\home\\x\\b\\c\\d\\e\\f') },
+			{ uri: URI.file('c:\\home\\y\\b\\c\\d\\e\\f') },
+			{ uri: URI.file('c:\\nothome\\a\\b\\c') },
+		]);
+		const home = { userHome: 'c:\\home' };
+		assert.deepEqual(labels.getPathLabel(URI.file('c:\\home\\a\\b\\c\\file'), ws, home), 'home\\a\\b\\c\\file');
+		assert.deepEqual(labels.getPathLabel(URI.file('c:\\home\\x\\c\\file'), ws, home), 'x\\c\\file');
+		assert.deepEqual(labels.getPathLabel(URI.file('c:\\home\\a\\b\\d\\file'), ws, home), 'd\\file');
+		assert.deepEqual(labels.getPathLabel(URI.file('c:\\home\\x\\b\\c\\d\\e\\f\\file'), ws, home), 'x\\b\\c\\d\\e\\f\\file');
+		assert.deepEqual(labels.getPathLabel(URI.file('c:\\home\\x\\b\\c\\d\\e\\f\\file'), ws, home), 'x\\b\\c\\d\\e\\f\\file');
+		assert.deepEqual(labels.getPathLabel(URI.file('c:\\nothome\\a\\b\\c\\file'), ws, home), 'nothome\\a\\b\\c\\file');
+		assert.deepEqual(labels.getPathLabel(URI.file('c:\\home\\notinworkspace\\file'), ws, home), 'c:\\home\\notinworkspace\\file');
 	});
 
 	test('shorten - windows', () => {
