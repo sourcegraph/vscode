@@ -39,6 +39,7 @@ export class MainThreadWorkspace implements MainThreadWorkspaceShape {
 	) {
 		this._proxy = extHostContext.get(ExtHostContext.ExtHostWorkspace);
 		this._contextService.onDidChangeWorkbenchState(this._onDidChangeWorkspaceState, this, this._toDispose);
+		this._contextService.onDidChangeWorkspaceFolders(this._onDidChangeWorkspaceState, this, this._toDispose);
 	}
 
 	dispose(): void {
