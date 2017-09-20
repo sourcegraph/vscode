@@ -1,6 +1,6 @@
 {
   "maxReviewers": 2,
-  "requiredOrgs": ["Microsoft"],
+  "requiredOrgs": ["sourcegraph"],
   "skipAlreadyAssignedPR": true,
   "skipAlreadyMentionedPR": true,
   "skipCollaboratorPR": true

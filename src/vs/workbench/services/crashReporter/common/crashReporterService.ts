@@ -26,7 +26,7 @@ configurationRegistry.registerConfiguration({
 	'properties': {
 		'telemetry.enableCrashReporter': {
 			'type': 'boolean',
-			'description': nls.localize('telemetry.enableCrashReporting', "Enable crash reports to be sent to Microsoft.\nThis option requires restart to take effect."),
+			'description': nls.localize('telemetry.enableCrashReporting', "Enable crash reports to be sent to Sourcegraph.\nThis option requires restart to take effect."),
 			'default': true
 		}
 	}

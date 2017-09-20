@@ -81,7 +81,7 @@ class ImportPatterns extends Lint.RuleWalker {
 
 		if (!matched) {
 			// None of the restrictions matched
-			this.addFailure(this.createFailure(node.getStart(), node.getWidth(), `Imports violates '${restrictions.join(' or ')}' restrictions. See https://github.com/Microsoft/vscode/wiki/Code-Organization`));
+			this.addFailure(this.createFailure(node.getStart(), node.getWidth(), `Imports violates '${restrictions.join(' or ')}' restrictions.`));
 		}
 	}
 }
