@@ -5,11 +5,47 @@
 
 'use strict';
 
+import URI from 'vs/base/common/uri';
 import * as assert from 'assert';
 import labels = require('vs/base/common/labels');
 import platform = require('vs/base/common/platform');
+import { nativeSep } from 'vs/base/common/paths';
+
+class MockWorkspaceFolderProvider {
+	constructor(private folders: { uri: URI }[]) { }
+	public getWorkspaceFolder(resource: URI): { uri: URI } {
+		for (const folder of this.folders) {
+			if (resource.fsPath === folder.uri.fsPath || resource.fsPath.indexOf(folder.uri.fsPath + nativeSep) === 0) {
+				return folder;
+			}
+		}
+		return null;
+	}
+	public getWorkspace(): { folders: { uri: URI }[] } {
+		return { folders: this.folders };
+	}
+}
 
 suite('Labels', () => {
+	test('path label, multiple roots - not windows', () => {
+		const ws = new MockWorkspaceFolderProvider([
+			{ uri: URI.file('/home/a/b/c') },
+			{ uri: URI.file('/home/x/c') },
+			{ uri: URI.file('/home/a/b/d') },
+			{ uri: URI.file('/home/x/b/c/d/e/f') },
+			{ uri: URI.file('/home/y/b/c/d/e/f') },
+			{ uri: URI.file('/nothome/a/b/c') },
+		]);
+		const home = { userHome: '/home' };
+		assert.deepEqual(labels.getPathLabel(URI.file('/home/a/b/c/file'), ws, home), 'home/a/b/c/file');
+		assert.deepEqual(labels.getPathLabel(URI.file('/home/x/c/file'), ws, home), 'x/c/file');
+		assert.deepEqual(labels.getPathLabel(URI.file('/home/a/b/d/file'), ws, home), 'd/file');
+		assert.deepEqual(labels.getPathLabel(URI.file('/home/x/b/c/d/e/f/file'), ws, home), 'x/b/c/d/e/f/file');
+		assert.deepEqual(labels.getPathLabel(URI.file('/home/x/b/c/d/e/f/file'), ws, home), 'x/b/c/d/e/f/file');
+		assert.deepEqual(labels.getPathLabel(URI.file('/nothome/a/b/c/file'), ws, home), 'nothome/a/b/c/file');
+		assert.deepEqual(labels.getPathLabel(URI.file('/home/notinworkspace/file'), ws, home), '~/notinworkspace/file');
+	});
+
 	test('shorten - windows', () => {
 		if (!platform.isWindows) {
 			assert.ok(true);
