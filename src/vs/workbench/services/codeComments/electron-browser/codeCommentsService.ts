@@ -334,7 +334,10 @@ export class FileComments extends Disposable implements IFileComments {
 			.then(documentId => {
 				return TPromise.join(
 					this.threads
-						.filter(thread => !thread.archived)
+						// TODO(nick): ideally we don't want to compute display ranges for archived threads
+						// unless the user actually clicks on it. For now, we compute them up front because
+						// we don't have lazy computation yet.
+						// .filter(thread => !thread.archived)
 						.filter(uniqueFilter(thread => thread.revision))
 						.map(thread => this.instantiationService.invokeFunction(resolveContent, this.git, documentId, thread.revision))
 				);
