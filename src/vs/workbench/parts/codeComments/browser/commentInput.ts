@@ -29,6 +29,9 @@ export class CommentInput extends Disposable {
 
 	private inputBox: InputBox;
 
+	private didChangeHeight = this.disposable(new Emitter<void>());
+	public readonly onDidChangeHeight: Event<void> = this.didChangeHeight.event;
+
 	private submitButton: Button;
 	private didClickSubmitButton = this.disposable(new Emitter<SubmitEvent>());
 	public readonly onDidClickSubmitButton: Event<SubmitEvent> = this.didClickSubmitButton.event;
@@ -57,6 +60,7 @@ export class CommentInput extends Disposable {
 				this.inputBox.value = content || '';
 				this.disposable(attachInputBoxStyler(this.inputBox, this.themeService));
 				this.disposable(this.inputBox);
+				this.disposable(this.inputBox.onDidHeightChange(() => this.didChangeHeight.fire()));
 
 				this.disposable(chain(domEvent(this.inputBox.inputElement, 'keydown'))
 					.map(e => new StandardKeyboardEvent(e))
@@ -84,10 +88,6 @@ export class CommentInput extends Disposable {
 		});
 	}
 
-	public get onDidChangeHeight(): Event<number> {
-		return this.inputBox.onDidHeightChange;
-	}
-
 	public get onDidChangeContent(): Event<string> {
 		return this.inputBox.onDidChange;
 	}
@@ -96,8 +96,14 @@ export class CommentInput extends Disposable {
 		this.inputBox.value = value;
 	}
 
+	private _secondaryButtonLabel: string;
 	public set secondaryButtonLabel(label: string) {
+		const oldLabel = this._secondaryButtonLabel;
+		this._secondaryButtonLabel = label;
 		this.secondaryButton.label = label;
+		if (label !== oldLabel) {
+			this.didChangeHeight.fire();
+		}
 	}
 
 	public setEnabled(enabled: boolean) {
