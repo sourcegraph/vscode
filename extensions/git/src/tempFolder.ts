@@ -60,7 +60,12 @@ export async function getTempDirectory(key: string): Promise<string> {
  * getTempSubDirectory returns a pretty name for the sub-directory one level beneath a
  * directory returned by getTempDirectory. getTempDirectory must return a uniquely identifying value, so it
  * is often ugly and it's preferable not to show it in the UI. The sub-directory will often be unique enough
- * such that only it (and not its parent) is visible in the UI.
+ * such that only it (and not its parent) is visible in the UI (e.g., in the case of the file quickopen).
+ *
+ * Example temp sub-directory names:
+ *   refs/tags/tag_name -> tag_name
+ *   refs/heads/branch_name -> branch_name
+ *   fddb37510d2f8f41f8b329f6334c8a2fe2f22c25 -> fddb37
  */
 export function getTempSubDirectory(rev?: string): string {
 	if (!rev) {
