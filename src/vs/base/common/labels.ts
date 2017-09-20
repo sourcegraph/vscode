@@ -6,7 +6,7 @@
 
 import URI from 'vs/base/common/uri';
 import platform = require('vs/base/common/platform');
-import { nativeSep, normalize, isEqualOrParent, isEqual, basename, join } from 'vs/base/common/paths';
+import { nativeSep, normalize, isEqualOrParent, isEqual, basename, join, dirname } from 'vs/base/common/paths';
 import { endsWith, ltrim } from 'vs/base/common/strings';
 
 export interface ILabelProvider {
@@ -50,7 +50,7 @@ export function getPathLabel(resource: URI | string, rootProvider?: IWorkspaceFo
 		}
 
 		if (hasMultipleRoots) {
-			const rootName = basename(baseResource.uri.fsPath);
+			const rootName = getMinimallyUniqueSubpath(rootProvider, baseResource.uri);
 			pathLabel = pathLabel ? join(rootName, pathLabel) : rootName; // always show root basename if there are multiple
 		}
 
@@ -343,4 +343,45 @@ export function mnemonicButtonLabel(label: string): string {
 
 export function unmnemonicLabel(label: string): string {
 	return label.replace(/&/g, '&&');
+}
+
+/**
+ * getMinimallyUniqueSubpath returns the minimal suffix path that uniquely identifies the specified folder
+ * among folders in the current workspace (as provided by rootProvider).
+ *
+ * @param rootProvider provides the list of folders in the current workspace.
+ * @param workspaceFolderURI should be a member of `rootProvider.getWorkspace().folders`.
+ */
+function getMinimallyUniqueSubpath(rootProvider: IWorkspaceFolderProvider, workspaceFolderURI: URI): string {
+	const paths = rootProvider.getWorkspace().folders.map(f => f.uri.fsPath);
+
+	const subpathToPrefix = getMinimallyUniqueSubpathsToPrefix(paths);
+	const pathToSubpath = new Map<string, string>();
+	subpathToPrefix.forEach((prefix, subpath) => {
+		pathToSubpath.set(join(prefix, subpath), subpath);
+	});
+
+	return pathToSubpath.get(workspaceFolderURI.fsPath);
+}
+
+function getMinimallyUniqueSubpathsToPrefix(paths: string[]): Map<string, string> {
+	const m = new Map<string, string[]>();
+	for (const p of paths) {
+		const k = basename(p);
+		if (!m.has(k)) {
+			m.set(k, []);
+		}
+		m.get(k).push(dirname(p));
+	}
+	const subpaths = new Map<string, string>();
+	m.forEach((v, k) => {
+		if (v.length === 1) {
+			subpaths.set(k, v[0]);
+		} else {
+			getMinimallyUniqueSubpathsToPrefix(v).forEach((vv, kk) => {
+				subpaths.set(join(kk, k), vv);
+			});
+		}
+	});
+	return subpaths;
 }
