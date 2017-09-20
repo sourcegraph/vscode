@@ -135,7 +135,10 @@ export function parseGitURL(gitURL: string): URI | null {
 		gitURL = 'ssh://' + (sshMatch[1] || '') + sshMatch[2] + '/' + sshMatch[3];
 	}
 	const uri = URI.parse(gitURL);
-	return uri.scheme !== '' ? uri.with({ scheme: 'git+' + uri.scheme }) : null;
+	if (uri.scheme === '') {
+		return null; // Not a valid git clone url.
+	}
+	return uri.with({ scheme: 'git+' + uri.scheme });
 }
 
 function getTelemetryData(workspace: IStoredWorkspace): ITelemetryData {

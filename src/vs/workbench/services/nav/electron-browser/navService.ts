@@ -34,6 +34,7 @@ import { EDITOR_CONTRIBUTION_ID as CODE_COMMENTS_CONTRIBUTION_ID } from 'vs/edit
 import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
 // tslint:disable-next-line:import-patterns
 import { VIEWLET_ID as EXPLORER_VIEWLET_ID } from 'vs/workbench/parts/files/common/files';
+import { parseGitURL } from 'vs/workbench/services/workspace/node/workspaceSharingService';
 
 type HandledURI = {
 	repo?: string;
@@ -84,6 +85,7 @@ export class NavService extends Disposable implements INavService {
 				options: {
 					pinned: true,
 					revealIfVisible: true,
+					revealIfOpened: true,
 				},
 			} as IResourceInput);
 			return;
@@ -103,6 +105,10 @@ export class NavService extends Disposable implements INavService {
 		if (!query.repo || !query.vcs) {
 			return Promise.resolve(void 0);
 		}
+		// If a VCS is specified that is not Git we do not support it.
+		if (query.vcs !== 'git') {
+			return Promise.resolve(void 0);
+		}
 
 		// Wait for all extensions to register resource resolvers.
 		//
@@ -110,9 +116,10 @@ export class NavService extends Disposable implements INavService {
 		// don't all need to be always (eagerly) activated (i.e., '*')
 		await this.extensionService.onReady(); // extensions register resource resolvers
 		await this.extensionService.activateByEvent('*');
-
-		const resource = URI.parse(`${query.vcs}+${query.repo}`);
-
+		const resource = parseGitURL(query.repo);
+		if (!resource) {
+			return;
+		}
 		let addFolderCompleted = false;
 		const addFolderPromise = this.foldersWorkbenchService.addFoldersAsWorkspaceRootFolders([resource]).then(([uri]) => {
 			addFolderCompleted = true;
@@ -140,6 +147,7 @@ export class NavService extends Disposable implements INavService {
 			options: {
 				pinned: true,
 				revealIfVisible: true,
+				revealIfOpened: true,
 				revealInCenterIfOutsideViewport: true,
 			},
 		};
