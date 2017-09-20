@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 'use strict';
 
+import { TPromise } from 'vs/base/common/winjs.base';
 import { ICodeEditorService } from 'vs/editor/common/services/codeEditorService';
 import { ICommonCodeEditor, IModel, OverviewRulerLane, IDecorationOptions, IEditorContribution } from 'vs/editor/common/editorCommon';
 import { IDisposable, Disposable, dispose } from 'vs/base/common/lifecycle';
@@ -20,6 +21,8 @@ import { ThreadCommentsWidget } from 'vs/workbench/parts/codeComments/electron-b
 import { keys } from 'vs/base/common/map';
 import { DraftThreadCommentsWidget } from 'vs/workbench/parts/codeComments/electron-browser/draftThreadCommentsWidget';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
+import { Action } from 'vs/base/common/actions';
+import { once } from 'vs/base/common/event';
 
 /**
  * Decoration key for highlighting a comment range.
@@ -107,14 +110,41 @@ export class CodeCommentsController extends Disposable implements IEditorContrib
 			if (!matches) {
 				return;
 			}
-			if (matches > 1) {
-				console.warn('multiple matches; choosing one');
-				// TODO(nick): show a context menu to select which thread to open.
-				// For now we can just fall through and arbitrarily show the first one.
-				// contextMenuService.showContextMenu({
-				// });
+
+			// First attempt to close all widgets on this line.
+			if (this.closeAllWidgetsOnLine(e.target.position.lineNumber)) {
+				// We closed some widgets, so we are done.
+				return;
 			}
 
+			// Since we didn't close any widgets, the user wants to open a widget.
+			// If there is more than one we show a context menu.
+			if (matches > 1) {
+				const openDraftThreadActions = draftThreads.map(draftThread => {
+					const label = `(Draft) ${draftThread.title}`;
+					return new Action(`openDraftThread${draftThread.id}`, label, '', true, () => {
+						this.showDraftThreadWidget(draftThread, true);
+						return TPromise.as(true);
+					});
+				});
+				const openThreadActions = threads.map(thread => {
+					return new Action(`openThread${thread.id}`, thread.title, '', true, () => {
+						this.showThreadWidget(thread, true);
+						return TPromise.as(true);
+					});
+				});
+				contextMenuService.showContextMenu({
+					getAnchor: () => {
+						return { x: e.event.posx, y: e.event.posy };
+					},
+					getActions: () => {
+						return TPromise.as(openDraftThreadActions.concat(openThreadActions));
+					},
+				});
+				return;
+			}
+
+			// There is only one widget to open on this line, so just open it.
 			if (draftThreads.length) {
 				const draftThread = draftThreads[0];
 				const draftThreadWidget = this.openDraftThreadWidgets.get(draftThread.id);
@@ -139,7 +169,45 @@ export class CodeCommentsController extends Disposable implements IEditorContrib
 		this.onDidChangeModel();
 	}
 
+	/**
+	 * Closes all widgets on the line and returns true if any were closed.
+	 */
+	private closeAllWidgetsOnLine(line: number, options?: { exceptThreadId?: number, exceptDraftThreadId?: number }): boolean {
+		const threads = this.threadsByLine.get(line) || [];
+		const draftThreads = this.draftThreadsByLine.get(line) || [];
+		let closedWidgets = false;
+		for (const thread of threads) {
+			if (options && options.exceptThreadId && options.exceptThreadId === thread.id) {
+				continue;
+			}
+			const threadWidget = this.openThreadWidgets.get(thread.id);
+			if (threadWidget) {
+				threadWidget.dispose();
+				closedWidgets = true;
+			}
+		}
+		for (const draftThread of draftThreads) {
+			if (options && options.exceptDraftThreadId && options.exceptDraftThreadId === draftThread.id) {
+				continue;
+			}
+			const draftThreadWidget = this.openDraftThreadWidgets.get(draftThread.id);
+			if (draftThreadWidget) {
+				draftThreadWidget.dispose();
+				closedWidgets = true;
+			}
+		}
+		return closedWidgets;
+	}
+
 	public showThreadWidget(thread: IThreadComments, reveal: boolean): void {
+		if (!thread.displayRange) {
+			this._register(once(thread.onDidChangeDisplayRange)(() => {
+				this.showThreadWidget(thread, reveal);
+			}));
+			return;
+		}
+		this.closeAllWidgetsOnLine(thread.displayRange.startLineNumber, { exceptThreadId: thread.id });
+
 		const openThreadWidget = this.openThreadWidgets.get(thread.id);
 		if (openThreadWidget) {
 			openThreadWidget.expand(reveal);
@@ -171,6 +239,7 @@ export class CodeCommentsController extends Disposable implements IEditorContrib
 	}
 
 	public showDraftThreadWidget(draftThread: IDraftThreadComments, reveal: boolean): void {
+		this.closeAllWidgetsOnLine(draftThread.displayRange.startLineNumber, { exceptThreadId: draftThread.id });
 		const openDraftThreadWidget = this.openDraftThreadWidgets.get(draftThread.id);
 		if (openDraftThreadWidget) {
 			openDraftThreadWidget.expand(reveal);

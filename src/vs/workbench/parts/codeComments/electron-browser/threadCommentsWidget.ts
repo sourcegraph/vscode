@@ -20,7 +20,6 @@ import * as date from 'date-fns';
 import { CommentInput } from 'vs/workbench/parts/codeComments/browser/commentInput';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { getCommentTelemetryData } from 'vs/workbench/parts/codeComments/common/codeComments';
-import { once } from 'vs/base/common/event';
 import { dispose, IDisposable } from 'vs/base/common/lifecycle';
 import { BaseThreadCommentsWidget } from 'vs/workbench/parts/codeComments/browser/baseThreadCommentsWidget';
 
@@ -151,12 +150,6 @@ export class ThreadCommentsWidget extends BaseThreadCommentsWidget {
 	}
 
 	public expand(reveal: boolean): void {
-		if (!this.threadComments.displayRange) {
-			this._disposables.push(once(this.threadComments.onDidChangeDisplayRange)(() => {
-				this.expand(reveal);
-			}));
-			return;
-		}
 		if (!this.container) {
 			// Lazily initialize so we don't prematurely listen to events.
 			this.create();

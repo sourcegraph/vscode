@@ -72,6 +72,7 @@ comments {
  */
 const threadGraphql = `
 id
+title
 file
 revision
 startLine
@@ -416,6 +417,7 @@ class ModelWatcher extends Disposable {
 
 export class ThreadComments extends Disposable implements IThreadComments {
 	public readonly id: number;
+	public readonly title: string;
 	public readonly file: string;
 	public readonly revision: string;
 	public readonly range: Range;
@@ -491,6 +493,7 @@ export class ThreadComments extends Disposable implements IThreadComments {
 			throw new Error(`expected thread ${thread.id} to have at least one comment`);
 		}
 		this.id = thread.id;
+		this.title = thread.title;
 		this.file = thread.file;
 		this.revision = thread.revision;
 		this.range = new Range(thread.startLine, thread.startCharacter, thread.endLine, thread.endCharacter);
@@ -633,6 +636,31 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 		if (this._content !== content) {
 			this._content = content;
 			this.didChangeContent.fire();
+			let title = content;
+			const match = content.match(/[.!?]\s/);
+			if (match) {
+				title = content.substr(match.index + 1);
+			}
+			const newline = title.indexOf('\n');
+			if (newline !== -1) {
+				title = content.substr(0, newline);
+			}
+			title = title.trim();
+			if (title.length > 140) {
+				title = title.substr(0, 137) + '...';
+			}
+			this.title = title.trim();
+		}
+	}
+
+	private _title: string = '';
+	private didChangeTitle = this.disposable(new Emitter<void>());
+	public readonly onDidChangeTitle = this.didChangeTitle.event;
+	public get title(): string { return this._title; }
+	public set title(title: string) {
+		if (this._title !== title) {
+			this._title = title;
+			this.didChangeTitle.fire();
 		}
 	}
 

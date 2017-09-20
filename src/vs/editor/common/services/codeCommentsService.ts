@@ -90,6 +90,12 @@ export interface IDraftThreadComments extends IEventDisposable {
 	readonly onDidChangeContent: Event<void>;
 
 	/**
+	 * The title of the draft thread.
+	 */
+	title: string;
+	readonly onDidChangeTitle: Event<void>;
+
+	/**
 	 * The range that the draft should be displayed at.
 	 */
 	readonly displayRange: Range;
@@ -120,6 +126,11 @@ export interface IThreadComments extends IEventDisposable {
 	 * Auto increment id for the thread.
 	 */
 	readonly id: number;
+
+	/**
+	 * The title of the thread.
+	 */
+	readonly title: string;
 
 	/**
 	 * The relative path of the file inside of the repo.
