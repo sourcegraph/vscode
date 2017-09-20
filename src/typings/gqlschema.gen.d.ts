@@ -317,7 +317,7 @@ declare namespace GQL {
     username: string;
     email: string;
     displayName: string;
-    avatarURL: string;
+    avatarURL: string | null;
     createdAt: string;
     updatedAt: string;
   }
@@ -506,6 +506,7 @@ declare namespace GQL {
   interface IPackage {
     __typename: "Package";
     lang: string;
+    repo: IRepository | null;
     id: string | null;
     type: string | null;
     name: string | null;
@@ -513,7 +514,6 @@ declare namespace GQL {
     baseDir: string | null;
     repoURL: string | null;
     version: string | null;
-    repo: IRepository | null;
   }
 
   /*
@@ -521,6 +521,7 @@ declare namespace GQL {
   */
   interface IDependency {
     __typename: "Dependency";
+    repo: IRepository | null;
     name: string | null;
     repoURL: string | null;
     depth: number | null;
@@ -531,7 +532,6 @@ declare namespace GQL {
     commit: string | null;
     version: string | null;
     id: string | null;
-    repo: IRepository | null;
   }
 
   /*
