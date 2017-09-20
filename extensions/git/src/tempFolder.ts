@@ -31,7 +31,8 @@ async function onDidChangeWorkspaceFolders(e: vscode.WorkspaceFoldersChangeEvent
 	for (const removed of e.removed) {
 		if (isTempWorkspaceFolder(removed)) {
 			const choice = await vscode.window.showInformationMessage(
-				localize('deleteDirectoryContainingWorktreeWorkspaceFolder', "Remove temporary worktree folder from disk? ({0})", path.basename(removed.uri.fsPath), deleteWord)
+				localize('deleteDirectoryContainingWorktreeWorkspaceFolder', "Remove temporary worktree folder from disk? ({0})", path.basename(removed.uri.fsPath)),
+				deleteWord,
 			);
 			if (choice !== deleteWord) {
 				continue;
