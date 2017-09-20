@@ -278,8 +278,8 @@ export class CodeCommentsViewlet extends Viewlet {
 						CodeCommentsController.get(this.getActiveCodeEditor()).showThreadWidget(thread, true);
 					});
 					div.div({ class: 'leftRight' }, div => {
-						div.div({ class: 'left', title: recentComment.authorEmail }, div => {
-							div.text(recentComment.authorName);
+						div.div({ class: 'left', title: recentComment.author.email }, div => {
+							div.text(recentComment.author.displayName);
 						});
 						div.div({ class: 'right' }, div => {
 							const time = localize('timeAgo', "{0} ago", date.distanceInWordsToNow(recentComment.createdAt));

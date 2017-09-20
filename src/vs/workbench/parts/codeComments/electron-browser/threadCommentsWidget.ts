@@ -113,8 +113,8 @@ export class ThreadCommentsWidget extends BaseThreadCommentsWidget {
 		for (const comment of this.threadComments.comments) {
 			div.div({ class: 'comment' }, div => {
 				div.div({ class: 'header' }, div => {
-					div.div({ class: 'author', title: comment.authorName }, div => {
-						div.text(comment.authorName);
+					div.div({ class: 'author', title: comment.author.email }, div => {
+						div.text(comment.author.displayName);
 					});
 					div.div({ class: 'timeAgo' }, div => {
 						const time = localize('timeAgo', "{0} ago", date.distanceInWordsToNow(comment.createdAt));

@@ -5,7 +5,7 @@
 'use strict';
 
 import { localize } from 'vs/nls';
-import { ICodeCommentsService, IFileComments, IThreadComments, IComment, IDraftThreadComments } from 'vs/editor/common/services/codeCommentsService';
+import { ICodeCommentsService, IFileComments, IThreadComments, IComment, ICommentAuthor, IDraftThreadComments } from 'vs/editor/common/services/codeCommentsService';
 import { Range } from 'vs/editor/common/core/range';
 import Event, { Emitter, any } from 'vs/base/common/event';
 import { VSDiff as Diff } from 'vs/workbench/services/codeComments/common/vsdiff';
@@ -27,6 +27,8 @@ import { StrictResourceMap } from 'vs/base/common/map';
 import { IMessageService, Severity } from 'vs/platform/message/common/message';
 import { IModelContentChangedEvent } from 'vs/editor/common/model/textModelEvents';
 import { InterruptibleDelayer } from 'vs/base/common/async';
+import { IAuthService } from 'vs/platform/auth/common/auth';
+
 export { Event }
 
 /**
@@ -59,8 +61,10 @@ comments {
 	contents
 	createdAt
 	updatedAt
-	authorName
-	authorEmail
+	author {
+		displayName
+		email
+	}
 }`;
 
 /**
@@ -144,6 +148,7 @@ export class FileComments extends Disposable implements IFileComments {
 		@IModelService private modelService: IModelService,
 		@IInstantiationService private instantiationService: IInstantiationService,
 		@IRemoteService private remoteService: IRemoteService,
+		@IAuthService private authService: IAuthService,
 	) {
 		super();
 		this.git = instantiationService.createInstance(Git, uri);
@@ -215,20 +220,33 @@ export class FileComments extends Disposable implements IFileComments {
 		if (this.refreshingThreads) {
 			return this.refreshingThreads;
 		}
-
-		interface ThreadsResponse {
-			threads: GQL.IThread[];
-		}
-
 		const refreshingThreads = TPromise.join([
 			this.getDocumentId(),
 			this.git.getAccessToken(),
 		])
-			.then<ThreadsResponse>(([documentId, accessToken]) => {
+			.then<GQL.IThread[]>(([documentId, accessToken]) => {
 				if (!documentId) {
-					return TPromise.wrap({ threads: [] });
+					return TPromise.wrap([]);
 				}
-				return requestGraphQL<ThreadsResponse>(this.remoteService, `query ThreadsForFile(
+				if (this.authService.currentUser && this.authService.currentUser.currentOrgMember) {
+					return requestGraphQL<{ org: { threads: GQL.IThread[] } }>(this.remoteService, `query ThreadsForFile (
+							$file: String!,
+						) {
+							root {
+								org(id: $orgId) {
+									threads(file: $file) {
+										${threadGraphql}
+									}
+								}
+							}
+						}`, {
+							orgId: this.authService.currentUser.currentOrgMember.org.id,
+							file: documentId.file,
+						})
+						.then(response => response.org.threads);
+				}
+				// TODO(nick): when this deprecated code path is removed, we can remove unnecessary fields on data.
+				return requestGraphQL<{ threads: GQL.IThread[] }>(this.remoteService, `query ThreadsForFileDeprecated (
 						$repo: String!,
 						$accessToken: String!,
 						$file: String!,
@@ -245,9 +263,10 @@ export class FileComments extends Disposable implements IFileComments {
 					}`, {
 						...documentId,
 						accessToken,
-					});
+					})
+					.then(response => response.threads);
 			})
-			.then(data => {
+			.then(threads => {
 				const oldThreads = this._threads.reduce((threads, thread) => {
 					threads.set(thread.id, thread);
 					return threads;
@@ -255,7 +274,7 @@ export class FileComments extends Disposable implements IFileComments {
 
 				// Although we are updating this._threads here, we don't fire
 				// threadsDidChange until the display ranges have updated.
-				this._threads = data.threads
+				this._threads = threads
 					.map(thread => {
 						const oldThread = oldThreads.get(thread.id);
 						if (oldThread) {
@@ -461,6 +480,7 @@ export class ThreadComments extends Disposable implements IThreadComments {
 		private git: Git,
 		@IRemoteService private remoteService: IRemoteService,
 		@IInstantiationService private instantiationService: IInstantiationService,
+		@IAuthService private authService: IAuthService,
 	) {
 		super();
 		const comments = thread.comments.map(comment => new Comment(comment));
@@ -477,12 +497,32 @@ export class ThreadComments extends Disposable implements IThreadComments {
 	}
 
 	public setArchived(archived: boolean): TPromise<void> {
+		if (this.authService.currentUser && this.authService.currentUser.currentOrgMember) {
+			return this.operation(() => {
+				return requestGraphQLMutation<{ updateThread2: GQL.IThread }>(this.remoteService, `mutation ThreadSetArchived {
+					updateThread2(
+						threadID: $threadID,
+						archived: $archived,
+					) {
+						archivedAt
+					}
+				}`, {
+						threadID: this.id,
+						archived,
+					})
+					.then(response => {
+						this.archived = !!response.updateThread2.archivedAt;
+					});
+			});
+		}
+
+		// deprecated code path
 		return this.operation(() => TPromise.join([
 			this.git.getRemoteRepo(),
 			this.git.getAccessToken(),
 		])
 			.then(([remoteURI, accessToken]) => {
-				return requestGraphQLMutation<{ updateThread: GQL.IThread }>(this.remoteService, `mutation SetArchived {
+				return requestGraphQLMutation<{ updateThread: GQL.IThread }>(this.remoteService, `mutation ThreadSetArchivedDeprecated {
 					updateThread(
 						threadID: $threadID,
 						remoteURI: $remoteURI,
@@ -508,6 +548,28 @@ export class ThreadComments extends Disposable implements IThreadComments {
 		if (!this.draftReply.length) {
 			return TPromise.wrapError(new Error(localize('emptyCommentError', "Comment can not be empty.")));
 		}
+		if (this.authService.currentUser && this.authService.currentUser.currentOrgMember) {
+			return this.operation(() => {
+				return requestGraphQLMutation<{ addCommentToThread2: GQL.IThread }>(this.remoteService, `mutation SubmitDraftReply {
+					addCommentToThread2(
+						threadID: $threadID,
+						contents: $contents,
+					) {
+						${commentsGraphql}
+					}
+				}`, {
+						threadID: this.id,
+						contents: this.draftReply,
+					})
+
+					.then(response => {
+						this.draftReply = '';
+						this.comments = response.addCommentToThread2.comments.map(c => new Comment(c));
+					});
+			});
+		}
+
+		// deprecated code path
 		return this.operation(() => TPromise.join<any>([
 			this.git.getUserName(),
 			this.git.getUserEmail(),
@@ -515,7 +577,7 @@ export class ThreadComments extends Disposable implements IThreadComments {
 			this.git.getAccessToken(),
 		])
 			.then(([authorName, authorEmail, remoteURI, accessToken]) => {
-				return requestGraphQLMutation<{ addCommentToThread: GQL.IThread }>(this.remoteService, `mutation SubmitDraftReply {
+				return requestGraphQLMutation<{ addCommentToThread: GQL.IThread }>(this.remoteService, `mutation SubmitDraftReplyDeprecated {
 						addCommentToThread(
 							threadID: $threadID,
 							remoteURI: $remoteURI,
@@ -607,6 +669,7 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 		@IMessageService messageService: IMessageService,
 		@IInstantiationService private instantiationService: IInstantiationService,
 		@IRemoteService private remoteService: IRemoteService,
+		@IAuthService private authService: IAuthService,
 	) {
 		super();
 		this.displayRange = this.getNonEmptySelection(editor);
@@ -688,7 +751,31 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 		};
 		const promise = this.submitData
 			.then(data => {
-				return requestGraphQLMutation<{ createThread: GQL.IThread }>(this.remoteService, `mutation {
+				if (this.authService.currentUser && this.authService.currentUser.currentOrgMember) {
+					return requestGraphQLMutation<{ createThread2: GQL.IThread }>(this.remoteService, `mutation CreateThread {
+						createThread2(
+							orgID: $orgId,
+							remoteURI: $remoteURI,
+							file: $file,
+							revision: $revision,
+							startLine: $startLine,
+							endLine: $endLine,
+							startCharacter: $startCharacter,
+							endCharacter: $endCharacter,
+							contents: $contents,
+						) {
+							${threadGraphql}
+						}
+					}`, {
+							...data,
+							orgId: this.authService.currentUser.currentOrgMember.org.id,
+							contents,
+						})
+						.then(response => response.createThread2);
+
+				}
+				// TODO(nick): when this deprecated code path is removed, we can remove unnecessary fields on data.
+				return requestGraphQLMutation<{ createThread: GQL.IThread }>(this.remoteService, `mutation CreateThreadDeprecated {
 					createThread(
 						remoteURI: $remoteURI,
 						accessToken: $accessToken,
@@ -704,10 +791,11 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 					) {
 						${threadGraphql}
 					}
-				}`, { ...data, contents });
+				}`, { ...data, contents })
+					.then(response => response.createThread);
 			})
-			.then(response => {
-				const thread = this.instantiationService.createInstance(ThreadComments, response.createThread, this.git);
+			.then(gqlThread => {
+				const thread = this.instantiationService.createInstance(ThreadComments, gqlThread, this.git);
 				this.didSubmit.fire(thread);
 				return thread;
 			});
@@ -757,16 +845,25 @@ export class Comment implements IComment {
 	public readonly contents: string;
 	public readonly createdAt: Date;
 	public readonly updatedAt: Date;
-	public readonly authorName: string;
-	public readonly authorEmail: string;
+	public readonly author: ICommentAuthor;
 
 	constructor(comment: GQL.IComment) {
 		this.id = comment.id;
 		this.contents = comment.contents;
 		this.createdAt = new Date(comment.createdAt);
 		this.updatedAt = new Date(comment.updatedAt);
-		this.authorName = comment.authorName;
-		this.authorEmail = comment.authorEmail;
+		if (comment.author) {
+			this.author = {
+				email: comment.author.email,
+				displayName: comment.author.displayName,
+			};
+		} else {
+			// TODO(nick): deprecated code path
+			this.author = {
+				displayName: comment.authorName,
+				email: comment.authorEmail,
+			};
+		}
 	}
 }
 

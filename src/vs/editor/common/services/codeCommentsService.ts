@@ -195,12 +195,18 @@ export interface IThreadComments extends IEventDisposable {
  * Model for a single comment.
  */
 export interface IComment {
-	id: number;
-	contents: string;
-	createdAt: Date;
-	updatedAt: Date;
-	authorName: string;
-	authorEmail: string;
+	readonly id: number;
+	readonly contents: string;
+	readonly createdAt: Date;
+	readonly updatedAt: Date;
+	readonly author: ICommentAuthor;
+}
+
+export interface ICommentAuthor {
+	readonly email: string;
+	// readonly username: string;
+	readonly displayName: string;
+	// readonly avatarUrl: string | undefined;
 }
 
 export interface IEventDisposable extends IDisposable {
