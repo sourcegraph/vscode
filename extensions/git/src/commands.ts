@@ -16,7 +16,7 @@ import * as path from 'path';
 import * as os from 'os';
 import TelemetryReporter from 'vscode-extension-telemetry';
 import * as nls from 'vscode-nls';
-import { getTempDirectory, getGoPackagePrefix, setUpGoConfiguration } from './tempFolder';
+import { getTempDirectory, getTempSubDirectory, getGoPackagePrefix, setUpGoConfiguration } from './tempFolder';
 import { pathExists } from './nodeutil';
 
 const localize = nls.loadMessageBundle();
@@ -1086,13 +1086,14 @@ export class CommandCenter {
 		}
 
 		const tempFolder = await getTempDirectory(repository.root + '@' + rev);
+		const tempSubFolder = getTempSubDirectory(rev);
 
 		let dst: string;
 		const goPackagePrefix = await getGoPackagePrefix(repository.root);
 		if (goPackagePrefix) {
-			dst = path.join(tempFolder, 'src', goPackagePrefix.replace(/\//g, path.sep));
+			dst = path.join(tempFolder, tempSubFolder, 'src', goPackagePrefix.replace(/\//g, path.sep));
 		} else {
-			dst = path.join(tempFolder, path.basename(repository.root));
+			dst = path.join(tempFolder, tempSubFolder, path.basename(repository.root));
 		}
 
 		if (!await pathExists(dst)) {

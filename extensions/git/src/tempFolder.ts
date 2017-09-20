@@ -57,6 +57,32 @@ export async function getTempDirectory(key: string): Promise<string> {
 }
 
 /**
+ * getTempSubDirectory returns a pretty name for the sub-directory one level beneath a
+ * directory returned by getTempDirectory. getTempDirectory must return a uniquely identifying value, so it
+ * is often ugly and it's preferable not to show it in the UI. The sub-directory will often be unique enough
+ * such that only it (and not its parent) is visible in the UI.
+ */
+export function getTempSubDirectory(rev?: string): string {
+	if (!rev) {
+		return 'tmp';
+	}
+	if (rev.length === 40) {
+		return rev.slice(0, 6);
+	}
+	let subDir = rev;
+	if (subDir.startsWith('refs/tags/')) {
+		subDir = subDir.slice('refs/tags/'.length);
+	}
+	if (subDir.startsWith('refs/heads/')) {
+		subDir = subDir.slice('refs/heads/'.length);
+	}
+	if (subDir.startsWith('refs/remotes/')) {
+		subDir = subDir.slice('refs/remotes/'.length);
+	}
+	return subDir.replace(new RegExp('[' + path.sep + path.delimiter + ']', 'g'), '-');
+}
+
+/**
  * setUpGoConfiguration sets the `go.gopath` value in `.vscode/settings.json` in the new workspace folder, taking into account the configuration of the
  * source repository, to make the vscode-go plugin work. Local jump-to-definition should occur within the new workspace folder while external
  * jump-to-definition should work as in the original workspace folder.
