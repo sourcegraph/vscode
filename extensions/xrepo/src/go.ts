@@ -5,7 +5,9 @@
 
 import * as vscode from 'vscode';
 import path = require('path');
-import { getCurrentGoPath, getPackage } from './goenv';
+import { PackageData } from './types';
+import { getCurrentGoPath, getPackage, getGoRuntimePath, getToolsEnvVars } from './goenv';
+import { execFile } from './nodeutil';
 
 /**
  * Package descriptor
@@ -101,4 +103,29 @@ function packageToCanonicalPackage(pkg: string) {
 		return pkg;
 	}
 	return pkg.substring(lastVendorIdx + '/vendor/'.length);
+}
+
+export class GoPackageData implements PackageData {
+
+	constructor(public lang: string, public packageInfo: { [k: string]: string }, public dependencies?: { [k: string]: string }[]) { }
+
+	toDisplayString(): string {
+		return `Go Package: ${this.packageInfo['package']}`;
+	}
+}
+
+export async function getPackages(dir: string): Promise<PackageData[]> {
+	let goRuntimePath = getGoRuntimePath();
+	if (!goRuntimePath) {
+		vscode.window.showInformationMessage('Cannot find "go" binary. Update PATH or GOROOT appropriately');
+		return [];
+	}
+	// Use `{env: {}}` to make the execution faster. Include GOPATH to account if custom work space exists.
+	const env: any = getToolsEnvVars();
+	try {
+		const [out] = await execFile(goRuntimePath, ['list', '-f', '{{.ImportPath}}', './...'], { env: env, cwd: dir });
+		return out.trim().split('\n').map(l => l.trim()).filter(l => l.length > 0).map(p => new GoPackageData('go', { package: p }));
+	} catch {
+		return [];
+	}
 }

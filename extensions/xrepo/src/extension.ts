@@ -11,6 +11,7 @@ import * as path from 'path';
 import * as go from './go';
 import * as python from './python';
 import * as typescript from './typescript';
+import * as deps from './deps';
 
 const localize = nls.loadMessageBundle();
 
@@ -18,6 +19,7 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.commands.registerCommand('xrepo.goToSource', goToSourceFile));
 	context.subscriptions.push(vscode.commands.registerCommand('xrepo.initializeWorkspaceFolder', initializeWorkspaceFolderCmd));
 	context.subscriptions.push(vscode.workspace.onDidChangeWorkspaceFolders(onWorkspaceFolderAdded));
+	deps.activate(context);
 }
 
 async function goToSourceFile(): Promise<any> {

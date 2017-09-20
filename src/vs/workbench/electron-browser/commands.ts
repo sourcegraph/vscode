@@ -22,6 +22,7 @@ import URI from 'vs/base/common/uri';
 import { IEditorOptions, Position as EditorPosition } from 'vs/platform/editor/common/editor';
 import { IWorkspaceEditingService } from 'vs/workbench/services/workspace/common/workspaceEditing';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
+import { IRemoteService, requestGraphQL } from 'vs/platform/remote/node/remote';
 
 // --- List Commands
 
@@ -431,5 +432,39 @@ export function registerCommands(): void {
 			// Wait for workspace to reload and detect its newly added root.
 			return configurationService.reloadConfiguration();
 		});
+	});
+
+	CommandsRegistry.registerCommand('_workbench.getDependents', function (accessor: ServicesAccessor, lang: string, pkgData: { [k: string]: string }) {
+		const remoteService = accessor.get(IRemoteService);
+
+		const otherArgs: string[] = [];
+		for (let k of Object.keys(pkgData)) {
+			otherArgs.push(`, ${k}: ${JSON.stringify(pkgData[k])}`);
+		}
+
+		return requestGraphQL<any>(remoteService, `query ($lang: String!, $id: String, $type: String, $name: String, $commit: String, $baseDir: String, $repoURL: String, $version: String, $package: String, $limit: Int) {
+			root {
+				dependents(lang: $lang, id: $id, type: $type, name: $name, commit: $commit, baseDir: $baseDir, repoURL: $repoURL, version: $version, package: $package, limit: $limit) {
+					id
+					type
+					name
+					commit
+					repoURL
+					version
+					repo {
+						id
+						uri
+						description
+						language
+						fork
+					}
+				}
+			}
+		}`, {
+				lang: lang,
+				limit: 10,
+				...pkgData
+			},
+		).then(data => data.dependents);
 	});
 }

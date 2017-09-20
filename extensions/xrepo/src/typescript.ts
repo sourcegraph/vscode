@@ -8,6 +8,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { readFile } from './nodeutil';
 import { walk } from './util';
+import { PackageData } from './types';
 
 /**
  * Pacakge descriptor
@@ -80,9 +81,18 @@ async function definitionInfo(uri: vscode.Uri, selection: vscode.Selection): Pro
  * findDefinition returns the list of definition locations matching a definition metadata descriptor in a workspace folder.
  */
 async function findDefinition(workspaceFolder: vscode.WorkspaceFolder, defInfo: DefinitionInfo): Promise<vscode.Location[]> {
-	// Find package.json files
+	const pkgJsonFiles = await findPackageJsonFiles(workspaceFolder.uri.fsPath);
+	const locsByPkg: vscode.Location[][] = await Promise.all(pkgJsonFiles.map(f => findDefinitionInPackage(f, defInfo)));
+	const locs = [];
+	for (const l of locsByPkg) {
+		locs.push(...l);
+	}
+	return locs;
+}
+
+async function findPackageJsonFiles(dir: string): Promise<string[]> {
 	const pkgJsonFiles: string[] = [];
-	await walk(workspaceFolder.uri.fsPath, (filepath, stats) => {
+	await walk(dir, (filepath, stats) => {
 		const basename = path.basename(filepath);
 		if (basename === 'node_modules' && stats.isDirectory()) {
 			return false;
@@ -92,13 +102,7 @@ async function findDefinition(workspaceFolder: vscode.WorkspaceFolder, defInfo: 
 		}
 		return true;
 	});
-
-	const locsByPkg: vscode.Location[][] = await Promise.all(pkgJsonFiles.map(f => findDefinitionInPackage(f, defInfo)));
-	const locs = [];
-	for (const l of locsByPkg) {
-		locs.push(...l);
-	}
-	return locs;
+	return pkgJsonFiles;
 }
 
 /**
@@ -117,4 +121,17 @@ async function findDefinitionInPackage(packageJsonFile: string, defInfo: Definit
 		return [];
 	}
 	return [new vscode.Location(vscode.Uri.file(packageJsonFile), new vscode.Range(0, 0, 0, 0))];
+}
+
+class TypeScriptPackageData implements PackageData {
+	constructor(public lang: string, public packageInfo: { [k: string]: string }, public dependencies?: { [k: string]: string }[]) { }
+	toDisplayString(): string {
+		return `TypeScript Package: ${this.packageInfo['name']}`;
+	}
+}
+
+export async function getPackages(dir: string): Promise<PackageData[]> {
+	const pkgJsonFiles = await findPackageJsonFiles(dir);
+	const rawPkgs = await Promise.all(pkgJsonFiles.map(async f => JSON.parse(await readFile(f, 'utf8'))));
+	return rawPkgs.map(raw => new TypeScriptPackageData('typescript', { name: raw.name }));
 }
