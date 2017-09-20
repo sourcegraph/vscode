@@ -6,10 +6,9 @@
 
 import { TPromise } from 'vs/base/common/winjs.base';
 import { ICodeEditorService } from 'vs/editor/common/services/codeEditorService';
-import { ICommonCodeEditor, IModel, OverviewRulerLane, IDecorationOptions, IEditorContribution } from 'vs/editor/common/editorCommon';
+import { ICommonCodeEditor, IModel, OverviewRulerLane, IDecorationOptions, IEditorContribution, TrackedRangeStickiness } from 'vs/editor/common/editorCommon';
 import { IDisposable, Disposable, dispose } from 'vs/base/common/lifecycle';
 import { ICodeCommentsService, IThreadComments, IFileComments, IDraftThreadComments, EDITOR_CONTRIBUTION_ID } from 'vs/editor/common/services/codeCommentsService';
-import URI from 'vs/base/common/uri';
 import { Schemas } from 'vs/base/common/network';
 import * as colors from 'vs/platform/theme/common/colorRegistry';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
@@ -23,6 +22,7 @@ import { DraftThreadCommentsWidget } from 'vs/workbench/parts/codeComments/elect
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { Action } from 'vs/base/common/actions';
 import { once } from 'vs/base/common/event';
+import { ModelDecorationOptions } from 'vs/editor/common/model/textModelWithDecorations';
 
 /**
  * Decoration key for highlighting a comment range.
@@ -32,7 +32,10 @@ const HIGHLIGHT_DECORATION_KEY = 'codeCommentHighlight';
 /**
  * Decoration key for the gutter icon that indicates a comment exists on a line.
  */
-const GUTTER_ICON_DECORATION_KEY = 'codeCommentGutterIcon';
+const GUTTER_ICON_DECORATION_OPTIONS = ModelDecorationOptions.register({
+	glyphMarginClassName: 'code-comments-gutter-icon',
+	stickiness: TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
+});
 
 /**
  * Responsible for decorating the editor with indications of comments
@@ -88,12 +91,6 @@ export class CodeCommentsController extends Disposable implements IEditorContrib
 
 		this._register(themeService.onThemeChange(t => this.onThemeChange()));
 		this.onThemeChange();
-
-		const gutterIconPath = URI.parse(require.toUrl('./media/comment.svg')).fsPath;
-		codeEditorService.registerDecorationType(GUTTER_ICON_DECORATION_KEY, {
-			gutterIconPath: gutterIconPath,
-			gutterIconSize: 'contain',
-		});
 
 		this._register(editor.onMouseDown(e => {
 			if (!e.target.position) {
@@ -322,6 +319,9 @@ export class CodeCommentsController extends Disposable implements IEditorContrib
 			// Render decorations any time threads change (e.g. one was created, or data was fetched from network).
 			this.toDisposeOnModelChange.push(this.fileComments.onDidChangeThreads(() => this.renderDecorations(model)));
 			this.toDisposeOnModelChange.push(this.fileComments.onDidChangeDraftThreads(() => this.renderDecorations(model)));
+			this.toDisposeOnModelChange.push(model.onDidChangeContent(e => {
+				this.renderDecorations(model);
+			}));
 			this.renderDecorations(model);
 		} else {
 			this.fileComments = undefined;
@@ -346,6 +346,8 @@ export class CodeCommentsController extends Disposable implements IEditorContrib
 			this.renderDecorations(model);
 		}
 	}
+
+	private gutterIcons: string[] = [];
 
 	/**
 	 * Renders a gutter icon on lines that have comment threads, and
@@ -372,13 +374,14 @@ export class CodeCommentsController extends Disposable implements IEditorContrib
 		const expandedDraftThreadRanges = draftThreads.filter(thread => this.openDraftThreadWidgets.has(thread.id)).map(thread => thread.displayRange);
 
 		const highlights: IDecorationOptions[] = expandedThreadRanges.concat(expandedDraftThreadRanges).map(range => ({ range }));
+		// TODO(nick): use deltaDecorations here too
 		this.editor.setDecorations(HIGHLIGHT_DECORATION_KEY, highlights);
 
 		const threadRanges = threads.map(thread => thread.displayRange.collapseToStart());
 		const draftThreadRanges = draftThreads.map(thread => thread.displayRange.collapseToStart());
 
-		const gutterIcons: IDecorationOptions[] = threadRanges.concat(draftThreadRanges).map(range => ({ range }));
-		this.editor.setDecorations(GUTTER_ICON_DECORATION_KEY, gutterIcons);
+		const gutterIcons = threadRanges.concat(draftThreadRanges).map(range => ({ range, options: GUTTER_ICON_DECORATION_OPTIONS }));
+		this.gutterIcons = this.editor.deltaDecorations(this.gutterIcons, gutterIcons);
 	}
 
 	public saveViewState(): ViewState {

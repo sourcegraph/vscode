@@ -4,8 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 .monaco-workbench > .activitybar > .content .monaco-action-bar .action-label.codeComments {
-	-webkit-mask: url('comment.css.svg') no-repeat 50% 50%;
+	-webkit-mask: url('comment.svg') no-repeat 50% 50%;
 	-webkit-mask-size: 22px;
+}
+
+.code-comments-gutter-icon {
+	background: url('comment.svg') center center no-repeat;
 }
 
 .codeComments {
