@@ -29,7 +29,7 @@
 	"command.refreshComparison": "Refresh Comparison",
 	"command.closeComparison": "Close Comparison",
 	"command.addWorktree": "Create Worktree...",
-	"command.addTempWorktree": "Create Temp Worktree...",
+	"command.addTempWorktree": "Create Temporary Worktree...",
 	"command.branch": "Create Branch...",
 	"command.deleteBranch": "Delete Branch...",
 	"command.merge": "Merge Branch...",
