@@ -44,7 +44,11 @@ export function canonicalRemote(remote: string): string | undefined {
 		authority = authority.slice(idx + 1);
 	}
 
-	const canonical = authority.toLowerCase() + uri.path.replace(/\.(git|hg|svn)$/i, '').toLowerCase();
+	const path = uri.path
+		.replace(/\/*$/, '') // trailing slash
+		.replace(/\.(git|hg|svn)$/i, '');
+
+	const canonical = authority.toLowerCase() + path.toLowerCase();
 	return canonical ? canonical : undefined;
 }
 
@@ -102,6 +106,14 @@ check(
 );
 check(
 	'giTHub.com/foo/bAr',
+	'github.com/foo/bar',
+);
+check(
+	'git@github.com:foo/bar/',
+	'github.com/foo/bar',
+);
+check(
+	'github.com/foo/bar/',
 	'github.com/foo/bar',
 );
 console.log('git extension test done');
