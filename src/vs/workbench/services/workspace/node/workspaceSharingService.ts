@@ -21,7 +21,6 @@ import * as arrays from 'vs/base/common/arrays';
 import { IJSONEditingService } from 'vs/workbench/services/configuration/common/jsonEditing';
 import { IExtensionService } from 'vs/platform/extensions/common/extensions';
 import { localize } from 'vs/nls';
-// tslint:disable-next-line:import-patterns
 import { IFoldersWorkbenchService } from 'vs/workbench/services/folders/common/folders';
 import { IFolderCatalogService } from 'vs/platform/folders/common/folderCatalog';
 import { ITelemetryData, ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
