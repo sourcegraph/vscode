@@ -109,7 +109,10 @@ export class LaunchService implements ILaunchService {
 				preferNewWindow: !args['reuse-window'] && !args.wait,
 				forceReuseWindow: args['reuse-window'],
 				diffMode: args.diff,
-				addMode: args.add
+				addMode: args.add,
+				// HACK: Force folder(s) to be addded to the existing workspace
+				// unless explicitly told otherwise
+				forceExistingWorkspace: !args['new-window']
 			});
 		}
 
