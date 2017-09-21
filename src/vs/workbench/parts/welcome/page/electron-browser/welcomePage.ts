@@ -6,7 +6,6 @@
 
 import 'vs/css!./welcomePage';
 import URI from 'vs/base/common/uri';
-import * as path from 'path';
 import * as arrays from 'vs/base/common/arrays';
 import { WalkThroughInput } from 'vs/workbench/parts/welcome/walkThrough/node/walkThroughInput';
 import { IWorkbenchContribution } from 'vs/workbench/common/contributions';
@@ -34,13 +33,11 @@ import { IExtensionEnablementService, IExtensionManagementService, IExtensionGal
 import { used } from 'vs/workbench/parts/welcome/page/electron-browser/vs_code_welcome_page';
 import { ILifecycleService, StartupKind } from 'vs/platform/lifecycle/common/lifecycle';
 import { IDisposable, dispose } from 'vs/base/common/lifecycle';
-import { tildify } from 'vs/base/common/labels';
 import { IThemeService, registerThemingParticipant } from 'vs/platform/theme/common/themeService';
 import { registerColor, focusBorder, textLinkForeground, textLinkActiveForeground, foreground, descriptionForeground, contrastBorder, activeContrastBorder, welcomeButtonBackground } from 'vs/platform/theme/common/colorRegistry';
 import { getExtraColor } from 'vs/workbench/parts/welcome/walkThrough/node/walkThroughUtils';
 import { IExtensionsWorkbenchService } from 'vs/workbench/parts/extensions/common/extensions';
 import { IStorageService } from 'vs/platform/storage/common/storage';
-import { IWorkspaceIdentifier, getWorkspaceLabel, ISingleFolderWorkspaceIdentifier, isSingleFolderWorkspaceIdentifier } from 'vs/platform/workspaces/common/workspaces';
 import { IEditorInputFactory, EditorInput } from 'vs/workbench/common/editor';
 import { IFoldersWorkbenchService } from 'vs/workbench/services/folders/common/folders';
 
@@ -215,7 +212,6 @@ class WelcomePage {
 	) {
 		this.disposables.push(lifecycleService.onShutdown(() => this.dispose()));
 
-		const recentlyOpened = this.windowService.getRecentlyOpened();
 		const installedExtensions = this.instantiationService.invokeFunction(getInstalledExtensions);
 		const resource = URI.parse(require.toUrl('./vs_code_welcome_page'))
 			.with({
@@ -227,7 +223,7 @@ class WelcomePage {
 			name: localize('welcome.title', "Welcome"),
 			resource,
 			telemetryFrom,
-			onReady: (container: HTMLElement) => this.onReady(container, recentlyOpened, installedExtensions)
+			onReady: (container: HTMLElement) => this.onReady(container, installedExtensions)
 		});
 	}
 
@@ -235,7 +231,7 @@ class WelcomePage {
 		return this.editorService.openEditor(this.editorInput, { pinned: true }, Position.ONE);
 	}
 
-	private onReady(container: HTMLElement, recentlyOpened: TPromise<{ files: string[]; workspaces: (IWorkspaceIdentifier | ISingleFolderWorkspaceIdentifier)[]; }>, installedExtensions: TPromise<IExtensionStatus[]>): void {
+	private onReady(container: HTMLElement, installedExtensions: TPromise<IExtensionStatus[]>): void {
 		const enabled = isWelcomePageEnabled(this.configurationService);
 		const showOnStartup = <HTMLInputElement>container.querySelector('#showOnStartup');
 		const inactiveButtons = container.querySelectorAll('.sg-inactive');
@@ -252,68 +248,6 @@ class WelcomePage {
 		showOnStartup.addEventListener('click', e => {
 			this.configurationEditingService.writeConfiguration(ConfigurationTarget.USER, { key: configurationKey, value: showOnStartup.checked ? 'welcomePage' : 'newUntitledFile' });
 		});
-
-		recentlyOpened.then(({ workspaces }) => {
-			// Filter out the current workspace
-			workspaces = workspaces.filter(workspace => !this.contextService.isCurrentWorkspace(workspace));
-			if (!workspaces.length) {
-				const recent = container.querySelector('.welcomePage') as HTMLElement;
-				recent.classList.add('emptyRecent');
-				return;
-			}
-			const ul = container.querySelector('.recent ul');
-			const before = ul.firstElementChild;
-			workspaces.slice(0, 5).forEach(workspace => {
-				let label: string;
-				let parent: string;
-				let wsPath: string;
-				if (isSingleFolderWorkspaceIdentifier(workspace)) {
-					label = path.basename(workspace);
-					parent = path.dirname(workspace);
-					wsPath = workspace;
-				} else {
-					label = getWorkspaceLabel(workspace, this.environmentService);
-					parent = path.dirname(workspace.configPath);
-					wsPath = workspace.configPath;
-				}
-
-				const li = document.createElement('li');
-
-				const a = document.createElement('a');
-				let name = label;
-				let parentFolder = parent;
-				if (!name && parentFolder) {
-					const tmp = name;
-					name = parentFolder;
-					parentFolder = tmp;
-				}
-				const tildifiedParentFolder = tildify(parentFolder, this.environmentService.userHome);
-
-				a.innerText = name;
-				a.title = label;
-				a.setAttribute('aria-label', localize('welcomePage.openFolderWithPath', "Open folder {0} with path {1}", name, tildifiedParentFolder));
-				a.href = 'javascript:void(0)';
-				a.addEventListener('click', e => {
-					this.telemetryService.publicLog('workbenchActionExecuted', {
-						id: 'openRecentFolder',
-						from: telemetryFrom
-					});
-					this.windowsService.openWindow([wsPath], { forceNewWindow: e.ctrlKey || e.metaKey });
-					e.preventDefault();
-					e.stopPropagation();
-				});
-				li.appendChild(a);
-
-				const span = document.createElement('span');
-				span.classList.add('path');
-				span.classList.add('detail');
-				span.innerText = tildifiedParentFolder;
-				span.title = label;
-				li.appendChild(span);
-
-				ul.insertBefore(li, before);
-			});
-		}).then(null, onUnexpectedError);
 
 		this.addExtensionList(container, '.extensionPackList', extensionPacks, extensionPackStrings);
 		this.addExtensionList(container, '.keymapList', keymapExtensions, keymapStrings);

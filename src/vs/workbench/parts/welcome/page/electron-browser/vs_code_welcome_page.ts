@@ -35,27 +35,6 @@ export default () => `
 							</li>
 						</ul>
 					</div>
-					<div class="section recent commands">
-						<h2 class="caption">${escape(localize('welcomePage.recent', "Recent workspaces and folders"))}</h2>
-
-						<ul class="list">
-							<!-- Filled programmatically -->
-							<li class="moreRecent"><a href="command:workbench.action.openRecent">${escape(localize('welcomePage.moreRecent', "More..."))}</a><span class="path detail if_shortcut" data-command="workbench.action.openRecent">(<span class="shortcut" data-command="workbench.action.openRecent"></span>)</span></li>
-						</ul>
-						<ul class="none detail">
-							<li>
-								<button>
-									<div class="icon-container">
-										<div class="btn-icon list-icon"></div>
-									</div>
-									<div class="button-label">
-										<h3 class="caption">${escape(localize('welcomePage.noRecentFolders', "Nothing recent"))}</h3>
-										<span class="detail">${escape(localize('welcomePage.openToGetStarted', "Open a local folder or remote repository to get started"))}</span>
-									</div>
-								</button>
-							</li>
-						</ul>
-					</div>
 					<div class="section public-workspaces">
 						<h2>Public workspaces</h2>
 						<p class="detail">Try Sourcegraph on these popular open-source projects</p>
