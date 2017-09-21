@@ -60,8 +60,22 @@ export class GlobalRepositories {
 			walker.search(dir, path => {
 				remotePromises.push(this.git.exec(path, ['remote', '--verbose']).then(result => {
 					for (const key of extractCanonicalRemotes(result.stdout)) {
-						this.map.set(key, path);
-						staleRemotes.delete(key);
+						if (staleRemotes.has(key)) {
+							// First time we have seen this key on this scan, so overwrite incase the value is stale.
+							this.map.set(key, path);
+							staleRemotes.delete(key);
+						} else {
+							// We want to consistently set the same path for a key. So we only update the key if
+							// * It is unset, or
+							// * It is shorter, or
+							// * It is the same length, but lexicographically before.
+							//
+							// NOTE: When rescanning this does mean temporarily we can have different values. Not preventing that for simplicity.
+							const current = this.map.get(key);
+							if (!current || path.length < current.length || (path.length === current.length && path < current)) {
+								this.map.set(key, path);
+							}
+						}
 					}
 				}, () => { }));
 			}, err => {
