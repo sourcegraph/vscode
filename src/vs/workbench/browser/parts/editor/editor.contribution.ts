@@ -40,6 +40,8 @@ import { getQuickNavigateHandler, inQuickOpenContext } from 'vs/workbench/browse
 import { KeybindingsRegistry } from 'vs/platform/keybinding/common/keybindingsRegistry';
 import { ContextKeyExpr } from 'vs/platform/contextkey/common/contextkey';
 import { isMacintosh } from 'vs/base/common/platform';
+import { IWorkbenchContributionsRegistry, Extensions as WorkbenchExtensions } from 'vs/workbench/common/contributions';
+import { EditorViewTelemetryHandler } from 'vs/workbench/browser/parts/editor/editorTelemetry';
 
 // Register String Editor
 Registry.as<IEditorRegistry>(EditorExtensions.Editors).registerEditor(
@@ -416,3 +418,8 @@ if (isMacintosh) {
 		group: 'navigation'
 	});
 }
+
+// Register File Editor Tracker
+Registry.as<IWorkbenchContributionsRegistry>(WorkbenchExtensions.Workbench).registerWorkbenchContribution(
+	EditorViewTelemetryHandler
+);

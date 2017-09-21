@@ -132,6 +132,14 @@ export class AppInsightsAppender implements ITelemetryAppender {
 		if (!this._aiClient) {
 			return;
 		}
+
+		// PATCH(sourcegraph): for our logging we put everything under a "native" object, but
+		// AI expects certain common properties to be top-level
+		if (data && data.native) {
+			data = mixin({ ...data }, data.native);
+			delete data.native;
+		}
+
 		data = mixin(data, this._defaultData);
 		if (this._aiClient.context && this._aiClient.context.keys) {
 			data[this._aiClient.context.keys.userId] = data['common.machineId'];

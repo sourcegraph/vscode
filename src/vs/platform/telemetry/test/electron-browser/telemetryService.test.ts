@@ -6,6 +6,7 @@
 
 import * as assert from 'assert';
 import { Emitter } from 'vs/base/common/event';
+import { mixin } from 'vs/base/common/objects';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { TelemetryService } from 'vs/platform/telemetry/common/telemetryService';
 import ErrorTelemetry from 'vs/platform/telemetry/browser/errorTelemetry';
@@ -27,6 +28,13 @@ class TestTelemetryAppender implements ITelemetryAppender {
 	}
 
 	public log(eventName: string, data?: any): void {
+		// PATCH(sourcegraph): for our logging we put everything under a "native" object, but
+		// AI expects certain common properties to be top-level
+		if (data && data.native) {
+			data = mixin({ ...data }, data.native);
+			delete data.native;
+		}
+
 		this.events.push({ eventName, data });
 	}
 

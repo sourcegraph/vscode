@@ -67,6 +67,9 @@ export class SourcegraphEventLogger implements ITelemetryAppender {
 	}
 
 	logView(pageTitle: string, eventProperties?: ISourcegraphEventProperties): void {
+		if (!this.atTopLevel()) {
+			return;
+		}
 		if (!pageTitle) {
 			return;
 		}

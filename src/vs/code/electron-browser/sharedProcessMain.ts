@@ -28,9 +28,8 @@ import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { combinedAppender, NullTelemetryService } from 'vs/platform/telemetry/common/telemetryUtils';
 import { resolveCommonProperties, machineIdStorageKey } from 'vs/platform/telemetry/node/commonProperties';
 import { TelemetryAppenderChannel } from 'vs/platform/telemetry/common/telemetryIpc';
-import { ITelemetryServiceConfig } from 'vs/platform/telemetry/common/telemetryService';
+import { TelemetryService, ITelemetryServiceConfig } from 'vs/platform/telemetry/common/telemetryService';
 import { AppInsightsAppender } from 'vs/platform/telemetry/node/appInsightsAppender';
-import { SourcegraphTelemetryService } from 'vs/platform/telemetry/common/sourcegraphTelemetryService';
 import { IChoiceService } from 'vs/platform/message/common/message';
 import { ChoiceChannelClient } from 'vs/platform/message/common/messageIpc';
 import { IWindowsService } from 'vs/platform/windows/common/windows';
@@ -122,7 +121,7 @@ function main(server: Server, initData: ISharedProcessInitData): void {
 				piiPaths: [appRoot, extensionsPath]
 			};
 
-			services.set(ITelemetryService, new SyncDescriptor(SourcegraphTelemetryService, config));
+			services.set(ITelemetryService, new SyncDescriptor(TelemetryService, config));
 		} else {
 			services.set(ITelemetryService, NullTelemetryService);
 		}

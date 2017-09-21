@@ -26,7 +26,6 @@ import { NullTelemetryService, configurationTelemetry, lifecycleTelemetry, combi
 import { IExperimentService, ExperimentService } from 'vs/platform/telemetry/common/experiments';
 import { ITelemetryAppenderChannel, TelemetryAppenderClient } from 'vs/platform/telemetry/common/telemetryIpc';
 import { TelemetryService, ITelemetryServiceConfig } from 'vs/platform/telemetry/common/telemetryService';
-import { SourcegraphTelemetryService } from 'vs/platform/telemetry/common/sourcegraphTelemetryService';
 import { IRemoteService } from 'vs/platform/remote/node/remote';
 import { RemoteService } from 'vs/platform/remote/node/remoteService';
 import { SearchProfileService } from 'vs/workbench/services/search/node/searchProfileService';
@@ -293,7 +292,7 @@ export class WorkbenchShell {
 				piiPaths: [this.environmentService.appRoot, this.environmentService.extensionsPath]
 			};
 
-			const telemetryService = instantiationService.createInstance(SourcegraphTelemetryService, config);
+			const telemetryService = instantiationService.createInstance(TelemetryService, config);
 			this.telemetryService = telemetryService;
 
 			const errorTelemetry = new ErrorTelemetry(telemetryService);

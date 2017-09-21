@@ -9,13 +9,17 @@ import { localize } from 'vs/nls';
 import { escapeRegExpCharacters } from 'vs/base/common/strings';
 import { ITelemetryService, ITelemetryInfo, ITelemetryData } from 'vs/platform/telemetry/common/telemetry';
 import { ITelemetryAppender } from 'vs/platform/telemetry/common/telemetryUtils';
-import { optional } from 'vs/platform/instantiation/common/instantiation';
+import { optional, ServicesAccessor } from 'vs/platform/instantiation/common/instantiation';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { IConfigurationRegistry, Extensions } from 'vs/platform/configuration/common/configurationRegistry';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { IDisposable, dispose } from 'vs/base/common/lifecycle';
-import { cloneAndChange, mixin } from 'vs/base/common/objects';
+import { cloneAndChange } from 'vs/base/common/objects';
 import { Registry } from 'vs/platform/registry/common/platform';
+import { IEnvironmentService } from 'vs/platform/environment/common/environment';
+import { CommandsRegistry } from 'vs/platform/commands/common/commands';
+// tslint:disable-next-line
+import { IAuthConfiguration } from 'vs/workbench/services/codeComments/browser/git';
 
 export interface ITelemetryServiceConfig {
 	appender: ITelemetryAppender;
@@ -29,6 +33,8 @@ export class TelemetryService implements ITelemetryService {
 	static IDLE_START_EVENT_NAME = 'UserIdleStart';
 	static IDLE_STOP_EVENT_NAME = 'UserIdleStop';
 
+	private static CLEANUP_INDICATOR_STRING = '$DATA_REMOVED';
+
 	_serviceBrand: any;
 
 	protected _appender: ITelemetryAppender;
@@ -41,7 +47,8 @@ export class TelemetryService implements ITelemetryService {
 
 	constructor(
 		config: ITelemetryServiceConfig,
-		@optional(IConfigurationService) protected _configurationService: IConfigurationService
+		@optional(IConfigurationService) protected _configurationService?: IConfigurationService,
+		@optional(IEnvironmentService) protected _environmentService?: IEnvironmentService,
 	) {
 		this._appender = config.appender;
 		this._commonProperties = config.commonProperties || TPromise.as({});
@@ -55,7 +62,16 @@ export class TelemetryService implements ITelemetryService {
 		this._cleanupPatterns.push(
 			[/file:\/\/\/.*?\/resources\/app\//gi, ''],
 			[/file:\/\/\/.*/gi, ''],
-			[/ENOENT: no such file or directory.*?\'([^\']+)\'/gi, 'ENOENT: no such file or directory']
+			[/ENOENT: no such file or directory.*?\'([^\']+)\'/gi, 'ENOENT: no such file or directory'],
+			// Add static cleanup patterns for remote urls. Add CLEANUP_INDICATOR_STRING to help
+			// identify and remove these from the source.
+			[/git:\/\/.*/gi, `git://${TelemetryService.CLEANUP_INDICATOR_STRING}`],
+			[/repo:\/\/.*/gi, `repo://${TelemetryService.CLEANUP_INDICATOR_STRING}`],
+			[/(https:\/\/)?(www\.)?github.com\/.*/gi, `github.com//${TelemetryService.CLEANUP_INDICATOR_STRING}`],
+			[/Repository not found:.*/gi, `Repository not found: ${TelemetryService.CLEANUP_INDICATOR_STRING}`],
+			[/Revision not found:.*/gi, `Revision not found: ${TelemetryService.CLEANUP_INDICATOR_STRING}`],
+			[/Unable to open '[^']*': commit information not available for repo.*/gi, `Unable to open: ${TelemetryService.CLEANUP_INDICATOR_STRING}: commit information not available for repo ${TelemetryService.CLEANUP_INDICATOR_STRING}`],
+			[/Unable to open '[^']*'.*/gi, `Unable to open: ${TelemetryService.CLEANUP_INDICATOR_STRING}`]
 		);
 
 		for (let piiPath of this._piiPaths) {
@@ -96,13 +112,16 @@ export class TelemetryService implements ITelemetryService {
 	publicLog(eventName: string, data?: ITelemetryData): TPromise<any> {
 		// don't send events when the user is optout
 		if (!this._userOptIn) {
+			if (this._environmentService && this._environmentService.eventLogDebug) {
+				console.log(`User has opted out, not logging: ${eventName}`);
+			}
 			return TPromise.as(undefined);
 		}
 
 		return this._commonProperties.then(values => {
 
 			// (first) add common properties
-			data = mixin(data, values);
+			data = { ...data, native: values };
 
 			// (last) remove all PII from data
 			data = cloneAndChange(data, value => {
@@ -111,6 +130,18 @@ export class TelemetryService implements ITelemetryService {
 				}
 				return undefined;
 			});
+
+			// TODO(Dan) determine if we should remove this section before launch, we
+			// will replace with sourcegraph accounts
+			if (this._configurationService) {
+				const config = this._configurationService.getConfiguration<IAuthConfiguration>();
+				if (config && config.auth && config.auth.displayName) {
+					data.native.git_auth_displayName = config.auth.displayName;
+				}
+				if (config && config.auth && config.auth.email) {
+					data.native.git_auth_email = config.auth.email;
+				}
+			}
 
 			this._appender.log(eventName, data);
 
@@ -147,4 +178,9 @@ Registry.as<IConfigurationRegistry>(Extensions.Configuration).registerConfigurat
 			'default': true
 		}
 	}
+});
+
+CommandsRegistry.registerCommand('_telemetry.publicLog', function (accessor: ServicesAccessor, eventName: string, data?: ITelemetryData) {
+	const telemetryService = accessor.get(ITelemetryService);
+	telemetryService.publicLog(eventName, data);
 });

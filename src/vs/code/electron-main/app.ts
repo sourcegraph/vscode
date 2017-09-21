@@ -34,7 +34,7 @@ import { URLChannel } from 'vs/platform/url/common/urlIpc';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { NullTelemetryService } from 'vs/platform/telemetry/common/telemetryUtils';
 import { ITelemetryAppenderChannel, TelemetryAppenderClient } from 'vs/platform/telemetry/common/telemetryIpc';
-import { ITelemetryServiceConfig } from 'vs/platform/telemetry/common/telemetryService';
+import { TelemetryService, ITelemetryServiceConfig } from 'vs/platform/telemetry/common/telemetryService';
 import { ICredentialsService } from 'vs/platform/credentials/common/credentials';
 import { CredentialsService } from 'vs/platform/credentials/node/credentialsService';
 import { CredentialsChannel } from 'vs/platform/credentials/node/credentialsIpc';
@@ -56,7 +56,6 @@ import { WorkspacesChannel } from 'vs/platform/workspaces/common/workspacesIpc';
 import { IWorkspacesMainService } from 'vs/platform/workspaces/common/workspaces';
 import { dirname, join } from 'path';
 import { touch } from 'vs/base/node/pfs';
-import { SourcegraphTelemetryService } from 'vs/platform/telemetry/common/sourcegraphTelemetryService';
 import { WindowLevel } from 'vs/platform/telemetry/common/analyticsConstants';
 
 export class CodeApplication {
@@ -314,7 +313,7 @@ export class CodeApplication {
 				}));
 			const piiPaths = [this.environmentService.appRoot, this.environmentService.extensionsPath];
 			const config: ITelemetryServiceConfig = { appender, commonProperties, piiPaths };
-			services.set(ITelemetryService, new SyncDescriptor(SourcegraphTelemetryService, config));
+			services.set(ITelemetryService, new SyncDescriptor(TelemetryService, config));
 		} else {
 			services.set(ITelemetryService, NullTelemetryService);
 		}

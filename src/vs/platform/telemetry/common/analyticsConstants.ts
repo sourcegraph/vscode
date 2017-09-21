@@ -427,10 +427,10 @@ export const SOURCEGRAPH_EVENT_MAP: { [eventName: string]: EventMapEntry } = {
 	'resolvingInput': { eventCategory: EventCategory.VSCodeInternal, eventAction: EventAction.Unknown, shouldLog: false },
 	'disposingInput': { eventCategory: EventCategory.VSCodeInternal, eventAction: EventAction.Unknown, shouldLog: false },
 
-	'workspce.tags': { eventCategory: EventCategory.VSCodeInternal, eventAction: EventAction.Unknown, shouldLog: false },
-	'workspace.remotes': { eventCategory: EventCategory.VSCodeInternal, eventAction: EventAction.Unknown },
-	'workspace.azure': { eventCategory: EventCategory.VSCodeInternal, eventAction: EventAction.Unknown },
-	'workspace.hashedRemotes': { eventCategory: EventCategory.VSCodeInternal, eventAction: EventAction.Unknown },
+	'workspce.tags': { eventCategory: EventCategory.VSCodeInternal, eventAction: EventAction.Unknown, topLevelOnly: true },
+	'workspace.remotes': { eventCategory: EventCategory.VSCodeInternal, eventAction: EventAction.Unknown, topLevelOnly: true },
+	'workspace.azure': { eventCategory: EventCategory.VSCodeInternal, eventAction: EventAction.Unknown, topLevelOnly: true },
+	'workspace.hashedRemotes': { eventCategory: EventCategory.VSCodeInternal, eventAction: EventAction.Unknown, topLevelOnly: true },
 
 	'fileGet': { eventCategory: EventCategory.VSCodeInternal, eventAction: EventAction.Unknown, shouldLog: false },
 	'filePUT': { eventCategory: EventCategory.VSCodeInternal, eventAction: EventAction.Unknown, shouldLog: false },
@@ -450,9 +450,9 @@ export const SOURCEGRAPH_EVENT_MAP: { [eventName: string]: EventMapEntry } = {
 	'LogoutClicked': { eventCategory: EventCategory.Auth, eventAction: EventAction.SignOut, topLevelOnly: true },
 	'RemoteSettingsOpened': { eventCategory: EventCategory.External, eventAction: EventAction.Click, topLevelOnly: true },
 	'SignInModalInitiated': { eventCategory: EventCategory.Auth, eventAction: EventAction.Click, eventFeature: EventFeature.SignInModal },
-	'CurrentUserSignedIn': { eventCategory: EventCategory.Auth, eventAction: EventAction.Submit },
-	'CurrentUserSignedOut': { eventCategory: EventCategory.Auth, eventAction: EventAction.Submit },
-	'CurrentUserChanged': { eventCategory: EventCategory.Auth, eventAction: EventAction.Submit },
+	'CurrentUserSignedIn': { eventCategory: EventCategory.Auth, eventAction: EventAction.Submit, topLevelOnly: true },
+	'CurrentUserSignedOut': { eventCategory: EventCategory.Auth, eventAction: EventAction.Submit, topLevelOnly: true },
+	'CurrentUserChanged': { eventCategory: EventCategory.Auth, eventAction: EventAction.Submit, topLevelOnly: true },
 
 	// Orgs
 	'CurrentOrgChanged': { eventCategory: EventCategory.Orgs, eventAction: EventAction.Submit },
@@ -479,5 +479,5 @@ export const SOURCEGRAPH_EVENT_MAP: { [eventName: string]: EventMapEntry } = {
 	'BrowserExtInstallSuccess': { eventCategory: EventCategory.Marketing, eventAction: EventAction.Success, eventFeature: EventFeature.Reminder },
 
 	// View events, handled specially by the Sourcegraph event logger
-	'ViewFile': { eventCategory: EventCategory.View, eventAction: EventAction.Unknown },
+	'ViewFile': { eventCategory: EventCategory.View, eventAction: EventAction.Unknown, topLevelOnly: true },
 };

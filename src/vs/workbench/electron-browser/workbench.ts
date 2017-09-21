@@ -107,7 +107,6 @@ import { WorkspaceSharingService } from 'vs/workbench/services/workspace/node/wo
 import URI from 'vs/base/common/uri';
 // tslint:disable-next-line:import-patterns
 import { ModalPart } from 'vs/workbench/parts/modal/modalPart';
-import { SourcegraphTelemetryService } from 'vs/platform/telemetry/common/sourcegraphTelemetryService';
 import { IFolderCatalogService } from 'vs/platform/folders/common/folderCatalog';
 import { FolderCatalogService } from 'vs/workbench/services/folders/common/folderCatalogService';
 import { IFoldersWorkbenchService } from 'vs/workbench/services/folders/common/folders';
@@ -605,10 +604,6 @@ export class Workbench implements IPartService {
 		this.editorService = this.instantiationService.createInstance(WorkbenchEditorService, this.editorPart);
 		serviceCollection.set(IWorkbenchEditorService, this.editorService);
 		serviceCollection.set(IEditorGroupService, this.editorPart);
-		// Sourcegraph addition (Dan): cleanly capture file switching events (private repo+file details removed)
-		if (this.telemetryService instanceof SourcegraphTelemetryService) {
-			this.telemetryService.registerEditorServiceEventListeners(this.editorPart);
-		}
 
 		// Context bar
 		this.contextbarPart = this.instantiationService.createInstance(ContextbarPart, Identifiers.CONTEXTBAR_PART);
