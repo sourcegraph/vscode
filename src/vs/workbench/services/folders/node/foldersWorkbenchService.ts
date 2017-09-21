@@ -364,12 +364,22 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 
 	public addFoldersAsWorkspaceRootFolders(anyFolders: (IFolder | URI)[]): TPromise<URI[]> {
 		const uris = anyFolders.map(folder => folder instanceof URI ? folder : folder.resource);
-		return this.workspaceEditingService.addFolders(uris)
+		return this.ready()
+			.then(() => this.workspaceEditingService.addFolders(uris))
 			.then(() => this.configurationService.reloadConfiguration())
 			.then(() => TPromise.join(uris.map(uri => this.resourceResolverService.resolveResource(uri))))
 			.then(uris => {
 				return TPromise.join(uris.map(resource => this.waitForRepository(resource))).then(() => uris);
 			});
+	}
+
+	// Returns a promise which is done once all workspaces folders are ready.
+	private ready(): TPromise<void> {
+		const workspace = this.contextService.getWorkspace();
+		if (!workspace || arrays.isFalsyOrEmpty(workspace.folders)) {
+			return TPromise.as(void 0);
+		}
+		return TPromise.join(workspace.folders.map(folder => this.waitForRepository(folder.uri))).then(() => { });
 	}
 
 	private waitForRepository(resource: URI): TPromise<void> {
