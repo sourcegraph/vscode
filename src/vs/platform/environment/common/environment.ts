@@ -33,6 +33,8 @@ export interface ParsedArgs {
 	debugId?: string;
 	debugSearch?: string;
 	debugBrkSearch?: string;
+	debugDiff?: string;
+	debugBrkDiff?: string;
 	'list-extensions'?: boolean;
 	'show-versions'?: boolean;
 	'install-extension'?: string | string[];
@@ -86,6 +88,7 @@ export interface IEnvironmentService {
 
 	debugExtensionHost: IExtensionHostDebugParams;
 	debugSearch: IDebugParams;
+	debugDiff: IDebugParams;
 
 
 	logExtensionHostCommunication: boolean;

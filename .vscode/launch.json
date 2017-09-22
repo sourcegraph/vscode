@@ -1,7 +1,6 @@
 {
 	"version": "0.1.0",
 	"configurations": [
-
 		{
 			"type": "node",
 			"request": "launch",
@@ -40,6 +39,16 @@
 			"protocol": "inspector",
 			"name": "Attach to Search Process",
 			"port": 5876,
+			"outFiles": [
+				"${workspaceRoot}/out/**/*.js"
+			]
+		},
+		{
+			"type": "node",
+			"request": "attach",
+			"protocol": "inspector",
+			"name": "Attach to Diff Process",
+			"port": 5877,
 			"outFiles": [
 				"${workspaceRoot}/out/**/*.js"
 			]

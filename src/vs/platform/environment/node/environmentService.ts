@@ -113,6 +113,9 @@ export class EnvironmentService implements IEnvironmentService {
 	@memoize
 	get debugSearch(): IDebugParams { return parseSearchPort(this._args, this.isBuilt); }
 
+	@memoize
+	get debugDiff(): IDebugParams { return parseDiffPort(this._args, this.isBuilt); }
+
 	get isBuilt(): boolean { return !process.env['VSCODE_DEV']; }
 	get verbose(): boolean { return this._args.verbose; }
 	get wait(): boolean { return this._args.wait; }
@@ -178,6 +181,10 @@ export function parseExtensionHostPort(args: ParsedArgs, isBuild: boolean): IExt
 
 export function parseSearchPort(args: ParsedArgs, isBuild: boolean): IDebugParams {
 	return parseDebugPort(args.debugSearch, args.debugBrkSearch, 5876, isBuild);
+}
+
+export function parseDiffPort(args: ParsedArgs, isBuild: boolean): IDebugParams {
+	return parseDebugPort(args.debugDiff, args.debugBrkDiff, 5877, isBuild);
 }
 
 export function parseDebugPort(debugArg: string, debugBrkArg: string, defaultBuildPort: number, isBuild: boolean, debugId?: string): IExtensionHostDebugParams {

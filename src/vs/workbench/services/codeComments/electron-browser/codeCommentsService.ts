@@ -28,6 +28,8 @@ import { IMessageService, Severity } from 'vs/platform/message/common/message';
 import { IModelContentChangedEvent } from 'vs/editor/common/model/textModelEvents';
 import { InterruptibleDelayer } from 'vs/base/common/async';
 import { IAuthService } from 'vs/platform/auth/common/auth';
+import { DiffWorkerClient } from 'vs/workbench/services/codeComments/node/diffWorkerClient';
+import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 
 export { Event }
 
@@ -92,9 +94,15 @@ export class CodeCommentsService implements ICodeCommentsService {
 	 */
 	private models = new StrictResourceMap<FileComments>();
 
+	private diffWorkerProvider: DiffWorkerClient;
+
 	constructor(
+		@IEnvironmentService environmentService: IEnvironmentService,
 		@IInstantiationService private instantiationService: IInstantiationService,
-	) { }
+
+	) {
+		this.diffWorkerProvider = new DiffWorkerClient(environmentService.debugDiff);
+	}
 
 	/**
 	 * See documentation on ICodeCommentsService.
@@ -106,7 +114,7 @@ export class CodeCommentsService implements ICodeCommentsService {
 		// like draft threads and draft replies so they could be restored.
 		let model = this.models.get(file);
 		if (!model) {
-			model = this.instantiationService.createInstance(FileComments, file);
+			model = this.instantiationService.createInstance(FileComments, this.diffWorkerProvider, file);
 			this.models.set(file, model);
 		}
 		return model;
@@ -144,6 +152,7 @@ export class FileComments extends Disposable implements IFileComments {
 	private scmRepository: ISCMRepository;
 
 	constructor(
+		private diffWorker: DiffWorkerClient,
 		uri: URI,
 		@ISCMService scmService: ISCMService,
 		@IModelService private modelService: IModelService,
@@ -345,21 +354,33 @@ export class FileComments extends Disposable implements IFileComments {
 			})
 			.then(revContents => {
 				if (!this.modelWatcher.model) {
+					return TPromise.as(undefined);
+				}
+				const revLines = revContents.map(revContent => {
+					const lines = RawTextSource.fromString(revContent.content).lines;
+					return { revision: revContent.revision, lines };
+				});
+				const revRanges = this.threads.map(thread => {
+					return {
+						revision: thread.revision,
+						range: thread.range,
+					};
+				});
+				const modifiedLines = this.modelWatcher.model.getLinesContent();
+				return this.diffWorker.diff({
+					revLines,
+					revRanges,
+					modifiedLines,
+				});
+			})
+			.then(result => {
+				if (!result) {
 					return;
 				}
-
-				const diffs = revContents.reduce((diffs, revContent) => {
-					const originalLines = RawTextSource.fromString(revContent.content).lines;
-					const modifiedLines = this.modelWatcher.model.getLinesContent();
-					// TODO(nick): this is slow and CPU intensive. Can we run in a background thread?
-					diffs.set(revContent.revision, new Diff(originalLines, modifiedLines));
-					return diffs;
-				}, new Map<string, Diff>());
-
 				for (const thread of this.threads) {
-					const diff = diffs.get(thread.revision);
-					if (diff) {
-						thread.displayRange = diff.transformRange(thread.range);
+					const transforms = result[thread.revision];
+					if (transforms) {
+						thread.displayRange = Range.lift(transforms[thread.range.toString()]);
 					}
 				}
 				this.didChangeThreads.fire();
