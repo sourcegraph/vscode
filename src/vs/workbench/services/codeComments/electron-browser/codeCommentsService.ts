@@ -30,6 +30,7 @@ import { InterruptibleDelayer } from 'vs/base/common/async';
 import { IAuthService } from 'vs/platform/auth/common/auth';
 import { DiffWorkerClient } from 'vs/workbench/services/codeComments/node/diffWorkerClient';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
+import { TextModel } from 'vs/editor/common/model/textModel';
 
 export { Event }
 
@@ -742,7 +743,7 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 		const revision = git.getLastPushedRevision();
 		const authorName = git.getUserName();
 		const authorEmail = git.getUserEmail();
-		const range = TPromise.join<any>([
+		const codeSnippet = TPromise.join<any>([
 			remoteURI,
 			file,
 			revision,
@@ -750,25 +751,40 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 			.then(([repo, file, revision]) => instantiationService.invokeFunction(resolveContent, git, { repo, file }, revision))
 			.then(content => {
 				if (model.isDisposed()) {
-					return TPromise.wrapError<Range>(new Error(localize('modelDisposedError', "Unable to create comment on editor that no longer exists.")));
+					throw new Error(localize('modelDisposedError', "Unable to create comment on editor that no longer exists."));
 				}
-				const originalLines = RawTextSource.fromString(content.content).lines;
+				const originalModel = TextModel.createFromString(content.content);
+				const originalLines = originalModel.getLinesContent();
 				const modifiedLines = model.getLinesContent();
 				// Compute reverse diff.
 				const diff = new Diff(modifiedLines, originalLines);
-				return diff.transformRange(this.displayRange);
+				const range = diff.transformRange(this.displayRange);
+				if (!range) {
+					return undefined;
+				}
+				const rangeLength = originalModel.getValueLengthInRange(range);
+				// TODO(nick): this is where we would compute and pass through the actual text (plus some context) being commented on.
+				return { range, rangeLength };
 			});
 
-		this.submitData = this.join([remoteURI, accessToken, file, revision, authorName, authorEmail, range])
-			.then(([remoteURI, accessToken, file, revision, authorName, authorEmail, range]) => {
-				if (!range) {
+		this.submitData = this.join([remoteURI, accessToken, file, revision, authorName, authorEmail, codeSnippet])
+			.then(([remoteURI, accessToken, file, revision, authorName, authorEmail, codeSnippet]) => {
+				if (!codeSnippet) {
 					throw new Error(localize('emptyCommentRange', "Can not comment on code that has not been pushed."));
 				}
-				const startLine = range.startLineNumber;
-				const endLine = range.endLineNumber;
-				const startCharacter = range.startColumn;
-				const endCharacter = range.endColumn;
-				return { remoteURI, accessToken, file, revision, startLine, endLine, startCharacter, endCharacter, authorName, authorEmail };
+				return {
+					remoteURI,
+					accessToken,
+					file,
+					revision,
+					startLine: codeSnippet.range.startLineNumber,
+					endLine: codeSnippet.range.endLineNumber,
+					startCharacter: codeSnippet.range.startColumn,
+					endCharacter: codeSnippet.range.endColumn,
+					rangeLength: codeSnippet.rangeLength,
+					authorName,
+					authorEmail
+				};
 			})
 			.then(undefined, err => {
 				const errors = coalesce(Array.isArray(err) ? err : [err]);
@@ -813,6 +829,7 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 							startLine: $startLine,
 							endLine: $endLine,
 							startCharacter: $startCharacter,
+							rangeLength: $rangeLength,
 							endCharacter: $endCharacter,
 							contents: $contents,
 						) {
