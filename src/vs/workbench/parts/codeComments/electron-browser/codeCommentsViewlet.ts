@@ -187,9 +187,11 @@ export class CodeCommentsViewlet extends Viewlet {
 	 */
 	private render(modelUri: URI | undefined, options: { refreshData?: boolean }): void {
 		if (!this.authed) {
+			this.recentThreadsView = false;
 			this.renderAuthenticationView();
 			return;
 		}
+		this.recentThreadsView = true;
 
 		if (!modelUri) {
 			this.renderCommentsNotAvailable();
@@ -239,7 +241,6 @@ export class CodeCommentsViewlet extends Viewlet {
 	 * Renders threads for whole file ordered by most recent comment timestamp descending.
 	 */
 	private renderRecentThreadsView(modelUri: URI, options: { refreshData?: boolean }): void {
-		this.recentThreadsView = true;
 		this.title = localize('recentComments', "Recent conversations: {0}", basename(modelUri.fsPath));
 		this.actions = [];
 		this.updateTitleArea();
