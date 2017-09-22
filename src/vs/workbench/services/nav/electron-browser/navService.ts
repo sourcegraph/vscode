@@ -35,6 +35,7 @@ import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
 // tslint:disable-next-line:import-patterns
 import { VIEWLET_ID as EXPLORER_VIEWLET_ID } from 'vs/workbench/parts/files/common/files';
 import { parseGitURL } from 'vs/workbench/services/workspace/node/workspaceSharingService';
+import { IConfigurationEditingService, ConfigurationTarget } from 'vs/workbench/services/configuration/common/configurationEditing';
 
 type HandledURI = {
 	repo?: string;
@@ -43,6 +44,7 @@ type HandledURI = {
 	path?: string;
 	selection?: string | string[];
 	thread?: string;
+	cookie?: string;
 };
 
 export class NavService extends Disposable implements INavService {
@@ -64,6 +66,7 @@ export class NavService extends Disposable implements INavService {
 		@IExtensionService private extensionService: IExtensionService,
 		@IResourceResolverService private resourceResolverService: IResourceResolverService,
 		@IFoldersWorkbenchService private foldersWorkbenchService: IFoldersWorkbenchService,
+		@IConfigurationEditingService private configurationEditingService: IConfigurationEditingService
 	) {
 		super();
 
@@ -102,6 +105,15 @@ export class NavService extends Disposable implements INavService {
 			location = location.with({ query: location.query.replace(/\+/g, '%2B') });
 		}
 		const query = querystring.parse<HandledURI>(location.query);
+
+		// If an auth cookie has been passed back update it.
+		if (query.cookie) {
+			this.configurationEditingService.writeConfiguration(ConfigurationTarget.USER, {
+				key: 'remote.cookie',
+				value: query.cookie,
+			});
+		}
+
 		if (!query.repo || !query.vcs) {
 			return Promise.resolve(void 0);
 		}
