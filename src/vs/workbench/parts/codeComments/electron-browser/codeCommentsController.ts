@@ -108,6 +108,11 @@ export class CodeCommentsController extends Disposable implements IEditorContrib
 				return;
 			}
 
+			// We are either going to show or hide a thread.
+			// We need to stop propogation so the debugEditorContribution
+			// doesn't toggle breakpoints as a result of this click.
+			e.event.stopPropagation();
+
 			// First attempt to close all widgets on this line.
 			if (this.closeAllWidgetsOnLine(e.target.position.lineNumber)) {
 				// We closed some widgets, so we are done.
