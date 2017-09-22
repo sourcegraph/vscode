@@ -249,7 +249,7 @@ export class NavService extends Disposable implements INavService {
 				query.selection = control.getSelections().map(formatSelection).filter(s => !!s).join(',') || undefined;
 			}
 			if (repository.provider.revision) {
-				query.revision = repository.provider.revision.specifier;
+				query.revision = repository.provider.revision.id;
 			}
 
 			const queryParts = Object.keys(query).filter(k => !!query[k]).map(k => k + '=' + encodeURIComponent(query[k]));
