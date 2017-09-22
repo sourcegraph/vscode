@@ -222,7 +222,6 @@ export class CodeCommentsViewlet extends Viewlet {
 	}
 
 	private renderCommentsNotAvailable(): void {
-		this.recentThreadsView = false;
 		this.title = localize('comment', "Code Comments");
 		this.actions = [];
 		this.updateTitleArea();
