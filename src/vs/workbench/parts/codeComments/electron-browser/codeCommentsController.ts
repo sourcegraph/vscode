@@ -204,7 +204,7 @@ export class CodeCommentsController extends Disposable implements IEditorContrib
 		}, this, disposables);
 		thread.onWillDispose(() => threadWidget.dispose(), this, disposables);
 
-		threadWidget.onWillDispose(() => {
+		threadWidget.onDidClose(() => {
 			this.openThreadWidgets.delete(thread.id);
 			this.updateHasOpenWidgets();
 			dispose(disposables);
@@ -232,7 +232,7 @@ export class CodeCommentsController extends Disposable implements IEditorContrib
 
 		draftThread.onDidSubmit(thread => this.showThreadWidget(thread, true), this, disposables);
 		draftThread.onWillDispose(() => draftThreadWidget.dispose(), this, disposables);
-		draftThreadWidget.onWillDispose(() => {
+		draftThreadWidget.onDidClose(() => {
 			this.openDraftThreadWidgets.delete(draftThread.id);
 			this.updateHasOpenWidgets();
 			dispose(disposables);

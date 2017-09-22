@@ -10,16 +10,15 @@ import { ICodeEditor } from 'vs/editor/browser/editorBrowser';
 import { registerThemingParticipant, ITheme, IThemeService } from 'vs/platform/theme/common/themeService';
 import { $ } from 'vs/base/browser/builder';
 import * as dom from 'vs/base/browser/dom';
-import { ZoneWidget } from 'vs/editor/contrib/zoneWidget/browser/zoneWidget';
-import { peekViewBorder, peekViewResultsBackground } from 'vs/editor/contrib/referenceSearch/browser/referencesWidget';
+import { peekViewBorder, peekViewResultsBackground, peekViewTitleBackground, peekViewTitleForeground, peekViewTitleInfoForeground } from 'vs/editor/contrib/referenceSearch/browser/referencesWidget';
 import { Color } from 'vs/base/common/color';
-import Event, { Emitter } from 'vs/base/common/event';
 import { textLinkActiveForeground, textLinkForeground } from 'vs/platform/theme/common/colorRegistry';
+import { PeekViewWidget } from 'vs/editor/contrib/referenceSearch/browser/peekViewWidget';
 
 /**
  * Base class for thead widgets.
  */
-export class BaseThreadCommentsWidget extends ZoneWidget {
+export class BaseThreadCommentsWidget extends PeekViewWidget {
 
 	protected threadCommentsElement: HTMLElement;
 
@@ -27,7 +26,7 @@ export class BaseThreadCommentsWidget extends ZoneWidget {
 		editor: ICodeEditor,
 		@IThemeService themeService: IThemeService,
 	) {
-		super(editor, { isResizeable: false });
+		super(editor, { showFrame: false, isResizeable: false });
 		this._disposables.push(themeService.onThemeChange(this.applyTheme, this));
 		this.applyTheme(themeService.getTheme());
 	}
@@ -37,10 +36,16 @@ export class BaseThreadCommentsWidget extends ZoneWidget {
 		this.style({
 			arrowColor: borderColor,
 			frameColor: borderColor,
+			headerBackgroundColor: theme.getColor(peekViewTitleBackground) || Color.transparent,
+			primaryHeadingColor: theme.getColor(peekViewTitleForeground),
+			secondaryHeadingColor: theme.getColor(peekViewTitleInfoForeground)
 		});
 	}
 
-	protected _fillContainer(containerElement: HTMLElement): void {
+	protected _fillBody(containerElement: HTMLElement): void {
+		super._fillBody(containerElement);
+		this.setCssClass('thread-comments-zone-widget');
+
 		// Set tabindex so it can handle focus.
 		$(containerElement).div({ class: 'thread-comments', tabindex: -1 }, div => {
 			this.threadCommentsElement = div.getContainer();
@@ -49,25 +54,25 @@ export class BaseThreadCommentsWidget extends ZoneWidget {
 
 	protected layout() {
 		const lineHeight = this.editor.getConfiguration().lineHeight;
-		const totalHeight = dom.getTotalHeight(this.threadCommentsElement) + this._decoratingElementsHeight();
+		const totalHeight = dom.getTotalHeight(this.threadCommentsElement) + this._decoratingElementsHeight() + this.headHeight;
 		const heightInLines = Math.ceil(totalHeight / lineHeight);
 		this._relayout(heightInLines);
 	}
 
 	protected _onWidth(widthInPixel: number): void {
+		super._onWidth(widthInPixel);
 		this.layout();
 	}
 
-	protected _doLayout(heightInPixel: number, widthInPixel: number): void {
+	public _doLayout(heightInPixel: number, widthInPixel: number): void {
+		super._doLayout(heightInPixel, widthInPixel);
 		this.layout();
 	}
 
-	private willDispose = new Emitter<void>();
-	public onWillDispose: Event<void> = this.willDispose.event;
-
-	public dispose() {
-		this.willDispose.fire();
-		super.dispose();
+	private headHeight: number = 0;
+	protected _doLayoutHead(heightInPixel: number, widthInPixel: number): void {
+		super._doLayoutHead(heightInPixel, widthInPixel);
+		this.headHeight = heightInPixel;
 	}
 }
 
