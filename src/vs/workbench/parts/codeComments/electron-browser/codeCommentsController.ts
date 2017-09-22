@@ -23,6 +23,11 @@ import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { Action } from 'vs/base/common/actions';
 import { once } from 'vs/base/common/event';
 import { ModelDecorationOptions } from 'vs/editor/common/model/textModelWithDecorations';
+import { KeyCode, KeyMod } from 'vs/base/common/keyCodes';
+import { KeybindingsRegistry } from 'vs/platform/keybinding/common/keybindingsRegistry';
+import { ServicesAccessor, CommonEditorRegistry } from 'vs/editor/common/editorCommonExtensions';
+import { IContextKey, IContextKeyService, RawContextKey } from 'vs/platform/contextkey/common/contextkey';
+import { getOuterEditor } from 'vs/editor/contrib/referenceSearch/browser/peekViewWidget';
 
 /**
  * Decoration key for highlighting a comment range.
@@ -86,8 +91,11 @@ export class CodeCommentsController extends Disposable implements IEditorContrib
 		@IThemeService private themeService: IThemeService,
 		@ICodeCommentsService private codeCommentsService: ICodeCommentsService,
 		@ITelemetryService private telemetryService: ITelemetryService,
+		@IContextKeyService contextKeyService: IContextKeyService,
 	) {
 		super();
+
+		this.hasOpenWidgets = hasOpenWidgets.bindTo(contextKeyService);
 
 		this._register(themeService.onThemeChange(t => this.onThemeChange()));
 		this.onThemeChange();
@@ -171,6 +179,84 @@ export class CodeCommentsController extends Disposable implements IEditorContrib
 		this.onDidChangeModel();
 	}
 
+	public showThreadWidget(thread: IThreadComments, reveal: boolean): void {
+		if (!thread.displayRange) {
+			this._register(once(thread.onDidChangeDisplayRange)(() => {
+				this.showThreadWidget(thread, reveal);
+			}));
+			return;
+		}
+		this.closeAllWidgetsOnLine(thread.displayRange.startLineNumber, { exceptThreadId: thread.id });
+
+		const openThreadWidget = this.openThreadWidgets.get(thread.id);
+		if (openThreadWidget) {
+			openThreadWidget.expand(reveal);
+			return;
+		}
+		this.telemetryService.publicLog('codeComments.viewThread', { codeComments: { commentCount: thread.comments.length } });
+		const threadWidget = this.instantiationService.createInstance(ThreadCommentsWidget, this.editor, thread);
+		const disposables: IDisposable[] = [];
+
+		thread.onDidChangeArchived(() => {
+			if (thread.archived) {
+				threadWidget.dispose();
+			}
+		}, this, disposables);
+		thread.onWillDispose(() => threadWidget.dispose(), this, disposables);
+
+		threadWidget.onWillDispose(() => {
+			this.openThreadWidgets.delete(thread.id);
+			this.updateHasOpenWidgets();
+			dispose(disposables);
+			this.renderCurrentModelDecorations();
+			this.editor.focus();
+		});
+
+		this.openThreadWidgets.set(thread.id, threadWidget);
+		threadWidget.expand(reveal);
+		this.updateHasOpenWidgets();
+
+		// Update highlights.
+		this.renderCurrentModelDecorations();
+	}
+
+	public showDraftThreadWidget(draftThread: IDraftThreadComments, reveal: boolean): void {
+		this.closeAllWidgetsOnLine(draftThread.displayRange.startLineNumber, { exceptThreadId: draftThread.id });
+		const openDraftThreadWidget = this.openDraftThreadWidgets.get(draftThread.id);
+		if (openDraftThreadWidget) {
+			openDraftThreadWidget.expand(reveal);
+			return;
+		}
+		const draftThreadWidget = this.instantiationService.createInstance(DraftThreadCommentsWidget, this.editor, draftThread);
+		const disposables: IDisposable[] = [];
+
+		draftThread.onDidSubmit(thread => this.showThreadWidget(thread, true), this, disposables);
+		draftThread.onWillDispose(() => draftThreadWidget.dispose(), this, disposables);
+		draftThreadWidget.onWillDispose(() => {
+			this.openDraftThreadWidgets.delete(draftThread.id);
+			this.updateHasOpenWidgets();
+			dispose(disposables);
+			this.renderCurrentModelDecorations();
+			this.editor.focus();
+		});
+
+		this.openDraftThreadWidgets.set(draftThread.id, draftThreadWidget);
+		draftThreadWidget.expand(reveal);
+		this.updateHasOpenWidgets();
+
+		// Update highlights.
+		this.renderCurrentModelDecorations();
+	}
+
+	/**
+	 * Context key that is true if any widgets are open.
+	 */
+	private hasOpenWidgets: IContextKey<boolean>;
+
+	private updateHasOpenWidgets(): void {
+		this.hasOpenWidgets.set((this.openDraftThreadWidgets.size + this.openThreadWidgets.size) > 0);
+	}
+
 	/**
 	 * Closes all widgets on the line and returns true if any were closed.
 	 */
@@ -201,69 +287,12 @@ export class CodeCommentsController extends Disposable implements IEditorContrib
 		return closedWidgets;
 	}
 
-	public showThreadWidget(thread: IThreadComments, reveal: boolean): void {
-		if (!thread.displayRange) {
-			this._register(once(thread.onDidChangeDisplayRange)(() => {
-				this.showThreadWidget(thread, reveal);
-			}));
-			return;
-		}
-		this.closeAllWidgetsOnLine(thread.displayRange.startLineNumber, { exceptThreadId: thread.id });
-
-		const openThreadWidget = this.openThreadWidgets.get(thread.id);
-		if (openThreadWidget) {
-			openThreadWidget.expand(reveal);
-			return;
-		}
-		this.telemetryService.publicLog('codeComments.viewThread', { codeComments: { commentCount: thread.comments.length } });
-		const threadWidget = this.instantiationService.createInstance(ThreadCommentsWidget, this.editor, thread);
-		const disposables: IDisposable[] = [];
-
-		thread.onDidChangeArchived(() => {
-			if (thread.archived) {
-				threadWidget.dispose();
-			}
-		}, this, disposables);
-		thread.onWillDispose(() => threadWidget.dispose(), this, disposables);
-
-		threadWidget.onWillDispose(() => {
-			this.openThreadWidgets.delete(thread.id);
-			dispose(disposables);
-			this.renderCurrentModelDecorations();
-			this.editor.focus();
-		});
-
-		this.openThreadWidgets.set(thread.id, threadWidget);
-		threadWidget.expand(reveal);
-
-		// Update highlights.
-		this.renderCurrentModelDecorations();
-	}
-
-	public showDraftThreadWidget(draftThread: IDraftThreadComments, reveal: boolean): void {
-		this.closeAllWidgetsOnLine(draftThread.displayRange.startLineNumber, { exceptThreadId: draftThread.id });
-		const openDraftThreadWidget = this.openDraftThreadWidgets.get(draftThread.id);
-		if (openDraftThreadWidget) {
-			openDraftThreadWidget.expand(reveal);
-			return;
-		}
-		const draftThreadWidget = this.instantiationService.createInstance(DraftThreadCommentsWidget, this.editor, draftThread);
-		const disposables: IDisposable[] = [];
-
-		draftThread.onDidSubmit(thread => this.showThreadWidget(thread, true), this, disposables);
-		draftThread.onWillDispose(() => draftThreadWidget.dispose(), this, disposables);
-		draftThreadWidget.onWillDispose(() => {
-			this.openDraftThreadWidgets.delete(draftThread.id);
-			dispose(disposables);
-			this.renderCurrentModelDecorations();
-			this.editor.focus();
-		});
-
-		this.openDraftThreadWidgets.set(draftThread.id, draftThreadWidget);
-		draftThreadWidget.expand(reveal);
-
-		// Update highlights.
-		this.renderCurrentModelDecorations();
+	/**
+	 * Closes all open widgets.
+	 */
+	public closeAllWidgets(): void {
+		this.openDraftThreadWidgets.forEach(w => w.dispose());
+		this.openThreadWidgets.forEach(w => w.dispose());
 	}
 
 	public dispose() {
@@ -274,9 +303,7 @@ export class CodeCommentsController extends Disposable implements IEditorContrib
 	private disposeOnModelChange(): void {
 		this.toDisposeOnModelChange = dispose(this.toDisposeOnModelChange);
 		this.openThreadWidgets.forEach(w => w.dispose());
-		this.openThreadWidgets.clear();
 		this.openDraftThreadWidgets.forEach(w => w.dispose());
-		this.openDraftThreadWidgets.clear();
 	}
 
 	public getId(): string {
@@ -421,6 +448,24 @@ export class CodeCommentsController extends Disposable implements IEditorContrib
 		});
 	}
 }
+
+const hasOpenWidgets = new RawContextKey<boolean>('hasOpenWidgets', false);
+
+KeybindingsRegistry.registerCommandAndKeybindingRule({
+	id: 'closeCodeComments',
+	weight: CommonEditorRegistry.commandWeight(51),
+	primary: KeyCode.Escape,
+	secondary: [KeyMod.Shift | KeyCode.Escape],
+	when: hasOpenWidgets,
+	handler: (accessor: ServicesAccessor) => {
+		const editor = getOuterEditor(accessor);
+		if (!editor) {
+			return;
+		}
+		const controller = CodeCommentsController.get(editor);
+		controller.closeAllWidgets();
+	}
+});
 
 /**
  * Returns a map that indexes the elements of an array by a key.

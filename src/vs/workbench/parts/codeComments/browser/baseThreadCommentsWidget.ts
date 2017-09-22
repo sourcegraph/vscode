@@ -10,13 +10,11 @@ import { ICodeEditor } from 'vs/editor/browser/editorBrowser';
 import { registerThemingParticipant, ITheme, IThemeService } from 'vs/platform/theme/common/themeService';
 import { $ } from 'vs/base/browser/builder';
 import * as dom from 'vs/base/browser/dom';
-import { IKeyboardEvent } from 'vs/base/browser/keyboardEvent';
 import { ZoneWidget } from 'vs/editor/contrib/zoneWidget/browser/zoneWidget';
 import { peekViewBorder, peekViewResultsBackground } from 'vs/editor/contrib/referenceSearch/browser/referencesWidget';
 import { Color } from 'vs/base/common/color';
 import Event, { Emitter } from 'vs/base/common/event';
 import { textLinkActiveForeground, textLinkForeground } from 'vs/platform/theme/common/colorRegistry';
-import { KeyCode } from 'vs/base/common/keyCodes';
 
 /**
  * Base class for thead widgets.
@@ -47,12 +45,6 @@ export class BaseThreadCommentsWidget extends ZoneWidget {
 		$(containerElement).div({ class: 'thread-comments', tabindex: -1 }, div => {
 			this.threadCommentsElement = div.getContainer();
 		});
-
-		this._disposables.push(dom.addStandardDisposableListener(containerElement, 'keydown', (e: IKeyboardEvent) => {
-			if (e.keyCode === KeyCode.Escape) {
-				this.dispose();
-			}
-		}));
 	}
 
 	protected layout() {
