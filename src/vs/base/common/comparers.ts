@@ -193,7 +193,7 @@ export interface IScorableResourceAccessor<T> {
 	getResourcePath(t: T): string;
 }
 
-export function compareByScore<T>(elementA: T, elementB: T, accessor: IScorableResourceAccessor<T>, lookFor: string, lookForNormalizedLower: string, scorerCache?: { [key: string]: number }): number {
+export function compareByScore<T>(elementA: T, elementB: T, accessor: IScorableResourceAccessor<T>, lookFor: string, lookForNormalizedLower: string, scorerCache?: { [key: string]: number }, boostA: number = 0, boostB: number = 0): number {
 	const labelA = accessor.getLabel(elementA);
 	const labelB = accessor.getLabel(elementB);
 
@@ -204,8 +204,14 @@ export function compareByScore<T>(elementA: T, elementB: T, accessor: IScorableR
 	}
 
 	// Give higher importance to label score
-	const labelAScore = scorer.score(labelA, lookFor, scorerCache);
-	const labelBScore = scorer.score(labelB, lookFor, scorerCache);
+	let labelAScore = scorer.score(labelA, lookFor, scorerCache);
+	let labelBScore = scorer.score(labelB, lookFor, scorerCache);
+	if (labelAScore > 0) {
+		labelAScore += boostA;
+	}
+	if (labelBScore > 0) {
+		labelBScore += boostB;
+	}
 
 	if (labelAScore !== labelBScore) {
 		return labelAScore > labelBScore ? -1 : 1;
@@ -215,8 +221,14 @@ export function compareByScore<T>(elementA: T, elementB: T, accessor: IScorableR
 	let resourcePathA = accessor.getResourcePath(elementA);
 	let resourcePathB = accessor.getResourcePath(elementB);
 	if (resourcePathA && resourcePathB) {
-		const resourceAScore = scorer.score(resourcePathA, lookFor, scorerCache);
-		const resourceBScore = scorer.score(resourcePathB, lookFor, scorerCache);
+		let resourceAScore = scorer.score(resourcePathA, lookFor, scorerCache);
+		let resourceBScore = scorer.score(resourcePathB, lookFor, scorerCache);
+		if (resourceAScore > 0) {
+			resourceAScore += boostA;
+		}
+		if (resourceBScore > 0) {
+			resourceBScore += boostB;
+		}
 
 		if (resourceAScore !== resourceBScore) {
 			return resourceAScore > resourceBScore ? -1 : 1;

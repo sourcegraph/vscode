@@ -5,13 +5,32 @@
 'use strict';
 
 import * as vscode from 'vscode';
-import { requestGraphQL } from './util';
+import { requestGraphQL, distinct } from './util';
 import * as nls from 'vscode-nls';
 import * as cp from 'child_process';
 
 const localize = nls.loadMessageBundle();
 
 const GITHUB_SCHEME = 'github';
+
+const repoFields = [
+	'name',
+	'nameWithOwner',
+	'description',
+	'isPrivate',
+	'isFork',
+	'isMirror',
+	'stargazers { totalCount }',
+	'forks { totalCount }',
+	'watchers { totalCount }',
+	'primaryLanguage { name }',
+	'createdAt',
+	'updatedAt',
+	'pushedAt',
+	'viewerHasStarred',
+	'viewerCanAdminister',
+	'diskUsage',
+].join('\n');
 
 export function activate(context: vscode.ExtensionContext): void {
 	context.subscriptions.push(vscode.workspace.registerResourceResolutionProvider(GITHUB_SCHEME, {
@@ -29,24 +48,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		return await showCreateGitHubTokenWalkthrough(skipInfoMessage);
 	});
 
-	const repoFields = [
-		'name',
-		'nameWithOwner',
-		'description',
-		'isPrivate',
-		'isFork',
-		'isMirror',
-		'stargazers { totalCount }',
-		'forks { totalCount }',
-		'watchers { totalCount }',
-		'primaryLanguage { name }',
-		'createdAt',
-		'updatedAt',
-		'pushedAt',
-		'viewerHasStarred',
-		'viewerCanAdminister',
-		'diskUsage',
-	].join('\n');
+	const viewerRepositories = new ViewerRepositories();
 	context.subscriptions.push(vscode.workspace.registerFolderCatalogProvider(vscode.Uri.parse('github://github.com'), {
 		resolveFolder(resource: vscode.Uri): Thenable<vscode.CatalogFolder> {
 			return requestGraphQL(`
@@ -111,9 +113,11 @@ query {
 					{}).then((data: any) => data.viewer.repositories.nodes, showErrorImmediately);
 			}
 
-			return request.then(repos => {
-				return repos.map(toCatalogFolder);
-			});
+			const [viewerRepos, searchResults] = await Promise.all([
+				viewerRepositories.fetch(),
+				request.then<vscode.CatalogFolder[]>(repos => repos.map(toCatalogFolder)),
+			]);
+			return distinct(viewerRepos.concat(searchResults), f => f.resource.toString());
 		},
 	}));
 
@@ -216,6 +220,57 @@ query($owner: String!, $name: String!) {
 	});
 
 
+}
+
+// Fetches and caches the github repositories associated to the current user.
+class ViewerRepositories {
+	private request: Thenable<vscode.CatalogFolder[]> | null;
+	private token: string;
+
+	// Returns the github repositories for the current user. Best-effort, so
+	// should never be rejected. Also cached, so efficient to be repeatedly called.
+	public fetch(): Thenable<vscode.CatalogFolder[]> {
+		const token = vscode.workspace.getConfiguration('github').get<string>('token');
+		if (!token) {
+			return Promise.resolve([]);
+		}
+		if (token === this.token && this.request !== null) {
+			return this.request;
+		}
+		this.token = token;
+		const request = requestGraphQL(`
+			{
+				viewer {
+					contributedRepositories(first: 100) {
+						nodes {
+							...repoFields
+						}
+					}
+					repositories(first: 100) {
+						nodes {
+							...repoFields
+						}
+					}
+				}
+			}
+
+			fragment repoFields on Repository {
+				${repoFields}
+			}
+			`, {}).then<vscode.CatalogFolder[]>((data: any) => {
+				return [].concat(
+					data.viewer.contributedRepositories.nodes,
+					data.viewer.repositories.nodes,
+				).map(toCatalogFolder);
+			}, (reason) => {
+				// try again, but don't fail other requests if this fails
+				console.error(reason);
+				this.request = null;
+				return [];
+			});
+		this.request = request;
+		return request;
+	};
 }
 
 function parseGitHubRepositoryFullName(cloneUrl: vscode.Uri): { owner: string, name: string } | undefined {

@@ -37,3 +37,15 @@ export function requestGraphQL<T>(query: string, variables: { [name: string]: an
 			return body.data;
 		});
 }
+
+export function distinct<V, K>(array: V[], key: (v: V) => K): V[] {
+	const seen = new Set<K>();
+	return array.filter(v => {
+		const k = key(v);
+		if (seen.has(k)) {
+			return false;
+		}
+		seen.add(k);
+		return true;
+	});
+}

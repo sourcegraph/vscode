@@ -29,6 +29,7 @@ import { IResourceResolverService } from 'vs/platform/resourceResolver/common/re
 import { IFolder, IFoldersWorkbenchService, ISearchStats, ISearchQuery } from 'vs/workbench/services/folders/common/folders';
 import { IProgressService2, ProgressLocation } from 'vs/platform/progress/common/progress';
 import { AddAndExploreWorkspaceFolderAction } from 'vs/workbench/parts/workspace/browser/folderActions';
+import * as scorer from 'vs/base/common/scorer';
 
 /**
 * The quick open model representing folder results from a single handler.
@@ -202,6 +203,10 @@ export class FolderEntry extends QuickOpenEntry {
 		return false;
 	}
 
+	public getCatalogFolder(): IFolder {
+		return this.folder;
+	}
+
 	// Override to add this folder as a workspace root (instead of just opening a new editor).
 	public run(mode: Mode, context: IEntryRunContext): boolean {
 		// Ctrl+Enter opens in background.
@@ -350,11 +355,14 @@ export class OpenAnyFolderHandler extends QuickOpenHandler {
 					return new QuickOpenModel();
 				}
 
-				const entries = result.entries as FolderEntry[];
-
-				// Sort
+				// Some providers always return repos associated with a user. So ensure all entries match query.
 				const unsortedResultTime = Date.now();
 				const normalizedSearchValue = strings.stripWildcards(searchValue).toLowerCase();
+				const accessor = this.folderEntryAccessor(searchValue);
+				const entries = (result.entries as FolderEntry[])
+					.filter(f => scorer.score(accessor.getResourcePath(f), normalizedSearchValue) > 0);
+
+				// Sort
 				const viewResults: FolderEntryOrGroup[] = arrays.top(
 					entries,
 					this.createComparer(searchValue, normalizedSearchValue),
@@ -418,21 +426,51 @@ export class OpenAnyFolderHandler extends QuickOpenHandler {
 	 */
 	private createComparer(searchValue: string, normalizedSearchValue: string): (elementA: FolderEntry, elementB: FolderEntry) => number {
 		return (a: FolderEntry, b: FolderEntry) => {
-			return compareByScore<FolderEntry>(a, b, OpenAnyFolderHandler.FolderEntryAccessor, searchValue, normalizedSearchValue, this.scorerCache);
+			return compareByScore<FolderEntry>(a, b, this.folderEntryAccessor(searchValue), searchValue, normalizedSearchValue, this.scorerCache, this.calcBoost(a), this.calcBoost(b));
 		};
 	}
 
-	private static FolderEntryAccessor: IScorableResourceAccessor<FolderEntry> = {
-		getLabel(entry: FolderEntry): string {
-			// Only return the final path component, so that it's weighted more heavily in
-			// scoring.
-			return entry.getLabel();
-		},
+	private calcBoost(e: FolderEntry): number {
+		const f = e.getCatalogFolder();
+		if (f.viewerCanAdminister) {
+			return 1000;
+		}
+		if (f.isPrivate) {
+			return 500;
+		}
+		if (f.viewerHasStarred) {
+			return 100;
+		}
+		if (f.isFork) {
+			return -10;
+		}
+		if (f.starsCount > 0) {
+			// Boost repos slightly based on star count
+			return Math.log(f.starsCount);
+		}
+		return 0;
+	}
 
-		getResourcePath(entry: FolderEntry): string {
-			const resource = entry.getResource();
-			return resource.authority + resource.path;
-		},
+	private folderEntryAccessor(searchValue: string): IScorableResourceAccessor<FolderEntry> {
+		const searchContainsSep = searchValue.indexOf('/') >= 0;
+		return {
+			getLabel(entry: FolderEntry): string {
+				if (searchContainsSep) {
+					// Return full label if our query contains a /
+					return entry.getLabel();
+				}
+				// Only return the final path component, so that it's weighted more heavily in
+				// scoring.
+				const label = entry.getLabel();
+				const i = label.lastIndexOf('/');
+				return i < 0 ? label : label.substr(i + 1);
+			},
+
+			getResourcePath(entry: FolderEntry): string {
+				const resource = entry.getResource();
+				return resource.authority + resource.path;
+			},
+		};
 	};
 
 	public getGroupLabel(): string {
