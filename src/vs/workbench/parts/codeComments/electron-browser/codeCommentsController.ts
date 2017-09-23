@@ -453,7 +453,7 @@ const hasOpenWidgets = new RawContextKey<boolean>('hasOpenWidgets', false);
 
 KeybindingsRegistry.registerCommandAndKeybindingRule({
 	id: 'closeCodeComments',
-	weight: CommonEditorRegistry.commandWeight(51),
+	weight: CommonEditorRegistry.commandWeight(500),
 	primary: KeyCode.Escape,
 	secondary: [KeyMod.Shift | KeyCode.Escape],
 	when: hasOpenWidgets,
