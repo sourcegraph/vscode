@@ -17,6 +17,7 @@ import { domEvent } from 'vs/base/browser/event';
 import { KeyCode, KeyMod } from 'vs/base/common/keyCodes';
 import { Button } from 'vs/base/browser/ui/button/button';
 import { IMessageService, Severity } from 'vs/platform/message/common/message';
+import { editorBackground } from 'vs/platform/theme/common/colorRegistry';
 
 export interface SubmitEvent {
 	content: string;
@@ -75,7 +76,11 @@ export class CommentInput extends Disposable {
 
 				this.secondaryButton = new Button(div.getContainer());
 				this.secondaryButton.label = secondaryButtonLabel;
-				attachButtonStyler(this.secondaryButton, this.themeService);
+				attachButtonStyler(this.secondaryButton, this.themeService, {
+					// buttonForeground: buttonBackground,
+					buttonBackground: editorBackground,
+					// buttonHoverBackground: buttonBackground,
+				});
 				this.disposable(this.secondaryButton);
 				this.disposable(this.secondaryButton.addListener('click', () => this.didClickSecondaryButton.fire()));
 
