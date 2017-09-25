@@ -432,6 +432,14 @@ export interface Commit {
 	message: string;
 }
 
+export interface Worktree {
+	path: string;
+	head?: string;
+	detached?: boolean;
+	bare?: boolean;
+	branch?: string;
+}
+
 export class GitStatusParser {
 
 	private lastRaw = '';
@@ -713,6 +721,39 @@ export class Repository {
 
 	async worktreePrune(): Promise<void> {
 		await this.run(['worktree', 'prune']);
+	}
+
+	async worktreeList(): Promise<Worktree[]> {
+		const worktrees: Worktree[] = [];
+		const execResult = await this.run(['worktree', 'list', '--porcelain']);
+		const lines = execResult.stdout.split(/\r?\n/);
+		let l = 0;
+		while (l < lines.length) {
+			if (!lines[l].startsWith('worktree ')) {
+				l++;
+				continue;
+			}
+			const path = lines[l].slice('worktree '.length).trim();
+			const props = new Map<string, any>();
+			l++;
+			while (l < lines.length && lines[l].trim().length > 0) {
+				const f = lines[l].trim().indexOf(' ');
+				if (f === -1) {
+					props.set(lines[l], true);
+				} else {
+					props.set(lines[l].slice(0, f), lines[l].slice(f + 1));
+				}
+				l++;
+			}
+			worktrees.push({
+				path: path,
+				head: props.get('HEAD'),
+				bare: props.get('bare'),
+				branch: props.get('branch'),
+				detached: props.get('detached'),
+			});
+		}
+		return worktrees;
 	}
 
 	async commit(message: string, opts: { all?: boolean, amend?: boolean, signoff?: boolean, signCommit?: boolean } = Object.create(null)): Promise<void> {
