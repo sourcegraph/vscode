@@ -186,7 +186,7 @@ export class CodeCommentsController extends Disposable implements IEditorContrib
 			}));
 			return;
 		}
-		this.closeAllWidgetsOnLine(thread.displayRange.startLineNumber, { exceptThreadId: thread.id });
+		this.closeAllWidgets({ exceptThreadId: thread.id });
 
 		const openThreadWidget = this.openThreadWidgets.get(thread.id);
 		if (openThreadWidget) {
@@ -221,7 +221,7 @@ export class CodeCommentsController extends Disposable implements IEditorContrib
 	}
 
 	public showDraftThreadWidget(draftThread: IDraftThreadComments, reveal: boolean): void {
-		this.closeAllWidgetsOnLine(draftThread.displayRange.startLineNumber, { exceptThreadId: draftThread.id });
+		this.closeAllWidgets({ exceptDraftThreadId: draftThread.id });
 		const openDraftThreadWidget = this.openDraftThreadWidgets.get(draftThread.id);
 		if (openDraftThreadWidget) {
 			openDraftThreadWidget.expand(reveal);
@@ -290,9 +290,19 @@ export class CodeCommentsController extends Disposable implements IEditorContrib
 	/**
 	 * Closes all open widgets.
 	 */
-	public closeAllWidgets(): void {
-		this.openDraftThreadWidgets.forEach(w => w.dispose());
-		this.openThreadWidgets.forEach(w => w.dispose());
+	public closeAllWidgets(options?: { exceptThreadId?: number, exceptDraftThreadId?: number }): void {
+		this.openDraftThreadWidgets.forEach((draftThreadWidget, draftThreadId) => {
+			if (options && options.exceptDraftThreadId && options.exceptDraftThreadId === draftThreadId) {
+				return;
+			}
+			draftThreadWidget.dispose();
+		});
+		this.openThreadWidgets.forEach((threadWidget, threadId) => {
+			if (options && options.exceptThreadId && options.exceptThreadId === threadId) {
+				return;
+			}
+			threadWidget.dispose();
+		});
 	}
 
 	public dispose() {
