@@ -362,15 +362,28 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 		}));
 	}
 
-	public addFoldersAsWorkspaceRootFolders(anyFolders: (IFolder | URI)[]): TPromise<URI[]> {
-		const uris = anyFolders.map(folder => folder instanceof URI ? folder : folder.resource);
+	public async addFoldersAsWorkspaceRootFolders(anyFolders: (IFolder | URI)[]): TPromise<URI[]> {
+		// Caution: The order of operations here is important and changes may cause subtle errors.
+		// Any change to workspace configuration settings will cause the extension host
+		// to be restarted and kill all outstanding extension requests. The addFolders
+		// method may trigger workspace configuration changes that interfere with other actions
+		// in the Promise chain. This is a subtle flaw in the extension API at the moment, so
+		// we code defensively here by retrying on failure. The second time should succeed,
+		// because no workspace folder configuration changes should occur.
+		const unresolvedURIs = anyFolders.map(folder => folder instanceof URI ? folder : folder.resource);
+		try {
+			return await this.addFoldersAsWorkspaceRootFoldersOnce(unresolvedURIs);
+		} catch {/* Try again */ }
+		await new Promise(resolve => setTimeout(resolve, 1000));
+		return this.addFoldersAsWorkspaceRootFoldersOnce(unresolvedURIs);
+	}
+
+	private addFoldersAsWorkspaceRootFoldersOnce(unresolvedURIs: URI[]): TPromise<URI[]> {
 		return this.ready()
-			.then(() => this.workspaceEditingService.addFolders(uris))
-			.then(() => this.configurationService.reloadConfiguration())
-			.then(() => TPromise.join(uris.map(uri => this.resourceResolverService.resolveResource(uri))))
-			.then(uris => {
-				return TPromise.join(uris.map(resource => this.waitForRepository(resource))).then(() => uris);
-			});
+			.then(() => TPromise.join(unresolvedURIs.map(uri => this.resourceResolverService.resolveResource(uri))))
+			.then(resolvedUris => this.workspaceEditingService.addFolders(resolvedUris).then(() => resolvedUris))
+			.then(resolvedUris => TPromise.join(resolvedUris.map(resource => this.waitForRepository(resource))).then(() => resolvedUris))
+			.then(resolvedUris => this.configurationService.reloadConfiguration().then(() => resolvedUris));
 	}
 
 	// Returns a promise which is done once all workspaces folders are ready.
