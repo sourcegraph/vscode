@@ -16,8 +16,7 @@ import * as path from 'path';
 import * as os from 'os';
 import TelemetryReporter from 'vscode-extension-telemetry';
 import * as nls from 'vscode-nls';
-import { getTempDirectory, getTempSubDirectory, getGoPackagePrefix, setUpGoConfiguration } from './tempFolder';
-import { pathExists } from './nodeutil';
+import { createTempWorktree } from './repository_helpers';
 
 const localize = nls.loadMessageBundle();
 
@@ -1083,30 +1082,15 @@ export class CommandCenter {
 				return;
 			}
 			rev = choice.treeish;
-		}
-
-		const tempFolder = await getTempDirectory(repository.root + '@' + rev);
-		const tempSubFolder = getTempSubDirectory(rev);
-
-		let dst: string;
-		const goPackagePrefix = await getGoPackagePrefix(repository.root);
-		if (goPackagePrefix) {
-			dst = path.join(tempFolder, tempSubFolder, 'src', goPackagePrefix.replace(/\//g, path.sep));
-		} else {
-			dst = path.join(tempFolder, tempSubFolder, path.basename(repository.root));
-		}
-
-		if (!await pathExists(dst)) {
-			await this.worktreePrune(repository);
-			await this.addWorktree(repository, dst, rev);
-			if (goPackagePrefix) {
-				await setUpGoConfiguration(repository, tempFolder, dst);
+			if (!rev) {
+				window.showErrorMessage(localize('failedToSelectRef', "Failed to select valid ref to check out"));
+				return;
 			}
 		}
 
-		// Add new worktree to workspace.
+		const worktree = await createTempWorktree(repository, rev);
 		if (workspace.workspaceFolders) {
-			await commands.executeCommand('_workbench.addRoots', [Uri.file(dst)]);
+			await commands.executeCommand('_workbench.addRoots', [Uri.file(worktree.path)]);
 		}
 	}
 
