@@ -22,32 +22,41 @@ File a single issue per problem and feature request.
 * Do not enumerate multiple bugs or feature requests in the same issue.
 * Do not add your issue as a comment to an existing issue unless it's for the identical input. Many issues look similar, but have different causes.
 
-The more information you can provide, the more likely someone will be successful reproducing the issue and finding a fix. 
+The more information you can provide, the more likely someone will be successful reproducing the issue and finding a fix.
 
-Please include the following with each issue. 
+Please include the following with each issue.
 
 * Version of VS Code
-* List of extensions that you have installed. 
+* List of extensions that you have installed.
 
-> **Tip:** You can easily add the list of extensions by creating the issue using `Report Issues` from VS Code's Help menu. 
+> **Tip:** You can easily add the list of extensions by creating the issue using `Report Issues` from VS Code's Help menu.
 
-* Reproducible steps (1... 2... 3...) and what you expected versus what you actually saw. 
-* Images, animations, or a link to a video. 
-* A code snippet that demonstrates the issue or a link to a code repository we can easily pull down onto our machine to recreate the issue. 
+* Reproducible steps (1... 2... 3...) and what you expected versus what you actually saw.
+* Images, animations, or a link to a video.
+* A code snippet that demonstrates the issue or a link to a code repository we can easily pull down onto our machine to recreate the issue.
 
-> **Note:** Because we need to copy and paste the code snippet, including a code snippet as a media file (i.e. .gif) is not sufficient. 
+> **Note:** Because we need to copy and paste the code snippet, including a code snippet as a media file (i.e. .gif) is not sufficient.
 
 * Errors in the Dev Tools Console (Help | Toggle Developer Tools)
 
 Please remember to do the following:
 
-* Search the issue repository to see if there exists a duplicate. 
-* Recreate the issue after disabling all extensions (see the [docs for how to do this](https://code.visualstudio.com/docs/editor/extension-gallery#_disable-an-extension)). If you find the issue is caused by an extension you have installed please file an issue on the extension respectively. 
-* Simplify your code around the issue so we can better isolate the problem. 
+* Search the issue repository to see if there exists a duplicate.
+* Recreate the issue after disabling all extensions (see the [docs for how to do this](https://code.visualstudio.com/docs/editor/extension-gallery#_disable-an-extension)). If you find the issue is caused by an extension you have installed please file an issue on the extension respectively.
+* Simplify your code around the issue so we can better isolate the problem.
 
 Don't feel bad if we can't reproduce the issue and ask for more information!
 
 Finally, this is our [issue tracking](https://github.com/Microsoft/vscode/wiki/Issue-Tracking) work flow that describes what happens once you submitted an issue.
+
+### Upstream Issues
+
+If you suspect an issue affects Sourcegraph Editor and upstream [Visual Studio Code](https://github.com/Microsoft/vscode) equally, then do not file it here.
+
+1. Confirm the issue affects Visual Studio Code
+2. Report the issue from Visual Studio Code, not Sourcegraph Editor
+
+If an issue affects Sourcegraph Editor more than it affects upstream (because it breaks an important Sourcegraph-specific workflow, for example), then file it here. Link to any related upstream issues.
 
 ## Contributing Fixes
 If you are interested in fixing issues and contributing directly to the code base,
