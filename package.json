@@ -4,7 +4,7 @@
   "electronVersion": "1.7.7",
   "distro": "HEAD",
   "author": {
-    "name": "Microsoft Corporation"
+    "name": "Sourcegraph"
   },
   "main": "./out/main",
   "private": true,
@@ -130,10 +130,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Microsoft/vscode.git"
+    "url": "https://github.com/sourcegraph/src.git"
   },
   "bugs": {
-    "url": "https://github.com/Microsoft/vscode/issues"
+    "url": "https://github.com/sourcegraph/src/issues"
   },
   "optionalDependencies": {
     "windows-process-tree": "0.1.6",
