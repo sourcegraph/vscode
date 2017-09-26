@@ -32,6 +32,11 @@ export class OpenerService implements IOpenerService {
 
 	open(resource: URI, options?: { openToSide?: boolean }): TPromise<any> {
 
+		/* __GDPR__
+			"openerService" : {
+				"scheme" : { "classification": "SystemMetaData", "purpose": "FeatureInsight" }
+			}
+		*/
 		this._telemetryService.publicLog('openerService', { scheme: resource.scheme });
 
 		const { scheme, path, query, fragment } = resource;
@@ -75,7 +80,7 @@ export class OpenerService implements IOpenerService {
 				return TPromise.as(undefined);
 
 			} else if (resource.scheme === Schemas.file) {
-				resource = URI.file(normalize(resource.fsPath)); // workaround for non-normalized paths (https://github.com/Microsoft/vscode/issues/12954)
+				resource = resource.with({ path: normalize(resource.path) }); // workaround for non-normalized paths (https://github.com/Microsoft/vscode/issues/12954)
 			}
 			promise = this._resourceResolverService.resolveResource(resource)
 				.then(resource => this._editorService.openEditor({ resource, options: { selection } }, options && options.openToSide));

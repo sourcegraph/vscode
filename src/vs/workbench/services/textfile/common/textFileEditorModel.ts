@@ -12,6 +12,7 @@ import { onUnexpectedError } from 'vs/base/common/errors';
 import { guessMimeTypes } from 'vs/base/common/mime';
 import { toErrorMessage } from 'vs/base/common/errorMessage';
 import URI from 'vs/base/common/uri';
+// import * as assert from 'vs/base/common/assert';
 import { IDisposable, dispose } from 'vs/base/common/lifecycle';
 import paths = require('vs/base/common/paths');
 import diagnostics = require('vs/base/common/diagnostics');
@@ -89,6 +90,9 @@ export class TextFileEditorModel extends BaseTextEditorModel implements ITextFil
 	) {
 		super(modelService, modeService);
 
+		// TODO@remote
+		// assert.ok(resource.scheme === 'file', 'TextFileEditorModel can only handle file:// resources.');
+
 		this.resource = resource;
 		this.toDispose = [];
 		this._onDidContentChange = new Emitter<StateChange>();
@@ -116,16 +120,18 @@ export class TextFileEditorModel extends BaseTextEditorModel implements ITextFil
 		this.toDispose.push(this.fileService.onFileChanges(e => this.onFileChanges(e)));
 		this.toDispose.push(this.textFileService.onAutoSaveConfigurationChange(config => this.updateAutoSaveConfiguration(config)));
 		this.toDispose.push(this.textFileService.onFilesAssociationChange(e => this.onFilesAssociationChange()));
-		this.toDispose.push(this.onDidStateChange(e => {
-			if (e === StateChange.REVERTED) {
+		this.toDispose.push(this.onDidStateChange(e => this.onStateChange(e)));
+	}
 
-				// Cancel any content change event promises as they are no longer valid.
-				this.contentChangeEventScheduler.cancel();
+	private onStateChange(e: StateChange): void {
+		if (e === StateChange.REVERTED) {
 
-				// Refire state change reverted events as content change events
-				this._onDidContentChange.fire(StateChange.REVERTED);
-			}
-		}));
+			// Cancel any content change event promises as they are no longer valid.
+			this.contentChangeEventScheduler.cancel();
+
+			// Refire state change reverted events as content change events
+			this._onDidContentChange.fire(StateChange.REVERTED);
+		}
 	}
 
 	private onFileChanges(e: FileChangesEvent): void {
@@ -360,7 +366,13 @@ export class TextFileEditorModel extends BaseTextEditorModel implements ITextFil
 	private loadWithContent(content: IRawTextContent | IContent, backup?: URI): TPromise<TextFileEditorModel> {
 		diag('load() - resolved content', this.resource, new Date());
 
-		// Telemetry
+		/* __GDPR__
+			"fileGet" : {
+				"mimeType" : { "classification": "SystemMetaData", "purpose": "FeatureInsight" },
+				"ext": { "classification": "SystemMetaData", "purpose": "FeatureInsight" },
+				"path": { "classification": "CustomerContent", "purpose": "FeatureInsight" }
+			}
+		*/
 		this.telemetryService.publicLog('fileGet', { mimeType: guessMimeTypes(this.resource.fsPath).join(', '), ext: paths.extname(this.resource.fsPath), path: anonymize(this.resource.fsPath) });
 
 		// Update our resolved disk stat model
@@ -446,10 +458,8 @@ export class TextFileEditorModel extends BaseTextEditorModel implements ITextFil
 					this.setDirty(false);
 				}
 
-				// See https://github.com/Microsoft/vscode/issues/30189
-				// This code has been extracted to a different method because it caused a memory leak
-				// where `value` was captured in the content change listener closure scope.
-				this._installChangeContentListener();
+				// Model Listeners
+				this.installModelListeners();
 
 				return this;
 			}, error => {
@@ -462,13 +472,14 @@ export class TextFileEditorModel extends BaseTextEditorModel implements ITextFil
 		return this.createTextEditorModelPromise;
 	}
 
-	private _installChangeContentListener(): void {
+	private installModelListeners(): void {
+
 		// See https://github.com/Microsoft/vscode/issues/30189
 		// This code has been extracted to a different method because it caused a memory leak
 		// where `value` was captured in the content change listener closure scope.
-		this.toDispose.push(this.textEditorModel.onDidChangeContent(() => {
-			this.onModelContentChanged();
-		}));
+
+		// Content Change
+		this.toDispose.push(this.textEditorModel.onDidChangeContent(() => this.onModelContentChanged()));
 	}
 
 	private doLoadBackup(backup: URI): TPromise<string> {
@@ -693,8 +704,17 @@ export class TextFileEditorModel extends BaseTextEditorModel implements ITextFil
 
 				// Telemetry
 				if (this.isSettingsFile()) {
+					/* __GDPR__
+						"settingsWritten" : {}
+					*/
 					this.telemetryService.publicLog('settingsWritten'); // Do not log write to user settings.json and .vscode folder as a filePUT event as it ruins our JSON usage data
 				} else {
+					/* __GDPR__
+						"filePUT" : {
+							"mimeType" : { "classification": "SystemMetaData", "purpose": "FeatureInsight" },
+							"ext": { "classification": "SystemMetaData", "purpose": "FeatureInsight" }
+						}
+					*/
 					this.telemetryService.publicLog('filePUT', { mimeType: guessMimeTypes(this.resource.fsPath).join(', '), ext: paths.extname(this.lastResolvedDiskStat.resource.fsPath) });
 				}
 

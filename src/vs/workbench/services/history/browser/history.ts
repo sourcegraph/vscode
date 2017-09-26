@@ -10,12 +10,12 @@ import errors = require('vs/base/common/errors');
 import URI from 'vs/base/common/uri';
 import { IEditor } from 'vs/editor/common/editorCommon';
 import { IEditor as IBaseEditor, IEditorInput, ITextEditorOptions, IResourceInput, ITextEditorSelection, Position as GroupPosition } from 'vs/platform/editor/common/editor';
-import { EditorInput, IEditorCloseEvent, IEditorRegistry, Extensions, toResource, IEditorGroup } from 'vs/workbench/common/editor';
+import { EditorInput, IEditorCloseEvent, IEditorRegistry, toResource, IEditorGroup } from 'vs/workbench/common/editor';
 import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { IHistoryService, IStackEntry } from 'vs/workbench/services/history/common/history';
 import { FileChangesEvent, IFileService, FileChangeType } from 'vs/platform/files/common/files';
 import { Selection } from 'vs/editor/common/core/selection';
-import { IWorkspaceContextService, WorkbenchState } from 'vs/platform/workspace/common/workspace';
+import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
 import { IDisposable, dispose } from 'vs/base/common/lifecycle';
 import { IStorageService, StorageScope } from 'vs/platform/storage/common/storage';
 import { ILifecycleService } from 'vs/platform/lifecycle/common/lifecycle';
@@ -30,6 +30,7 @@ import { parse, IExpression } from 'vs/base/common/glob';
 import { ICursorPositionChangedEvent } from 'vs/editor/common/controller/cursorEvents';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { ResourceGlobMatcher } from 'vs/workbench/common/resources';
+import { Extensions } from 'vs/workbench/browser/parts/editor/baseEditor';
 
 /**
  * Stores the selection & view state of an editor and allows to compare it to other selection states.
@@ -740,7 +741,10 @@ export class HistoryService extends BaseHistoryService implements IHistoryServic
 			if (input instanceof EditorInput) {
 				const factory = registry.getEditorInputFactory(input.getTypeId());
 				if (factory) {
-					return { editorInputJSON: { typeId: input.getTypeId(), deserialized: factory.serialize(input) } } as ISerializedEditorHistoryEntry;
+					const deserialized = factory.serialize(input);
+					if (deserialized) {
+						return { editorInputJSON: { typeId: input.getTypeId(), deserialized } } as ISerializedEditorHistoryEntry;
+					}
 				}
 			}
 
@@ -774,10 +778,11 @@ export class HistoryService extends BaseHistoryService implements IHistoryServic
 			}
 
 			// Editor input: via factory
-			if (serializedEditorHistoryEntry.editorInputJSON) {
-				const factory = registry.getEditorInputFactory(serializedEditorHistoryEntry.editorInputJSON.typeId);
+			const { editorInputJSON } = serializedEditorHistoryEntry;
+			if (editorInputJSON && editorInputJSON.deserialized) {
+				const factory = registry.getEditorInputFactory(editorInputJSON.typeId);
 				if (factory) {
-					return factory.deserialize(this.instantiationService, serializedEditorHistoryEntry.editorInputJSON.deserialized);
+					return factory.deserialize(this.instantiationService, editorInputJSON.deserialized);
 				}
 			}
 
@@ -787,7 +792,8 @@ export class HistoryService extends BaseHistoryService implements IHistoryServic
 	}
 
 	public getLastActiveWorkspaceRoot(): URI {
-		if (this.contextService.getWorkbenchState() === WorkbenchState.EMPTY) {
+		const folders = this.contextService.getWorkspace().folders;
+		if (folders.length === 0) {
 			return void 0;
 		}
 
@@ -806,6 +812,6 @@ export class HistoryService extends BaseHistoryService implements IHistoryServic
 		}
 
 		// fallback to first workspace
-		return this.contextService.getWorkspace().folders[0].uri;
+		return folders[0].uri;
 	}
 }

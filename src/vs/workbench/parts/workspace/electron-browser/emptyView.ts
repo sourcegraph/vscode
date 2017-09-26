@@ -12,22 +12,20 @@ import { IAction } from 'vs/base/common/actions';
 import { Button } from 'vs/base/browser/ui/button/button';
 import { $ } from 'vs/base/browser/builder';
 import { IActionItem } from 'vs/base/browser/ui/actionbar/actionbar';
-import { CollapsibleView, IViewletViewOptions, IViewOptions } from 'vs/workbench/browser/parts/views/views';
+import { ViewsViewletPanel, IViewletViewOptions, IViewOptions } from 'vs/workbench/browser/parts/views/viewsViewlet';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { NewEmptyWorkspaceAction, SaveWorkspaceAsAction } from 'vs/workbench/browser/actions/workspaceActions';
 import { attachButtonStyler } from 'vs/platform/theme/common/styler';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
-import { ViewSizing } from 'vs/base/browser/ui/splitview/splitview';
 import { IWorkspaceContextService, WorkbenchState } from 'vs/platform/workspace/common/workspace';
 
-export class EmptyView extends CollapsibleView {
+export class EmptyView extends ViewsViewletPanel {
 
 	private openWorkspaceButton: Button;
 
 	constructor(
-		initialSize: number,
 		options: IViewletViewOptions,
 		@IThemeService private themeService: IThemeService,
 		@IInstantiationService private instantiationService: IInstantiationService,
@@ -35,7 +33,7 @@ export class EmptyView extends CollapsibleView {
 		@IContextMenuService contextMenuService: IContextMenuService,
 		@IWorkspaceContextService private contextService: IWorkspaceContextService,
 	) {
-		super(initialSize, { ...(options as IViewOptions), sizing: ViewSizing.Flexible }, keybindingService, contextMenuService);
+		super({ ...(options as IViewOptions) }, keybindingService, contextMenuService);
 	}
 
 	public renderHeader(container: HTMLElement): void {

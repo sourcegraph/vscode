@@ -482,7 +482,7 @@ export class ExtHostSCM {
 	 * SCM information about resources under the URI. This data structure is kept in
 	 * sync with the equivalent map in the main process.
 	 */
-	private _sourceControlRootsMap: TrieMap<SourceControlHandle>;
+	private _sourceControlRootsMap: TrieMap<URI, SourceControlHandle>;
 
 	constructor(
 		mainContext: IMainContext,
@@ -608,7 +608,7 @@ export class ExtHostSCM {
 	}
 
 	getSourceControlForResource(resource: vscode.Uri): vscode.SourceControl | undefined {
-		const handle = this._sourceControlRootsMap.findSubstr(resource.toString());
+		const handle = this._sourceControlRootsMap.findSubstr(resource);
 		if (!handle) {
 			return undefined;
 		}
@@ -616,9 +616,9 @@ export class ExtHostSCM {
 	}
 
 	private updateFolderSourceControlsMap(): void {
-		this._sourceControlRootsMap = new TrieMap<SourceControlHandle>(TrieMap.PathSplitter);
+		this._sourceControlRootsMap = new TrieMap<URI, SourceControlHandle>(uri => [uri.scheme, uri.authority].concat(uri.path.split('/')));
 		for (const { handle, rootUri } of this._sourceControlRoots) {
-			this._sourceControlRootsMap.insert(rootUri.toString(), { handle });
+			this._sourceControlRootsMap.insert(rootUri, { handle });
 		}
 	}
 }

@@ -45,8 +45,8 @@ const nodeModules = ['electron', 'original-fs']
 // Build
 
 const builtInExtensions = [
-	{ name: 'ms-vscode.node-debug', version: '1.17.8' },
-	{ name: 'ms-vscode.node-debug2', version: '1.17.1' }
+	{ name: 'ms-vscode.node-debug', version: '1.17.13' },
+	{ name: 'ms-vscode.node-debug2', version: '1.17.4' }
 ];
 
 const excludedExtensions = [
@@ -458,9 +458,19 @@ gulp.task('upload-vscode-configuration', ['generate-vscode-configuration'], () =
 			account: process.env.AZURE_STORAGE_ACCOUNT,
 			key: process.env.AZURE_STORAGE_ACCESS_KEY,
 			container: 'configuration',
-			prefix: `${packageJson.version}/${commit}/`
+			prefix: `${versionStringToNumber(packageJson.version)}/${commit}/`
 		}));
 });
+
+function versionStringToNumber(versionStr) {
+	const semverRegex = /(\d+)\.(\d+)\.(\d+)/;
+	const match = versionStr.match(semverRegex);
+	if (!match) {
+		return 0;
+	}
+
+	return parseInt(match[1], 10) * 10000 + parseInt(match[2], 10) * 100 + parseInt(match[3], 10);
+}
 
 gulp.task('generate-vscode-configuration', () => {
 	return new Promise((resolve, reject) => {
@@ -469,8 +479,10 @@ gulp.task('generate-vscode-configuration', () => {
 			return reject(new Error('$AGENT_BUILDDIRECTORY not set'));
 		}
 
+		const userDataDir = path.join(os.tmpdir(), 'tmpuserdata');
+		const extensionsDir = path.join(os.tmpdir(), 'tmpextdir');
 		const appPath = path.join(buildDir, 'VSCode-darwin/Visual\\ Studio\\ Code\\ -\\ Insiders.app/Contents/Resources/app/bin/code');
-		const codeProc = cp.exec(`${appPath} --export-default-configuration='${allConfigDetailsPath}' --wait`);
+		const codeProc = cp.exec(`${appPath} --export-default-configuration='${allConfigDetailsPath}' --wait --user-data-dir='${userDataDir}' --extensions-dir='${extensionsDir}'`);
 
 		const timer = setTimeout(() => {
 			codeProc.kill();

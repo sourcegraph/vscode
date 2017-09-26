@@ -376,12 +376,12 @@ function toCatalogFolder(repo: {
 }): vscode.CatalogFolder {
 	return {
 		// These URIs are resolved by the resource resolver we register above.
-		resource: new vscode.Uri().with({ scheme: GITHUB_SCHEME, authority: 'github.com', path: `/repository/${repo.nameWithOwner}` }),
+		resource: vscode.Uri.parse('').with({ scheme: GITHUB_SCHEME, authority: 'github.com', path: `/repository/${repo.nameWithOwner}` }),
 
 		displayPath: repo.nameWithOwner,
 		displayName: repo.name,
 		genericIconClass: iconForRepo(repo),
-		cloneUrl: new vscode.Uri().with({ scheme: 'https', authority: 'github.com', path: `/${repo.nameWithOwner}.git` }),
+		cloneUrl: vscode.Uri.parse('').with({ scheme: 'https', authority: 'github.com', path: `/${repo.nameWithOwner}.git` }),
 		description: repo.description,
 		isPrivate: repo.isPrivate,
 		isFork: repo.isFork,

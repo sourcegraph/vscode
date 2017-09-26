@@ -71,7 +71,7 @@ export class SCMService implements ISCMService {
 	 * Map of SCM root folders to the SCM repository that is used to provide SCM information
 	 * about resources inside the folder.
 	 */
-	private _folderRepositoriesMap: TrieMap<ISCMRepository>;
+	private _folderRepositoriesMap: TrieMap<URI, ISCMRepository>;
 
 	constructor() {
 		this.updateFolderRepositoriesMap();
@@ -106,14 +106,14 @@ export class SCMService implements ISCMService {
 	}
 
 	getRepositoryForResource(resource: URI): ISCMRepository | undefined {
-		return this._folderRepositoriesMap.findSubstr(resource.toString());
+		return this._folderRepositoriesMap.findSubstr(resource);
 	}
 
 	private updateFolderRepositoriesMap(): void {
-		this._folderRepositoriesMap = new TrieMap<ISCMRepository>(TrieMap.PathSplitter);
+		this._folderRepositoriesMap = new TrieMap<URI, ISCMRepository>(uri => [uri.scheme, uri.authority].concat(uri.path.split('/')));
 		for (const repository of this._repositories) {
 			if (repository.provider.rootUri) {
-				this._folderRepositoriesMap.insert(repository.provider.rootUri.toString(), repository);
+				this._folderRepositoriesMap.insert(repository.provider.rootUri, repository);
 			}
 		}
 	}

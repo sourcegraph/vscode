@@ -63,7 +63,7 @@ export class CombinedSCMProvider implements ISCMProvider {
 	private _onDidChange = new Emitter<void>();
 	public get onDidChange(): Event<void> { return this._onDidChange.event; }
 
-	private _rootUriMap: TrieMap<ISCMProvider>;
+	private _rootUriMap: TrieMap<URI, ISCMProvider>;
 
 	constructor(
 		public readonly id: string,
@@ -120,10 +120,10 @@ export class CombinedSCMProvider implements ISCMProvider {
 	}
 
 	private updateRootUriMap(): void {
-		this._rootUriMap = new TrieMap<ISCMProvider>(TrieMap.PathSplitter);
+		this._rootUriMap = new TrieMap<URI, ISCMProvider>(uri => [uri.scheme, uri.authority].concat(uri.path.split('/')));
 		for (const { provider } of this._providerData) {
 			if (provider.rootUri) {
-				this._rootUriMap.insert(provider.rootUri.toString(), provider);
+				this._rootUriMap.insert(provider.rootUri, provider);
 			}
 		}
 	}
@@ -167,7 +167,7 @@ export class CombinedSCMProvider implements ISCMProvider {
 	}
 
 	public getOriginalResource(uri: URI): TPromise<URI> {
-		const provider = this._rootUriMap.findSubstr(uri.toString());
+		const provider = this._rootUriMap.findSubstr(uri);
 		if (provider) {
 			return provider.getOriginalResource(uri);
 		}

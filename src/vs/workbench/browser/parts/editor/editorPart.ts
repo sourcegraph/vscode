@@ -20,8 +20,8 @@ import { getCodeEditor } from 'vs/editor/common/services/codeEditorService';
 import { toErrorMessage } from 'vs/base/common/errorMessage';
 import { Scope as MementoScope } from 'vs/workbench/common/memento';
 import { Part } from 'vs/workbench/browser/part';
-import { BaseEditor, EditorDescriptor } from 'vs/workbench/browser/parts/editor/baseEditor';
-import { IEditorRegistry, Extensions as EditorExtensions, EditorInput, EditorOptions, ConfirmResult, IWorkbenchEditorConfiguration, IEditorDescriptor, TextEditorOptions, SideBySideEditorInput, TextCompareEditorVisible, TEXT_DIFF_EDITOR_ID } from 'vs/workbench/common/editor';
+import { BaseEditor, EditorDescriptor, Extensions as EditorExtensions } from 'vs/workbench/browser/parts/editor/baseEditor';
+import { IEditorRegistry, EditorInput, EditorOptions, ConfirmResult, IWorkbenchEditorConfiguration, IEditorDescriptor, TextEditorOptions, SideBySideEditorInput, TextCompareEditorVisible, TEXT_DIFF_EDITOR_ID } from 'vs/workbench/common/editor';
 import { EditorGroupsControl, Rochade, IEditorGroupsControl, ProgressState } from 'vs/workbench/browser/parts/editor/editorGroupsControl';
 import { WorkbenchProgressService } from 'vs/workbench/services/progress/browser/progressService';
 import { IEditorGroupService, GroupOrientation, GroupArrangement, IEditorTabOptions, IMoveOptions } from 'vs/workbench/services/group/common/groupService';
@@ -166,6 +166,13 @@ export class EditorPart extends Part implements IEditorPart, IEditorGroupService
 
 			this.revealIfOpen = editorConfig.revealIfOpen;
 
+			/* __GDPR__
+				"workbenchEditorConfiguration" : {
+					"${include}": [
+						"${IWorkbenchEditorConfiguration}"
+					]
+				}
+			*/
 			this.telemetryService.publicLog('workbenchEditorConfiguration', editorConfig);
 		} else {
 			this.tabOptions = {
@@ -248,10 +255,24 @@ export class EditorPart extends Part implements IEditorPart, IEditorGroupService
 	}
 
 	private onEditorOpened(identifier: EditorIdentifier): void {
+		/* __GDPR__
+			"editorOpened" : {
+				"${include}": [
+					"${EditorTelemetryDescriptor}"
+				]
+			}
+		*/
 		this.telemetryService.publicLog('editorOpened', identifier.editor.getTelemetryDescriptor());
 	}
 
 	private onEditorClosed(event: EditorCloseEvent): void {
+		/* __GDPR__
+			"editorClosed" : {
+				"${include}": [
+					"${EditorTelemetryDescriptor}"
+				]
+			}
+		*/
 		this.telemetryService.publicLog('editorClosed', event.editor.getTelemetryDescriptor());
 	}
 
@@ -319,6 +340,11 @@ export class EditorPart extends Part implements IEditorPart, IEditorGroupService
 
 		// Opened to the side
 		if (position !== Position.ONE) {
+			/* __GDPR__
+				"workbenchSideEditorOpened" : {
+					"position" : { "classification": "SystemMetaData", "purpose": "FeatureInsight" }
+				}
+			*/
 			this.telemetryService.publicLog('workbenchSideEditorOpened', { position: position });
 		}
 

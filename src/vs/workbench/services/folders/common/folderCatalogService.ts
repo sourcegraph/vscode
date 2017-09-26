@@ -28,7 +28,7 @@ export class FolderCatalogService implements IFolderCatalogService {
 	/**
 	 * Maps from a URI to the provider that registered for that URI.
 	 */
-	private providersMap: TrieMap<IFolderCatalogProvider>;
+	private providersMap: TrieMap<URI, IFolderCatalogProvider>;
 
 	constructor() {
 		this.updateProvidersMap();
@@ -97,13 +97,13 @@ export class FolderCatalogService implements IFolderCatalogService {
 	}
 
 	private getProviderForResource(resource: URI): IFolderCatalogProvider {
-		return this.providersMap.findSubstr(resource.toString());
+		return this.providersMap.findSubstr(resource);
 	}
 
 	private updateProvidersMap(): void {
-		this.providersMap = new TrieMap<IFolderCatalogProvider>(TrieMap.PathSplitter);
+		this.providersMap = new TrieMap<URI, IFolderCatalogProvider>(uri => [uri.scheme, uri.authority].concat(uri.path.split('/')));
 		for (const { root, provider } of this.providers) {
-			this.providersMap.insert(root.toString(), provider);
+			this.providersMap.insert(root, provider);
 		}
 	}
 }
