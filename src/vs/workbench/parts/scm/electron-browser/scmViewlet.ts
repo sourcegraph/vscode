@@ -8,16 +8,16 @@
 import 'vs/css!./media/scmViewlet';
 import { localize } from 'vs/nls';
 import { TPromise } from 'vs/base/common/winjs.base';
-import { chain } from 'vs/base/common/event';
+import Event, { Emitter, chain } from 'vs/base/common/event';
 import { basename } from 'vs/base/common/paths';
 import { onUnexpectedError } from 'vs/base/common/errors';
-import { IDisposable, dispose, combinedDisposable } from 'vs/base/common/lifecycle';
-import { Builder } from 'vs/base/browser/builder';
-import { append, $, toggleClass, trackFocus, addClass, removeClass } from 'vs/base/browser/dom';
-import { PanelViewlet, ViewletPanel } from 'vs/workbench/browser/parts/views/views2';
+import { IDisposable, dispose, combinedDisposable, empty as EmptyDisposable, toDisposable } from 'vs/base/common/lifecycle';
+import { Builder, Dimension } from 'vs/base/browser/builder';
+import { PanelViewlet, ViewletPanel } from 'vs/workbench/browser/parts/views/panelViewlet';
+import { append, $, addClass, toggleClass, trackFocus } from 'vs/base/browser/dom';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { List } from 'vs/base/browser/ui/list/listWidget';
-import { IDelegate, IRenderer, IListContextMenuEvent, IListEvent } from 'vs/base/browser/ui/list/list';
+import { IDelegate, IRenderer, IListContextMenuEvent } from 'vs/base/browser/ui/list/list';
 import { VIEWLET_ID } from 'vs/workbench/parts/scm/common/scm';
 import { FileLabel } from 'vs/workbench/browser/labels';
 import { CountBadge } from 'vs/base/browser/ui/countBadge/countBadge';
@@ -50,13 +50,8 @@ import * as platform from 'vs/base/common/platform';
 import { domEvent } from 'vs/base/browser/event';
 import { StandardKeyboardEvent } from 'vs/base/browser/keyboardEvent';
 import { KeyMod, KeyCode } from 'vs/base/common/keyCodes';
-import { ILifecycleService } from 'vs/platform/lifecycle/common/lifecycle';
-import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { Command } from 'vs/editor/common/modes';
 import { render as renderOcticons } from 'vs/base/browser/ui/octiconLabel/octiconLabel';
-import { CombinedSCMRepository, CombinedSCMProvider } from './scmCombo';
-
-const ENABLE_SCM_COMBO = false;
 
 // TODO@Joao
 // Need to subclass MenuItemActionItem in order to respect
@@ -68,24 +63,20 @@ class SCMMenuItemActionItem extends MenuItemActionItem {
 		event.preventDefault();
 		event.stopPropagation();
 
-		if (this._context instanceof CombinedSCMProvider) {
-			TPromise.join(this._context.providers.map(provider => this.actionRunner.run(this._commandAction, provider)))
-				.done(undefined, err => this._messageService.show(Severity.Error, err));
-			return;
-		}
-
 		this.actionRunner.run(this._commandAction, this._context)
 			.done(undefined, err => this._messageService.show(Severity.Error, err));
 	}
 }
 
-interface IViewModel {
-	addRepositoryPanel(panel: RepositoryPanel, size: number, index?: number): void;
-	removeRepositoryPanel(panel: RepositoryPanel): void;
-	moveRepositoryPanel(from: RepositoryPanel, to: RepositoryPanel): void;
+export interface ISpliceEvent<T> {
+	index: number;
+	deleteCount: number;
+	elements: T[];
+}
 
-	isRepositoryVisible(repository: ISCMRepository): boolean;
-	getPendingChangesCount(repository: ISCMRepository): number;
+export interface IViewModel {
+	readonly repositories: ISCMRepository[];
+	readonly onDidSplice: Event<ISpliceEvent<ISCMRepository>>;
 }
 
 class ProvidersListDelegate implements IDelegate<ISCMRepository> {
@@ -97,17 +88,6 @@ class ProvidersListDelegate implements IDelegate<ISCMRepository> {
 	getTemplateId(element: ISCMRepository): string {
 		return 'provider';
 	}
-}
-
-interface RepositoryTemplateData {
-	provider: HTMLElement;
-	checkbox: HTMLInputElement;
-	title: HTMLElement;
-	type: HTMLElement;
-	actionBar: ActionBar;
-	badge: CountBadge;
-	disposable: IDisposable;
-	templateDisposable: IDisposable;
 }
 
 class StatusBarAction extends Action {
@@ -138,29 +118,41 @@ class StatusBarActionItem extends ActionItem {
 	}
 }
 
+interface RepositoryTemplateData {
+	title: HTMLElement;
+	type: HTMLElement;
+	countContainer: HTMLElement;
+	count: CountBadge;
+	actionBar: ActionBar;
+	disposable: IDisposable;
+	templateDisposable: IDisposable;
+}
+
 class ProviderRenderer implements IRenderer<ISCMRepository, RepositoryTemplateData> {
 
 	readonly templateId = 'provider';
 
 	constructor(
-		protected viewModel: IViewModel,
-		@IThemeService private themeService: IThemeService,
-		@ICommandService protected commandService: ICommandService
+		@ICommandService protected commandService: ICommandService,
+		@IThemeService protected themeService: IThemeService
 	) { }
 
 	renderTemplate(container: HTMLElement): RepositoryTemplateData {
 		const provider = append(container, $('.scm-provider'));
-		const checkbox = append(provider, $('input', { type: 'checkbox', checked: 'true' })) as HTMLInputElement;
-		checkbox.style.display = 'none'; // TODO(sqs)
 		const name = append(provider, $('.name'));
 		const title = append(name, $('span.title'));
 		const type = append(name, $('span.type'));
-		const actionBar = new ActionBar(provider, { actionItemProvider: a => new StatusBarActionItem(a as StatusBarAction) });
-		const badge = new CountBadge(append(provider, $('.badge')));
-		const disposable = combinedDisposable([attachBadgeStyler(badge, this.themeService)]);
-		const templateDisposable = combinedDisposable([actionBar]);
+		const countContainer = append(provider, $('.count'));
 
-		return { provider, checkbox, title, type, actionBar, badge, disposable, templateDisposable };
+		append(provider, $('.spacer'));
+
+		const count = new CountBadge(countContainer);
+		const badgeStyler = attachBadgeStyler(count, this.themeService);
+		const actionBar = new ActionBar(provider, { actionItemProvider: a => new StatusBarActionItem(a as StatusBarAction) });
+		const disposable = EmptyDisposable;
+		const templateDisposable = combinedDisposable([actionBar, badgeStyler]);
+
+		return { title, type, countContainer, count, actionBar, disposable, templateDisposable };
 	}
 
 	renderElement(repository: ISCMRepository, index: number, templateData: RepositoryTemplateData): void {
@@ -175,10 +167,6 @@ class ProviderRenderer implements IRenderer<ISCMRepository, RepositoryTemplateDa
 			templateData.type.textContent = '';
 		}
 
-		templateData.checkbox.checked = this.viewModel.isRepositoryVisible(repository);
-		// const onClick = domEvent(templateData.checkbox, 'change');
-		// disposables.push(onClick(() => this.viewModel.toggleRepositoryVisibility(repository, templateData.checkbox.checked)));
-
 		// const disposables = commands.map(c => this.statusbarService.addEntry({
 		// 	text: c.title,
 		// 	tooltip: `${repository.provider.label} - ${c.tooltip}`,
@@ -190,7 +178,7 @@ class ProviderRenderer implements IRenderer<ISCMRepository, RepositoryTemplateDa
 		const disposeActions = () => dispose(actions);
 		disposables.push({ dispose: disposeActions });
 
-		const updateActions = () => {
+		const update = () => {
 			disposeActions();
 
 			const commands = repository.provider.statusBarCommands || [];
@@ -198,19 +186,13 @@ class ProviderRenderer implements IRenderer<ISCMRepository, RepositoryTemplateDa
 			templateData.actionBar.clear();
 			templateData.actionBar.push(actions);
 
-			const count = this.viewModel.getPendingChangesCount(repository);
-			templateData.badge.setCount(count);
-			templateData.badge.setTitleFormat(count > 1 ? localize('repositoryPendingChanges', "{0} pending changes", count) : localize('repositoryPendingChange', "{0} pending change", count));
-
-			if (count > 0) {
-				addClass(templateData.provider, 'dirty');
-			} else {
-				removeClass(templateData.provider, 'dirty');
-			}
+			const count = repository.provider.count || 0;
+			toggleClass(templateData.countContainer, 'hidden', count === 0);
+			templateData.count.setCount(repository.provider.count);
 		};
 
-		repository.provider.onDidChange(updateActions, null, disposables);
-		updateActions();
+		repository.provider.onDidChange(update, null, disposables);
+		update();
 
 		templateData.disposable = combinedDisposable(disposables);
 	}
@@ -224,109 +206,57 @@ class ProviderRenderer implements IRenderer<ISCMRepository, RepositoryTemplateDa
 class MainPanel extends ViewletPanel {
 
 	private list: List<ISCMRepository>;
-	private repositoryMenus = new Map<ISCMRepository, SCMMenus>();//TODO(sqs): maybe not necessary
-	private repositories: ISCMRepository[] = [];
-	private repositoryPanels: RepositoryPanel[] = [];
+
+	private _onSelectionChange = new Emitter<ISCMRepository[]>();
+	readonly onSelectionChange: Event<ISCMRepository[]> = this._onSelectionChange.event;
 
 	constructor(
 		protected viewModel: IViewModel,
 		@IKeybindingService protected keybindingService: IKeybindingService,
 		@IContextMenuService protected contextMenuService: IContextMenuService,
 		@ISCMService protected scmService: ISCMService,
-		@IListService private listService: IListService,
-		@IThemeService private themeService: IThemeService,
-		@IInstantiationService private instantiationService: IInstantiationService
+		@IInstantiationService private instantiationService: IInstantiationService,
+		@IThemeService private themeService: IThemeService
 	) {
 		super(localize('scm providers', "Source Control Providers"), {}, keybindingService, contextMenuService);
 		this.updateBodySize();
 	}
 
+	private splice(index: number, deleteCount: number, repositories: ISCMRepository[] = []): void {
+		const wasEmpty = this.list.length === 0;
+
+		this.list.splice(index, deleteCount, repositories);
+		this.updateBodySize();
+
+		// Automatically select the first one
+		if (wasEmpty && this.list.length > 0) {
+			this.list.setSelection([0]);
+		}
+	}
+
 	protected renderBody(container: HTMLElement): void {
 		const delegate = new ProvidersListDelegate();
-		const renderer = this.instantiationService.createInstance(ProviderRenderer, this.viewModel);
+		const renderer = this.instantiationService.createInstance(ProviderRenderer);
 
 		this.list = new List<ISCMRepository>(container, delegate, [renderer], {
 			identityProvider: repository => repository.provider.id
 		});
-		this.disposables.push(attachListStyler(this.list, this.themeService));
-		this.disposables.push(this.listService.register(this.list));
+
 		this.disposables.push(this.list);
-
-		this.list.onSelectionChange(this.onSelectionChange, this, this.disposables);
-		this.list.onContextMenu(this.onListContextMenu, this, this.disposables);
-
-		this.scmService.onDidAddRepository(this.onDidAddRepository, this, this.disposables);
-		this.scmService.onDidRemoveRepository(this.onDidRemoveRepository, this, this.disposables);
-		this.scmService.repositories.forEach(r => this.onDidAddRepository(r));
+		this.disposables.push(attachListStyler(this.list, this.themeService));
+		this.list.onSelectionChange(e => this._onSelectionChange.fire(e.elements), null, this.disposables);
+		this.viewModel.onDidSplice(({ index, deleteCount, elements }) => this.splice(index, deleteCount, elements), null, this.disposables);
+		this.splice(0, 0, this.viewModel.repositories);
 	}
 
 	protected layoutBody(size: number): void {
 		this.list.layout(size);
 	}
 
-	private onDidAddRepository(repository: ISCMRepository): void {
-		const wasEmpty = this.list.length === 0;
-		this.repositories.push(repository);
-		this.list.splice(this.list.length, 0, [repository]);
-		this.updateBodySize();
-		if (wasEmpty || this.repositories.length === 1) {
-			this.list.setFocus([0]);
-			this.list.setSelection([0]);
-		}
-	}
-
-	private onDidRemoveRepository(repository: ISCMRepository): void {
-		const index = this.repositories.indexOf(repository);
-
-		if (index === -1) {
-			return;
-		}
-
-		this.repositories.splice(index, 1);
-		this.list.splice(index, 1);
-		this.updateBodySize();
-	}
-
-	private onSelectionChange(e: IListEvent<ISCMRepository>): void {
-		const toRemove = this.repositoryPanels.filter(p => e.elements.every(r => p.repository !== r));
-		const toAdd = e.elements.filter(r => this.repositoryPanels.every(p => p.repository !== r));
-
-		for (const repository of toAdd) {
-			const panel = this.instantiationService.createInstance(RepositoryPanel, repository);
-			this.repositoryPanels.push(panel);
-			this.viewModel.addRepositoryPanel(panel, panel.minimumSize, 1);
-		}
-		for (const panel of toRemove) {
-			this.viewModel.removeRepositoryPanel(panel);
-			this.repositoryPanels = this.repositoryPanels.filter(p => p !== panel);
-		}
-
-		// this.viewModel.addRepositoryPanel();
-		// this.repositoryPanels
-	}
-
-	private onListContextMenu(e: IListContextMenuEvent<ISCMRepository>): void {
-		this.contextMenuService.showContextMenu({
-			getAnchor: () => e.anchor,
-			getActions: () => TPromise.as(this.getSCMMenus(e.element).getTitleSecondaryActions()),
-			getActionsContext: () => e.element.provider,
-		});
-	}
-
 	private updateBodySize(): void {
-		const size = Math.min(7, this.repositories.length) * 22;
+		const size = Math.min(5, this.viewModel.repositories.length) * 22;
 		this.minimumBodySize = size;
-		this.maximumBodySize = Math.max(1, this.repositories.length) * 22;
-	}
-
-	private getSCMMenus(repository: ISCMRepository): SCMMenus {
-		let menus = this.repositoryMenus.get(repository);
-		if (!menus) {
-			menus = this.instantiationService.createInstance(SCMMenus, repository.provider);
-			this.disposables.push(menus);
-			this.repositoryMenus.set(repository, menus);
-		}
-		return menus;
+		this.maximumBodySize = size;
 	}
 }
 
@@ -475,37 +405,6 @@ class ProviderListDelegate implements IDelegate<ISCMResourceGroup | ISCMResource
 	}
 }
 
-// class ProviderViewDescriptor implements IViewDescriptor {
-
-// 	// This ID magic needs to happen in order to preserve
-// 	// good splitview state when reloading the workbench
-// 	static idCount = 0;
-// 	static freeIds: string[] = [];
-
-// 	readonly id: string;
-
-// 	get repository(): ISCMRepository { return this._repository; }
-// 	get name(): string {
-// 		return this._repository.provider.rootUri
-// 			? `${basename(this._repository.provider.rootUri.fsPath)} (${this._repository.provider.label})`
-// 			: this._repository.provider.label;
-// 	}
-// 	get ctor(): any { return null; }
-// 	get location(): ViewLocation { return ViewLocation.SCM; }
-
-// 	constructor(private _repository: ISCMRepository) {
-// 		if (ProviderViewDescriptor.freeIds.length > 0) {
-// 			this.id = ProviderViewDescriptor.freeIds.shift();
-// 		} else {
-// 			this.id = `scm${ProviderViewDescriptor.idCount++}`;
-// 		}
-// 	}
-
-// 	dispose(): void {
-// 		ProviderViewDescriptor.freeIds.push(this.id);
-// 	}
-// }
-
 function scmResourceIdentityProvider(r: ISCMResourceGroup | ISCMResource): string {
 	if (isSCMResource(r)) {
 		const group = r.resourceGroup;
@@ -519,8 +418,7 @@ function scmResourceIdentityProvider(r: ISCMResourceGroup | ISCMResource): strin
 
 export class RepositoryPanel extends ViewletPanel {
 
-
-	private cachedHeight: number | undefined;
+	private cachedHeight: number | undefined = undefined;
 	private inputBoxContainer: HTMLElement;
 	private inputBox: InputBox;
 	private listContainer: HTMLElement;
@@ -538,17 +436,15 @@ export class RepositoryPanel extends ViewletPanel {
 		@IMessageService protected messageService: IMessageService,
 		@IWorkbenchEditorService protected editorService: IWorkbenchEditorService,
 		@IEditorGroupService protected editorGroupService: IEditorGroupService,
-		@IStorageService private storageService: IStorageService,
-		@ILifecycleService private lifecycleService: ILifecycleService,
-		@IConfigurationService private configurationService: IConfigurationService,
 		@IInstantiationService protected instantiationService: IInstantiationService
 	) {
 		super(repository.provider.label, {}, keybindingService, contextMenuService);
-
 		this.menus = instantiationService.createInstance(SCMMenus, repository.provider);
-		this.menus.onDidChangeTitle(this.updateActions, this, this.disposables);
+	}
 
-		this.minimumBodySize = 120;
+	render(container: HTMLElement): void {
+		super.render(container);
+		this.menus.onDidChangeTitle(this.updateActions, this, this.disposables);
 	}
 
 	protected renderHeaderTitle(container: HTMLElement): void {
@@ -635,12 +531,16 @@ export class RepositoryPanel extends ViewletPanel {
 	}
 
 	layoutBody(height: number = this.cachedHeight): void {
+		if (height === undefined) {
+			return;
+		}
+
 		this.list.layout(height);
 		this.cachedHeight = height;
 		this.inputBox.layout();
 
 		const editorHeight = this.inputBox.height;
-		const listHeight = height - (editorHeight > 0 ? editorHeight + 12 /* margin */ : 0);
+		const listHeight = height - (editorHeight + 12 /* margin */);
 		this.listContainer.style.height = `${listHeight}px`;
 		this.list.layout(listHeight);
 
@@ -650,7 +550,7 @@ export class RepositoryPanel extends ViewletPanel {
 	focus(): void {
 		super.focus();
 
-		if (this.expanded) {
+		if (this.isExpanded()) {
 			this.inputBox.focus();
 		}
 	}
@@ -695,6 +595,11 @@ export class RepositoryPanel extends ViewletPanel {
 	private pin(): void {
 		const activeEditor = this.editorService.getActiveEditor();
 		const activeEditorInput = this.editorService.getActiveEditorInput();
+
+		if (!activeEditor) {
+			return;
+		}
+
 		this.editorGroupService.pinEditor(activeEditor.position, activeEditorInput);
 	}
 
@@ -722,8 +627,6 @@ export class RepositoryPanel extends ViewletPanel {
 	}
 
 	private updateInputBox(): void {
-		this.inputBoxContainer.hidden = !this.repository.provider.acceptInputCommand;
-
 		if (typeof this.repository.provider.commitTemplate === 'undefined') {
 			return;
 		}
@@ -764,16 +667,23 @@ class InstallAdditionalSCMProvidersAction extends Action {
 	}
 }
 
-export class SCMViewlet extends PanelViewlet {
+export class SCMViewlet extends PanelViewlet implements IViewModel {
 
+	private el: HTMLElement;
 	private menus: SCMMenus;
-
-	private mainPanel: MainPanel;
-
-	// private repositoryToViewDescriptor = new Map<string, ProviderViewDescriptor>();
+	private mainPanel: MainPanel | null = null;
+	private mainPanelDisposable: IDisposable = EmptyDisposable;
+	private _repositories: ISCMRepository[] = [];
+	private repositoryPanels: RepositoryPanel[] = [];
 	private disposables: IDisposable[] = [];
 
-	private combinedRepository: CombinedSCMRepository;
+	private _onDidSplice = new Emitter<ISpliceEvent<ISCMRepository>>();
+	readonly onDidSplice: Event<ISpliceEvent<ISCMRepository>> = this._onDidSplice.event;
+
+	private _height: number | undefined = undefined;
+	get height(): number | undefined { return this._height; }
+
+	get repositories(): ISCMRepository[] { return this._repositories; }
 
 	constructor(
 		@ITelemetryService telemetryService: ITelemetryService,
@@ -793,99 +703,80 @@ export class SCMViewlet extends PanelViewlet {
 		@IStorageService storageService: IStorageService,
 		@IExtensionService extensionService: IExtensionService
 	) {
-		super(VIEWLET_ID, { showHeaderInTitleWhenSingleView: false }, telemetryService, themeService);
+		super(VIEWLET_ID, { showHeaderInTitleWhenSingleView: true }, telemetryService, themeService);
 
 		this.menus = instantiationService.createInstance(SCMMenus, undefined);
 		this.menus.onDidChangeTitle(this.updateTitleArea, this, this.disposables);
-
-		if (ENABLE_SCM_COMBO) {
-			this.combinedRepository = new CombinedSCMRepository('git', localize('combinedRepository', "Combined"), scmService.repositories);
-			this.scmService.onDidAddRepository(r => this.combinedRepository.addRepository(r), this, this.disposables);
-			this.scmService.onDidRemoveRepository(r => this.combinedRepository.removeRepository(r), this, this.disposables);
-		}
 	}
 
 	async create(parent: Builder): TPromise<void> {
 		await super.create(parent);
 
-		parent.addClass('scm-viewlet', 'empty');
-		append(parent.getHTMLElement(), $('div.empty-message', null, localize('no active repo', "There are no active repositories.")));
+		this.el = parent.getHTMLElement();
+		addClass(this.el, 'scm-viewlet');
+		addClass(this.el, 'empty');
+		append(parent.getHTMLElement(), $('div.empty-message', null, localize('no open repo', "There are no active source control providers.")));
 
-		this.mainPanel = this.instantiationService.createInstance(MainPanel, this as IViewModel);
-		this.addPanel(this.mainPanel, this.mainPanel.minimumSize, 0);
-
-		// this.scmService.onDidAddRepository(this.onDidAddRepository, this, this.disposables);
-		// this.scmService.onDidRemoveRepository(this.onDidRemoveRepository, this, this.disposables);
-		// this.scmService.repositories.forEach(p => this.onDidAddRepository(p));
-
-		// ViewsRegistry.registerViews([new ProvidersViewDescriptor()]);
-		// if (ENABLE_SCM_COMBO) {
-		// 	this.onDidAddRepository(this.combinedRepository);
-		// }
-
-		// ViewsRegistry.registerViews([new ProvidersViewDescriptor()]);
+		this.scmService.onDidAddRepository(this.onDidAddRepository, this, this.disposables);
+		this.scmService.onDidRemoveRepository(this.onDidRemoveRepository, this, this.disposables);
+		this.scmService.repositories.forEach(r => this.onDidAddRepository(r));
+		this.onDidChangeRepositories();
 	}
 
-	// private onDidAddRepository(repository: ISCMRepository): void {
-	// 	const viewDescriptor = new ProviderViewDescriptor(repository);
-	// 	this.repositoryToViewDescriptor.set(repository.provider.id, viewDescriptor);
+	private onDidAddRepository(repository: ISCMRepository): void {
+		this.onDidChangeRepositories();
 
-	// private onDidRemoveRepository(repository: ISCMRepository): void {
-	// 	const viewDescriptor = this.repositoryToViewDescriptor.get(repository.provider.id);
-	// 	this.repositoryToViewDescriptor.delete(repository.provider.id);
-	// 	viewDescriptor.dispose();
+		const index = this._repositories.length;
+		this._repositories.push(repository);
+		this._onDidSplice.fire({ index, deleteCount: 0, elements: [repository] });
 
-	// 	ViewsRegistry.deregisterViews([viewDescriptor.id], ViewLocation.SCM);
-	// 	toggleClass(this.getContainer().getHTMLElement(), 'empty', this.views.length === 0);
-	// 	this.updateTitleArea();
-	// }
-
-	// setVisible(visible: boolean): TPromise<void> {
-	// 	return super.setVisible(visible).then(() => {
-	// 		toggleClass(this.getContainer().getHTMLElement(), 'empty', this.views.length === 0);
-	// 	});
-	// }
-
-	isRepositoryVisible(repository: ISCMRepository): boolean {
-		// const view = this.repositoryToViewDescriptor.get(repository.provider.id);
-		// return !!this.getView(view.id);
-		return true;
-	}
-
-	// toggleRepositoryVisibility(repository: ISCMRepository, visible: boolean): void {
-	// 	const view = this.repositoryToViewDescriptor.get(repository.provider.id);
-	// 	this.toggleViewVisibility(view.id, visible);
-	// }
-
-	// setRepositoriesVisible(repositories: ISCMRepository[]) {
-	// 	this.repositoryToViewDescriptor.forEach(view => {
-	// 		const visible = repositories.indexOf(view.repository) !== -1;
-	// 		if (this.isVisible()) {
-	// 			this.toggleViewVisibility(view.id, visible);
-	// 		}
-	// 	});
-	// }
-
-	getPendingChangesCount(repository: ISCMRepository): number {
-		if (typeof repository.provider.count === 'number') {
-			return repository.provider.count;
+		if (!this.mainPanel) {
+			this.onSelectionChange(this.repositories);
 		}
-		return repository.provider.resources.reduce<number>((r, g) => r + g.resourceCollection.resources.length, 0);
 	}
 
-	// protected createView(viewDescriptor: IViewDescriptor, initialSize: number, options: IViewletViewOptions): IViewletView {
-	// 	if (viewDescriptor instanceof ProviderViewDescriptor) {
-	// 		return this.instantiationService.createInstance(ProviderView, initialSize, viewDescriptor.repository, options);
-	// 	} else if (viewDescriptor instanceof ProvidersViewDescriptor) {
-	// 		return this.instantiationService.createInstance(ProvidersView, initialSize, this, options);
-	// 	}
-	//
-	// 	return this.instantiationService.createInstance(viewDescriptor.ctor, initialSize, options);
-	// }
+	private onDidRemoveRepository(repository: ISCMRepository): void {
+		this.onDidChangeRepositories();
 
-	// protected getDefaultViewSize(): number | undefined {
-	// 	return this.dimension && this.dimension.height / Math.max(this.views.length, 1);
-	// }
+		const index = this._repositories.indexOf(repository);
+
+		if (index === -1) {
+			return;
+		}
+
+		this._repositories.splice(index, 1);
+		this._onDidSplice.fire({ index, deleteCount: 1, elements: [] });
+
+		if (!this.mainPanel) {
+			this.onSelectionChange(this.repositories);
+		}
+	}
+
+	private onDidChangeRepositories(): void {
+		toggleClass(this.el, 'empty', this.scmService.repositories.length === 0);
+
+		const shouldMainPanelBeVisible = this.scmService.repositories.length > 1;
+
+		if (!!this.mainPanel === shouldMainPanelBeVisible) {
+			return;
+		}
+
+		if (shouldMainPanelBeVisible) {
+			this.mainPanel = this.instantiationService.createInstance(MainPanel, this);
+			const selectionChangeDisposable = this.mainPanel.onSelectionChange(this.onSelectionChange, this);
+			this.addPanel(this.mainPanel, this.mainPanel.minimumSize, 0);
+
+			this.mainPanelDisposable = toDisposable(() => {
+				this.removePanel(this.mainPanel);
+				selectionChangeDisposable.dispose();
+				this.mainPanel.dispose();
+			});
+		} else {
+			this.mainPanelDisposable.dispose();
+			this.mainPanelDisposable = EmptyDisposable;
+			this.mainPanel = null;
+		}
+	}
 
 	getOptimalWidth(): number {
 		return 400;
@@ -893,20 +784,20 @@ export class SCMViewlet extends PanelViewlet {
 
 	getTitle(): string {
 		const title = localize('source control', "Source Control");
-		// const views = ViewsRegistry.getViews(ViewLocation.SCM);
 
-		// if (views.length === 1) {
-		// 	const view = views[0];
-		// 	return localize('viewletTitle', "{0}: {1}", title, view.name);
-		// } else {
-		return title;
-		// }
+		if (this.repositories.length === 1) {
+			const [repository] = this.repositories;
+			return localize('viewletTitle', "{0}: {1}", title, repository.provider.label);
+		} else {
+			return title;
+		}
 	}
 
 	getActions(): IAction[] {
-		// if (this.isSingleView) {
-		// 	return this.views[0].getActions();
-		// }
+		if (this.isSingleView()) {
+			const [panel] = this.repositoryPanels;
+			return panel.getActions();
+		}
 
 		return this.menus.getTitleActions();
 	}
@@ -914,18 +805,20 @@ export class SCMViewlet extends PanelViewlet {
 	getSecondaryActions(): IAction[] {
 		let result: IAction[];
 
-		// if (this.isSingleView) {
-		// 	result = [
-		// 		...this.views[0].getSecondaryActions(),
-		// 		new Separator()
-		// 	];
-		// } else {
-		result = this.menus.getTitleSecondaryActions();
+		if (this.isSingleView()) {
+			const [panel] = this.repositoryPanels;
 
-		if (result.length > 0) {
-			result.push(new Separator());
+			result = [
+				...panel.getSecondaryActions(),
+				new Separator()
+			];
+		} else {
+			result = this.menus.getTitleSecondaryActions();
+
+			if (result.length > 0) {
+				result.push(new Separator());
+			}
 		}
-		// }
 
 		result.push(this.instantiationService.createInstance(InstallAdditionalSCMProvidersAction));
 
@@ -940,20 +833,50 @@ export class SCMViewlet extends PanelViewlet {
 		return new SCMMenuItemActionItem(action, this.keybindingService, this.messageService);
 	}
 
-	addRepositoryPanel(panel: RepositoryPanel, size: number, index?: number): void {
-		this.addPanel(panel, size, index + 1);
+	layout(dimension: Dimension): void {
+		super.layout(dimension);
+		this._height = dimension.height;
 	}
 
-	removeRepositoryPanel(panel: RepositoryPanel): void {
-		this.removePanel(panel);
+	private onSelectionChange(repositories: ISCMRepository[]): void {
+		// Remove unselected panels
+		this.repositoryPanels
+			.filter(p => repositories.every(r => p.repository !== r))
+			.forEach(panel => this.removePanel(panel));
+
+		// Collect panels still selected
+		const repositoryPanels = this.repositoryPanels
+			.filter(p => repositories.some(r => p.repository === r));
+
+		// Collect new selected panels
+		const newRepositoryPanels = repositories
+			.filter(r => this.repositoryPanels.every(p => p.repository !== r))
+			.map(r => this.instantiationService.createInstance(RepositoryPanel, r));
+
+		// Add new selected panels
+		this.repositoryPanels = [...repositoryPanels, ...newRepositoryPanels];
+		newRepositoryPanels.forEach(panel => {
+			this.addPanel(panel, panel.minimumSize, this.length);
+			panel.repository.focus();
+		});
+
+		// Resize all panels equally
+		const height = typeof this.height === 'number' ? this.height : 1000;
+		const mainPanelHeight = this.mainPanel ? this.mainPanel.minimumSize : 0;
+		const size = (height - mainPanelHeight) / repositories.length;
+
+		for (const panel of this.repositoryPanels) {
+			this.resizePanel(panel, size);
+		}
 	}
 
-	moveRepositoryPanel(from: RepositoryPanel, to: RepositoryPanel): void {
-		this.movePanel(from, to);
+	protected isSingleView(): boolean {
+		return super.isSingleView() && this.repositories.length === 1;
 	}
 
 	dispose(): void {
 		this.disposables = dispose(this.disposables);
+		this.mainPanelDisposable.dispose();
 		super.dispose();
 	}
 }

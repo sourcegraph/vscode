@@ -11,7 +11,6 @@ import { localize } from 'vs/nls';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { chain } from 'vs/base/common/event';
 import { PagedModel, IPagedModel } from 'vs/base/common/paging';
-import { ViewSizing } from 'vs/base/browser/ui/splitview/splitview';
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
 import { IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
@@ -25,7 +24,7 @@ import { IFolderAction, AddWorkspaceFolderAction, RemoveWorkspaceFoldersAction, 
 import { IListService } from 'vs/platform/list/browser/listService';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { attachListStyler, attachBadgeStyler } from 'vs/platform/theme/common/styler';
-import { CollapsibleView, IViewletViewOptions, IViewOptions } from 'vs/workbench/browser/parts/views/views';
+import { ViewsViewletPanel, IViewletViewOptions, IViewOptions } from 'vs/workbench/browser/parts/views/viewsViewlet';
 import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { IWorkspaceContextService, WorkbenchState } from 'vs/platform/workspace/common/workspace';
 import { IEditorGroupService } from 'vs/workbench/services/group/common/groupService';
@@ -39,7 +38,7 @@ import { StandardKeyboardEvent } from 'vs/base/browser/keyboardEvent';
 import { KeyCode } from 'vs/base/common/keyCodes';
 import { defaultGenerator } from 'vs/base/common/idGenerator';
 
-export abstract class FoldersListView extends CollapsibleView {
+export abstract class FoldersListView extends ViewsViewletPanel {
 
 	private messageBox: HTMLElement;
 	private foldersList: HTMLElement;
@@ -48,7 +47,6 @@ export abstract class FoldersListView extends CollapsibleView {
 	private list: PagedList<IFolder>;
 
 	constructor(
-		initialSize: number,
 		private options: IViewletViewOptions,
 		@IKeybindingService keybindingService: IKeybindingService,
 		@IContextMenuService contextMenuService: IContextMenuService,
@@ -66,7 +64,7 @@ export abstract class FoldersListView extends CollapsibleView {
 		@IFoldersWorkbenchService protected catalogService: IFoldersWorkbenchService,
 		@IViewletService private viewletService: IViewletService,
 	) {
-		super(initialSize, { ...(options as IViewOptions), ariaHeaderLabel: options.name, sizing: ViewSizing.Flexible, collapsed: !!options.collapsed, initialBodySize: 1 * 62 }, keybindingService, contextMenuService);
+		super({ ...(options as IViewOptions), ariaHeaderLabel: options.name }, keybindingService, contextMenuService);
 
 		this.registerListeners();
 	}
@@ -77,7 +75,7 @@ export abstract class FoldersListView extends CollapsibleView {
 		const titleDiv = append(container, $('div.title'));
 		append(titleDiv, $('span')).textContent = this.options.name;
 		this.badge = new CountBadge(append(container, $('.count-badge-wrapper')));
-		this.toDispose.push(attachBadgeStyler(this.badge, this.themeService));
+		this.disposables.push(attachBadgeStyler(this.badge, this.themeService));
 	}
 
 	renderBody(container: HTMLElement): void {
@@ -95,17 +93,17 @@ export abstract class FoldersListView extends CollapsibleView {
 
 		const onKeyDownForList = onKeyDown.filter(() => this.count() > 0);
 		onKeyDownForList.filter(e => e.keyCode === KeyCode.Enter && (e.ctrlKey || (isMacintosh && e.metaKey)))
-			.on(this.onModifierEnter, this, this.toDispose);
+			.on(this.onModifierEnter, this, this.disposables);
 		onKeyDownForList.filter(e => e.keyCode === KeyCode.Delete || e.keyCode === KeyCode.Backspace)
-			.on(this.onDelete, this, this.toDispose);
+			.on(this.onDelete, this, this.disposables);
 
-		this.toDispose.push(attachListStyler(this.list.widget, this.themeService));
-		this.toDispose.push(this.listService.register(this.list.widget));
+		this.disposables.push(attachListStyler(this.list.widget, this.themeService));
+		this.disposables.push(this.listService.register(this.list.widget));
 
 		chain(this.list.onPin)
 			.map(e => e.elements[0])
 			.filter(e => !!e)
-			.on(this.pin, this, this.toDispose);
+			.on(this.pin, this, this.disposables);
 	}
 
 	setVisible(visible: boolean): TPromise<void> {
@@ -237,7 +235,7 @@ export class CurrentWorkspaceFoldersView extends FoldersListView {
 		// a root is removed. All other changes are handled by the actions' and widgets'
 		// own listeners within an entry.
 		if (this.contextService.getWorkbenchState() !== WorkbenchState.EMPTY) {
-			this.toDispose.push(this.contextService.onDidChangeWorkspaceFolders(() => {
+			this.disposables.push(this.contextService.onDidChangeWorkspaceFolders(() => {
 				this.show(''); // trigger a reload; query is always empty in this view
 			}));
 		}

@@ -6,7 +6,7 @@
 'use strict';
 
 import { TPromise } from 'vs/base/common/winjs.base';
-import { OpenContext, IWindowConfiguration, ReadyState, INativeOpenDialogOptions } from 'vs/platform/windows/common/windows';
+import { OpenContext, IWindowConfiguration, ReadyState, INativeOpenDialogOptions, IEnterWorkspaceResult } from 'vs/platform/windows/common/windows';
 import { ParsedArgs } from 'vs/platform/environment/common/environment';
 import Event from 'vs/base/common/event';
 import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
@@ -56,14 +56,13 @@ export interface IWindowsMainService {
 	onWindowsCountChanged: Event<IWindowsCountChangedEvent>;
 	onWindowClose: Event<number>;
 	onWindowReload: Event<number>;
-	onWindowWorkspaceOpen: Event<number>;
 
 	// methods
 	ready(initialUserEnv: IProcessEnvironment): void;
 	reload(win: ICodeWindow, cli?: ParsedArgs): void;
 	openWorkspace(win?: ICodeWindow): void;
-	createAndOpenWorkspace(win: ICodeWindow, folders?: string[], path?: string): TPromise<IWorkspaceIdentifier>;
-	saveAndOpenWorkspace(win: ICodeWindow, path: string): TPromise<IWorkspaceIdentifier>;
+	createAndEnterWorkspace(win: ICodeWindow, folders?: string[], path?: string): TPromise<IEnterWorkspaceResult>;
+	saveAndEnterWorkspace(win: ICodeWindow, path: string): TPromise<IEnterWorkspaceResult>;
 	closeWorkspace(win: ICodeWindow): void;
 	open(openConfig: IOpenConfiguration): ICodeWindow[];
 	openExtensionDevelopmentHostWindow(openConfig: IOpenConfiguration): void;

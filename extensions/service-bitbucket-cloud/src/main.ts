@@ -192,7 +192,7 @@ function checkBitbucketAppPassword(): boolean {
 function toCatalogFolder(repo: Repository): vscode.CatalogFolder {
 	return {
 		// These URIs are resolved by the resource resolver we register above.
-		resource: new vscode.Uri().with({ scheme: BITBUCKET_CLOUD_SCHEME, authority: 'bitbucket.org', path: `/repository/${encodeURIComponent(repo.uuid.replace(/[{}]/g, ''))}` }),
+		resource: vscode.Uri.parse('').with({ scheme: BITBUCKET_CLOUD_SCHEME, authority: 'bitbucket.org', path: `/repository/${encodeURIComponent(repo.uuid.replace(/[{}]/g, ''))}` }),
 
 		displayPath: repo.full_name,
 		displayName: repo.name,

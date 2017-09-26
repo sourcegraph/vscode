@@ -32,6 +32,7 @@ import { Verbosity } from 'vs/platform/editor/common/editor';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { TITLE_BAR_ACTIVE_BACKGROUND, TITLE_BAR_ACTIVE_FOREGROUND, TITLE_BAR_INACTIVE_FOREGROUND, TITLE_BAR_INACTIVE_BACKGROUND, TITLE_BAR_BORDER } from 'vs/workbench/common/theme';
 import { IPartService } from 'vs/workbench/services/part/common/partService';
+import { isMacintosh } from 'vs/base/common/platform';
 
 export class TitlebarPart extends Part implements ITitleService {
 
@@ -40,7 +41,7 @@ export class TitlebarPart extends Part implements ITitleService {
 	private static NLS_UNSUPPORTED = nls.localize('patchedWindowTitle', "[Unsupported]");
 	private static NLS_EXTENSION_HOST = nls.localize('devExtensionWindowTitlePrefix', "[Extension Development Host]");
 	private static TITLE_DIRTY = '\u25cf ';
-	private static TITLE_SEPARATOR = ' — ';
+	private static TITLE_SEPARATOR = isMacintosh ? ' - ' : ' - '; // macOS uses special - separator
 
 	private titleContainer: Builder;
 	private title: Builder;
@@ -194,7 +195,7 @@ export class TitlebarPart extends Part implements ITitleService {
 		// Compute folder resource
 		// Single Root Workspace: always the root single workspace in this case
 		// Otherwise: root folder of the currently active file if any
-		let folder = this.contextService.getWorkbenchState() === WorkbenchState.FOLDER ? workspace.folders[0] : this.contextService.getWorkspaceFolder(toResource(input, { supportSideBySide: true, filter: 'file' }));
+		let folder = this.contextService.getWorkbenchState() === WorkbenchState.FOLDER ? workspace.folders[0] : this.contextService.getWorkspaceFolder(toResource(input, { supportSideBySide: true }));
 
 		// Variables
 		const activeEditorShort = input ? input.getTitle(Verbosity.SHORT) : '';
@@ -202,7 +203,7 @@ export class TitlebarPart extends Part implements ITitleService {
 		const activeEditorLong = input ? input.getTitle(Verbosity.LONG) : activeEditorMedium;
 		const rootName = workspace.name;
 		const rootPath = root ? labels.getPathLabel(root, void 0, this.environmentService) : '';
-		const folderName = folder ? (paths.basename(folder.uri.fsPath) || folder.uri.fsPath) : '';
+		const folderName = folder ? folder.name : '';
 		const folderPath = folder ? labels.getPathLabel(folder.uri, void 0, this.environmentService) : '';
 		const dirty = input && input.isDirty() ? TitlebarPart.TITLE_DIRTY : '';
 		const appName = this.environmentService.appNameLong;

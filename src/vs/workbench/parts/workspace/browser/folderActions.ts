@@ -244,7 +244,7 @@ export class ExploreWorkspaceFolderAction extends Action {
 			const explorerView = viewlet.getExplorerView();
 			if (explorerView) {
 				explorerView.select(this.catalogService.getWorkspaceFolderForCatalogFolder(this.folder), true);
-				explorerView.expand();
+				explorerView.setExpanded(true);
 			}
 			return void 0;
 		});
@@ -449,11 +449,11 @@ export class AddLocalWorkspaceFolderAction extends BaseWorkspacesAction {
 
 	public run(): TPromise<any> {
 		if (this.contextService.getWorkbenchState() !== WorkbenchState.WORKSPACE) {
-			return this.windowService.createAndOpenWorkspace([]);
+			return this.windowService.createAndEnterWorkspace([]);
 		}
 
 		if (this.contextService.getWorkbenchState() === WorkbenchState.FOLDER) {
-			return this.windowService.createAndOpenWorkspace([this.contextService.getWorkspace().folders[0].toString()]);
+			return this.windowService.createAndEnterWorkspace([this.contextService.getWorkspace().folders[0].toString()]);
 		}
 
 		const folders = super.pickFolders(mnemonicButtonLabel(localize({ key: 'add', comment: ['&& denotes a mnemonic'] }, "&&Add")), localize('addFolderToWorkspaceTitle', "Add Folder to Workspace"));

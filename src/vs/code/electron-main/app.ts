@@ -240,9 +240,9 @@ export class CodeApplication {
 		});
 
 		// Keyboard layout changes
-		KeyboardLayoutMonitor.INSTANCE.onDidChangeKeyboardLayout(isISOKeyboard => {
+		KeyboardLayoutMonitor.INSTANCE.onDidChangeKeyboardLayout(() => {
 			if (this.windowsMainService) {
-				this.windowsMainService.sendToAll('vscode:keyboardLayoutChanged', isISOKeyboard);
+				this.windowsMainService.sendToAll('vscode:keyboardLayoutChanged', false);
 			}
 		});
 	}
@@ -306,7 +306,8 @@ export class CodeApplication {
 		if (this.environmentService.eventLogDebug || (this.environmentService.isBuilt && !this.environmentService.isExtensionDevelopment && !!product.enableTelemetry)) {
 			const channel = getDelayedChannel<ITelemetryAppenderChannel>(this.sharedProcessClient.then(c => c.getChannel('telemetryAppender')));
 			const appender = new TelemetryAppenderClient(channel, WindowLevel.Main);
-			const commonProperties = resolveCommonProperties(product.commit, pkg.version)
+			const commonProperties = resolveCommonProperties(product.commit, pkg.version, this.environmentService.installSource)
+				// __GDPR__COMMON__ "common.machineId" : { "classification": "EndUserPseudonymizedInformation", "purpose": "FeatureInsight" }
 				.then(result => Object.defineProperty(result, 'common.machineId', {
 					get: () => this.storageService.getItem(machineIdStorageKey),
 					enumerable: true

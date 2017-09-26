@@ -17,7 +17,7 @@ import { IExtensionService } from 'vs/platform/extensions/common/extensions';
 import { VIEWLET_ID, IManagementViewlet } from 'vs/workbench/parts/management/common/management';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { ViewsRegistry, ViewLocation, IViewDescriptor } from 'vs/workbench/browser/parts/views/viewsRegistry';
-import { PersistentViewsViewlet } from 'vs/workbench/browser/parts/views/views';
+import { PersistentViewsViewlet } from 'vs/workbench/browser/parts/views/viewsViewlet';
 import { IStorageService } from 'vs/platform/storage/common/storage';
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
 import { IContextKeyService, RawContextKey, IContextKey } from 'vs/platform/contextkey/common/contextkey';

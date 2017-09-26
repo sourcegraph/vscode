@@ -27,7 +27,7 @@ import { ITextModelService } from 'vs/editor/common/services/resolverService';
 import { IEditorInput, IEditorOptions, Position, Direction, IEditor, IResourceInput, ITextEditorSelection } from 'vs/platform/editor/common/editor';
 import { IUntitledEditorService, UntitledEditorService } from 'vs/workbench/services/untitled/common/untitledEditorService';
 import { IMessageService, IConfirmation } from 'vs/platform/message/common/message';
-import { IWorkspaceContextService, IWorkspace as IWorkbenchWorkspace, WorkbenchState, WorkspaceFolder } from 'vs/platform/workspace/common/workspace';
+import { IWorkspaceContextService, IWorkspace as IWorkbenchWorkspace, WorkbenchState, IWorkspaceFolder, IWorkspaceFoldersChangeEvent } from 'vs/platform/workspace/common/workspace';
 import { ILifecycleService, ShutdownEvent, ShutdownReason, StartupKind, LifecyclePhase } from 'vs/platform/lifecycle/common/lifecycle';
 import { EditorStacksModel } from 'vs/workbench/common/editor/editorStacksModel';
 import { ServiceCollection } from 'vs/platform/instantiation/common/serviceCollection';
@@ -46,7 +46,7 @@ import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/edi
 import { IHistoryService, IStackEntry } from 'vs/workbench/services/history/common/history';
 import { IInstantiationService, ServicesAccessor } from 'vs/platform/instantiation/common/instantiation';
 import { TestConfigurationService } from 'vs/platform/configuration/test/common/testConfigurationService';
-import { IWindowsService, IWindowService, INativeOpenDialogOptions } from 'vs/platform/windows/common/windows';
+import { IWindowsService, IWindowService, INativeOpenDialogOptions, IEnterWorkspaceResult } from 'vs/platform/windows/common/windows';
 import { TestWorkspace } from 'vs/platform/workspace/test/common/testWorkspace';
 import { RawTextSource, IRawTextSource } from 'vs/editor/common/model/textSource';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
@@ -74,14 +74,14 @@ export class TestContextService implements IWorkspaceContextService {
 	private options: any;
 
 	private _onDidChangeWorkspaceName: Emitter<void>;
-	private _onDidChangeWorkspaceFolders: Emitter<void>;
+	private _onDidChangeWorkspaceFolders: Emitter<IWorkspaceFoldersChangeEvent>;
 	private _onDidChangeWorkbenchState: Emitter<WorkbenchState>;
 
 	constructor(workspace: any = TestWorkspace, options: any = null) {
 		this.workspace = workspace;
 		this.id = generateUuid();
 		this.options = options || Object.create(null);
-		this._onDidChangeWorkspaceFolders = new Emitter<void>();
+		this._onDidChangeWorkspaceFolders = new Emitter<IWorkspaceFoldersChangeEvent>();
 		this._onDidChangeWorkbenchState = new Emitter<WorkbenchState>();
 	}
 
@@ -89,7 +89,7 @@ export class TestContextService implements IWorkspaceContextService {
 		return this._onDidChangeWorkspaceName.event;
 	}
 
-	public get onDidChangeWorkspaceFolders(): Event<void> {
+	public get onDidChangeWorkspaceFolders(): Event<IWorkspaceFoldersChangeEvent> {
 		return this._onDidChangeWorkspaceFolders.event;
 	}
 
@@ -97,7 +97,7 @@ export class TestContextService implements IWorkspaceContextService {
 		return this._onDidChangeWorkbenchState.event;
 	}
 
-	public getFolders(): WorkspaceFolder[] {
+	public getFolders(): IWorkspaceFolder[] {
 		return this.workspace ? this.workspace.folders : [];
 	}
 
@@ -115,7 +115,7 @@ export class TestContextService implements IWorkspaceContextService {
 		return this.workspace;
 	}
 
-	public getWorkspaceFolder(resource: URI): WorkspaceFolder {
+	public getWorkspaceFolder(resource: URI): IWorkspaceFolder {
 		return this.isInsideWorkspace(resource) ? this.workspace.folders[0] : null;
 	}
 
@@ -919,11 +919,11 @@ export class TestWindowService implements IWindowService {
 		return TPromise.as(void 0);
 	}
 
-	createAndOpenWorkspace(folders?: string[], path?: string): TPromise<IWorkspaceIdentifier> {
+	createAndEnterWorkspace(folders?: string[], path?: string): TPromise<IEnterWorkspaceResult> {
 		return TPromise.as(void 0);
 	}
 
-	saveAndOpenWorkspace(path: string): TPromise<IWorkspaceIdentifier> {
+	saveAndEnterWorkspace(path: string): TPromise<IEnterWorkspaceResult> {
 		return TPromise.as(void 0);
 	}
 
@@ -1067,11 +1067,11 @@ export class TestWindowsService implements IWindowsService {
 		return TPromise.as(void 0);
 	}
 
-	createAndOpenWorkspace(windowId: number, folders?: string[], path?: string): TPromise<IWorkspaceIdentifier> {
+	createAndEnterWorkspace(windowId: number, folders?: string[], path?: string): TPromise<IEnterWorkspaceResult> {
 		return TPromise.as(void 0);
 	}
 
-	saveAndOpenWorkspace(windowId: number, path: string): TPromise<IWorkspaceIdentifier> {
+	saveAndEnterWorkspace(windowId: number, path: string): TPromise<IEnterWorkspaceResult> {
 		return TPromise.as(void 0);
 	}
 

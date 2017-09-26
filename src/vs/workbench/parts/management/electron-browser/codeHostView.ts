@@ -10,13 +10,12 @@ import DOM = require('vs/base/browser/dom');
 import { TPromise } from 'vs/base/common/winjs.base';
 import { Button } from 'vs/base/browser/ui/button/button';
 import { Builder, $ } from 'vs/base/browser/builder';
-import { CollapsibleView, IViewletViewOptions, IViewOptions } from 'vs/workbench/browser/parts/views/views';
+import { ViewsViewletPanel, IViewletViewOptions, IViewOptions } from 'vs/workbench/browser/parts/views/viewsViewlet';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { attachButtonStyler } from 'vs/platform/theme/common/styler';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
-import { ViewSizing } from 'vs/base/browser/ui/splitview/splitview';
 import { ICommandService } from 'vs/platform/commands/common/commands';
 import { IExtensionService } from 'vs/platform/extensions/common/extensions';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
@@ -27,7 +26,7 @@ import { IConfigurationService, IConfigurationServiceEvent } from 'vs/platform/c
  * This view is responsible for exposing commands from the service-git and service-bitbucket-cloud extensions so that
  * a user can add an authentication token.
  */
-export class CodeHostView extends CollapsibleView {
+export class CodeHostView extends ViewsViewletPanel {
 
 	public static readonly ID = 'management.codeHost';
 
@@ -35,7 +34,6 @@ export class CodeHostView extends CollapsibleView {
 	private bitbucketAccessTokenButton: Button;
 
 	constructor(
-		initialSize: number,
 		options: IViewletViewOptions,
 		@ITelemetryService private telemetryService: ITelemetryService,
 		@IThemeService private themeService: IThemeService,
@@ -46,7 +44,7 @@ export class CodeHostView extends CollapsibleView {
 		@IExtensionService private extensionService: IExtensionService,
 		@IConfigurationService private configurationService: IConfigurationService
 	) {
-		super(initialSize, { ...(options as IViewOptions), sizing: ViewSizing.Flexible }, keybindingService, contextMenuService);
+		super({ ...(options as IViewOptions) }, keybindingService, contextMenuService);
 
 		this.configurationService.onDidUpdateConfiguration(async (e) => {
 			await this.updateButtonLabelsForConfigEvent(e);

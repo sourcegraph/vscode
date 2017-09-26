@@ -26,7 +26,7 @@ import { IEditorGroupService } from 'vs/workbench/services/group/common/groupSer
 import { IMessageService } from 'vs/platform/message/common/message';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IWorkspaceConfigurationService } from 'vs/workbench/services/configuration/common/configuration';
-import { IWindowsService, IWindowService, IWindowSettings, IPath, IOpenFileRequest, IWindowsConfiguration, IAddFoldersRequest } from 'vs/platform/windows/common/windows';
+import { IWindowsService, IWindowService, IWindowSettings, IPath, IOpenFileRequest, IWindowsConfiguration, IAddFoldersRequest, IRunActionInWindowRequest } from 'vs/platform/windows/common/windows';
 import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
@@ -137,9 +137,31 @@ export class ElectronWindow extends Themable {
 		});
 
 		// Support runAction event
-		ipc.on('vscode:runAction', (event, actionId: string) => {
-			this.commandService.executeCommand(actionId, { from: 'menu' }).done(_ => {
-				this.telemetryService.publicLog('commandExecuted', { id: actionId, from: 'menu' });
+		ipc.on('vscode:runAction', (event, request: IRunActionInWindowRequest) => {
+			const args: any[] = [];
+
+			// If we run an action from the touchbar, we fill in the currently active resource
+			// as payload because the touch bar items are context aware depending on the editor
+			if (request.from === 'touchbar') {
+				const activeEditor = this.editorService.getActiveEditor();
+				if (activeEditor) {
+					const resource = toResource(activeEditor.input, { supportSideBySide: true });
+					if (resource) {
+						args.push(resource);
+					}
+				}
+			} else {
+				args.push({ from: request.from }); // TODO@telemetry this is a bit weird to send this to every action?
+			}
+
+			this.commandService.executeCommand(request.id, ...args).done(_ => {
+				/* __GDPR__
+					"commandExecuted" : {
+						"id" : { "classification": "SystemMetaData", "purpose": "FeatureInsight" },
+						"from": { "classification": "SystemMetaData", "purpose": "FeatureInsight" }
+					}
+				*/
+				this.telemetryService.publicLog('commandExecuted', { id: request.id, from: request.from });
 			}, err => {
 				this.messageService.show(Severity.Error, err);
 			});
@@ -228,8 +250,8 @@ export class ElectronWindow extends Themable {
 		});
 
 		// keyboard layout changed event
-		ipc.on('vscode:keyboardLayoutChanged', (event, isISOKeyboard: boolean) => {
-			KeyboardMapperFactory.INSTANCE._onKeyboardLayoutChanged(isISOKeyboard);
+		ipc.on('vscode:keyboardLayoutChanged', event => {
+			KeyboardMapperFactory.INSTANCE._onKeyboardLayoutChanged();
 		});
 
 		// keyboard layout changed event
@@ -409,7 +431,7 @@ export class ElectronWindow extends Themable {
 			workspaceFolders.push(...request.foldersToAdd.map(folderToAdd => URI.file(folderToAdd.filePath)));
 
 			// Create workspace and open (ensure no duplicates)
-			this.workspaceEditingService.createAndOpenWorkspace(arrays.distinct(workspaceFolders.map(folder => folder.fsPath), folder => platform.isLinux ? folder : folder.toLowerCase()));
+			this.workspaceEditingService.createAndEnterWorkspace(arrays.distinct(workspaceFolders.map(folder => folder.fsPath), folder => platform.isLinux ? folder : folder.toLowerCase()));
 		}
 	}
 

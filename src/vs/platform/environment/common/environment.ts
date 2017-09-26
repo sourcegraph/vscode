@@ -44,6 +44,7 @@ export interface ParsedArgs {
 	'skip-getting-started'?: boolean;
 	'sticky-quickopen'?: boolean;
 	'export-default-configuration'?: string;
+	'install-source'?: string;
 }
 
 export const IEnvironmentService = createDecorator<IEnvironmentService>('environmentService');
@@ -106,6 +107,7 @@ export interface IEnvironmentService {
 
 	nodeCachedDataDir: string;
 
+	installSource: string;
 	sourcegraphContext: JSContext;
 	eventLogDebug: boolean;
 }

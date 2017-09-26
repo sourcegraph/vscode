@@ -213,12 +213,12 @@ export class CommandCenter {
 		const opts: TextDocumentShowOptions = {
 			preserveFocus,
 			preview,
-			viewColumn: window.activeTextEditor && window.activeTextEditor.viewColumn || ViewColumn.One
+			viewColumn: ViewColumn.Active
 		};
 
 		const activeTextEditor = window.activeTextEditor;
 
-		if (preserveSelection && activeTextEditor && activeTextEditor.document.uri.fsPath === right.fsPath) {
+		if (preserveSelection && activeTextEditor && activeTextEditor.document.uri.toString() === right.toString()) {
 			opts.selection = activeTextEditor.selection;
 		}
 
@@ -348,6 +348,11 @@ export class CommandCenter {
 		});
 
 		if (!url) {
+			/* __GDPR__
+				"clone" : {
+					"outcome" : { "classification": "SystemMetaData", "purpose": "FeatureInsight" }
+				}
+			*/
 			this.telemetryReporter.sendTelemetryEvent('clone', { outcome: 'no_URL' });
 			return;
 		}
@@ -362,6 +367,11 @@ export class CommandCenter {
 		});
 
 		if (!parentPath) {
+			/* __GDPR__
+				"clone" : {
+					"outcome" : { "classification": "SystemMetaData", "purpose": "FeatureInsight" }
+				}
+			*/
 			this.telemetryReporter.sendTelemetryEvent('clone', { outcome: 'no_directory' });
 			return;
 		}
@@ -379,14 +389,30 @@ export class CommandCenter {
 			const result = await window.showInformationMessage(localize('proposeopen', "Would you like to open the cloned repository?"), open);
 
 			const openFolder = result === open;
+			/* __GDPR__
+				"clone" : {
+					"outcome" : { "classification": "SystemMetaData", "purpose": "FeatureInsight" },
+					"openFolder": { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true }
+				}
+			*/
 			this.telemetryReporter.sendTelemetryEvent('clone', { outcome: 'success' }, { openFolder: openFolder ? 1 : 0 });
 			if (openFolder) {
 				commands.executeCommand('_workbench.addRoots', [Uri.file(repositoryPath)]);
 			}
 		} catch (err) {
 			if (/already exists and is not an empty directory/.test(err && err.stderr || '')) {
+				/* __GDPR__
+					"clone" : {
+						"outcome" : { "classification": "SystemMetaData", "purpose": "FeatureInsight" }
+					}
+				*/
 				this.telemetryReporter.sendTelemetryEvent('clone', { outcome: 'directory_not_empty' });
 			} else {
+				/* __GDPR__
+					"clone" : {
+						"outcome" : { "classification": "SystemMetaData", "purpose": "FeatureInsight" }
+					}
+				*/
 				this.telemetryReporter.sendTelemetryEvent('clone', { outcome: 'error' });
 			}
 			throw err;
@@ -449,10 +475,10 @@ export class CommandCenter {
 			const opts: TextDocumentShowOptions = {
 				preserveFocus,
 				preview: preview,
-				viewColumn: activeTextEditor && activeTextEditor.viewColumn || ViewColumn.One
+				viewColumn: ViewColumn.Active
 			};
 
-			if (activeTextEditor && activeTextEditor.document.uri.fsPath === uri.fsPath) {
+			if (activeTextEditor && activeTextEditor.document.uri.toString() === uri.toString()) {
 				opts.selection = activeTextEditor.selection;
 			}
 
@@ -1559,6 +1585,11 @@ export class CommandCenter {
 				});
 			}
 
+			/* __GDPR__
+				"git.command" : {
+					"command" : { "classification": "SystemMetaData", "purpose": "FeatureInsight" }
+				}
+			*/
 			this.telemetryReporter.sendTelemetryEvent('git.command', { command: id });
 
 			return result.catch(async err => {

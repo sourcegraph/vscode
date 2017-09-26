@@ -58,7 +58,7 @@ export function startup(configuration: IWindowConfiguration): TPromise<void> {
 
 	browser.setFullscreen(!!configuration.fullscreen);
 
-	KeyboardMapperFactory.INSTANCE._onKeyboardLayoutChanged(configuration.isISOKeyboard);
+	KeyboardMapperFactory.INSTANCE._onKeyboardLayoutChanged();
 
 	browser.setAccessibilitySupport(configuration.accessibilitySupport ? platform.AccessibilitySupport.Enabled : platform.AccessibilitySupport.Disabled);
 
@@ -111,7 +111,8 @@ function openWorkbench(configuration: IWindowConfiguration): TPromise<void> {
 
 function createAndInitializeWorkspaceService(configuration: IWindowConfiguration, environmentService: EnvironmentService, workspacesService: IWorkspacesService): TPromise<WorkspaceService> {
 	return validateWorkspacePath(configuration).then(() => {
-		let workspaceService: WorkspaceService = new WorkspaceService(environmentService, workspacesService);
+		const workspaceService = new WorkspaceService(environmentService, workspacesService);
+
 		return workspaceService.initialize(configuration.workspace || configuration.folderPath || configuration).then(() => workspaceService, error => workspaceService);
 	});
 }
@@ -141,7 +142,6 @@ function validateWorkspacePath(configuration: IWindowConfiguration): TPromise<vo
 }
 
 function createStorageService(workspaceService: IWorkspaceContextService, environmentService: IEnvironmentService): IStorageService {
-
 	let workspaceId: string;
 	let secondaryWorkspaceId: number;
 
