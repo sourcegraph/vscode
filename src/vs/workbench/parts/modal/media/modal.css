@@ -58,7 +58,7 @@
 	border-radius: 2px;
 	padding: 5px 12px;
 	width: 296px;
-	border: none;
+	border: 1px solid;
 	font-size: 14px;
 	line-height: 24px;
 }

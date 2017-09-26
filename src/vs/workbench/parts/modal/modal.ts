@@ -9,7 +9,7 @@ import { TPromise } from 'vs/base/common/winjs.base';
 import { Builder } from 'vs/base/browser/builder';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { ModalPart } from 'vs/workbench/parts/modal/modalPart';
-import { registerColor, inputBorder, inputBackground, inputForeground, buttonBackground, buttonForeground, inputValidationErrorBackground, inputValidationInfoBackground } from 'vs/platform/theme/common/colorRegistry';
+import { registerColor, editorActiveLinkForeground, inputBorder, inputBackground, inputForeground, buttonBackground, buttonForeground, inputValidationErrorBackground, inputValidationInfoBackground } from 'vs/platform/theme/common/colorRegistry';
 import { registerThemingParticipant } from 'vs/platform/theme/common/themeService';
 import { ProgressBar } from 'vs/base/browser/ui/progressbar/progressbar';
 import { SIDE_BAR_BACKGROUND, SIDE_BAR_FOREGROUND, PANEL_BORDER } from 'vs/workbench/common/theme';
@@ -232,13 +232,19 @@ export const modalButtonDisabledBackground = registerColor('modal.buttonDisabled
 	dark: inputValidationInfoBackground,
 	light: inputValidationInfoBackground,
 	hc: inputValidationInfoBackground
-}, localize('modalButtonDisbledBackground', "Modal button disabled background"));
+}, localize('modalButtonDisabledBackground', "Modal button disabled background"));
 
 export const modalButtonDisabledForeground = registerColor('modal.buttonDisabledForeground', {
 	dark: SIDE_BAR_FOREGROUND,
 	light: SIDE_BAR_FOREGROUND,
 	hc: SIDE_BAR_FOREGROUND
-}, localize('modalButtonDisbledForeground', "Modal button disabled foreground"));
+}, localize('modalButtonDisabledForeground', "Modal button disabled foreground"));
+
+export const modalActiveLinkForeground = registerColor('modal.activeLinkForeground', {
+	dark: editorActiveLinkForeground,
+	light: editorActiveLinkForeground,
+	hc: editorActiveLinkForeground
+}, localize('modalActiveLinkForeground', "Modal active link foreground"));
 
 registerThemingParticipant((theme, collector) => {
 	const baseModalSelector = '.monaco-shell .monaco-shell-content .part.modal .modal-body';
@@ -323,4 +329,9 @@ registerThemingParticipant((theme, collector) => {
 		collector.addRule(`${baseModalSelector} input[type=submit].modal-button-disabled { color: ${buttonDisabledForeground}; }`);
 		collector.addRule(`${baseModalSelector} .modal-button.modal-button-disabled { color: ${buttonDisabledForeground}; }`);
 	}
+	let activeLinkForeground = theme.getColor(modalActiveLinkForeground, true);
+	if (activeLinkForeground) {
+		collector.addRule(`${baseModalSelector} a { color: ${activeLinkForeground}; }`);
+	}
+
 });
