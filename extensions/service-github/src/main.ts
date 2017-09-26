@@ -209,14 +209,12 @@ query($owner: String!, $name: String!) {
 			return;
 		}
 
-		// Get head & base revision, set base revision
-		for (const refName of [choice.pullRequest.headRefName, choice.pullRequest.baseRefName]) {
-			const setRevisionArgs = (setRevisionCommand.arguments || []).concat(refName);
-			await vscode.commands.executeCommand(setRevisionCommand.command, ...setRevisionArgs);
-		}
+		// Set head revision.
+		const setRevisionArgs = (setRevisionCommand.arguments || []).concat(choice.pullRequest.headRefName);
+		await vscode.commands.executeCommand(setRevisionCommand.command, ...setRevisionArgs);
 
-		// Open comparison against head revision.
-		await vscode.commands.executeCommand('git.openComparison', sourceControl, `...${choice.pullRequest.headRefName}`);
+		// Open comparison against base revision.
+		await vscode.commands.executeCommand('git.openComparison', sourceControl, choice.pullRequest.baseRefName);
 	});
 
 
