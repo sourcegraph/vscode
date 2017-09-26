@@ -77,8 +77,8 @@ else
 				echo "Submitting apt-addpkg.json:"
 				cat apt-addpkg.json
 
-				step "Publish to repositories" \
-					./repoapi_client.sh -config apt-config.json -addpkg apt-addpkg.json
+				# step "Publish to repositories" \
+				#	./repoapi_client.sh -config apt-config.json -addpkg apt-addpkg.json
 			fi
 			# Submit to yum repo (disabled as it's manual until signing is automated)
 			# eval echo '{ \"server\": \"$LINUX_REPO_SERVER\", \"protocol\": \"$LINUX_REPO_PROTOCOL\", \"port\": \"$LINUX_REPO_PORT\", \"repositoryId\": \"$LINUX_REPO_YUM_ID\", \"username\": \"$LINUX_REPO_USERNAME\", \"password\": \"$LINUX_REPO_PASSWORD\" }' > yum-config.json
