@@ -551,7 +551,8 @@ export class RepositoryPanel extends ViewletPanel {
 		this.cachedHeight = height;
 		this.inputBox.layout();
 
-		const editorHeight = this.inputBox.height;
+		const acceptsInput = !!this.repository.provider.acceptInputCommand;
+		const editorHeight = acceptsInput ? this.inputBox.height : 0;
 		const listHeight = height - (editorHeight + 12 /* margin */);
 		this.listContainer.style.height = `${listHeight}px`;
 		this.list.layout(listHeight);
@@ -639,6 +640,8 @@ export class RepositoryPanel extends ViewletPanel {
 	}
 
 	private updateInputBox(): void {
+		toggleClass(this.inputBoxContainer, 'hidden', !this.repository.provider.acceptInputCommand);
+
 		if (typeof this.repository.provider.commitTemplate === 'undefined') {
 			return;
 		}
