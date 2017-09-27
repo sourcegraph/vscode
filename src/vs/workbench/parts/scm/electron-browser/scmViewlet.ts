@@ -245,6 +245,7 @@ class MainPanel extends ViewletPanel {
 		this.disposables.push(this.list);
 		this.disposables.push(attachListStyler(this.list, this.themeService));
 		this.list.onSelectionChange(e => this._onSelectionChange.fire(e.elements), null, this.disposables);
+		this.list.onContextMenu(e => this.onListContextMenu(e), null, this.disposables);
 		this.viewModel.onDidSplice(({ index, deleteCount, elements }) => this.splice(index, deleteCount, elements), null, this.disposables);
 		this.splice(0, 0, this.viewModel.repositories);
 	}
@@ -257,6 +258,18 @@ class MainPanel extends ViewletPanel {
 		const size = Math.min(5, this.viewModel.repositories.length) * 22;
 		this.minimumBodySize = size;
 		this.maximumBodySize = size;
+	}
+
+	private onListContextMenu(e: IListContextMenuEvent<ISCMRepository>): void {
+		const element = e.element;
+
+		const menus = this.instantiationService.createInstance(SCMMenus, element.provider);
+
+		this.contextMenuService.showContextMenu({
+			getAnchor: () => e.anchor,
+			getActions: () => TPromise.as(menus.getTitleSecondaryActions()),
+			getActionsContext: () => element.provider,
+		});
 	}
 }
 
@@ -277,7 +290,6 @@ class ResourceGroupRenderer implements IRenderer<ISCMResourceGroup, ResourceGrou
 		private actionItemProvider: IActionItemProvider,
 		private themeService: IThemeService
 	) { }
-
 	renderTemplate(container: HTMLElement): ResourceGroupTemplate {
 		const element = append(container, $('.resource-group'));
 		const name = append(element, $('.name'));
