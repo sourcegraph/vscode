@@ -92,7 +92,7 @@ export async function getBestRepositoryWorktree(repos: Repository[], canonicalRe
 		if (headCommit.hash === revision) {
 			return [repo, repo.root];
 		}
-		await repo.fetch(); // TODO(beyang): potentially parallelize or make optional
+		await repo.fetch({ all: true }); // TODO(beyang): potentially parallelize or make optional
 		const resolved = await resolveRevision(repo, canonicalRemoteUri, revision);
 		if (!resolved) {
 			continue;
@@ -136,6 +136,7 @@ export async function getBestRepositoryWorktree(repos: Repository[], canonicalRe
 			return [repo, worktree.path];
 		}
 	}
+	// We arrive here only if the revision could not be found, including in any of the remotes
 	return null;
 }
 
