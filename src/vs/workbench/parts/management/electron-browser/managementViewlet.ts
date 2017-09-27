@@ -88,7 +88,7 @@ export class ManagementViewlet extends PersistentViewsViewlet implements IManage
 		const profileViewDescriptorExists = viewDescriptors.some(v => v.id === profileViewDescriptor.id);
 		const updateViewDescriptorExists = viewDescriptors.some(v => v.id === updateViewDescriptor.id);
 
-		if (this.updateService.state === UpdateState.UpdateAvailable) {
+		if (this.updateService.state === UpdateState.UpdateDownloaded) {
 			if (!updateViewDescriptorExists) {
 				viewDescriptorsToRegister.push(updateViewDescriptor);
 			}
