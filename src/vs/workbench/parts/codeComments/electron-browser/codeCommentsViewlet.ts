@@ -129,6 +129,7 @@ export class CodeCommentsViewlet extends Viewlet {
 		parent.append(this.scrollContainer);
 
 		this._register(this.editorGroupService.onEditorsChanged(this.onEditorsChanged, this));
+		// TODO(nick): this should probably be pushed down into code comments service.
 		this._register(this.authService.onDidChangeCurrentUser(() => this.onEditorsChanged()));
 		this.onEditorsChanged();
 		return TPromise.as(null);
@@ -192,6 +193,7 @@ export class CodeCommentsViewlet extends Viewlet {
 		const config = this.configurationService.getConfiguration<IAuthConfiguration>();
 		const authed = this.authService.currentUser && this.authService.currentUser.currentOrgMember;
 		if (!config.auth.allowCodeCommentsWithoutAuth && !authed) {
+			// TODO(nick): differentiate between not signed in and not in an org.
 			this.recentThreadsView = false;
 			this.renderAuthenticationView();
 			return;
