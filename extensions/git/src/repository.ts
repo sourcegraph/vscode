@@ -6,7 +6,7 @@
 'use strict';
 
 import { Uri, Command, EventEmitter, Event, scm, SourceControl, SourceControlInputBox, CommandOptions, SourceControlResourceGroup, SourceControlResourceState, SourceControlResourceDecorations, Disposable, ProgressLocation, window, workspace, WorkspaceEdit } from 'vscode';
-import { Repository as BaseRepository, Ref, Branch, Remote, Commit, GitErrorCodes, Stash, RefType, IFileDiff } from './git';
+import { Repository as BaseRepository, Ref, Branch, Remote, Commit, GitErrorCodes, Stash, RefType, IFileDiff, Worktree } from './git';
 import { anyEvent, filterEvent, eventToPromise, dispose, find } from './util';
 import { memoize, throttle, debounce } from './decorators';
 import { toGitUri } from './uri';
@@ -225,6 +225,7 @@ export enum Operation {
 	Diff = 1 << 24,
 	MergeBase = 1 << 25,
 	RevParse = 1 << 26,
+	WorktreeList = 1 << 27,
 }
 
 // function getOperationName(operation: Operation): string {
@@ -575,6 +576,10 @@ export class Repository implements Disposable {
 		await this.run(Operation.WorktreePrune, () => this.repository.worktreePrune());
 	}
 
+	async worktreeList(): Promise<Worktree[]> {
+		return await this.run(Operation.WorktreeList, () => this.repository.worktreeList());
+	}
+
 	async getDiff(args: string[]): Promise<{ diff: IFileDiff[], didHitLimit: boolean }> {
 		return await this.run(Operation.Diff, () => this.repository.getDiff(args));
 	}
@@ -591,14 +596,18 @@ export class Repository implements Disposable {
 		return await this.repository.getCommit(ref);
 	}
 
+	async getBranch(branch: string): Promise<Branch> {
+		return await this.repository.getBranch(branch);
+	}
+
 	async reset(treeish: string, hard?: boolean): Promise<void> {
 		await this.run(Operation.Reset, () => this.repository.reset(treeish, hard));
 	}
 
 	@throttle
-	async fetch(): Promise<void> {
+	async fetch(op?: { all?: boolean }): Promise<void> {
 		try {
-			await this.run(Operation.Fetch, () => this.repository.fetch());
+			await this.run(Operation.Fetch, () => this.repository.fetch(op));
 		} catch (err) {
 			// noop
 		}

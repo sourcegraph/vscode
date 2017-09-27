@@ -36,6 +36,7 @@ import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
 import { VIEWLET_ID as EXPLORER_VIEWLET_ID } from 'vs/workbench/parts/files/common/files';
 import { parseGitURL } from 'vs/workbench/services/workspace/node/workspaceSharingService';
 import { IConfigurationEditingService, ConfigurationTarget } from 'vs/workbench/services/configuration/common/configurationEditing';
+import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
 
 type HandledURI = {
 	repo?: string;
@@ -66,7 +67,8 @@ export class NavService extends Disposable implements INavService {
 		@IExtensionService private extensionService: IExtensionService,
 		@IResourceResolverService private resourceResolverService: IResourceResolverService,
 		@IFoldersWorkbenchService private foldersWorkbenchService: IFoldersWorkbenchService,
-		@IConfigurationEditingService private configurationEditingService: IConfigurationEditingService
+		@IConfigurationEditingService private configurationEditingService: IConfigurationEditingService,
+		@IWorkspaceContextService private workspaceContextService: IWorkspaceContextService
 	) {
 		super();
 
@@ -132,10 +134,11 @@ export class NavService extends Disposable implements INavService {
 		if (!resource) {
 			return;
 		}
+		const resourceRev = resource.with({ query: query.revision });
 		let addFolderCompleted = false;
-		const addFolderPromise = this.foldersWorkbenchService.addFoldersAsWorkspaceRootFolders([resource]).then(([uri]) => {
+		const addFolderPromise = this.foldersWorkbenchService.addFoldersAsWorkspaceRootFolders([resourceRev]).then(([resolvedURI]) => {
 			addFolderCompleted = true;
-			return uri;
+			return resolvedURI;
 		});
 
 		// Show message only if adding the folder takes longer than 300ms.

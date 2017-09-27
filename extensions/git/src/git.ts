@@ -446,6 +446,14 @@ export interface Commit {
 	message: string;
 }
 
+export interface Worktree {
+	path: string;
+	head?: string;
+	detached?: boolean;
+	bare?: boolean;
+	branch?: string;
+}
+
 export class GitStatusParser {
 
 	private lastRaw = '';
@@ -729,6 +737,35 @@ export class Repository {
 		await this.run(['worktree', 'prune']);
 	}
 
+	async worktreeList(): Promise<Worktree[]> {
+		const execResult = await this.run(['worktree', 'list', '--porcelain']);
+		const worktreeChunks = execResult.stdout.split(/(?:\r?\n){2,}/);
+		const worktrees: (Worktree | null)[] = worktreeChunks.map(chunk => {
+			const lines = chunk.trim().split(/\r?\n/);
+			if (!lines[0].startsWith('worktree ')) {
+				return null;
+			}
+			const path = lines[0].slice('worktree '.length);
+			const props = new Map<String, any>();
+			for (const propLine of lines.slice(1)) {
+				const f = propLine.trim().indexOf(' ');
+				if (f === -1) {
+					props.set(propLine, true);
+				} else {
+					props.set(propLine.slice(0, f), propLine.slice(f + 1));
+				}
+			}
+			return {
+				path: path,
+				head: props.get('HEAD'),
+				bare: props.get('bare'),
+				branch: props.get('branch'),
+				detached: props.get('detached'),
+			};
+		});
+		return worktrees.filter(worktree => worktree) as Worktree[];
+	}
+
 	async commit(message: string, opts: { all?: boolean, amend?: boolean, signoff?: boolean, signCommit?: boolean } = Object.create(null)): Promise<void> {
 		const args = ['commit', '--quiet', '--allow-empty-message', '--file', '-'];
 
@@ -876,9 +913,13 @@ export class Repository {
 		}
 	}
 
-	async fetch(): Promise<void> {
+	async fetch(op?: { all?: boolean }): Promise<void> {
 		try {
-			await this.run(['fetch']);
+			if (op && op.all) {
+				await this.run(['fetch', '--all']);
+			} else {
+				await this.run(['fetch']);
+			}
 		} catch (err) {
 			if (/No remote repository specified\./.test(err.stderr || '')) {
 				err.gitErrorCode = GitErrorCodes.NoRemoteRepositorySpecified;
