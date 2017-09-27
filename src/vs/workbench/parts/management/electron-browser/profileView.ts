@@ -13,8 +13,10 @@ import { ViewsViewletPanel, IViewletViewOptions, IViewOptions } from 'vs/workben
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
+import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { IAuthService, IAuthConfiguration } from 'vs/platform/auth/common/auth';
+import { attachButtonStyler } from 'vs/platform/theme/common/styler';
 
 /**
  * AuthView is a collapasble viewlet rendered when the ManagementViewlet is triggered.
@@ -28,6 +30,7 @@ export class ProfileView extends ViewsViewletPanel {
 	constructor(
 		options: IViewletViewOptions,
 		@ITelemetryService private telemetryService: ITelemetryService,
+		@IThemeService private themeService: IThemeService,
 		@IKeybindingService keybindingService: IKeybindingService,
 		@IContextMenuService contextMenuService: IContextMenuService,
 		@IConfigurationService private configurationService: IConfigurationService,
@@ -79,7 +82,8 @@ export class ProfileView extends ViewsViewletPanel {
 			$('p').text(name).display('inline').verticalAlign('middle').padding(0, 5, 0, 5).appendTo(nameContainer);
 			const buttonContainer = $('div').display('inline').float('right').verticalAlign('middle').style('border-radius', '3px').padding(2).appendTo(nameContainer);
 			const signoutButton = new Button(buttonContainer);
-			signoutButton.label = 'Sign out';
+			attachButtonStyler(signoutButton, this.themeService);
+			signoutButton.label = nls.localize('management.profile.signoutLabel', 'Sign out');
 			signoutButton.addListener('click', () => {
 				this.authService.signOut();
 			});
@@ -93,6 +97,7 @@ export class ProfileView extends ViewsViewletPanel {
 		const buttonContainer = $('div').appendTo(signInContainer);
 		const signoutButton = new Button(buttonContainer);
 		signoutButton.label = nls.localize('management.profile.signInLabel', 'Sign in to Sourcegraph');
+		attachButtonStyler(signoutButton, this.themeService);
 		signoutButton.addListener('click', () => {
 			this.authService.showSignInFlow();
 		});

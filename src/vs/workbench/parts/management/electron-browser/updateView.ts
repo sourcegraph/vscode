@@ -13,6 +13,8 @@ import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IUpdateService } from 'vs/platform/update/common/update';
+import { IThemeService } from 'vs/platform/theme/common/themeService';
+import { attachButtonStyler } from 'vs/platform/theme/common/styler';
 
 /**
  * UpdateView is a collapasble viewlet rendered in the ManagementViewlet
@@ -25,6 +27,7 @@ export class UpdateView extends ViewsViewletPanel {
 	constructor(
 		options: IViewletViewOptions,
 		@ITelemetryService private telemetryService: ITelemetryService,
+		@IThemeService private themeService: IThemeService,
 		@IKeybindingService keybindingService: IKeybindingService,
 		@IContextMenuService contextMenuService: IContextMenuService,
 		@IUpdateService private updateService: IUpdateService
@@ -44,6 +47,7 @@ export class UpdateView extends ViewsViewletPanel {
 		const buttonContainer = $('div').appendTo(updateDiv).padding(15, 15, 15, 15);
 		const updateButton = new Button(buttonContainer);
 		updateButton.label = nls.localize('miRestartToUpdate', 'Restart to update');
+		attachButtonStyler(updateButton, this.themeService);
 		updateButton.addListener('click', () => {
 			this.telemetryService.publicLog('workbenchActionExecuted', { id: 'RestartToUpdate', from: 'managementViewlet' });
 			this.updateService.quitAndInstall();
