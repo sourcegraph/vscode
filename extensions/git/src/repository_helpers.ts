@@ -46,20 +46,21 @@ export async function createTempWorktree(repository: Repository, rev: string): P
 }
 
 /**
- * resolveRevision resolves a revision to an exact commit hash with respect to a particular remote. It returns a tuple of
- * the [full name of the remote branch if it exists, the resolved commit hash] or null if the resolution could not occur.
+ * resolveRevision resolves a revision to an exact commit hash with respect to a particular remote. It returns an object
+ * with the full name of the remote branch if it exists and the resolved commit hash, or null if the resolution
+ * could not occur.
  */
-export async function resolveRevision(repo: Repository, canonicalRemoteUri: string, rev: string): Promise<[string | null, string] | null> {
+export async function resolveRevision(repo: Repository, canonicalRemoteUri: string, rev: string): Promise<{ remoteBranch: string | null, commit: string } | null> {
 	// Resolve revision to hash
 	if (rev.length === 40) {
-		return [null, rev];
+		return { remoteBranch: null, commit: rev };
 	} else {
 		for (const remote of repo.remotes) {
 			if (canonicalRemote(remote.url) === canonicalRemoteUri) {
 				try {
 					const remoteBranch = `${remote.name}/${rev}`;
 					const commit = await repo.getCommit(remoteBranch);
-					return [remoteBranch, commit.hash];
+					return { remoteBranch: remoteBranch, commit: commit.hash };
 				} catch {/* commit not found */ }
 			}
 		}
@@ -85,36 +86,36 @@ export async function resolveRevision(repo: Repository, canonicalRemoteUri: stri
  */
 export async function getBestRepositoryWorktree(repos: Repository[], canonicalRemoteUri: string, revision: string): Promise<[Repository, string] | null> {
 	// Attempt to find a repository with the desired revision already checked out to the main worktree
-	const resolvedRepoRevs: [Repository, string | null, string][] = [];
+	const resolvedRepoRevs: { repo: Repository, remoteBranch: string | null, commit: string }[] = [];
 	for (const repo of repos) {
 		const headCommit = await repo.getCommit('HEAD');
 		if (headCommit.hash === revision) {
 			return [repo, repo.root];
 		}
-		await repo.fetch(); // TODO(beyang): parallelize potentially or make optional
+		await repo.fetch(); // TODO(beyang): potentially parallelize or make optional
 		const resolved = await resolveRevision(repo, canonicalRemoteUri, revision);
 		if (!resolved) {
 			continue;
 		}
-		const [remoteBranch, resolvedRevision] = resolved;
-		if (resolvedRevision === headCommit.hash) {
+		const { remoteBranch, commit } = resolved;
+		if (commit === headCommit.hash) {
 			return [repo, repo.root];
 		}
-		resolvedRepoRevs.push([repo, remoteBranch, resolvedRevision]);
+		resolvedRepoRevs.push({ repo, remoteBranch, commit });
 	}
-	const resolvedRepoRevsWorktrees: [Repository, string | null, string, Promise<Worktree[]>][] = [];
-	for (const [repo, remoteBranch, resolvedRev] of resolvedRepoRevs) {
-		resolvedRepoRevsWorktrees.push([repo, remoteBranch, resolvedRev, repo.worktreeList()]);
+	const resolvedRepoRevsWorktrees: { repo: Repository, remoteBranch: string | null, commit: string, worktreesP: Promise<Worktree[]> }[] = [];
+	for (const { repo, remoteBranch, commit } of resolvedRepoRevs) {
+		resolvedRepoRevsWorktrees.push({ repo, remoteBranch, commit, worktreesP: repo.worktreeList() });
 	}
 
 	if (revision.length !== 40) {
 		// Attempt to find a repository with a branch worktree whose upstream matches the revision
-		for (const [repo, remoteBranch, resolvedRevision, worktreesP] of resolvedRepoRevsWorktrees) {
+		for (const { repo, remoteBranch, commit, worktreesP } of resolvedRepoRevsWorktrees) {
 			for (const worktree of await worktreesP) {
 				if (worktree.branch) {
 					const branchName = worktree.branch.startsWith('refs/heads/') ? worktree.branch.slice('refs/heads/'.length) : worktree.branch;
 					const branch = await repo.getBranch(branchName);
-					if (branch.upstream && branch.upstream === remoteBranch && branch.commit === resolvedRevision) {
+					if (branch.upstream && branch.upstream === remoteBranch && branch.commit === commit) {
 						return [repo, worktree.path];
 					}
 				}
@@ -122,15 +123,15 @@ export async function getBestRepositoryWorktree(repos: Repository[], canonicalRe
 		}
 	}
 	// Attempt to find a repository with a worktree checked out to the resolved revision
-	for (const [repo, , resolvedRevision, worktreesP] of resolvedRepoRevsWorktrees) {
-		const worktree = await getRepositoryWorktree(repo, resolvedRevision, worktreesP);
+	for (const { repo, commit, worktreesP } of resolvedRepoRevsWorktrees) {
+		const worktree = await getRepositoryWorktree(repo, commit, worktreesP);
 		if (worktree) {
 			return [repo, worktree.path];
 		}
 	}
 	// Attempt to create a worktree checked out to the resolved revision
-	for (const [repo, , resolvedRevision, worktreesP] of resolvedRepoRevsWorktrees) {
-		const worktree = await getRepositoryWorktree(repo, resolvedRevision, worktreesP, true);
+	for (const { repo, commit, worktreesP } of resolvedRepoRevsWorktrees) {
+		const worktree = await getRepositoryWorktree(repo, commit, worktreesP, true);
 		if (worktree) {
 			return [repo, worktree.path];
 		}
