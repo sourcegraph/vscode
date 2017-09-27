@@ -724,36 +724,32 @@ export class Repository {
 	}
 
 	async worktreeList(): Promise<Worktree[]> {
-		const worktrees: Worktree[] = [];
 		const execResult = await this.run(['worktree', 'list', '--porcelain']);
-		const lines = execResult.stdout.split(/\r?\n/);
-		let l = 0;
-		while (l < lines.length) {
-			if (!lines[l].startsWith('worktree ')) {
-				l++;
-				continue;
+		const worktreeChunks = execResult.stdout.split(/(?:\r?\n){2,}/);
+		const worktrees: (Worktree | null)[] = worktreeChunks.map(chunk => {
+			const lines = chunk.trim().split(/\r?\n/);
+			if (!lines[0].startsWith('worktree ')) {
+				return null;
 			}
-			const path = lines[l].slice('worktree '.length).trim();
-			const props = new Map<string, any>();
-			l++;
-			while (l < lines.length && lines[l].trim().length > 0) {
-				const f = lines[l].trim().indexOf(' ');
+			const path = lines[0].slice('worktree '.length);
+			const props = new Map<String, any>();
+			for (const propLine of lines.slice(1)) {
+				const f = propLine.trim().indexOf(' ');
 				if (f === -1) {
-					props.set(lines[l], true);
+					props.set(propLine, true);
 				} else {
-					props.set(lines[l].slice(0, f), lines[l].slice(f + 1));
+					props.set(propLine.slice(0, f), propLine.slice(f + 1));
 				}
-				l++;
 			}
-			worktrees.push({
+			return {
 				path: path,
 				head: props.get('HEAD'),
 				bare: props.get('bare'),
 				branch: props.get('branch'),
 				detached: props.get('detached'),
-			});
-		}
-		return worktrees;
+			};
+		});
+		return worktrees.filter(worktree => worktree) as Worktree[];
 	}
 
 	async commit(message: string, opts: { all?: boolean, amend?: boolean, signoff?: boolean, signCommit?: boolean } = Object.create(null)): Promise<void> {
