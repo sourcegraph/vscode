@@ -1268,6 +1268,11 @@ export class CommandCenter {
 		}
 	}
 
+	@command('git.mergeBase', { repository: true })
+	async mergeBase(repository: Repository, ...args: string[]): Promise<string[]> {
+		return await repository.getMergeBase(args);
+	}
+
 	@command('git.createTag', { repository: true })
 	async createTag(repository: Repository): Promise<void> {
 		const inputTagName = await window.showInputBox({
