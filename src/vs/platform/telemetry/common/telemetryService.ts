@@ -18,8 +18,7 @@ import { cloneAndChange } from 'vs/base/common/objects';
 import { Registry } from 'vs/platform/registry/common/platform';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 import { CommandsRegistry } from 'vs/platform/commands/common/commands';
-// tslint:disable-next-line
-import { IAuthConfiguration } from 'vs/workbench/services/codeComments/browser/git';
+import { IAuthConfiguration } from 'vs/platform/auth/common/auth';
 
 export interface ITelemetryServiceConfig {
 	appender: ITelemetryAppender;

@@ -12,6 +12,7 @@ import { IConfigurationService } from 'vs/platform/configuration/common/configur
 import { IConfigurationEditingService, ConfigurationTarget } from 'vs/workbench/services/configuration/common/configurationEditing';
 import { IConfigurationRegistry, Extensions } from 'vs/platform/configuration/common/configurationRegistry';
 import { Registry } from 'vs/platform/registry/common/platform';
+import { IAuthConfiguration } from 'vs/platform/auth/common/auth';
 
 /**
  * Interface to intract with Git in the current workspace.
@@ -185,13 +186,6 @@ export class Git {
 		}
 		return repository.provider.executeCommand(params);
 	}
-}
-
-export interface IAuthConfiguration {
-	auth?: {
-		displayName?: string;
-		email?: string;
-	};
 }
 
 // Until we have real auth, just let the user configure their

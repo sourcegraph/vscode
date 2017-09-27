@@ -34,7 +34,7 @@ let descriptor = new GlobalViewletDescriptor(
 	'vs/workbench/parts/management/electron-browser/managementViewlet',
 	'ManagementViewlet',
 	VIEWLET_ID,
-	localize('management', "Management"),
+	localize('accountManagement', "Account Management"),
 	'management',
 	80,
 	UpdateContribution
