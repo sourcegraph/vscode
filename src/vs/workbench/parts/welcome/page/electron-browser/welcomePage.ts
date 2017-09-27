@@ -288,6 +288,12 @@ class WelcomePage {
 		const showOnStartup = <HTMLInputElement>container.querySelector('#showOnStartup');
 		const inactiveButtons = container.querySelectorAll('.sg-inactive');
 
+		// TMP: Remove team section from welcome page until fully supported.
+		const teamSection = container.querySelector('.splash.last') as HTMLElement;
+		if (teamSection) {
+			teamSection.style.display = 'none';
+		}
+
 		for (let i = 0; i < inactiveButtons.length; i++) {
 			inactiveButtons[i].addEventListener('click', e => {
 				this.messageService.show(Severity.Warning, localize('welcomePage.featureInactive', 'This feature has not been implemented yet.'));
