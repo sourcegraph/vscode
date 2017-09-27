@@ -205,5 +205,10 @@ Registry.as<IConfigurationRegistry>(Extensions.Configuration)
 				pattern: '^[^@]+@[^@]+\.[^@]+',
 				description: localize('email', "Your email address"),
 			},
+			'auth.allowCodeCommentsWithoutAuth': {
+				type: 'boolean',
+				default: false,
+				description: localize('allowCodeCommentsWithoutAuth', "Disable auth requirement for code comments (for debugging, will be removed soon)"),
+			}
 		}
 	});

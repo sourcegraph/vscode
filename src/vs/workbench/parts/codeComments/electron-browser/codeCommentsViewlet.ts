@@ -32,6 +32,8 @@ import { renderComment } from 'vs/workbench/parts/codeComments/browser/renderCom
 import { CodeCommentsController } from 'vs/workbench/parts/codeComments/electron-browser/codeCommentsController';
 import { Button } from 'vs/base/browser/ui/button/button';
 import { attachButtonStyler } from 'vs/platform/theme/common/styler';
+import { IAuthService, IAuthConfiguration } from 'vs/platform/auth/common/auth';
+import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 
 /**
  * Renders code comments in a viewlet.
@@ -59,8 +61,6 @@ export class CodeCommentsViewlet extends Viewlet {
 	private scrollContainer: HTMLElement;
 	private title: string;
 	private actions: IAction[] = [];
-	// Temporary to leave as true until we add auth in.
-	private authed = true;
 
 	/**
 	 * True if the threads list is rendered.
@@ -76,6 +76,8 @@ export class CodeCommentsViewlet extends Viewlet {
 		@ICodeCommentsService private codeCommentsService: ICodeCommentsService,
 		@IProgressService private progressService: IProgressService,
 		@IInstantiationService private instantiationService: IInstantiationService,
+		@IAuthService private authService: IAuthService,
+		@IConfigurationService protected configurationService: IConfigurationService,
 	) {
 		super(Constants.VIEWLET_ID, telemetryService, themeService);
 	}
@@ -127,6 +129,7 @@ export class CodeCommentsViewlet extends Viewlet {
 		parent.append(this.scrollContainer);
 
 		this._register(this.editorGroupService.onEditorsChanged(this.onEditorsChanged, this));
+		this._register(this.authService.onDidChangeCurrentUser(() => this.onEditorsChanged()));
 		this.onEditorsChanged();
 		return TPromise.as(null);
 	}
@@ -186,7 +189,9 @@ export class CodeCommentsViewlet extends Viewlet {
 	 * TODO: refactor thread list view into separate class like CreateThreadView and ThreadView.
 	 */
 	private render(modelUri: URI | undefined, options: { refreshData?: boolean }): void {
-		if (!this.authed) {
+		const config = this.configurationService.getConfiguration<IAuthConfiguration>();
+		const authed = this.authService.currentUser && this.authService.currentUser.currentOrgMember;
+		if (!config.auth.allowCodeCommentsWithoutAuth && !authed) {
 			this.recentThreadsView = false;
 			this.renderAuthenticationView();
 			return;
@@ -215,9 +220,10 @@ export class CodeCommentsViewlet extends Viewlet {
 		let section = $('div.section').appendTo(container);
 		const signInButton = new Button(section);
 		attachButtonStyler(signInButton, this.themeService);
-		signInButton.label = localize('signInButtonLabel', 'Sign in');
+		signInButton.label = localize('signInButtonLabel', 'Sign in to Sourcegraph');
 		signInButton.addListener('click', () => {
 			this.telemetryService.publicLog('codeComments.signupButtonClicked');
+			this.authService.showSignInFlow();
 		});
 	}
 

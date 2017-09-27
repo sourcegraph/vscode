@@ -99,5 +99,6 @@ export interface IAuthConfiguration {
 	auth?: {
 		displayName?: string;
 		email?: string;
+		allowCodeCommentsWithoutAuth?: boolean;
 	};
 }
