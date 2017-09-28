@@ -50,8 +50,8 @@ export class ProfileView extends ViewsViewletPanel {
 
 	private updateCurrentSizeConstraints(): void {
 		if (this.authService.currentUser) {
-			this.minimumBodySize = 50;
-			this.maximumBodySize = 50;
+			this.minimumBodySize = 120;
+			this.maximumBodySize = 120;
 		} else {
 			this.minimumBodySize = 150;
 			this.maximumBodySize = 150;
@@ -71,7 +71,7 @@ export class ProfileView extends ViewsViewletPanel {
 
 		DOM.addClass(container, 'management-view');
 		if (this.authService.currentUser) {
-			const nameContainer = $('div.section').padding(10, 0, 10, 0).appendTo(container);
+			const nameContainer = $('div.section').addClass('row-container').appendTo(container);
 			const { avatarUrl, email } = this.authService.currentUser;
 			let name = email;
 			const config = this.configurationService.getConfiguration<IAuthConfiguration>();
@@ -79,8 +79,16 @@ export class ProfileView extends ViewsViewletPanel {
 				name = config.auth.displayName;
 			}
 			$('img').src(avatarUrl).size('30').style('border-radius', '15px').verticalAlign('middle').appendTo(nameContainer);
-			$('p').text(name).display('inline').verticalAlign('middle').padding(0, 5, 0, 5).appendTo(nameContainer);
-			const buttonContainer = $('div').display('inline').float('right').verticalAlign('middle').style('border-radius', '3px').padding(2).appendTo(nameContainer);
+			$('p').text(name).appendTo(nameContainer);
+
+			// TODO: listen for onDidChangeCurrentOrgMember once in-app org switching is supported
+			if (this.authService.currentUser.currentOrgMember) {
+				const orgContainer = $('div.section').addClass('row-container').appendTo(container);
+				$('img').addClass('organization-icon').appendTo(orgContainer);
+				$('p').text(this.authService.currentUser.currentOrgMember.org.name).appendTo(orgContainer);
+			}
+
+			const buttonContainer = $('div').display('flex').float('right').verticalAlign('middle').style('border-radius', '3px').padding(2).appendTo(container);
 			const signoutButton = new Button(buttonContainer);
 			attachButtonStyler(signoutButton, this.themeService);
 			signoutButton.label = nls.localize('management.profile.signoutLabel', 'Sign out');

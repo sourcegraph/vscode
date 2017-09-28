@@ -10,3 +10,23 @@
 .management-viewlet .management-view {
 	padding: 0 20px 0 20px;
 }
+
+.management-viewlet .management-view .row-container {
+	padding: 5px 0 5px 0;
+}
+
+.management-viewlet .management-view .row-container p {
+	display: inline;
+	vertical-align: middle;
+	padding: 0 5px 0 5px;
+}
+
+.management-viewlet .management-view .organization-icon {
+	background-color: rgb(255, 255, 255);
+	opacity: 0.6;
+	-webkit-mask: url('../../../../../../../node_modules/@sourcegraph/icons/svg/Friends.svg') no-repeat 50% 50%;
+	-webkit-mask-size: 30px;
+	height: 30px;
+	width: 30px;
+	vertical-align: middle;
+}
