@@ -55,6 +55,10 @@ class ComparisonPick implements QuickPickItem {
 	constructor(public readonly comparison: Comparison) { }
 }
 
+function isParent(parent: string, child: string): boolean {
+	return child.startsWith(parent);
+}
+
 export class Model {
 
 	private _onDidOpenRepository = new EventEmitter<Repository>();
@@ -204,7 +208,9 @@ export class Model {
 		const activeRepositories = new Set<Repository>(activeRepositoriesList);
 		const openRepositoriesToDispose = removed
 			.map(folder => this.getOpenRepository(folder.uri))
-			.filter(r => !!r && !activeRepositories.has(r.repository)) as OpenRepository[];
+			.filter(r => !!r)
+			.filter(r => !activeRepositories.has(r!.repository))
+			.filter(r => !(workspace.workspaceFolders || []).some(f => isParent(f.uri.fsPath, r!.repository.root))) as OpenRepository[];
 
 		possibleRepositoryFolders.forEach(p => this.tryOpenRepository(p.uri.fsPath, true));
 		openRepositoriesToDispose.forEach(r => r.dispose());

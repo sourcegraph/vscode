@@ -25,7 +25,7 @@ import { IEnvironmentService } from 'vs/platform/environment/common/environment'
 import { CustomConfigurationModel } from 'vs/platform/configuration/common/model';
 import { WorkspaceConfigurationModel, ScopedConfigurationModel, FolderConfigurationModel, FolderSettingsModel } from 'vs/workbench/services/configuration/common/configurationModels';
 import { IConfigurationServiceEvent, ConfigurationSource, IConfigurationKeys, IConfigurationValue, ConfigurationModel, IConfigurationOverrides, Configuration as BaseConfiguration, IConfigurationValues, IConfigurationData } from 'vs/platform/configuration/common/configuration';
-import { IWorkspaceConfigurationService, WORKSPACE_CONFIG_FOLDER_DEFAULT_NAME, WORKSPACE_STANDALONE_CONFIGURATIONS, WORKSPACE_CONFIG_DEFAULT_PATH } from 'vs/workbench/services/configuration/common/configuration';
+import { IWorkspaceConfigurationService, WORKSPACE_CONFIG_FOLDER_DEFAULT_NAME, WORKSPACE_STANDALONE_CONFIGURATIONS, WORKSPACE_CONFIG_DEFAULT_PATH, TASKS_CONFIGURATION_KEY, LAUNCH_CONFIGURATION_KEY } from 'vs/workbench/services/configuration/common/configuration';
 import { ConfigurationService as GlobalConfigurationService } from 'vs/platform/configuration/node/configurationService';
 import * as nls from 'vs/nls';
 import { Registry } from 'vs/platform/registry/common/platform';
@@ -128,6 +128,7 @@ configurationExtPoint.setHandler(extensions => {
 		validateProperties(configuration, collector);
 
 		configuration.id = id;
+		configuration.isFromExtensions = true;
 		configurations.push(configuration);
 	};
 
@@ -257,7 +258,9 @@ contributionRegistry.registerSchema('vscode://schemas/workspaceConfig', {
 			description: nls.localize('workspaceConfig.extensions.description', "Workspace extensions"),
 			$ref: 'vscode://schemas/extensions'
 		}
-	}
+	},
+	additionalProperties: false,
+	errorMessage: nls.localize('unknownWorkspaceProperty', "Unknown workspace configuration property")
 });
 
 export class WorkspaceService extends Disposable implements IWorkspaceConfigurationService, IWorkspaceContextService {
@@ -272,6 +275,9 @@ export class WorkspaceService extends Disposable implements IWorkspaceConfigurat
 
 	protected readonly _onDidUpdateConfiguration: Emitter<IConfigurationServiceEvent> = this._register(new Emitter<IConfigurationServiceEvent>());
 	public readonly onDidUpdateConfiguration: Event<IConfigurationServiceEvent> = this._onDidUpdateConfiguration.event;
+
+	private _onDidRegisterExtensionsConfigurations: Emitter<void> = this._register(new Emitter<void>());
+	public readonly onDidRegisterExtensionsConfigurations: Event<void> = this._onDidRegisterExtensionsConfigurations.event;
 
 	protected readonly _onDidChangeWorkspaceFolders: Emitter<IWorkspaceFoldersChangeEvent> = this._register(new Emitter<IWorkspaceFoldersChangeEvent>());
 	public readonly onDidChangeWorkspaceFolders: Event<IWorkspaceFoldersChangeEvent> = this._onDidChangeWorkspaceFolders.event;
@@ -290,6 +296,7 @@ export class WorkspaceService extends Disposable implements IWorkspaceConfigurat
 
 		this.baseConfigurationService = this._register(new GlobalConfigurationService(environmentService));
 		this._register(this.baseConfigurationService.onDidUpdateConfiguration(e => this.onBaseConfigurationChanged(e)));
+		this._register(this.baseConfigurationService.onDidRegisterExtensionsConfigurations(e => this.onDidRegisterExtensionsDefaultsConfigurations()));
 		this._register(configurationRegistry.onDidRegisterConfiguration(e => this.registerConfigurationSchemas()));
 	}
 
@@ -463,10 +470,7 @@ export class WorkspaceService extends Disposable implements IWorkspaceConfigurat
 
 		result.added = newFolders.filter(newFolder => !currentFolders.some(currentFolder => newFolder.uri.toString() === currentFolder.uri.toString()));
 		result.removed = currentFolders.filter(currentFolder => !newFolders.some(newFolder => currentFolder.uri.toString() === newFolder.uri.toString()));
-
-		if (result.added.length === 0 && result.removed.length === 0) {
-			result.changed = currentFolders.filter((currentFolder, index) => newFolders[index].uri.toString() !== currentFolder.uri.toString());
-		}
+		result.changed = newFolders.filter(newFolder => currentFolders.some(currentFolder => newFolder.uri.toString() === currentFolder.uri.toString() && newFolder.name !== currentFolder.name));
 
 		return result;
 	}
@@ -518,14 +522,24 @@ export class WorkspaceService extends Disposable implements IWorkspaceConfigurat
 		}
 	}
 
-	private onBaseConfigurationChanged({ source, sourceConfig }: IConfigurationServiceEvent): void {
+	private onBaseConfigurationChanged({ source, sourceConfig }: IConfigurationServiceEvent, doNotTrigger: boolean = false): boolean {
 		if (this.workspace) {
 			if (source === ConfigurationSource.Default) {
 				this.workspace.folders.forEach(folder => this._configuration.getFolderConfigurationModel(folder.uri).update());
 			}
 			if (this._configuration.updateBaseConfiguration(<any>this.baseConfigurationService.configuration())) {
-				this._onDidUpdateConfiguration.fire({ source, sourceConfig });
+				if (!doNotTrigger) {
+					this._onDidUpdateConfiguration.fire({ source, sourceConfig });
+				}
+				return true;
 			}
+		}
+		return false;
+	}
+
+	private onDidRegisterExtensionsDefaultsConfigurations(): void {
+		if (this.onBaseConfigurationChanged({ source: ConfigurationSource.Default, sourceConfig: this.baseConfigurationService.getConfigurationData().defaults.contents }, true)) {
+			this._onDidRegisterExtensionsConfigurations.fire();
 		}
 	}
 
@@ -789,7 +803,7 @@ class FolderConfiguration<T> extends Disposable {
 	}
 
 	private isWorkspaceConfigurationFile(folderRelativePath: string): boolean {
-		return [WORKSPACE_CONFIG_DEFAULT_PATH, WORKSPACE_STANDALONE_CONFIGURATIONS.launch, WORKSPACE_STANDALONE_CONFIGURATIONS.tasks].some(p => p === folderRelativePath);
+		return [WORKSPACE_CONFIG_DEFAULT_PATH, WORKSPACE_STANDALONE_CONFIGURATIONS[TASKS_CONFIGURATION_KEY], WORKSPACE_STANDALONE_CONFIGURATIONS[LAUNCH_CONFIGURATION_KEY]].some(p => p === folderRelativePath);
 	}
 
 	private toResource(folderRelativePath: string): URI {
