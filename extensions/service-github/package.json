@@ -45,6 +45,15 @@
         "github.token": {
           "type": "string",
           "description": "%config.token%"
+        },
+        "github.cloneProtocol": {
+          "type": "string",
+          "default": "https",
+          "enum": [
+            "https",
+            "ssh"
+          ],
+          "description": "%config.cloneProtocol%"
         }
       }
     }

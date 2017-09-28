@@ -33,10 +33,20 @@ const repoFields = [
 ].join('\n');
 
 export function activate(context: vscode.ExtensionContext): void {
+	const viewer = new Viewer();
+
 	context.subscriptions.push(vscode.workspace.registerResourceResolutionProvider(GITHUB_SCHEME, {
-		resolveResource(resource: vscode.Uri): Thenable<vscode.Uri> {
+		async resolveResource(resource: vscode.Uri): Promise<vscode.Uri> {
 			const data = resourceToNameAndOwner(resource);
-			return Promise.resolve(vscode.Uri.parse(`git+ssh://git@github.com/${data.owner}/${data.name}.git`));
+			const protocol = vscode.workspace.getConfiguration('github').get<string>('cloneProtocol');
+			let user: string | null = null;
+			if (protocol === 'ssh') {
+				user = 'git';
+			} else {
+				user = await viewer.username();
+			}
+			const userAuthority = user ? `${user}@` : '';
+			return vscode.Uri.parse(`git+${protocol}://${userAuthority}github.com/${data.owner}/${data.name}.git`);
 		},
 	}));
 
@@ -48,7 +58,6 @@ export function activate(context: vscode.ExtensionContext): void {
 		return await showCreateGitHubTokenWalkthrough(skipInfoMessage);
 	});
 
-	const viewerRepositories = new ViewerRepositories();
 	context.subscriptions.push(vscode.workspace.registerFolderCatalogProvider(vscode.Uri.parse('github://github.com'), {
 		resolveFolder(resource: vscode.Uri): Thenable<vscode.CatalogFolder> {
 			return requestGraphQL(`
@@ -114,7 +123,7 @@ query {
 			}
 
 			const [viewerRepos, searchResults] = await Promise.all([
-				viewerRepositories.fetch(),
+				viewer.repositories(),
 				request.then<vscode.CatalogFolder[]>(repos => repos.map(toCatalogFolder)),
 			]);
 			return distinct(viewerRepos.concat(searchResults), f => f.resource.toString());
@@ -222,22 +231,21 @@ query($owner: String!, $name: String!) {
 
 }
 
-// Fetches and caches the github repositories associated to the current user.
-class ViewerRepositories {
-	private request: Thenable<vscode.CatalogFolder[]> | null;
+// Fetches and caches the github information associated to the current user.
+class Viewer {
 	private token: string;
+	private repoRequest: Thenable<vscode.CatalogFolder[]> | null;
+	private usernameRequest: Thenable<string | null> | null;
 
 	// Returns the github repositories for the current user. Best-effort, so
 	// should never be rejected. Also cached, so efficient to be repeatedly called.
-	public fetch(): Thenable<vscode.CatalogFolder[]> {
-		const token = vscode.workspace.getConfiguration('github').get<string>('token');
-		if (!token) {
+	public repositories(): Thenable<vscode.CatalogFolder[]> {
+		if (!this.validState()) {
 			return Promise.resolve([]);
 		}
-		if (token === this.token && this.request !== null) {
-			return this.request;
+		if (this.repoRequest !== null) {
+			return this.repoRequest;
 		}
-		this.token = token;
 		const request = requestGraphQL(`
 			{
 				viewer {
@@ -265,12 +273,53 @@ class ViewerRepositories {
 			}, (reason) => {
 				// try again, but don't fail other requests if this fails
 				console.error(reason);
-				this.request = null;
+				this.repoRequest = null;
 				return [];
 			});
-		this.request = request;
+		this.repoRequest = request;
 		return request;
 	};
+
+	// Returns the username of the currently logged in user. It is best-effort, so if the
+	// network request fails or there is no logged in user null is returned.
+	public username(): Thenable<string | null> {
+		if (!this.validState()) {
+			return Promise.resolve(null);
+		}
+		if (this.usernameRequest !== null) {
+			return this.usernameRequest;
+		}
+		const request = requestGraphQL(`
+		{
+			viewer {
+				login
+			}
+		}
+		`, {}).then<string | null>((data: any) => {
+				return data.viewer.login;
+			}, (reason) => {
+				// try again, but don't fail other requests if this fails
+				console.error(reason);
+				this.usernameRequest = null;
+				return null;
+			});
+		this.usernameRequest = request;
+		return request;
+	}
+
+	// Returns true if you can do a request or use a cached request.
+	private validState(): boolean {
+		const token = vscode.workspace.getConfiguration('github').get<string>('token');
+		if (!token) {
+			return false;
+		}
+		if (token !== this.token) {
+			this.repoRequest = null;
+			this.usernameRequest = null;
+		}
+		this.token = token;
+		return true;
+	}
 }
 
 function parseGitHubRepositoryFullName(cloneUrl: vscode.Uri): { owner: string, name: string } | undefined {

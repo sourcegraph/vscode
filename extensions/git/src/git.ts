@@ -436,7 +436,7 @@ export class Git {
 		return cp.spawn(this.gitPath, args, options);
 	}
 
-	private log(output: string): void {
+	log(output: string): void {
 		this._onOutput.emit('log', output);
 	}
 }
