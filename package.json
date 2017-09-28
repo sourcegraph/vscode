@@ -2,7 +2,7 @@
   "name": "src-oss-dev",
   "version": "1.17.0",
   "electronVersion": "1.7.7",
-  "distro": "844fa1b49cad5939922e15bf69321330bce65831",
+  "distro": "HEAD",
   "author": {
     "name": "Microsoft Corporation"
   },
