@@ -904,7 +904,7 @@ export class Repository implements Disposable {
 		await timeout(5000);
 	}
 
-	private async whenIdleAndFocused(): Promise<void> {
+	async whenIdleAndFocused(): Promise<void> {
 		while (true) {
 			if (!this.operations.isIdle()) {
 				await eventToPromise(this.onDidRunOperation);

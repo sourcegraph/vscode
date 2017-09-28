@@ -246,7 +246,7 @@ export class DebugService implements debug.IDebugService {
 
 	private tryToAutoFocusStackFrame(thread: debug.IThread): TPromise<any> {
 		const callStack = thread.getCallStack();
-		if (!callStack.length || (this.viewModel.focusedStackFrame && this.viewModel.focusedStackFrame.thread.threadId === thread.threadId)) {
+		if (!callStack.length || (this.viewModel.focusedStackFrame && this.viewModel.focusedStackFrame.thread.getId() === thread.getId())) {
 			return TPromise.as(null);
 		}
 
@@ -429,14 +429,14 @@ export class DebugService implements debug.IDebugService {
 	private fetchThreads(session: RawDebugSession, stoppedDetails?: debug.IRawStoppedDetails): TPromise<any> {
 		return session.threads().then(response => {
 			if (response && response.body && response.body.threads) {
-				response.body.threads.forEach(thread =>
+				response.body.threads.forEach(thread => {
 					this.model.rawUpdate({
 						sessionId: session.getId(),
 						threadId: thread.id,
 						thread,
-						stoppedDetails,
-						allThreadsStopped: stoppedDetails ? stoppedDetails.allThreadsStopped : undefined
-					}));
+						stoppedDetails: stoppedDetails && thread.id === stoppedDetails.threadId ? stoppedDetails : undefined
+					});
+				});
 			}
 		});
 	}
@@ -763,8 +763,8 @@ export class DebugService implements debug.IDebugService {
 				if (!this.configurationManager.getAdapter(resolvedConfig.type) || (config.request !== 'attach' && config.request !== 'launch')) {
 					let message: string;
 					if (config.request !== 'attach' && config.request !== 'launch') {
-						message = config.request ? nls.localize('debugRequestNotSupported', "Configured debug request '{0}' is not supported", config.request)
-							: nls.localize('debugRequesMissing', "Debug request is missing in the chosen launch configuration");
+						message = config.request ? nls.localize('debugRequestNotSupported', "Chosen debug configuration has an unsupported attribute value `{0}`: '{1}'.", 'request', config.request)
+							: nls.localize('debugRequesMissing', "Attribute '{0}' is missing from the chosen debug configuration.", 'request');
 
 					} else {
 						message = resolvedConfig.type ? nls.localize('debugTypeNotSupported', "Configured debug type '{0}' is not supported.", resolvedConfig.type) :

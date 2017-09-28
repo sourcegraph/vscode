@@ -9,7 +9,6 @@ import { basename, normalize, join, dirname } from 'path';
 import * as fs from 'original-fs';
 import { localize } from 'vs/nls';
 import * as arrays from 'vs/base/common/arrays';
-import * as strings from 'vs/base/common/strings';
 import { assign, mixin, equals } from 'vs/base/common/objects';
 import { IBackupMainService } from 'vs/platform/backup/common/backup';
 import { IEnvironmentService, ParsedArgs } from 'vs/platform/environment/common/environment';
@@ -34,6 +33,7 @@ import { IWorkspacesMainService, IWorkspaceIdentifier, ISingleFolderWorkspaceIde
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { mnemonicButtonLabel } from 'vs/base/common/labels';
 import { Schemas } from 'vs/base/common/network';
+import { normalizeNFC, startsWith } from 'vs/base/common/strings';
 
 enum WindowError {
 	UNRESPONSIVE,
@@ -406,7 +406,7 @@ export class WindowsManager implements IWindowsMainService {
 		//
 		let urisToHandle = openConfig.urisToHandle || [];
 		for (const arg of openConfig.cli._) {
-			if (strings.startsWith(arg, `${product.urlProtocol}:`)) {
+			if (startsWith(arg, `${product.urlProtocol}:`)) {
 				urisToHandle.push(arg);
 			}
 		}
@@ -995,7 +995,7 @@ export class WindowsManager implements IWindowsMainService {
 			return null;
 		}
 
-		if (strings.startsWith(anyPath, `${product.urlProtocol}:`)) {
+		if (startsWith(anyPath, `${product.urlProtocol}:`)) {
 			return null; // handle via urisToHandle
 		}
 
@@ -1717,6 +1717,9 @@ class FileDialog {
 		const focusedWindow = this.windowsMainService.getWindowById(options.windowId) || this.windowsMainService.getFocusedWindow();
 		dialog.showOpenDialog(focusedWindow && focusedWindow.win, options.dialogOptions, paths => {
 			if (paths && paths.length > 0) {
+				if (isMacintosh) {
+					paths = paths.map(path => normalizeNFC(path)); // normalize paths returned from the OS
+				}
 
 				// Remember path in storage for next time
 				this.storageService.setItem(FileDialog.workingDirPickerStorageKey, dirname(paths[0]));
@@ -1889,7 +1892,7 @@ class WorkspacesManager {
 
 			// Save: save workspace, but do not veto unload
 			case ConfirmResult.SAVE: {
-				const target = dialog.showSaveDialog(e.window.win, {
+				let target = dialog.showSaveDialog(e.window.win, {
 					buttonLabel: mnemonicButtonLabel(localize({ key: 'save', comment: ['&& denotes a mnemonic'] }, "&&Save")),
 					title: localize('saveWorkspace', "Save Workspace"),
 					filters: WORKSPACE_FILTER_SAVE,
@@ -1897,6 +1900,10 @@ class WorkspacesManager {
 				});
 
 				if (target) {
+					if (isMacintosh) {
+						target = normalizeNFC(target); // normalize paths returned from the OS
+					}
+
 					e.veto(this.workspacesService.saveWorkspace(workspace, target).then(() => false, () => false));
 				} else {
 					e.veto(true); // keep veto if no target was provided
