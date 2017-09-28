@@ -8,7 +8,8 @@
 import 'vs/css!./media/scmViewlet';
 import { localize } from 'vs/nls';
 import { TPromise } from 'vs/base/common/winjs.base';
-import Event, { Emitter, chain } from 'vs/base/common/event';
+import Event, { Emitter, chain, mapEvent } from 'vs/base/common/event';
+import { domEvent, stop } from 'vs/base/browser/event';
 import { basename } from 'vs/base/common/paths';
 import { onUnexpectedError } from 'vs/base/common/errors';
 import { IDisposable, dispose, combinedDisposable, empty as EmptyDisposable, toDisposable } from 'vs/base/common/lifecycle';
@@ -17,7 +18,7 @@ import { PanelViewlet, ViewletPanel } from 'vs/workbench/browser/parts/views/pan
 import { append, $, addClass, toggleClass, trackFocus } from 'vs/base/browser/dom';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { List } from 'vs/base/browser/ui/list/listWidget';
-import { IDelegate, IRenderer, IListContextMenuEvent } from 'vs/base/browser/ui/list/list';
+import { IDelegate, IRenderer, IListContextMenuEvent, IListEvent } from 'vs/base/browser/ui/list/list';
 import { VIEWLET_ID } from 'vs/workbench/parts/scm/common/scm';
 import { FileLabel } from 'vs/workbench/browser/labels';
 import { CountBadge } from 'vs/base/browser/ui/countBadge/countBadge';
@@ -47,11 +48,11 @@ import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
 import { IExtensionsViewlet, VIEWLET_ID as EXTENSIONS_VIEWLET_ID } from 'vs/workbench/parts/extensions/common/extensions';
 import { InputBox } from 'vs/base/browser/ui/inputbox/inputBox';
 import * as platform from 'vs/base/common/platform';
-import { domEvent } from 'vs/base/browser/event';
 import { StandardKeyboardEvent } from 'vs/base/browser/keyboardEvent';
 import { KeyMod, KeyCode } from 'vs/base/common/keyCodes';
 import { Command } from 'vs/editor/common/modes';
 import { render as renderOcticons } from 'vs/base/browser/ui/octiconLabel/octiconLabel';
+import { StandardMouseEvent } from 'vs/base/browser/mouseEvent';
 
 // TODO@Joao
 // Need to subclass MenuItemActionItem in order to respect
@@ -76,7 +77,9 @@ export interface ISpliceEvent<T> {
 
 export interface IViewModel {
 	readonly repositories: ISCMRepository[];
+	readonly selectedRepositories: ISCMRepository[];
 	readonly onDidSplice: Event<ISpliceEvent<ISCMRepository>>;
+	hide(repository: ISCMRepository): void;
 }
 
 class ProvidersListDelegate implements IDelegate<ISCMRepository> {
@@ -222,6 +225,23 @@ class MainPanel extends ViewletPanel {
 		this.updateBodySize();
 	}
 
+	focus(): void {
+		super.focus();
+		this.list.domFocus();
+	}
+
+	hide(repository: ISCMRepository): void {
+		const selectedElements = this.list.getSelectedElements();
+		const index = selectedElements.indexOf(repository);
+
+		if (index === -1) {
+			return;
+		}
+
+		const selection = this.list.getSelection();
+		this.list.setSelection([...selection.slice(0, index), ...selection.slice(index + 1)]);
+	}
+
 	private splice(index: number, deleteCount: number, repositories: ISCMRepository[] = []): void {
 		const wasEmpty = this.list.length === 0;
 
@@ -244,7 +264,7 @@ class MainPanel extends ViewletPanel {
 
 		this.disposables.push(this.list);
 		this.disposables.push(attachListStyler(this.list, this.themeService));
-		this.list.onSelectionChange(e => this._onSelectionChange.fire(e.elements), null, this.disposables);
+		this.list.onSelectionChange(this.onListSelectionChange, this, this.disposables);
 		this.list.onContextMenu(e => this.onListContextMenu(e), null, this.disposables);
 		this.viewModel.onDidSplice(({ index, deleteCount, elements }) => this.splice(index, deleteCount, elements), null, this.disposables);
 		this.splice(0, 0, this.viewModel.repositories);
@@ -255,9 +275,26 @@ class MainPanel extends ViewletPanel {
 	}
 
 	private updateBodySize(): void {
-		const size = Math.min(5, this.viewModel.repositories.length) * 22;
-		this.minimumBodySize = size;
-		this.maximumBodySize = size;
+		const count = this.viewModel.repositories.length;
+
+		if (count <= 5) {
+			const size = count * 22;
+			this.minimumBodySize = size;
+			this.maximumBodySize = size;
+		} else {
+			this.minimumBodySize = 5 * 22;
+			this.maximumBodySize = Number.POSITIVE_INFINITY;
+		}
+	}
+
+	private onListSelectionChange(e: IListEvent<ISCMRepository>): void {
+		// select one repository if the selected one is gone
+		if (e.elements.length === 0 && this.list.length > 0) {
+			this.list.setSelection([0]);
+			return;
+		}
+
+		this._onSelectionChange.fire(e.elements);
 	}
 
 	private onListContextMenu(e: IListContextMenuEvent<ISCMRepository>): void {
@@ -439,6 +476,7 @@ export class RepositoryPanel extends ViewletPanel {
 
 	constructor(
 		readonly repository: ISCMRepository,
+		private viewModel: IViewModel,
 		@IKeybindingService protected keybindingService: IKeybindingService,
 		@IThemeService protected themeService: IThemeService,
 		@IContextMenuService protected contextMenuService: IContextMenuService,
@@ -472,6 +510,25 @@ export class RepositoryPanel extends ViewletPanel {
 			title.textContent = this.repository.provider.label;
 			type.textContent = '';
 		}
+
+		const onContextMenu = mapEvent(stop(domEvent(container, 'contextmenu')), e => new StandardMouseEvent(e));
+		onContextMenu(this.onContextMenu, this, this.disposables);
+	}
+
+	private onContextMenu(event: StandardMouseEvent): void {
+		if (this.viewModel.selectedRepositories.length <= 1) {
+			return;
+		}
+
+		this.contextMenuService.showContextMenu({
+			getAnchor: () => ({ x: event.posx, y: event.posy }),
+			getActions: () => TPromise.as([<IAction>{
+				id: `scm.hideRepository`,
+				label: localize('hideRepository', "Hide"),
+				enabled: true,
+				run: () => this.viewModel.hide(this.repository)
+			}]),
+		});
 	}
 
 	protected renderBody(container: HTMLElement): void {
@@ -699,6 +756,7 @@ export class SCMViewlet extends PanelViewlet implements IViewModel {
 	get height(): number | undefined { return this._height; }
 
 	get repositories(): ISCMRepository[] { return this._repositories; }
+	get selectedRepositories(): ISCMRepository[] { return this.repositoryPanels.map(p => p.repository); }
 
 	constructor(
 		@ITelemetryService telemetryService: ITelemetryService,
@@ -739,11 +797,10 @@ export class SCMViewlet extends PanelViewlet implements IViewModel {
 	}
 
 	private onDidAddRepository(repository: ISCMRepository): void {
-		this.onDidChangeRepositories();
-
 		const index = this._repositories.length;
 		this._repositories.push(repository);
 		this._onDidSplice.fire({ index, deleteCount: 0, elements: [repository] });
+		this.onDidChangeRepositories();
 
 		if (!this.mainPanel) {
 			this.onSelectionChange(this.repositories);
@@ -751,8 +808,6 @@ export class SCMViewlet extends PanelViewlet implements IViewModel {
 	}
 
 	private onDidRemoveRepository(repository: ISCMRepository): void {
-		this.onDidChangeRepositories();
-
 		const index = this._repositories.indexOf(repository);
 
 		if (index === -1) {
@@ -761,6 +816,7 @@ export class SCMViewlet extends PanelViewlet implements IViewModel {
 
 		this._repositories.splice(index, 1);
 		this._onDidSplice.fire({ index, deleteCount: 1, elements: [] });
+		this.onDidChangeRepositories();
 
 		if (!this.mainPanel) {
 			this.onSelectionChange(this.repositories);
@@ -866,7 +922,7 @@ export class SCMViewlet extends PanelViewlet implements IViewModel {
 		// Collect new selected panels
 		const newRepositoryPanels = repositories
 			.filter(r => this.repositoryPanels.every(p => p.repository !== r))
-			.map(r => this.instantiationService.createInstance(RepositoryPanel, r));
+			.map(r => this.instantiationService.createInstance(RepositoryPanel, r, this));
 
 		// Add new selected panels
 		this.repositoryPanels = [...repositoryPanels, ...newRepositoryPanels];
@@ -888,6 +944,15 @@ export class SCMViewlet extends PanelViewlet implements IViewModel {
 	protected isSingleView(): boolean {
 		return super.isSingleView() && this.repositories.length === 1;
 	}
+
+	hide(repository: ISCMRepository): void {
+		if (!this.mainPanel) {
+			return;
+		}
+
+		this.mainPanel.hide(repository);
+	}
+
 
 	dispose(): void {
 		this.disposables = dispose(this.disposables);

@@ -1377,7 +1377,7 @@ export abstract class BaseSaveOneFileAction extends BaseSaveFileAction {
 			source = toResource(this.editorService.getActiveEditorInput(), { supportSideBySide: true });
 		}
 
-		if (source && this.fileService.canHandleResource(source)) {
+		if (source && (this.fileService.canHandleResource(source) || source.scheme === 'untitled')) {
 
 			// Save As (or Save untitled with associated path)
 			if (this.isSaveAs() || source.scheme === 'untitled') {
@@ -1394,7 +1394,7 @@ export abstract class BaseSaveOneFileAction extends BaseSaveFileAction {
 				const editor = getCodeEditor(activeEditor);
 				if (editor) {
 					const activeResource = toResource(activeEditor.input, { supportSideBySide: true });
-					if (this.fileService.canHandleResource(activeResource) && activeResource && activeResource.toString() === source.toString()) {
+					if (activeResource && (this.fileService.canHandleResource(activeResource) || source.scheme === 'untitled') && activeResource.toString() === source.toString()) {
 						viewStateOfSource = editor.saveViewState();
 					}
 				}
@@ -1638,7 +1638,7 @@ export class SaveAllInGroupAction extends BaseSaveAllAction {
 		const resourcesToSave: URI[] = [];
 		editorGroup.getEditors().forEach(editor => {
 			const resource = toResource(editor, { supportSideBySide: true });
-			if (resource && this.fileService.canHandleResource(resource)) {
+			if (resource && (resource.scheme === 'untitled' || this.fileService.canHandleResource(resource))) {
 				resourcesToSave.push(resource);
 			}
 		});
