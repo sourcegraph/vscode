@@ -62,10 +62,10 @@ export class AuthService extends Disposable implements IAuthService {
 	 * updates their remote.cookie setting, this method requests updated
 	 * user profile data from the remote endpoint.
 	 */
-	private onDidUpdateConfiguration() {
+	private onDidUpdateConfiguration(force?: boolean) {
 		const config = this.configurationService.getConfiguration<IRemoteConfiguration>();
 		// Only re-request user data, fire an event, and log telemetry if the cookie actually changed
-		if (this._currentSessionId === config.remote.cookie) {
+		if (!force && this._currentSessionId === config.remote.cookie) {
 			return;
 		}
 		this._currentSessionId = config.remote.cookie;
@@ -106,6 +106,10 @@ export class AuthService extends Disposable implements IAuthService {
 				// Fire event
 				this.fireDidChangeCurrentUser(UserChangedEventTypes.SignedOut);
 			});
+	}
+
+	public refresh(): void {
+		this.onDidUpdateConfiguration(true);
 	}
 
 	/**

@@ -24,6 +24,11 @@ export interface IAuthService {
 	readonly onDidChangeCurrentUser: Event<void>;
 
 	/**
+	 * Refresh fetches the latest infromation from the server and fires the necessary events.
+	 */
+	refresh(): void;
+
+	/**
 	 * Starts the user signin flow
 	 * If the user successfully signs in, the onDidChangeCurrentUser event will fire.
 	 */
@@ -60,7 +65,7 @@ export interface IUser {
 	/**
 	 * The current org that the user has selected.
 	 */
-	readonly currentOrgMember: IOrgMember | undefined;
+	currentOrgMember: IOrgMember | undefined;
 
 	/**
 	 * Event that fires when the current user changes their current org. Note,

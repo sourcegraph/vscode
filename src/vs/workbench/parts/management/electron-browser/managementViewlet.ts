@@ -29,7 +29,9 @@ import { UpdateContribution } from 'vs/workbench/parts/update/electron-browser/u
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { IAuthService } from 'vs/platform/auth/common/auth';
 import { UpdateView } from 'vs/workbench/parts/management/electron-browser/updateView';
+import { OrganizationView } from 'vs/workbench/parts/management/electron-browser/organizationView';
 import { IUpdateService, State as UpdateState } from 'vs/platform/update/common/update';
+import { RefreshProfileAction } from 'vs/workbench/parts/management/browser/managementActions';
 
 const ManagementViewletVisibleContext = new RawContextKey<boolean>('managementViewletVisible', false);
 
@@ -44,6 +46,7 @@ export class ManagementViewlet extends PersistentViewsViewlet implements IManage
 
 	private disposables: IDisposable[] = [];
 	private secondaryActions: IAction[] = [];
+	private actions: IAction[] = [];
 
 	constructor(
 		@ITelemetryService telemetryService: ITelemetryService,
@@ -72,6 +75,7 @@ export class ManagementViewlet extends PersistentViewsViewlet implements IManage
 
 		this.registerViews();
 		this.managementViewletVisibleContextKey = ManagementViewletVisibleContext.bindTo(contextKeyService);
+		this.actions = [this.instantiationService.createInstance(RefreshProfileAction, true, 'explorer-action refresh-orgs')];
 		this.secondaryActions = this.instantiationService.createInstance(UpdateContribution).getActions();
 	}
 
@@ -83,10 +87,12 @@ export class ManagementViewlet extends PersistentViewsViewlet implements IManage
 		const codeHostDescriptor = this.createCodeHostDescriptor();
 		const profileViewDescriptor = this.createProfileViewDescriptor();
 		const updateViewDescriptor = this.createUpdateViewDescriptor();
+		const organizationViewDescriptor = this.createOrganizationViewDescriptor();
 
 		const codeHostDescriptorExists = viewDescriptors.some(v => v.id === codeHostDescriptor.id);
 		const profileViewDescriptorExists = viewDescriptors.some(v => v.id === profileViewDescriptor.id);
 		const updateViewDescriptorExists = viewDescriptors.some(v => v.id === updateViewDescriptor.id);
+		const organizationViewDescriptorExists = viewDescriptors.some(v => v.id === organizationViewDescriptor.id);
 
 		if (this.updateService.state === UpdateState.UpdateDownloaded) {
 			if (!updateViewDescriptorExists) {
@@ -95,12 +101,22 @@ export class ManagementViewlet extends PersistentViewsViewlet implements IManage
 		} else {
 			viewDescriptorsToDeregister.push(updateViewDescriptor.id);
 		}
-		if (!profileViewDescriptorExists) {
-			viewDescriptorsToRegister.push(profileViewDescriptor);
+
+		if (this.authService.currentUser) {
+			if (!organizationViewDescriptorExists) {
+				viewDescriptorsToRegister.push(organizationViewDescriptor);
+			}
+		} else {
+			viewDescriptorsToDeregister.push(organizationViewDescriptor.id);
 		}
+
 
 		if (!codeHostDescriptorExists) {
 			viewDescriptorsToRegister.push(codeHostDescriptor);
+		}
+
+		if (!profileViewDescriptorExists) {
+			viewDescriptorsToRegister.push(profileViewDescriptor);
 		}
 
 		ViewsRegistry.deregisterViews(viewDescriptorsToDeregister, ViewLocation.Management);
@@ -132,8 +148,8 @@ export class ManagementViewlet extends PersistentViewsViewlet implements IManage
 			location: ViewLocation.Management,
 			ctor: CodeHostView,
 			canToggleVisibility: false,
-			order: 20,
-			size: 90,
+			order: 30,
+			size: 80,
 		};
 	}
 
@@ -144,9 +160,25 @@ export class ManagementViewlet extends PersistentViewsViewlet implements IManage
 			location: ViewLocation.Management,
 			ctor: UpdateView,
 			canToggleVisibility: true,
-			order: 70,
+			order: 50,
 			size: 5,
 		};
+	}
+
+	private createOrganizationViewDescriptor(): IViewDescriptor {
+		return {
+			id: OrganizationView.ID,
+			name: localize('management.organizations', "ORGANIZATIONS"),
+			location: ViewLocation.Management,
+			ctor: OrganizationView,
+			canToggleVisibility: true,
+			order: 20,
+			size: 20,
+		};
+	}
+
+	getActions(): IAction[] {
+		return this.actions;
 	}
 
 	getSecondaryActions(): IAction[] {

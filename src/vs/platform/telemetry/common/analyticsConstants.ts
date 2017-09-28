@@ -456,6 +456,10 @@ export const SOURCEGRAPH_EVENT_MAP: { [eventName: string]: EventMapEntry } = {
 
 	// Orgs
 	'CurrentOrgChanged': { eventCategory: EventCategory.Orgs, eventAction: EventAction.Submit },
+	'RefreshOrgClicked': { eventCategory: EventCategory.Orgs, eventAction: EventAction.Click },
+	'CreateOrgClicked': { eventCategory: EventCategory.Orgs, eventAction: EventAction.Click },
+	'InviteOrgMemberClicked': { eventCategory: EventCategory.Orgs, eventAction: EventAction.Click },
+	'SwitchActiveOrgClicked': { eventCategory: EventCategory.Orgs, eventAction: EventAction.Click },
 
 	// Redirects
 	'EmailInviteClicked': { eventCategory: EventCategory.Marketing, eventAction: EventAction.Redirect, topLevelOnly: true },
