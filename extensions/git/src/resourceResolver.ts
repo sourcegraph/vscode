@@ -134,8 +134,8 @@ export class GitResourceResolver {
 			} else {
 				this.commands.showOutput();
 				// Give advice for github, since it is a common failure path
-				if (cloneUrl.indexOf('github.com') >= 0) {
-					this.git.log(localize('cloneFailedGithubAdvice', "Github clone failed. Adjust github.cloneProtocol user setting to use ssh or https instead.\n"));
+				if (cloneUrl.toLowerCase().indexOf('github.com') >= 0) {
+					this.git.log(localize('cloneFailedGitHubAdvice', "GitHub clone failed. Adjust github.cloneProtocol user setting to use ssh or https instead.\n"));
 				}
 				throw new Error(localize('cloneFailed', "Cloning failed: {0} (see output for details)", err.message));
 			}
