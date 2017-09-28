@@ -707,7 +707,7 @@ suite('TelemetryService', () => {
 				keys() { return { default: [], user: [], workspace: [], folder: [] }; },
 				values() { return {}; },
 				onDidUpdateConfiguration: emitter.event,
-				onDidRegisterExtensionsConfigurations: new Emitter<any>().event,
+				// onDidRegisterExtensionsConfigurations: new Emitter<any>().event,
 			});
 
 		assert.equal(service.isOptedIn, false);
