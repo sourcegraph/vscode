@@ -11,8 +11,7 @@ import { IEditorContribution } from 'vs/editor/common/editorCommon';
 import { ICodeEditor } from 'vs/editor/browser/editorBrowser';
 import { ISCMService } from 'vs/workbench/services/scm/common/scm';
 import { any } from 'vs/base/common/event';
-import { IAuthService, IAuthConfiguration } from 'vs/platform/auth/common/auth';
-import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
+import { IAuthService } from 'vs/platform/auth/common/auth';
 
 export namespace CommentsContextKeys {
 	/**
@@ -38,7 +37,6 @@ export class CommentsContextKeyManager extends Disposable implements IEditorCont
 		@IContextKeyService contextKeyService: IContextKeyService,
 		@ISCMService private scmService: ISCMService,
 		@IAuthService private authService: IAuthService,
-		@IConfigurationService protected configurationService: IConfigurationService,
 	) {
 		super();
 		this.canComment = CommentsContextKeys.canComment.bindTo(contextKeyService);
@@ -67,9 +65,8 @@ export class CommentsContextKeyManager extends Disposable implements IEditorCont
 	}
 
 	private getCanComment(): boolean {
-		const config = this.configurationService.getConfiguration<IAuthConfiguration>();
 		const authed = this.authService.currentUser && this.authService.currentUser.currentOrgMember;
-		if (!config.auth.allowCodeCommentsWithoutAuth && !authed) {
+		if (!authed) {
 			return false;
 		}
 		const model = this.editor.getModel();

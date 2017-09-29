@@ -15,7 +15,7 @@ import { IContextMenuService } from 'vs/platform/contextview/browser/contextView
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
-import { IAuthService, IAuthConfiguration } from 'vs/platform/auth/common/auth';
+import { IAuthService } from 'vs/platform/auth/common/auth';
 import { attachButtonStyler } from 'vs/platform/theme/common/styler';
 
 /**
@@ -74,9 +74,8 @@ export class ProfileView extends ViewsViewletPanel {
 			const nameContainer = $('div.section').addClass('row-container').appendTo(container);
 			const { avatarUrl, email } = this.authService.currentUser;
 			let name = email;
-			const config = this.configurationService.getConfiguration<IAuthConfiguration>();
-			if (config && config.auth && config.auth.displayName) {
-				name = config.auth.displayName;
+			if (this.authService.currentUser && this.authService.currentUser.currentOrgMember && this.authService.currentUser.currentOrgMember.displayName) {
+				name = this.authService.currentUser.currentOrgMember.displayName;
 			}
 			$('img').src(avatarUrl).size('30').style('border-radius', '15px').verticalAlign('middle').appendTo(nameContainer);
 			$('p').text(name).display('inline').verticalAlign('middle').padding(0, 10, 0, 10).appendTo(nameContainer);

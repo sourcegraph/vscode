@@ -32,8 +32,7 @@ import { renderComment } from 'vs/workbench/parts/codeComments/browser/renderCom
 import { CodeCommentsController } from 'vs/workbench/parts/codeComments/electron-browser/codeCommentsController';
 import { Button } from 'vs/base/browser/ui/button/button';
 import { attachButtonStyler } from 'vs/platform/theme/common/styler';
-import { IAuthService, IAuthConfiguration } from 'vs/platform/auth/common/auth';
-import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
+import { IAuthService } from 'vs/platform/auth/common/auth';
 
 /**
  * Renders code comments in a viewlet.
@@ -77,7 +76,6 @@ export class CodeCommentsViewlet extends Viewlet {
 		@IProgressService private progressService: IProgressService,
 		@IInstantiationService private instantiationService: IInstantiationService,
 		@IAuthService private authService: IAuthService,
-		@IConfigurationService protected configurationService: IConfigurationService,
 	) {
 		super(Constants.VIEWLET_ID, telemetryService, themeService);
 	}
@@ -190,9 +188,8 @@ export class CodeCommentsViewlet extends Viewlet {
 	 * TODO: refactor thread list view into separate class like CreateThreadView and ThreadView.
 	 */
 	private render(modelUri: URI | undefined, options: { refreshData?: boolean }): void {
-		const config = this.configurationService.getConfiguration<IAuthConfiguration>();
 		const authed = this.authService.currentUser && this.authService.currentUser.currentOrgMember;
-		if (!config.auth.allowCodeCommentsWithoutAuth && !authed) {
+		if (!authed) {
 			// TODO(nick): differentiate between not signed in and not in an org.
 			this.recentThreadsView = false;
 			this.renderAuthenticationView();

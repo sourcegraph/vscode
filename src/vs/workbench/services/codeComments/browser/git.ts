@@ -4,15 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 'use strict';
 
-import { localize } from 'vs/nls';
 import { ISCMService } from 'vs/workbench/services/scm/common/scm';
 import URI from 'vs/base/common/uri';
 import { TPromise } from 'vs/base/common/winjs.base';
-import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
-import { IConfigurationEditingService, ConfigurationTarget } from 'vs/workbench/services/configuration/common/configurationEditing';
-import { IConfigurationRegistry, Extensions } from 'vs/platform/configuration/common/configurationRegistry';
-import { Registry } from 'vs/platform/registry/common/platform';
-import { IAuthConfiguration } from 'vs/platform/auth/common/auth';
 
 /**
  * Interface to intract with Git in the current workspace.
@@ -22,8 +16,6 @@ export class Git {
 	constructor(
 		private fileUri: URI,
 		@ISCMService private scmService: ISCMService,
-		@IConfigurationService protected configurationService: IConfigurationService,
-		@IConfigurationEditingService private configurationEditingService: IConfigurationEditingService,
 	) {
 	}
 
@@ -88,52 +80,6 @@ export class Git {
 	}
 
 	/**
-	 * Returns the user's configured display name.
-	 */
-	public getUserName(): TPromise<string> {
-		const config = this.configurationService.getConfiguration<IAuthConfiguration>();
-		if (config && config.auth && config.auth.displayName) {
-			return TPromise.wrap(config.auth.displayName);
-		}
-		return this.spawnPromiseTrim(['config', 'user.name']).then(displayName => {
-			if (!displayName) {
-				throw new Error(localize('configureAuthDisplayName', 'Please configure auth.displayName and try again.'));
-			}
-			this.configurationEditingService.writeConfiguration(ConfigurationTarget.USER, { key: 'auth.displayName', value: displayName });
-			return displayName;
-		});
-	}
-
-	/**
-	 * Returns the user's configured email address.
-	 */
-	public getUserEmail(): TPromise<string> {
-		const config = this.configurationService.getConfiguration<IAuthConfiguration>();
-		if (config && config.auth && config.auth.email) {
-			return TPromise.wrap(config.auth.email);
-		}
-		return this.spawnPromiseTrim(['config', 'user.email']).then(email => {
-			if (!email) {
-				throw new Error(localize('configureAuthEmail', 'Please configure auth.email and try again.'));
-			}
-			this.configurationEditingService.writeConfiguration(ConfigurationTarget.USER, { key: 'auth.email', value: email });
-			return email;
-		});
-	}
-
-	/**
-	 * For the first iteration, it is security through obscurity.
-	 * Anyone knows the URI of a repo (e.g. github.com/sourcegraph/sourcegraph)
-	 * and the hash of the first commit may fetch code comments for that repo.
-	 *
-	 * Beta testers in this iteration will be explictly told about this limitation.
-	 * Next iteration we will work on proper authorization controls by modeling organizations.
-	 */
-	public getAccessToken(): TPromise<string> {
-		return this.spawnPromiseTrim(['rev-list', '--max-parents=0', 'HEAD']);
-	}
-
-	/**
 	 * Returns the diff of file from a revision to the current state.
 	 */
 	public getDiff(fromRev: string, options?: { reverse?: boolean }): TPromise<string> {
@@ -187,28 +133,3 @@ export class Git {
 		return repository.provider.executeCommand(params);
 	}
 }
-
-// Until we have real auth, just let the user configure their
-// display name and email (like Git).
-Registry.as<IConfigurationRegistry>(Extensions.Configuration)
-	.registerConfiguration({
-		id: 'auth',
-		title: localize('auth', "Auth"),
-		type: 'object',
-		properties: {
-			'auth.displayName': {
-				type: 'string',
-				description: localize('displayName', "Your name"),
-			},
-			'auth.email': {
-				type: 'string',
-				pattern: '^[^@]+@[^@]+\.[^@]+',
-				description: localize('email', "Your email address"),
-			},
-			'auth.allowCodeCommentsWithoutAuth': {
-				type: 'boolean',
-				default: false,
-				description: localize('allowCodeCommentsWithoutAuth', "Disable auth requirement for code comments (for debugging, will be removed soon)"),
-			}
-		}
-	});

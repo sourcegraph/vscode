@@ -18,7 +18,7 @@ import { cloneAndChange } from 'vs/base/common/objects';
 import { Registry } from 'vs/platform/registry/common/platform';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 import { CommandsRegistry } from 'vs/platform/commands/common/commands';
-import { IAuthConfiguration } from 'vs/platform/auth/common/auth';
+import { IAuthService } from 'vs/platform/auth/common/auth';
 
 export interface ITelemetryServiceConfig {
 	appender: ITelemetryAppender;
@@ -48,6 +48,7 @@ export class TelemetryService implements ITelemetryService {
 		config: ITelemetryServiceConfig,
 		@optional(IConfigurationService) protected _configurationService?: IConfigurationService,
 		@optional(IEnvironmentService) protected _environmentService?: IEnvironmentService,
+		@optional(IAuthService) private _authService?: IAuthService,
 	) {
 		this._appender = config.appender;
 		this._commonProperties = config.commonProperties || TPromise.as({});
@@ -137,14 +138,9 @@ export class TelemetryService implements ITelemetryService {
 
 			// TODO(Dan) determine if we should remove this section before launch, we
 			// will replace with sourcegraph accounts
-			if (this._configurationService) {
-				const config = this._configurationService.getConfiguration<IAuthConfiguration>();
-				if (config && config.auth && config.auth.displayName) {
-					data.native.git_auth_displayName = config.auth.displayName;
-				}
-				if (config && config.auth && config.auth.email) {
-					data.native.git_auth_email = config.auth.email;
-				}
+			if (this._authService && this._authService.currentUser) {
+				// TODO(dan): is this what you want?
+				// data.native.current_user_id = this._authService.currentUser.id
 			}
 
 			this._appender.log(eventName, data);

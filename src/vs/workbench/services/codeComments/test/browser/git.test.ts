@@ -70,7 +70,7 @@ class FakeSCMService implements ISCMService {
 
 suite('git', function () {
 	let scmService = new FakeSCMService();
-	let git = new Git(undefined, scmService, undefined, undefined);
+	let git = new Git(undefined, scmService);
 
 	suite('getRemoteRepo', function () {
 		interface Test {

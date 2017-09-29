@@ -97,13 +97,3 @@ export interface IOrg {
 	 */
 	readonly name: string;
 }
-
-// TODO: This should be deprecated and removed after we are storing display name in database.
-// And after code comments depends on orgs.
-export interface IAuthConfiguration {
-	auth?: {
-		displayName?: string;
-		email?: string;
-		allowCodeCommentsWithoutAuth?: boolean;
-	};
-}
