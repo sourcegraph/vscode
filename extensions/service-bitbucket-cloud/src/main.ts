@@ -55,11 +55,12 @@ export function activate(context: vscode.ExtensionContext): void {
 			});
 		},
 		async search(query: string): Promise<vscode.CatalogFolder[]> {
-			if (!vscode.workspace.getConfiguration('bitbucket.cloud').get<boolean>('includeInSearch')) {
+			const hasApp = checkBitbucketAppPassword();
+
+			if (!hasApp && !vscode.workspace.getConfiguration('bitbucket.cloud').get<boolean>('triggerSetup')) {
 				return [];
 			}
 
-			const hasApp = checkBitbucketAppPassword();
 			if (!hasApp) {
 				const ok = await showBitbucketAppPasswordWalkthrough();
 				if (!ok) {
@@ -133,7 +134,7 @@ function showErrorImmediately<T>(error: string): T | Thenable<T> {
 					// TODO(sqs): If the user is temporarily offline, it's annoying to completely remove their
 					// credentials. Figure out a better way to handle this.
 					await unsetAppPassword();
-					await vscode.workspace.getConfiguration('bitbucket.cloud').update('includeInSearch', undefined, vscode.ConfigurationTarget.Global);
+					await vscode.workspace.getConfiguration('bitbucket.cloud').update('triggerSetup', undefined, vscode.ConfigurationTarget.Global);
 				}
 			});
 

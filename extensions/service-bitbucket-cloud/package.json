@@ -20,10 +20,10 @@
       "type": "object",
       "title": "Bitbucket Cloud",
       "properties": {
-        "bitbucket.cloud.includeInSearch": {
+        "bitbucket.cloud.triggerSetup": {
           "type": "boolean",
           "default": false,
-          "description": "%config.includeInSearch%"
+          "description": "%config.triggerSetup%"
         },
         "bitbucket.cloud.username": {
           "type": "string",
