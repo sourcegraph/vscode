@@ -7,6 +7,7 @@
 import * as vscode from 'vscode';
 import { fetchFromBitbucket } from './util';
 import * as nls from 'vscode-nls';
+import * as cp from 'child_process';
 
 const localize = nls.loadMessageBundle();
 
@@ -42,7 +43,16 @@ export function activate(context: vscode.ExtensionContext): void {
 
 		},
 		resolveLocalFolderResource(path: string): Thenable<vscode.Uri | null> {
-			return Promise.resolve(null);
+			return new Promise<string>((resolve, reject) => {
+				cp.exec('git ls-remote --get-url', { cwd: path }, (error, stdout, stderr) => resolve(stdout));
+			}).then(gitURL => {
+				gitURL = decodeURIComponent(gitURL.trim()).replace(/\.git$/, '');
+				const match = gitURL.match(/bitbucket.org[\/:]([^/]+\/[^/]+)/);
+				if (match) {
+					return vscode.Uri.parse(`${BITBUCKET_CLOUD_SCHEME}://bitbucket.org/repository/' + ${match[1]}`);
+				}
+				return null;
+			});
 		},
 		async search(query: string): Promise<vscode.CatalogFolder[]> {
 			if (!vscode.workspace.getConfiguration('bitbucket.cloud').get<boolean>('includeInSearch')) {
@@ -57,17 +67,17 @@ export function activate(context: vscode.ExtensionContext): void {
 				}
 			}
 
-			let url = `/repositories?role=member&pagelen=50`;
+			let queryValues = ['scm = "git"'];
 			if (query) {
 				// Workaround for https://bitbucket.org/site/master/issues/14768/repositories-query-20-api-returns-error.
-				let queryValue: string;
 				if (query.includes('/')) {
-					queryValue = `full_name ~ ${JSON.stringify(query)}`;
+					queryValues.push(`full_name ~ ${JSON.stringify(query)}`);
 				} else {
-					queryValue = `name ~ ${JSON.stringify(query)} OR parent.owner.username ~ ${JSON.stringify(query)}`;
+					queryValues.push(`(name ~ ${JSON.stringify(query)} OR parent.owner.username ~ ${JSON.stringify(query)})`);
 				}
-				url += `&q=${encodeURIComponent(queryValue)}`;
 			}
+			const queryValue = encodeURIComponent(queryValues.join(' AND '));
+			const url = `/repositories?role=member&pagelen=50&sort=-updated_on&q=${queryValue}`;
 
 			return fetchFromBitbucket<{ values: Repository[] }>(url).then(
 				({ values }) => values.map(toCatalogFolder),
@@ -93,7 +103,7 @@ interface Repository {
 }
 
 function resourceToApiPath(resource: vscode.Uri): string {
-	return '%7B%7D/' + encodeURIComponent('{' + resource.path.replace(/^\/repository\//, '') + '}');
+	return resource.path.replace(/^\/repository\//, '');
 }
 
 /**
@@ -170,7 +180,7 @@ async function showBitbucketAppPasswordWalkthrough(skipInfoMessage?: boolean): P
 	}
 
 	const appPassword = await vscode.window.showInputBox({
-		prompt: localize('appPasswordPrompt', "Bitbucket app password"),
+		prompt: localize('appPasswordPrompt', "Bitbucket app password (requires Repositories Read permission)"),
 		ignoreFocusOut: true,
 		value: config.get('appPassword'),
 	});
@@ -190,14 +200,15 @@ function checkBitbucketAppPassword(): boolean {
 }
 
 function toCatalogFolder(repo: Repository): vscode.CatalogFolder {
+	const cloneProtocol = vscode.workspace.getConfiguration('bitbucket.cloud').get<string>('cloneProtocol');
 	return {
 		// These URIs are resolved by the resource resolver we register above.
-		resource: vscode.Uri.parse('').with({ scheme: BITBUCKET_CLOUD_SCHEME, authority: 'bitbucket.org', path: `/repository/${encodeURIComponent(repo.uuid.replace(/[{}]/g, ''))}` }),
+		resource: vscode.Uri.parse('').with({ scheme: BITBUCKET_CLOUD_SCHEME, authority: 'bitbucket.org', path: `/repository/${repo.full_name}` }),
 
 		displayPath: repo.full_name,
 		displayName: repo.name,
 		genericIconClass: iconForRepo(repo),
-		cloneUrl: vscode.Uri.parse(repo.links.clone.find(clone => clone.name === 'ssh')!.href),
+		cloneUrl: vscode.Uri.parse(repo.links.clone.find(clone => clone.name === cloneProtocol)!.href),
 		description: repo.description,
 		isPrivate: repo.is_private,
 		primaryLanguage: repo.language,
@@ -205,6 +216,7 @@ function toCatalogFolder(repo: Repository): vscode.CatalogFolder {
 		updatedAt: repo.updated_on ? new Date(Date.parse(repo.updated_on)) : undefined,
 		pushedAt: repo.updated_on ? new Date(Date.parse(repo.updated_on)) : undefined,
 		approximateByteSize: repo.size >= 0 ? repo.size * 1024 : undefined,
+		viewerCanAdminister: true, // Possibly not true, but we only search repos we contribute to. So helps with search result boosting.
 	};
 }
 

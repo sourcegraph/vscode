@@ -1,5 +1,6 @@
 {
 	"config.includeInSearch": "Enable searching for repositories hosted on Bitbucket Cloud (Bitbucket.org)",
 	"config.username": "Bitbucket Cloud username",
-	"config.appPassword": "Bitbucket Cloud app password (must have permissions for Repositories: Read). Create one at https://bitbucket.org/account under 'Access management' > 'App passwords'."
+	"config.appPassword": "Bitbucket Cloud app password (must have permissions for Repositories: Read). Create one at https://bitbucket.org/account under 'Access management' > 'App passwords'.",
+	"config.cloneProtocol": "Protocol to use to clone a repository. Defaults to 'https'. Valid values are either 'https' or 'ssh'."
 }

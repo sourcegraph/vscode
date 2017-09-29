@@ -359,8 +359,9 @@ export class OpenAnyFolderHandler extends QuickOpenHandler {
 				const unsortedResultTime = Date.now();
 				const normalizedSearchValue = strings.stripWildcards(searchValue).toLowerCase();
 				const accessor = this.folderEntryAccessor(searchValue);
-				const entries = (result.entries as FolderEntry[])
-					.filter(f => scorer.score(accessor.getResourcePath(f), normalizedSearchValue) > 0);
+				const entries = ((result.entries || []) as FolderEntry[])
+					.filter(f => !!f && !!f.getResource())
+					.filter(f => !normalizedSearchValue || scorer.score(accessor.getResourcePath(f), normalizedSearchValue) > 0);
 
 				// Sort
 				const viewResults: FolderEntryOrGroup[] = arrays.top(

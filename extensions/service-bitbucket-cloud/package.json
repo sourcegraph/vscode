@@ -32,6 +32,15 @@
         "bitbucket.cloud.appPassword": {
           "type": "string",
           "description": "%config.appPassword%"
+        },
+        "bitbucket.cloud.cloneProtocol": {
+          "type": "string",
+          "default": "https",
+          "enum": [
+            "https",
+            "ssh"
+          ],
+          "description": "%config.cloneProtocol%"
         }
       }
     }
