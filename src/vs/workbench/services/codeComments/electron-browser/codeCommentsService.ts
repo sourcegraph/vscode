@@ -240,21 +240,24 @@ export class FileComments extends Disposable implements IFileComments {
 					return TPromise.wrap([]);
 				}
 				if (this.authService.currentUser && this.authService.currentUser.currentOrgMember) {
-					return requestGraphQL<{ org: { threads: GQL.IThread[] } }>(this.remoteService, `query ThreadsForFile (
+					return requestGraphQL<{ org: { repo: { threads: GQL.IThread[] } } }>(this.remoteService, `query ThreadsForFile (
 							$file: String!,
 						) {
 							root {
 								org(id: $orgId) {
-									threads(file: $file) {
-										${threadGraphql}
+									repo(remoteURI: $remoteURI) {
+										threads(file: $file) {
+											${threadGraphql}
+										}
 									}
 								}
 							}
 						}`, {
 							orgId: this.authService.currentUser.currentOrgMember.org.id,
 							file: documentId.file,
+							remoteURI: documentId.repo,
 						})
-						.then(response => response.org.threads);
+						.then(response => response.org.repo.threads);
 				}
 				// TODO(nick): when this deprecated code path is removed, we can remove unnecessary fields on data.
 				return requestGraphQL<{ threads: GQL.IThread[] }>(this.remoteService, `query ThreadsForFileDeprecated (
