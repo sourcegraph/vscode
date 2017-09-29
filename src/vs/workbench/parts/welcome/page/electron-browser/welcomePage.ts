@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 'use strict';
 
-import 'vs/css!./welcomePage';
+import 'vs/css!./sgWelcomePage';
 import URI from 'vs/base/common/uri';
 import * as arrays from 'vs/base/common/arrays';
 import { WalkThroughInput } from 'vs/workbench/parts/welcome/walkThrough/node/walkThroughInput';
@@ -30,7 +30,7 @@ import { IBackupFileService } from 'vs/workbench/services/backup/common/backup';
 import { IMessageService, Severity, CloseAction } from 'vs/platform/message/common/message';
 import { getInstalledExtensions, IExtensionStatus, onExtensionChanged, isKeymapExtension } from 'vs/workbench/parts/extensions/electron-browser/extensionsUtils';
 import { IExtensionEnablementService, IExtensionManagementService, IExtensionGalleryService, IExtensionTipsService } from 'vs/platform/extensionManagement/common/extensionManagement';
-import { used } from 'vs/workbench/parts/welcome/page/electron-browser/vs_code_welcome_page';
+import { used } from 'vs/workbench/parts/welcome/page/electron-browser/sg_welcome_page';
 import { ILifecycleService, StartupKind } from 'vs/platform/lifecycle/common/lifecycle';
 import { IDisposable, dispose } from 'vs/base/common/lifecycle';
 import { IThemeService, registerThemingParticipant } from 'vs/platform/theme/common/themeService';
@@ -265,10 +265,10 @@ class WelcomePage {
 		this.disposables.push(lifecycleService.onShutdown(() => this.dispose()));
 
 		const installedExtensions = this.instantiationService.invokeFunction(getInstalledExtensions);
-		const resource = URI.parse(require.toUrl('./vs_code_welcome_page'))
+		const resource = URI.parse(require.toUrl('./sg_welcome_page'))
 			.with({
 				scheme: Schemas.walkThrough,
-				query: JSON.stringify({ moduleId: 'vs/workbench/parts/welcome/page/electron-browser/vs_code_welcome_page' })
+				query: JSON.stringify({ moduleId: 'vs/workbench/parts/welcome/page/electron-browser/sg_welcome_page' })
 			});
 		this.editorInput = this.instantiationService.createInstance(WalkThroughInput, {
 			typeId: welcomeInputTypeId,
