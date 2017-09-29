@@ -217,6 +217,9 @@ export class FileComments extends Disposable implements IFileComments {
 	}
 
 	private refreshingThreads: TPromise<void> | undefined;
+
+	private didStartRefreshing = this.disposable(new Emitter<void>());
+	public onDidStartRefreshing = this.didStartRefreshing.event;
 	public get refreshing(): TPromise<void> {
 		return this.refreshingThreads || TPromise.wrap<void>(undefined);
 	}
@@ -274,7 +277,7 @@ export class FileComments extends Disposable implements IFileComments {
 						// Most recent comment timestamp descending.
 						return right.mostRecentComment.createdAt.getTime() - left.mostRecentComment.createdAt.getTime();
 					});
-				this.updateDisplayRanges();
+				return this.updateDisplayRanges();
 			});
 
 		this.refreshingThreads = refreshingThreads;
@@ -285,6 +288,7 @@ export class FileComments extends Disposable implements IFileComments {
 		}, err => {
 			this.refreshingThreads = undefined;
 		});
+		this.didStartRefreshing.fire();
 		return refreshingThreads;
 	}
 

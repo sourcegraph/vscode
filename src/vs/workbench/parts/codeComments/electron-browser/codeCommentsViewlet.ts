@@ -136,26 +136,30 @@ export class CodeCommentsViewlet extends Viewlet {
 	private onEditorsChanged(): void {
 		const editor = this.getActiveCodeEditor();
 		if (!editor) {
-			this.render(undefined, {});
+			this.render(undefined);
 			return;
 		}
 		this.activeEditorListeners = dispose(this.activeEditorListeners);
-		this.activeEditorListeners.push(editor.onDidChangeModel(e => this.render(e.newModelUrl, { refreshData: true })));
+		this.activeEditorListeners.push(editor.onDidChangeModel(e => this.render(e.newModelUrl)));
 		this.activeEditorListeners.push(editor.onDidChangeModelContent(e => {
 			if (e.isFlush) {
-				this.render(this.getModelUri(editor), { refreshData: true });
+				this.render(this.getModelUri(editor));
 			}
 		}));
 		const modelUri = this.getModelUri(editor);
 		if (modelUri) {
 			const fileComments = this.codeCommentsService.getFileComments(modelUri);
+			this.activeEditorListeners.push(fileComments.onDidStartRefreshing(() => {
+				this.progressService.showWhile(fileComments.refreshing);
+			}));
+			this.progressService.showWhile(fileComments.refreshing);
 			this.activeEditorListeners.push(fileComments.onDidChangeThreads(() => {
 				if (this.recentThreadsView) {
-					this.render(modelUri, {});
+					this.render(modelUri);
 				}
 			}));
 		}
-		this.render(modelUri, { refreshData: true });
+		this.render(modelUri);
 	}
 
 	private getActiveCodeEditor(): ICommonCodeEditor | undefined {
@@ -187,7 +191,7 @@ export class CodeCommentsViewlet extends Viewlet {
 	 *
 	 * TODO: refactor thread list view into separate class like CreateThreadView and ThreadView.
 	 */
-	private render(modelUri: URI | undefined, options: { refreshData?: boolean }): void {
+	private render(modelUri: URI | undefined): void {
 		const authed = this.authService.currentUser && this.authService.currentUser.currentOrgMember;
 		if (!authed) {
 			// TODO(nick): differentiate between not signed in and not in an org.
@@ -201,7 +205,7 @@ export class CodeCommentsViewlet extends Viewlet {
 			this.renderCommentsNotAvailable();
 			return;
 		}
-		this.renderRecentThreadsView(modelUri, options);
+		this.renderRecentThreadsView(modelUri);
 	}
 
 	private renderAuthenticationView(): void {
@@ -244,19 +248,13 @@ export class CodeCommentsViewlet extends Viewlet {
 	/**
 	 * Renders threads for whole file ordered by most recent comment timestamp descending.
 	 */
-	private renderRecentThreadsView(modelUri: URI, options: { refreshData?: boolean }): void {
+	private renderRecentThreadsView(modelUri: URI): void {
 		this.title = localize('recentComments', "Recent conversations: {0}", basename(modelUri.fsPath));
 		this.actions = [];
 		this.updateTitleArea();
 		this.renderDisposables = dispose(this.renderDisposables);
 
 		const fileComments = this.codeCommentsService.getFileComments(modelUri);
-		if (options.refreshData) {
-			this.progressService.showWhile(fileComments.refreshThreads());
-		} else {
-			this.progressService.showWhile(fileComments.refreshing);
-		}
-
 		clearNode(this.list);
 		$(this.list).div({ class: 'threads' }, div => {
 			if (fileComments.threads.length === 0) {
