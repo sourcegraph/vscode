@@ -81,12 +81,12 @@ export class OrganizationView extends ViewsViewletPanel {
 			return;
 		}
 
-		DOM.addClass(container, 'management-view');
+		DOM.addClass(container, 'organization-view');
 		const { orgMemberships, currentOrgMember } = this.authService.currentUser;
 		const orgsContainer = $('div.section').appendTo(container);
 
 		if (!orgMemberships.length) {
-			const manageOrgRow = $('div').addClass('org-row-container').appendTo(orgsContainer);
+			const manageOrgRow = $('div').addClass('add-organization-row').appendTo(orgsContainer);
 			const manageOrganizationsButton = new Button(manageOrgRow);
 			attachButtonStyler(manageOrganizationsButton, this.themeService);
 			manageOrganizationsButton.label = nls.localize('management.organization.addOrg', "Add organization");
@@ -97,12 +97,11 @@ export class OrganizationView extends ViewsViewletPanel {
 		}
 
 		orgMemberships.forEach(orgMember => {
-			const orgContainer = $('div').addClass('org-row-container').appendTo(orgsContainer);
-			const nameContainer = $('div').addClass('org-title').appendTo(orgContainer);
-			const img = $('img').size(30).appendTo(nameContainer);
+			const orgContainer = $('div').addClass('organization-row-container').appendTo(orgsContainer);
+			const nameContainer = $('div').addClass('organization-container').appendTo(orgContainer);
 			if (orgMember === currentOrgMember) {
 				$(orgContainer).style('cursor', 'auto');
-				img.addClass('selected-organization');
+				orgContainer.addClass('selected-organization');
 			} else {
 				$(orgContainer).style('cursor', 'pointer');
 				orgContainer.getHTMLElement().addEventListener('click', () => {
@@ -113,9 +112,9 @@ export class OrganizationView extends ViewsViewletPanel {
 			}
 
 			const { name } = orgMember.org;
-			$('p').text(name).addClass('org-title').appendTo(nameContainer);
+			$('div').text(name).addClass('organization-title').appendTo(nameContainer);
 
-			const buttonContainer = $('div').addClass('org-button-container').appendTo(orgContainer);
+			const buttonContainer = $('div').addClass('organization-button-container').appendTo(orgContainer);
 			const inviteButton = new Button(buttonContainer);
 			attachButtonStyler(inviteButton, this.themeService);
 			inviteButton.label = nls.localize('management.organization.invite', 'Invite');

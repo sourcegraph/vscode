@@ -54,7 +54,6 @@ export class ProfileView extends ViewsViewletPanel {
 			this.maximumBodySize = 50;
 		} else {
 			this.minimumBodySize = 150;
-			this.maximumBodySize = 150;
 		}
 	}
 
@@ -71,16 +70,17 @@ export class ProfileView extends ViewsViewletPanel {
 
 		DOM.addClass(container, 'management-view');
 		if (this.authService.currentUser) {
-			const nameContainer = $('div.section').addClass('row-container').appendTo(container);
+			const rowContainer = $('div.section').addClass('row-container').appendTo(container);
+			const nameContainer = $('div').addClass('name-container').appendTo(rowContainer);
 			const { avatarUrl, email } = this.authService.currentUser;
 			let name = email;
 			if (this.authService.currentUser && this.authService.currentUser.currentOrgMember && this.authService.currentUser.currentOrgMember.displayName) {
 				name = this.authService.currentUser.currentOrgMember.displayName;
 			}
-			$('img').src(avatarUrl).size('30').style('border-radius', '15px').verticalAlign('middle').appendTo(nameContainer);
-			$('p').text(name).display('inline').verticalAlign('middle').padding(0, 10, 0, 10).appendTo(nameContainer);
+			$('img').src(avatarUrl).size('30').addClass('avatar-img').appendTo(nameContainer);
+			$('div').addClass('profile-container').text(name).appendTo(nameContainer);
 
-			const buttonContainer = $('div').display('inline').float('right').verticalAlign('middle').style('border-radius', '3px').padding(2).appendTo(nameContainer);
+			const buttonContainer = $('div').addClass('signout-container').appendTo(rowContainer);
 			const signoutButton = new Button(buttonContainer);
 			attachButtonStyler(signoutButton, this.themeService);
 			signoutButton.label = nls.localize('management.profile.signoutLabel', 'Sign out');
@@ -91,9 +91,9 @@ export class ProfileView extends ViewsViewletPanel {
 		}
 
 		const userTitleDiv = $('div.section').appendTo(container);
-		$('h4').text(nls.localize('management.profile.title', "You are signed out")).appendTo(userTitleDiv);
+		$('h4').addClass('signedout-header').text(nls.localize('management.profile.title', "You are signed out")).appendTo(userTitleDiv);
 		const signInContainer = $('div').appendTo(userTitleDiv);
-		$('p').text(nls.localize('management.profile.signInSubTitle', 'Sign in to Sourcegraph to manage your account settings.')).appendTo(signInContainer);
+		$('p').text(nls.localize('management.profile.signInSubTitle', 'Sign in to manage your account settings.')).appendTo(signInContainer);
 		const buttonContainer = $('div').appendTo(signInContainer);
 		const signoutButton = new Button(buttonContainer);
 		signoutButton.label = nls.localize('management.profile.signInLabel', 'Sign in to Sourcegraph');
