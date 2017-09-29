@@ -127,8 +127,6 @@ export class CodeCommentsViewlet extends Viewlet {
 		parent.append(this.scrollContainer);
 
 		this._register(this.editorGroupService.onEditorsChanged(this.onEditorsChanged, this));
-		// TODO(nick): this should probably be pushed down into code comments service.
-		this._register(this.authService.onDidChangeCurrentUser(() => this.onEditorsChanged()));
 		this.onEditorsChanged();
 		return TPromise.as(null);
 	}

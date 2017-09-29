@@ -6,7 +6,7 @@
 
 import { IContextKey, IContextKeyService, RawContextKey } from 'vs/platform/contextkey/common/contextkey';
 import { editorContribution } from 'vs/editor/browser/editorBrowserExtensions';
-import { IDisposable, Disposable, dispose } from 'vs/base/common/lifecycle';
+import { Disposable } from 'vs/base/common/lifecycle';
 import { IEditorContribution } from 'vs/editor/common/editorCommon';
 import { ICodeEditor } from 'vs/editor/browser/editorBrowser';
 import { ISCMService } from 'vs/workbench/services/scm/common/scm';
@@ -41,22 +41,13 @@ export class CommentsContextKeyManager extends Disposable implements IEditorCont
 		super();
 		this.canComment = CommentsContextKeys.canComment.bindTo(contextKeyService);
 
-		this._register(authService.onDidChangeCurrentUser(() => this.didChangeCurrentUser()));
+		this._register(authService.onDidChangeCurrentUser(() => this.checkCanComment()));
 		this._register(editor.onDidChangeModel(() => this.checkCanComment()));
 		this._register(any(
 			scmService.onDidAddRepository,
 			scmService.onDidRemoveRepository,
 			scmService.onDidChangeRepository
 		)(this.checkCanComment, this));
-		this.checkCanComment();
-	}
-
-	private toDisposeOnDidChangeCurrentUser: IDisposable[] = [];
-	private didChangeCurrentUser(): void {
-		this.toDisposeOnDidChangeCurrentUser = dispose(this.toDisposeOnDidChangeCurrentUser);
-		if (this.authService.currentUser) {
-			this.toDisposeOnDidChangeCurrentUser.push(this.authService.currentUser.onDidChangeCurrentOrgMember(this.checkCanComment, this));
-		}
 		this.checkCanComment();
 	}
 

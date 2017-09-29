@@ -6,7 +6,7 @@
 
 import { localize } from 'vs/nls';
 import URI from 'vs/base/common/uri';
-import { Disposable } from 'vs/base/common/lifecycle';
+import { Disposable, IDisposable, dispose } from 'vs/base/common/lifecycle';
 import Event, { Emitter } from 'vs/base/common/event';
 import { IAuthService, IOrg, IUser, IOrgMember } from 'vs/platform/auth/common/auth';
 import { IRemoteService, IRemoteConfiguration, requestGraphQL } from 'vs/platform/remote/node/remote';
@@ -55,6 +55,8 @@ export class AuthService extends Disposable implements IAuthService {
 		return this._currentUser;
 	}
 
+	private toDisposeOnCurrentUserChange: IDisposable[] = [];
+
 	/**
 	 * Executed on 'remote.cookie' user setting updates. When the user first opens
 	 * the editor, changes their remote.cookie setting manually, or completes
@@ -89,10 +91,21 @@ export class AuthService extends Disposable implements IAuthService {
 						}
 					}
 				}
-			}`, {}).then(response => {
+			}`, {})
+			.then(response => {
+				dispose(this._currentUser);
+				this.toDisposeOnCurrentUserChange = dispose(this.toDisposeOnCurrentUserChange);
+
 				this._currentUser = new User(response.currentUser, this.telemetryService);
-				this.fireDidChangeCurrentUser(UserChangedEventTypes.SignedIn);
+				this.toDisposeOnCurrentUserChange.push(this._currentUser.onDidChangeCurrentOrgMember(() => {
+					this.didChangeCurrentUser.fire();
+				}));
+				this.telemetryService.publicLog('CurrentUserSignedIn', this._currentUser.getTelemetryData());
+				this.didChangeCurrentUser.fire();
 			}, () => {
+				dispose(this._currentUser);
+				this.toDisposeOnCurrentUserChange = dispose(this.toDisposeOnCurrentUserChange);
+
 				// If user is already signed in, notify them that their signout was successful and log telemetry.
 				// If not, it's possible they ran into this failed request during app launch.
 				if (this.currentUser) {
@@ -103,8 +116,10 @@ export class AuthService extends Disposable implements IAuthService {
 				// Delete user from memory
 				this._currentUser = undefined;
 				this._currentSessionId = undefined;
+
 				// Fire event
-				this.fireDidChangeCurrentUser(UserChangedEventTypes.SignedOut);
+				this.telemetryService.publicLog('CurrentUserSignedOut');
+				this.didChangeCurrentUser.fire();
 			});
 	}
 
@@ -135,28 +150,6 @@ export class AuthService extends Disposable implements IAuthService {
 			value: ''
 		});
 	}
-
-	private fireDidChangeCurrentUser(type: UserChangedEventTypes): void {
-		switch (type) {
-			case UserChangedEventTypes.SignedIn:
-				this.telemetryService.publicLog('CurrentUserSignedIn', this._currentUser.getTelemetryData());
-				break;
-			case UserChangedEventTypes.SignedOut:
-				this.telemetryService.publicLog('CurrentUserSignedOut');
-				break;
-			case UserChangedEventTypes.ProfileChanged:
-				this.telemetryService.publicLog('CurrentUserProfileChanged', this._currentUser.getTelemetryData());
-				break;
-		}
-
-		this.didChangeCurrentUser.fire();
-	}
-}
-
-enum UserChangedEventTypes {
-	SignedIn,
-	SignedOut,
-	ProfileChanged
 }
 
 class User extends Disposable implements IUser {
