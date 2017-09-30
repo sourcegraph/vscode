@@ -228,7 +228,7 @@ export function urlToSignIn(configService: IConfigurationService): URI {
 	}
 
 	return URI.parse(config.remote.endpoint).with({
-		path: '/editor-auth'
+		path: '/settings/editor-auth'
 	});
 }
 
