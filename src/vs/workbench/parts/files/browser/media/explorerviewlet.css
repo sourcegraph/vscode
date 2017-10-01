@@ -63,6 +63,8 @@
 
 .explorer-folders-view .monaco-tree-row .content {
 	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
 }
 
 .explorer-folders-view .monaco-tree-row .content::before {
@@ -146,21 +148,15 @@
 }
 
 .explorer-viewlet .explorer-folders-view .monaco-action-bar {
-	flex: 1 0 auto;
+	flex: 0 0 auto;
 	margin-top: 3px;
-	padding-right: 0.8em;
-	display: none;
+	padding-left: 5px;
+	padding-right: 8px;
 }
 
-.explorer-viewlet .explorer-folders-view .monaco-tree-row.focused .monaco-action-bar {
-	width: 0; /* in order to support a11y with keyboard, we use width: 0 to hide the actions, which still allows to "Tab" into the actions */
-	display: block;
-}
-
-.explorer-viewlet .explorer-folders-view .monaco-tree-row:hover:not(.highlighted) .monaco-action-bar,
-.explorer-viewlet .explorer-folders-view .monaco-tree-row.focused .monaco-action-bar {
-	width: inherit;
-	display: block;
+.explorer-viewlet .explorer-folders-view .monaco-tree-row:hover:not(.highlighted) .monaco-action-bar .remove-action,
+.explorer-viewlet .explorer-folders-view .monaco-tree-row.focused .monaco-action-bar .remove-action {
+	visibility: visible;
 }
 
 .explorer-viewlet .explorer-folders-view .monaco-action-bar .action-label {

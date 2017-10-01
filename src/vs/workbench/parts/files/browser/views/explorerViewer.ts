@@ -16,7 +16,7 @@ import paths = require('vs/base/common/paths');
 import resources = require('vs/base/common/resources');
 import errors = require('vs/base/common/errors');
 import { isString } from 'vs/base/common/types';
-import { IAction, ActionRunner as BaseActionRunner, IActionRunner } from 'vs/base/common/actions';
+import { IAction, ActionRunner as BaseActionRunner, IActionRunner, Action } from 'vs/base/common/actions';
 import comparers = require('vs/base/common/comparers');
 import { InputBox } from 'vs/base/browser/ui/inputbox/inputBox';
 import { isMacintosh, isLinux } from 'vs/base/common/platform';
@@ -57,9 +57,14 @@ import { distinct } from 'vs/base/common/arrays';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 import { getPathLabel } from 'vs/base/common/labels';
 import { extractResources } from 'vs/base/browser/dnd';
-import { ActionBar } from 'vs/base/browser/ui/actionbar/actionbar';
+import { ActionBar, ActionItem } from 'vs/base/browser/ui/actionbar/actionbar';
 import { EventType } from 'vs/base/common/events';
 import { RemoveWorkspaceFolderExplorerAction } from 'vs/workbench/parts/workspace/browser/folderActions';
+import { ISCMService, ISCMRepository } from 'vs/workbench/services/scm/common/scm';
+import { ICommandService } from 'vs/platform/commands/common/commands';
+import { Command } from 'vs/editor/common/modes';
+import { render as renderOcticons } from 'vs/base/browser/ui/octiconLabel/octiconLabel';
+import { any } from 'vs/base/common/event';
 
 export class FileDataSource implements IDataSource {
 	constructor(
@@ -279,6 +284,7 @@ export interface IFileTemplateData {
 	label: FileLabel;
 	actions: ActionBar;
 	container: HTMLElement;
+	templateDisposable?: IDisposable;
 }
 
 // Explorer Renderer
@@ -294,6 +300,8 @@ export class FileRenderer implements IRenderer {
 		@IContextViewService private contextViewService: IContextViewService,
 		@IInstantiationService private instantiationService: IInstantiationService,
 		@IMessageService private messageService: IMessageService,
+		@ISCMService private scmService: ISCMService,
+		@ICommandService private commandService: ICommandService,
 		@IThemeService private themeService: IThemeService
 	) {
 		this.state = state;
@@ -309,13 +317,24 @@ export class FileRenderer implements IRenderer {
 
 	public disposeTemplate(tree: ITree, templateId: string, templateData: IFileTemplateData): void {
 		templateData.label.dispose();
-		templateData.actions.clear();
+		templateData.actions.dispose();
+		if (templateData.templateDisposable) {
+			templateData.templateDisposable.dispose();
+			templateData.templateDisposable = undefined;
+		}
 	}
 
 	public renderTemplate(tree: ITree, templateId: string, container: HTMLElement): IFileTemplateData {
 		const label = this.instantiationService.createInstance(FileLabel, container, void 0);
 
-		const actions = new ActionBar(container);
+		const actions = new ActionBar(container, {
+			actionItemProvider: a => {
+				if (a instanceof StatusBarAction) {
+					return new StatusBarActionItem(a as StatusBarAction);
+				}
+				return undefined; // fall back to default
+			},
+		});
 		actions.addListener(EventType.RUN, ({ error }) => error && this.messageService.show(Severity.Error, error));
 
 		return { label, actions, container };
@@ -323,6 +342,10 @@ export class FileRenderer implements IRenderer {
 
 	public renderElement(tree: ITree, stat: FileStat, templateId: string, templateData: IFileTemplateData): void {
 		templateData.actions.clear();
+		if (templateData.templateDisposable) {
+			templateData.templateDisposable.dispose();
+			templateData.templateDisposable = undefined;
+		}
 
 		const editableData: IEditableData = this.state.getEditableData(stat);
 
@@ -335,17 +358,67 @@ export class FileRenderer implements IRenderer {
 			}
 			templateData.label.setFile(stat.resource, { hidePath: true, fileKind: stat.isRoot ? FileKind.ROOT_FOLDER : stat.isDirectory ? FileKind.FOLDER : FileKind.FILE, extraClasses });
 
-			if (stat.isRoot) {
-				const removeAction = this.instantiationService.createInstance(RemoveWorkspaceFolderExplorerAction, stat.resource);
-				templateData.actions.push([removeAction], { label: false, icon: true });
+			if (stat.isDirectory) {
+				templateData.actions.getContainer().getHTMLElement().style.display = '';
+				this.renderRootActions(templateData, stat);
 			}
 		}
 
 		// Input Box
 		else {
 			templateData.label.element.style.display = 'none';
+			templateData.actions.getContainer().getHTMLElement().style.display = 'none';
 			this.renderInputBox(templateData.container, tree, stat, editableData);
 		}
+	}
+
+	private renderRootActions(templateData: IFileTemplateData, stat: FileStat): void {
+		const disposables: IDisposable[] = [];
+
+		let repository: ISCMRepository | undefined;
+		const updateRepository = (r: ISCMRepository) => {
+			if (!r || !r.provider || !r.provider.rootUri || r.provider.rootUri.fsPath !== stat.resource.fsPath) {
+				return;
+			}
+			if (repository !== r) {
+				repository = r;
+				update();
+				if (repository) {
+					repository.provider.onDidChange(update, null, disposables);
+				}
+			}
+		};
+		const onDidAddOrRemoveRepository = any(this.scmService.onDidAddRepository, this.scmService.onDidRemoveRepository);
+		onDidAddOrRemoveRepository(updateRepository, null, disposables);
+
+		const actions: IAction[] = [];
+		const disposeActions = () => dispose(actions);
+		disposables.push({ dispose: disposeActions });
+		const update = () => {
+			templateData.actions.clear();
+			disposeActions();
+
+			const newActions: IAction[] = [];
+
+			if (repository) {
+				const commands = repository.provider.statusBarCommands || [];
+				const repositoryActions = commands.map(c => new StatusBarAction(c, this.commandService));
+				newActions.push(...repositoryActions);
+				templateData.actions.push(repositoryActions);
+			}
+
+			if (stat.isRoot) {
+				const removeAction = this.instantiationService.createInstance(RemoveWorkspaceFolderExplorerAction, stat.resource);
+				newActions.push(removeAction);
+				templateData.actions.push([removeAction], { label: false, icon: true });
+			}
+
+			actions.splice(0, actions.length, ...newActions);
+		};
+
+		updateRepository(this.scmService.getRepositoryForResource(stat.resource));
+
+		templateData.templateDisposable = lifecycle.combinedDisposable(disposables);
 	}
 
 	private renderInputBox(container: HTMLElement, tree: ITree, stat: FileStat, editableData: IEditableData): void {
@@ -413,6 +486,33 @@ export class FileRenderer implements IRenderer {
 			label,
 			styler
 		];
+	}
+}
+
+class StatusBarAction extends Action {
+	constructor(
+		private command: Command,
+		private commandService: ICommandService
+	) {
+		super(`statusbaraction{${command.id}}`, command.title, '', true);
+		this.tooltip = command.tooltip;
+	}
+
+	run(): TPromise<void> {
+		return this.commandService.executeCommand(this.command.id, ...this.command.arguments);
+	}
+}
+
+class StatusBarActionItem extends ActionItem {
+
+	constructor(action: StatusBarAction) {
+		super(null, action, {});
+	}
+
+	_updateLabel(): void {
+		if (this.options.label) {
+			this.$e.innerHtml(renderOcticons(this.getAction().label));
+		}
 	}
 }
 
