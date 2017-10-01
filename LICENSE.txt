@@ -1,3 +1,5 @@
+This repository contains Sourcegraph-related modifications to Microsoft Visual Studio Code (license below). We (Sourcegraph) plan to open-source these modifications in the future, but for now we are keeping them private.
+
 MIT License
 
 Copyright (c) 2015 - present Microsoft Corporation
