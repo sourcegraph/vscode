@@ -32,17 +32,9 @@
 	overflow: hidden;
 }
 
-.explorer-viewlet .explorer-item:not(.explorer-item-root),
+.explorer-viewlet .explorer-item,
 .explorer-viewlet .explorer-item .monaco-inputbox {
 	flex: 1;
-}
-
-.explorer-viewlet .explorer-item.explorer-item-root {
-	flex: 0 0 auto;
-}
-
-.explorer-viewlet .explorer-item.explorer-item-root .rootfolder-icon {
-	flex-shrink: 2;
 }
 
 .explorer-viewlet .explorer-item::before {
@@ -83,7 +75,6 @@
 	display: inline-block;
 	vertical-align: top;
 	content: ' ';
-	flex-shrink: 0;
 }
 
 .explorer-folders-view.align-icons-and-twisties .monaco-tree-row:not(.has-children) .content::before {
@@ -155,41 +146,24 @@
 }
 
 .explorer-viewlet .explorer-folders-view .monaco-action-bar {
-	line-height: initial;
-}
-
-.explorer-viewlet .explorer-folders-view .monaco-action-bar.actions1 {
-	margin-left: 6px;
-	margin-top: 2px;
-}
-
-.explorer-viewlet .explorer-folders-view .monaco-action-bar.actions2 {
 	flex: 1 0 auto;
 	margin-top: 3px;
-	display: none;
 	padding-right: 0.8em;
+	display: none;
 }
 
-.explorer-viewlet .explorer-folders-view .monaco-tree-row.focused .monaco-action-bar.actions2 {
+.explorer-viewlet .explorer-folders-view .monaco-tree-row.focused .monaco-action-bar {
 	width: 0; /* in order to support a11y with keyboard, we use width: 0 to hide the actions, which still allows to "Tab" into the actions */
 	display: block;
 }
 
-.explorer-viewlet .explorer-folders-view .monaco-tree-row:hover:not(.highlighted) .monaco-action-bar.actions2,
-.explorer-viewlet .explorer-folders-view .monaco-tree-row.focused .monaco-action-bar.actions2 {
+.explorer-viewlet .explorer-folders-view .monaco-tree-row:hover:not(.highlighted) .monaco-action-bar,
+.explorer-viewlet .explorer-folders-view .monaco-tree-row.focused .monaco-action-bar {
 	width: inherit;
 	display: block;
 }
 
-.explorer-viewlet .explorer-folders-view .monaco-action-bar .action-item {
-	overflow: hidden;
-}
-
-.explorer-viewlet .explorer-folders-view .monaco-action-bar .tag {
-	display: block;
-}
-
-.explorer-viewlet .explorer-folders-view .monaco-action-bar .action-label:not(.tag) {
+.explorer-viewlet .explorer-folders-view .monaco-action-bar .action-label {
 	background-repeat: no-repeat;
 	width: 16px;
 	height: 16px;

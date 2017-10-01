@@ -28,13 +28,13 @@ import { IWorkspaceEditingService } from 'vs/workbench/services/workspace/common
 import { BaseWorkspacesAction } from 'vs/workbench/browser/actions/workspaceActions';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { registerThemingParticipant, ITheme, ICssStyleCollector } from 'vs/platform/theme/common/themeService';
-import { buttonBackground, buttonForeground, buttonHoverBackground, contrastBorder, tagBackground, tagForeground, tagBorder, tagHoverBackground, tagHoverForeground, tagHoverBorder, registerColor } from 'vs/platform/theme/common/colorRegistry';
-import { FolderSCMSwitchRevisionAction } from './scmFolderActions';
+import { buttonBackground, buttonForeground, buttonHoverBackground, contrastBorder, registerColor, lighten, darken } from 'vs/platform/theme/common/colorRegistry';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 import { IWindowService } from 'vs/platform/windows/common/windows';
 import { mnemonicButtonLabel } from 'vs/base/common/labels';
 import { IStorageService, StorageScope } from 'vs/platform/storage/common/storage';
 import { IQuickOpenService } from 'vs/platform/quickOpen/common/quickOpen';
+import { Color } from 'vs/base/common/color';
 
 /**
  * For developer convenience. Shows a quickopen input field and adds the root folder
@@ -367,9 +367,6 @@ export class ManageWorkspaceFolderAction extends Action {
 
 		this._actionItem = this.instantiationService.createInstance(DropDownMenuActionItem, this, [
 			[
-				instantiationService.createInstance(FolderSCMSwitchRevisionAction),
-			],
-			[
 				instantiationService.createInstance(ExploreWorkspaceFolderAction),
 			],
 			[
@@ -510,6 +507,42 @@ export class ClearWorkspaceViewletInputAction extends Action {
 
 import { extensionButtonProminentBackground, extensionButtonProminentForeground, extensionButtonProminentHoverBackground } from 'vs/workbench/parts/extensions/browser/extensionsActions';
 
+export const folderLabelBackground = registerColor('folderLabel.background', {
+	dark: null,
+	light: null,
+	hc: null,
+}, localize('folderLabelBackground', "Background color for folder labels (e.g. SCM status)."));
+
+export const folderLabelForeground = registerColor('folderLabel.foreground', {
+	dark: '#aaaaaa',
+	light: '#555555',
+	hc: null,
+}, localize('folderLabelForeground', "Foreground color for folder labels (e.g. SCM status)."));
+
+export const folderLabelBorder = registerColor('folderLabel.border', {
+	dark: '#888888',
+	light: '#777777',
+	hc: null,
+}, localize('folderLabelBorder', "Border color for folder labels (e.g. SCM status)."));
+
+export const folderLabelHoverBackground = registerColor('folderLabel.hoverBackground', {
+	dark: Color.white.transparent(0.05),
+	light: Color.black.transparent(0.05),
+	hc: Color.white.transparent(0.05),
+}, localize('folderLabelHoverBackground', "Background hover color for folder labels (e.g. SCM status)."));
+
+export const folderLabelHoverForeground = registerColor('folderLabel.hoverForeground', {
+	dark: lighten(folderLabelForeground, 0.2),
+	light: darken(folderLabelForeground, 0.2),
+	hc: null,
+}, localize('folderLabelHoverForeground', "Foreground hover color for folder labels (e.g. SCM status)."));
+
+export const folderLabelHoverBorder = registerColor('folderLabel.hoverBorder', {
+	dark: lighten(folderLabelBorder, 0.3),
+	light: darken(folderLabelBorder, 0.3),
+	hc: null,
+}, localize('folderLabelHoverBorder', "Border hover color for folder labels (e.g. SCM status)."));
+
 export const folderButtonProminentBackground = registerColor('folderButton.prominentBackground', {
 	dark: extensionButtonProminentBackground,
 	light: extensionButtonProminentBackground,
@@ -549,34 +582,34 @@ registerThemingParticipant((theme: ITheme, collector: ICssStyleCollector) => {
 		collector.addRule(`.monaco-action-bar .action-item .action-label.folder-action { border: 1px solid ${contrastBorderColor}; }`);
 	}
 
-	const tagBackgroundColor = theme.getColor(tagBackground);
-	if (tagBackgroundColor) {
-		collector.addRule(`.monaco-action-bar .action-item .action-label.folder-label { background: ${tagBackgroundColor}; }`);
+	const folderLabelBackgroundColor = theme.getColor(folderLabelBackground);
+	if (folderLabelBackgroundColor) {
+		collector.addRule(`.monaco-action-bar .action-item .action-label.folder-label { background: ${folderLabelBackgroundColor}; }`);
 	}
 
-	const tagForegroundColor = theme.getColor(tagForeground);
-	if (tagForegroundColor) {
-		collector.addRule(`.monaco-action-bar .action-item .action-label.folder-label { color: ${tagForegroundColor}; }`);
+	const folderLabelForegroundColor = theme.getColor(folderLabelForeground);
+	if (folderLabelForegroundColor) {
+		collector.addRule(`.monaco-action-bar .action-item .action-label.folder-label { color: ${folderLabelForegroundColor}; }`);
 	}
 
-	const tagBorderColor = theme.getColor(tagBorder);
-	if (tagBorderColor) {
-		collector.addRule(`.monaco-action-bar .action-item .action-label.folder-label:not(:empty) { border: 1px solid ${tagBorderColor}; border-radius: 2px; }`);
+	const folderLabelBorderColor = theme.getColor(folderLabelBorder);
+	if (folderLabelBorderColor) {
+		collector.addRule(`.monaco-action-bar .action-item .action-label.folder-label:not(:empty) { border: 1px solid ${folderLabelBorderColor}; border-radius: 2px; }`);
 	}
 
-	const tagHoverBackgroundColor = theme.getColor(tagHoverBackground);
-	if (tagHoverBackgroundColor) {
-		collector.addRule(`.monaco-action-bar .action-item .action-label.folder-label:hover { background: ${tagHoverBackgroundColor}; }`);
+	const folderLabelHoverBackgroundColor = theme.getColor(folderLabelHoverBackground);
+	if (folderLabelHoverBackgroundColor) {
+		collector.addRule(`.monaco-action-bar .action-item .action-label.folder-label:hover { background: ${folderLabelHoverBackgroundColor}; }`);
 	}
 
-	const tagHoverForegroundColor = theme.getColor(tagHoverForeground);
-	if (tagHoverForegroundColor) {
-		collector.addRule(`.monaco-action-bar .action-item .action-label.folder-label:hover { color: ${tagHoverForegroundColor}; }`);
+	const folderLabelHoverForegroundColor = theme.getColor(folderLabelHoverForeground);
+	if (folderLabelHoverForegroundColor) {
+		collector.addRule(`.monaco-action-bar .action-item .action-label.folder-label:hover { color: ${folderLabelHoverForegroundColor}; }`);
 	}
 
-	const tagHoverBorderColor = theme.getColor(tagHoverBorder);
-	if (tagHoverBorderColor) {
-		collector.addRule(`.monaco-action-bar .action-item .action-label.folder-label:hover:not(:empty) { border: 1px solid ${tagHoverBorderColor}; border-radius: 2px; }`);
+	const folderLabelHoverBorderColor = theme.getColor(folderLabelHoverBorder);
+	if (folderLabelHoverBorderColor) {
+		collector.addRule(`.monaco-action-bar .action-item .action-label.folder-label:hover:not(:empty) { border: 1px solid ${folderLabelHoverBorderColor}; border-radius: 2px; }`);
 	}
 
 	const folderButtonProminentBackgroundColor = theme.getColor(folderButtonProminentBackground);

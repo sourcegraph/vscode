@@ -18,7 +18,6 @@ import { once } from 'vs/base/common/event';
 import { domEvent } from 'vs/base/browser/event';
 import { IFolder, WorkspaceFolderState } from 'vs/workbench/services/folders/common/folders';
 import { AddWorkspaceFolderAction, RemoveWorkspaceFolderAction, ManageWorkspaceFolderAction } from 'vs/workbench/parts/workspace/browser/folderActions';
-import { FolderSCMRevisionLabelAction } from 'vs/workbench/parts/workspace/browser/scmFolderActions';
 import { EventType } from 'vs/base/common/events';
 import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
@@ -98,15 +97,12 @@ export class Renderer implements IPagedRenderer<IFolder, ITemplateData> {
 			return undefined;
 		});
 
-		const scmRevisionAction = this.instantiationService.createInstance(FolderSCMRevisionLabelAction);
-		headerActionBar.push([scmRevisionAction], actionOptions);
-
 		const addAction = this.instantiationService.createInstance(AddWorkspaceFolderAction);
 		const removeAction = this.instantiationService.createInstance(RemoveWorkspaceFolderAction);
 		const manageAction = this.instantiationService.createInstance(ManageWorkspaceFolderAction);
 		footerActionBar.push([addAction, removeAction, manageAction], actionOptions);
 
-		const disposables = [nameWidget, starsWidget, timestampWidget, scmRevisionAction, headerActionBar, addAction, removeAction, manageAction, footerActionBar];
+		const disposables = [nameWidget, starsWidget, timestampWidget, headerActionBar, addAction, removeAction, manageAction, footerActionBar];
 
 		return {
 			root, element, iconImage, iconOcticon, name, stars, description, disposables,
@@ -115,7 +111,6 @@ export class Renderer implements IPagedRenderer<IFolder, ITemplateData> {
 				nameWidget.folder = folder;
 				starsWidget.folder = folder;
 				timestampWidget.folder = folder;
-				scmRevisionAction.folder = folder;
 				addAction.folder = folder;
 				removeAction.folder = folder;
 				manageAction.folder = folder;
