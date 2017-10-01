@@ -506,8 +506,8 @@ export class ThreadComments extends Disposable implements IThreadComments {
 
 	public setArchived(archived: boolean): TPromise<void> {
 		return this.operation(() => {
-			return requestGraphQLMutation<{ updateThread2: GQL.IThread }>(this.remoteService, `mutation ThreadSetArchived {
-				updateThread2(
+			return requestGraphQLMutation<{ updateThread: GQL.IThread }>(this.remoteService, `mutation ThreadSetArchived {
+				updateThread(
 					threadID: $threadID,
 					archived: $archived,
 				) {
@@ -518,7 +518,7 @@ export class ThreadComments extends Disposable implements IThreadComments {
 					archived,
 				})
 				.then(response => {
-					this.archived = !!response.updateThread2.archivedAt;
+					this.archived = !!response.updateThread.archivedAt;
 				});
 		});
 	}
@@ -528,8 +528,8 @@ export class ThreadComments extends Disposable implements IThreadComments {
 			return TPromise.wrapError(new Error(localize('emptyCommentError', "Comment can not be empty.")));
 		}
 		return this.operation(() => {
-			return requestGraphQLMutation<{ addCommentToThread2: GQL.IThread }>(this.remoteService, `mutation SubmitDraftReply {
-				addCommentToThread2(
+			return requestGraphQLMutation<{ addCommentToThread: GQL.IThread }>(this.remoteService, `mutation SubmitDraftReply {
+				addCommentToThread(
 					threadID: $threadID,
 					contents: $contents,
 				) {
@@ -541,7 +541,7 @@ export class ThreadComments extends Disposable implements IThreadComments {
 				})
 				.then(response => {
 					this.draftReply = '';
-					this.comments = response.addCommentToThread2.comments.map(c => new Comment(c));
+					this.comments = response.addCommentToThread.comments.map(c => new Comment(c));
 				});
 		});
 	}
@@ -725,8 +725,8 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 		};
 		const promise = this.submitData
 			.then(data => {
-				return requestGraphQLMutation<{ createThread2: GQL.IThread }>(this.remoteService, `mutation CreateThread {
-					createThread2(
+				return requestGraphQLMutation<{ createThread: GQL.IThread }>(this.remoteService, `mutation CreateThread {
+					createThread(
 						orgID: $orgId,
 						remoteURI: $remoteURI,
 						file: $file,
@@ -747,7 +747,7 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 					});
 			})
 			.then(response => {
-				const thread = this.instantiationService.createInstance(ThreadComments, response.createThread2, this.git);
+				const thread = this.instantiationService.createInstance(ThreadComments, response.createThread, this.git);
 				this.didSubmit.fire(thread);
 				return thread;
 			});
