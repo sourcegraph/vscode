@@ -870,6 +870,9 @@ export class ExplorerView extends ViewsViewletPanel {
 		// Stat needs to be resolved first and then revealed
 		const options: IResolveFileOptions = { resolveTo: [resource] };
 		const workspaceFolder = this.contextService.getWorkspaceFolder(resource);
+		if (!workspaceFolder && this.model.roots.length === 0) {
+			return TPromise.as(null);
+		}
 		const rootUri = workspaceFolder ? workspaceFolder.uri : this.model.roots[0].resource;
 		return this.fileService.resolveFile(rootUri, options).then(stat => {
 
