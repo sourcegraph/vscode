@@ -892,6 +892,11 @@
           "description": "%config.repositoryScanDirectory%",
           "default": "${homePath}"
         },
+        "git.enableAutoWorktree": {
+          "type": "boolean",
+          "description": "%config.enableAutoWorktree%",
+          "default": false
+        },
         "git.enableSmartCommit": {
           "type": "boolean",
           "description": "%config.enableSmartCommit%",

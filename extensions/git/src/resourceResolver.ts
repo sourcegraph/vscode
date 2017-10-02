@@ -42,7 +42,9 @@ export class GitResourceResolver {
 	}
 
 	public async resolveResource(resource: Uri): Promise<Uri> {
-		const revision = resource.query || null; // Make type optionally null so we don't pass empty strings around
+		// We only attempt to use worktree if the revision is set.
+		const autoWorktreeEnabled = workspace.getConfiguration('git').get<boolean>('enableAutoWorktree');
+		const revision = (autoWorktreeEnabled && resource.query) || null;
 		let repoUri = resource.with({ query: null } as any);
 
 		// For 'git' scheme, avoid conflict with the TextDocumentContentProvider's git: URIs by only resolving URIs
