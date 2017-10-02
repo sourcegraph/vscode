@@ -45,6 +45,7 @@ export class CodeHostView extends ViewsViewletPanel {
 		@IConfigurationService private configurationService: IConfigurationService
 	) {
 		super({ ...(options as IViewOptions) }, keybindingService, contextMenuService);
+		this.minimumBodySize = 180;
 
 		this.configurationService.onDidUpdateConfiguration(async (e) => {
 			await this.updateButtonLabelsForConfigEvent(e);

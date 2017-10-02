@@ -68,10 +68,12 @@ export class ManagementViewlet extends PersistentViewsViewlet implements IManage
 
 		this._register(this.authService.onDidChangeCurrentUser(user => {
 			this.configureViewlet();
+			this.updateViews();
 		}));
 
 		this._register(this.updateService.onStateChange((e) => {
 			this.configureViewlet();
+			this.updateViews();
 		}));
 
 		this.managementViewletVisibleContextKey = ManagementViewletVisibleContext.bindTo(contextKeyService);
@@ -107,7 +109,6 @@ export class ManagementViewlet extends PersistentViewsViewlet implements IManage
 	private configureViewlet(): void {
 		this.registerActions();
 		this.registerViews();
-		this.updateViews();
 	}
 
 	private registerViews(): void {
@@ -121,7 +122,6 @@ export class ManagementViewlet extends PersistentViewsViewlet implements IManage
 		const organizationViewDescriptor = this.createOrganizationViewDescriptor();
 
 		const codeHostDescriptorExists = viewDescriptors.some(v => v.id === codeHostDescriptor.id);
-		const profileViewDescriptorExists = viewDescriptors.some(v => v.id === profileViewDescriptor.id);
 		const updateViewDescriptorExists = viewDescriptors.some(v => v.id === updateViewDescriptor.id);
 		const organizationViewDescriptorExists = viewDescriptors.some(v => v.id === organizationViewDescriptor.id);
 
@@ -141,13 +141,11 @@ export class ManagementViewlet extends PersistentViewsViewlet implements IManage
 			viewDescriptorsToDeregister.push(organizationViewDescriptor.id);
 		}
 
+		viewDescriptorsToRegister.push(profileViewDescriptor);
+		viewDescriptorsToDeregister.push(profileViewDescriptor.id);
 
 		if (!codeHostDescriptorExists) {
 			viewDescriptorsToRegister.push(codeHostDescriptor);
-		}
-
-		if (!profileViewDescriptorExists) {
-			viewDescriptorsToRegister.push(profileViewDescriptor);
 		}
 
 		ViewsRegistry.deregisterViews(viewDescriptorsToDeregister, ViewLocation.Management);

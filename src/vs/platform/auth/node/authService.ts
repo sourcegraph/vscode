@@ -52,7 +52,7 @@ export class AuthService extends Disposable implements IAuthService {
 
 	) {
 		super();
-		this.updateConfigDelayer = new ThrottledDelayer<void>(1500);
+		this.updateConfigDelayer = new ThrottledDelayer<void>(1000);
 
 		// Load user profile data from remote endpoint on initial load
 		this._register(this.configurationService.onDidUpdateConfiguration(() => this.onDidUpdateConfiguration()));
