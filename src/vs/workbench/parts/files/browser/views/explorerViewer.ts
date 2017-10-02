@@ -376,20 +376,20 @@ export class FileRenderer implements IRenderer {
 		const disposables: IDisposable[] = [];
 
 		let repository: ISCMRepository | undefined;
-		const updateRepository = (r: ISCMRepository) => {
-			if (!r || !r.provider || !r.provider.rootUri || r.provider.rootUri.fsPath !== stat.resource.fsPath) {
-				return;
-			}
-			if (repository !== r) {
-				repository = r;
+		const updateRepository = (force: boolean = false) => {
+			const newRepository = this.scmService.repositories.filter(r => r.provider.rootUri && r.provider.rootUri.fsPath === stat.resource.fsPath)[0];
+			if (repository !== newRepository) {
+				repository = newRepository;
 				update();
 				if (repository) {
 					repository.provider.onDidChange(update, null, disposables);
 				}
+			} else if (force) {
+				update();
 			}
 		};
 		const onDidAddOrRemoveRepository = any(this.scmService.onDidAddRepository, this.scmService.onDidRemoveRepository);
-		onDidAddOrRemoveRepository(updateRepository, null, disposables);
+		onDidAddOrRemoveRepository(() => updateRepository(), null, disposables);
 
 		const actions: IAction[] = [];
 		const disposeActions = () => dispose(actions);
@@ -416,7 +416,7 @@ export class FileRenderer implements IRenderer {
 			actions.splice(0, actions.length, ...newActions);
 		};
 
-		updateRepository(this.scmService.getRepositoryForResource(stat.resource));
+		updateRepository(true);
 
 		templateData.templateDisposable = lifecycle.combinedDisposable(disposables);
 	}
