@@ -108,10 +108,12 @@ function _divideAndMerge<T>(data: T[], compare: (a: T, b: T) => number): void {
 	}
 }
 
-export function groupBy<T>(data: T[], compare: (a: T, b: T) => number): T[][] {
+export function groupBy<T>(data: T[], compare: (a: T, b: T) => number, stable = false): T[][] {
+	const sortedElements = stable ? mergeSort(data.slice(0), compare) : data.slice(0).sort(compare);
+
 	const result: T[][] = [];
 	let currentGroup: T[];
-	for (const element of data.slice(0).sort(compare)) {
+	for (const element of sortedElements) {
 		if (!currentGroup || compare(currentGroup[0], element) !== 0) {
 			currentGroup = [element];
 			result.push(currentGroup);
