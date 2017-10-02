@@ -68,12 +68,10 @@ export class ManagementViewlet extends PersistentViewsViewlet implements IManage
 
 		this._register(this.authService.onDidChangeCurrentUser(user => {
 			this.configureViewlet();
-			this.updateViews();
 		}));
 
 		this._register(this.updateService.onStateChange((e) => {
 			this.configureViewlet();
-			this.updateViews();
 		}));
 
 		this.managementViewletVisibleContextKey = ManagementViewletVisibleContext.bindTo(contextKeyService);
