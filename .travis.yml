@@ -6,6 +6,10 @@ os:
   - linux
   - osx
 
+cache:
+  directories:
+    - $HOME/.npm
+
 notifications:
   email: false
 
