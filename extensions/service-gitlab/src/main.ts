@@ -19,45 +19,6 @@ export function activate(context: vscode.ExtensionContext): void {
 	});
 }
 
-function parsegitlabRepositoryFullName(cloneUrl: vscode.Uri): { owner: string, name: string } | undefined {
-	const parts = cloneUrl.path.slice(1).replace(/\.git$/, '').split('/');
-	if (parts.length === 2) {
-		return { owner: parts[0], name: parts[1] };
-	}
-	return undefined;
-}
-
-function resourceToNameAndOwner(resource: vscode.Uri): { owner: string, name: string } {
-	const parts = resource.path.replace(/^\/repository\//, '').split('/');
-	return { owner: parts[0], name: parts[1] };
-}
-
-/**
- * Close quickopen and pass along the error so that the user sees it immediately instead
- * of only when they close the quickopen (which probably isn't showing any results because of
- * the error).
- */
-function showErrorImmediately<T>(error: string): T | Thenable<T> {
-	return vscode.commands.executeCommand('workbench.action.closeQuickOpen').then(() => vscode.commands.executeCommand('workbench.action.closeMessages').then(() => {
-		const resetTokenItem: vscode.MessageItem = { title: localize('resetToken', "Reset Token") };
-		const cancelItem: vscode.MessageItem = { title: localize('cancel', "Cancel"), isCloseAffordance: true };
-		vscode.window.showErrorMessage(error, resetTokenItem, cancelItem)
-			.then(async (value) => {
-				if (value === resetTokenItem) {
-					const hasToken = vscode.workspace.getConfiguration('gitlab').get<string>('token');
-					if (hasToken) {
-						await vscode.workspace.getConfiguration('gitlab').update('token', undefined, vscode.ConfigurationTarget.Global);
-					}
-					if (checkgitlabToken()) {
-						showCreategitlabTokenWalkthrough(); // will walk the user through recreating the token
-					}
-				}
-			});
-
-		return Promise.reject(error);
-	}));
-}
-
 /**
  * Shows the gitlab token creation walkthrough and returns if a gitlab token was added.
  */
@@ -69,6 +30,38 @@ async function showCreategitlabTokenWalkthrough(skipInfoMessage?: boolean): Prom
 	const createTokenItem: vscode.MessageItem = { title: localize('createToken', "Create Token on gitlab.com") };
 	const enterTokenItem: vscode.MessageItem = { title: localize('enterToken', "Enter Token") };
 	const cancelItem: vscode.MessageItem = { title: localize('cancel', "Cancel"), isCloseAffordance: true };
+	
+	const createHostItem: vscode.MessageItem = { title: localize('createToken', "Create Token on gitlab.com") };
+	const enterHostItem: vscode.MessageItem = { title: localize('enterToken', "Enter Token") };
+
+	const value = await vscode.window.showInformationMessage(
+		localize('nogitlabToken', "A GitLab host is needed to search for repositories"),
+		{ modal: false },
+		createHostItem, enterHostItem, cancelItem,
+	);
+	
+	// Display host message
+	let host;
+	if (value === createHostItem) {
+		host = await vscode.window.showInputBox({
+			prompt: localize('hostPrompt', "GitLab host is required to search for repositories (defaults to gitlab.com)"),
+			ignoreFocusOut: true,
+		});
+		
+		if(host == undefined) {
+			host = "gitlab.com"
+		}
+	} else if (!value || value === cancelItem) {
+		return false;
+	}
+	
+	if (host) {
+		await vscode.workspace.getConfiguration('gitlab').update('host', host, vscode.ConfigurationTarget.Global);
+		return true;
+	}
+
+	// TODO: use host instead of hardcoded value for urls
+
 	if (skipInfoMessage) {
 		await vscode.commands.executeCommand('vscode.open', vscode.Uri.parse('https://gitlab.com/profile/personal_access_tokens'));
 	} else {

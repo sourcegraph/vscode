@@ -39,6 +39,10 @@
         "gitlab.token": {
           "type": "string",
           "description": "%config.token%"
+        },
+        "gitlab.host": {
+          "type": "string",
+          "description": "%config.host%"
         }
       }
     }
