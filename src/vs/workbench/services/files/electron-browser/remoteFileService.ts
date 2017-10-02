@@ -172,7 +172,7 @@ export class RemoteFileService extends FileService {
 	}
 
 	resolveFiles(toResolve: { resource: URI; options?: IResolveFileOptions; }[]): TPromise<IResolveFileResult[], any> {
-		const groups = groupBy(toResolve, (a, b) => compare(a.resource.scheme, b.resource.scheme));
+		const groups = groupBy(toResolve, (a, b) => compare(a.resource.scheme, b.resource.scheme), true);
 		const promises: TPromise<IResolveFileResult[], any>[] = [];
 		for (const group of groups) {
 			if (group[0].resource.scheme === Schemas.file) {
