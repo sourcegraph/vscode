@@ -323,7 +323,7 @@ class Viewer {
 }
 
 function parseGitHubRepositoryFullName(cloneUrl: vscode.Uri): { owner: string, name: string } | undefined {
-	const parts = cloneUrl.path.slice(1).replace(/\.git$/, '').split('/');
+	const parts = cloneUrl.path.slice(1).replace(/(\.git)?\/?$/, '').split('/');
 	if (parts.length === 2) {
 		return { owner: parts[0], name: parts[1] };
 	}
