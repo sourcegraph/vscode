@@ -42,7 +42,7 @@ export class GitResourceResolver {
 	}
 
 	public async resolveResource(resource: Uri): Promise<Uri> {
-		const revision = resource.query;
+		const revision = resource.query || null; // Make type optionally null so we don't pass empty strings around
 		let repoUri = resource.with({ query: null } as any);
 
 		// For 'git' scheme, avoid conflict with the TextDocumentContentProvider's git: URIs by only resolving URIs
@@ -59,7 +59,7 @@ export class GitResourceResolver {
 
 		// See if a repository with this clone URL already exists. This is best-effort and is based on string
 		// equality between our unresolved resource URI and the repositories' remote URLs.
-		if (canonicalResource) {
+		if (canonicalResource && revision) {
 			const repoAndworktree = await this.findRepositoryWithRemoteRevision(canonicalResource, revision);
 			if (repoAndworktree) {
 				const [, worktreePath] = repoAndworktree;
@@ -69,6 +69,9 @@ export class GitResourceResolver {
 
 		const repoForRemote = await this.model.tryOpenRepositoryWithRemote(repoUri);
 		if (repoForRemote) {
+			if (!revision) {
+				return Uri.file(repoForRemote.root);
+			}
 			const headCommit = await repoForRemote.getCommit('HEAD');
 			if (headCommit.hash === revision) {
 				return Uri.file(repoForRemote.root);
@@ -100,14 +103,14 @@ export class GitResourceResolver {
 		const repositoriesWithRemote = this.model.repositories.filter(
 			rpo => rpo.remotes.filter(rmt => canonicalRemote(rmt.url) === canonicalResource).length > 0
 		);
-		return await getBestRepositoryWorktree(repositoriesWithRemote, canonicalResource, revision);;
+		return await getBestRepositoryWorktree(repositoriesWithRemote, canonicalResource, revision);
 	}
 
 	/**
 	 * cloneAndCheckout clones a repository to a path and checks it out to a revision. It returns the
 	 * Uri to the cloned repository on disk.
 	 */
-	private async cloneAndCheckout(cloneUrl: string, directory: string, displayName: string, rev: string): Promise<Uri> {
+	private async cloneAndCheckout(cloneUrl: string, directory: string, displayName: string, rev: string | null): Promise<Uri> {
 
 		try {
 			// Clone
@@ -118,7 +121,9 @@ export class GitResourceResolver {
 
 			// Checkout
 			const repo = this.git.open(directory);
-			await repo.checkout(rev, []);
+			if (rev) {
+				await repo.checkout(rev, []);
+			}
 
 			return Uri.file(directory);
 		} catch (anyErr) {

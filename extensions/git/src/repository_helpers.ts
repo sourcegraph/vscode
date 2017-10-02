@@ -80,7 +80,7 @@ export async function resolveRevision(repo: Repository, canonicalRemoteUri: stri
  *
  * @param repos is the list of repositories to search for a worktree
  * @param canonicalRemoteUri is a URI that identifies the remote(s)
- * @param revision is the revision with repsect to the remote. For instance, if the canonicalRemoteUri is "github.com/my/repo" and
+ * @param revision is the revision with respect to the remote. For instance, if the canonicalRemoteUri is "github.com/my/repo" and
  * 		the revision is "mybranch" and there is a remote named "upstream" with URL "https://github.com/my/repo.git", we will
  * 		return the best match worktree for "upstream/mybranch".
  */
