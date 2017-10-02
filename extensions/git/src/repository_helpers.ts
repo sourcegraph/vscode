@@ -105,7 +105,10 @@ export async function getBestRepositoryWorktree(repos: Repository[], canonicalRe
 	}
 	const resolvedRepoRevsWorktrees: { repo: Repository, remoteBranch: string | null, commit: string, worktreesP: Promise<Worktree[]> }[] = [];
 	for (const { repo, remoteBranch, commit } of resolvedRepoRevs) {
-		resolvedRepoRevsWorktrees.push({ repo, remoteBranch, commit, worktreesP: repo.worktreeList() });
+		resolvedRepoRevsWorktrees.push({
+			repo, remoteBranch, commit,
+			worktreesP: repo.worktreePrune().then(() => repo.worktreeList()),
+		});
 	}
 
 	if (revision.length !== 40) {
@@ -152,6 +155,7 @@ export async function getBestRepositoryWorktree(repos: Repository[], canonicalRe
 export async function getRepositoryWorktree(repository: Repository, rev: string, worktreesPromise?: Promise<Worktree[]>, createIfNotExist?: boolean): Promise<Worktree | null> {
 	let worktrees: Worktree[];
 	if (!worktreesPromise) {
+		await repository.worktreePrune();
 		worktrees = await repository.worktreeList();
 	} else {
 		worktrees = await worktreesPromise;
