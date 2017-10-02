@@ -47,6 +47,7 @@ export class ManagementViewlet extends PersistentViewsViewlet implements IManage
 	private disposables: IDisposable[] = [];
 	private secondaryActions: IAction[] = [];
 	private actions: IAction[] = [];
+	private refreshAction: RefreshProfileAction;
 
 	constructor(
 		@ITelemetryService telemetryService: ITelemetryService,
@@ -63,20 +64,50 @@ export class ManagementViewlet extends PersistentViewsViewlet implements IManage
 	) {
 		super(VIEWLET_ID, ViewLocation.Management, `${VIEWLET_ID}.state`, true, telemetryService, storageService, instantiationService, themeService, contextService, contextKeyService, contextMenuService, extensionService);
 
-		this.authService.onDidChangeCurrentUser(user => {
-			this.registerViews();
-			this.updateViews();
-		});
+		this.configureViewlet();
 
-		this.updateService.onStateChange((e) => {
-			this.registerViews();
-			this.updateViews();
-		});
+		this._register(this.authService.onDidChangeCurrentUser(user => {
+			this.configureViewlet();
+		}));
 
-		this.registerViews();
+		this._register(this.updateService.onStateChange((e) => {
+			this.configureViewlet();
+		}));
+
 		this.managementViewletVisibleContextKey = ManagementViewletVisibleContext.bindTo(contextKeyService);
-		this.actions = [this.instantiationService.createInstance(RefreshProfileAction, true, 'explorer-action refresh-orgs')];
 		this.secondaryActions = this.instantiationService.createInstance(UpdateContribution).getActions();
+	}
+
+	/**
+	 * Initalizes and registers viewlet actions.
+	 */
+	private registerActions(): void {
+		const actions = [];
+		if (!this.refreshAction) {
+			this.refreshAction = this.instantiationService.createInstance(RefreshProfileAction, true, 'explorer-action refresh-orgs');
+		}
+
+		actions.push(this.refreshAction);
+		this.actions = actions;
+	}
+
+	/**
+	 * Triggers a request to the server for updated account information. If the user has been updated onDidChangeCurrentUser
+	 * event will handle refreshing the viewlet if necessary.
+	 */
+	private refreshViewlet(): void {
+		if (this.refreshAction) {
+			this.refreshAction.run();
+		}
+	}
+
+	/**
+	 * Register all viewlet actions, views, and update view descriptors.
+	 */
+	private configureViewlet(): void {
+		this.registerActions();
+		this.registerViews();
+		this.updateViews();
 	}
 
 	private registerViews(): void {
@@ -191,6 +222,7 @@ export class ManagementViewlet extends PersistentViewsViewlet implements IManage
 			if (isVisibilityChanged) {
 				this.managementViewletVisibleContextKey.set(visible);
 				if (visible) {
+					this.refreshViewlet();
 					this.telemetryService.publicLog('management.openViewlet');
 				}
 			}

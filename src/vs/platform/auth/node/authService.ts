@@ -16,6 +16,9 @@ import { IConfigurationEditingService, ConfigurationTarget } from 'vs/workbench/
 import { ICommandService } from 'vs/platform/commands/common/commands';
 import { IMessageService, Severity } from 'vs/platform/message/common/message';
 import { ModalIdentifiers } from 'vs/workbench/parts/modal/modal';
+import { IWindowsService } from 'vs/platform/windows/common/windows';
+import { ThrottledDelayer } from 'vs/base/common/async';
+import { TPromise } from 'vs/base/common/winjs.base';
 
 export { Event }
 
@@ -36,18 +39,28 @@ export class AuthService extends Disposable implements IAuthService {
 	 */
 	private _currentSessionId?: string;
 
+	private updateConfigDelayer: ThrottledDelayer<void>;
+
 	constructor(
 		@ITelemetryService private telemetryService: ITelemetryService,
 		@IRemoteService private remoteService: IRemoteService,
 		@IConfigurationService private configurationService: IConfigurationService,
 		@IConfigurationEditingService private configurationEditingService: IConfigurationEditingService,
 		@ICommandService private commandService: ICommandService,
-		@IMessageService private messageService: IMessageService
+		@IMessageService private messageService: IMessageService,
+		@IWindowsService private windowsService: IWindowsService
+
 	) {
 		super();
+		this.updateConfigDelayer = new ThrottledDelayer<void>(1500);
 
 		// Load user profile data from remote endpoint on initial load
 		this._register(this.configurationService.onDidUpdateConfiguration(() => this.onDidUpdateConfiguration()));
+
+		this._register(this.windowsService.onWindowFocus(() => {
+			this.refresh();
+		}));
+
 		this.onDidUpdateConfiguration();
 	}
 
@@ -64,63 +77,65 @@ export class AuthService extends Disposable implements IAuthService {
 	 * updates their remote.cookie setting, this method requests updated
 	 * user profile data from the remote endpoint.
 	 */
-	private onDidUpdateConfiguration(force?: boolean) {
-		const config = this.configurationService.getConfiguration<IRemoteConfiguration>();
-		// Only re-request user data, fire an event, and log telemetry if the cookie actually changed
-		if (!force && this._currentSessionId === config.remote.cookie) {
-			return;
-		}
-		this._currentSessionId = config.remote.cookie;
-		// Request updated user profile information
-		requestGraphQL<{ currentUser: GQL.IUser }>(this.remoteService, `query CurrentUser {
-				root {
-					currentUser {
-						id
-						avatarURL
-						email
-						orgMemberships {
+	private onDidUpdateConfiguration(force?: boolean): void {
+		this.updateConfigDelayer.trigger(() => {
+			const config = this.configurationService.getConfiguration<IRemoteConfiguration>();
+			// Only re-request user data, fire an event, and log telemetry if the cookie actually changed
+			if (!force && this._currentSessionId === config.remote.cookie) {
+				return TPromise.as(null);
+			}
+			this._currentSessionId = config.remote.cookie;
+			// Request updated user profile information
+			return requestGraphQL<{ currentUser: GQL.IUser }>(this.remoteService, `query CurrentUser {
+					root {
+						currentUser {
 							id
-							username
-							email
-							displayName
 							avatarURL
-							org {
+							email
+							orgMemberships {
 								id
-								name
+								username
+								email
+								displayName
+								avatarURL
+								org {
+									id
+									name
+								}
 							}
 						}
 					}
-				}
-			}`, {})
-			.then(response => {
-				dispose(this._currentUser);
-				this.toDisposeOnCurrentUserChange = dispose(this.toDisposeOnCurrentUserChange);
+				}`, {})
+				.then(response => {
+					dispose(this._currentUser);
+					this.toDisposeOnCurrentUserChange = dispose(this.toDisposeOnCurrentUserChange);
 
-				this._currentUser = new User(response.currentUser, this.telemetryService);
-				this.toDisposeOnCurrentUserChange.push(this._currentUser.onDidChangeCurrentOrgMember(() => {
+					this._currentUser = new User(response.currentUser, this.telemetryService);
+					this.toDisposeOnCurrentUserChange.push(this._currentUser.onDidChangeCurrentOrgMember(() => {
+						this.didChangeCurrentUser.fire();
+					}));
+					this.telemetryService.publicLog('CurrentUserSignedIn', this._currentUser.getTelemetryData());
 					this.didChangeCurrentUser.fire();
-				}));
-				this.telemetryService.publicLog('CurrentUserSignedIn', this._currentUser.getTelemetryData());
-				this.didChangeCurrentUser.fire();
-			}, () => {
-				dispose(this._currentUser);
-				this.toDisposeOnCurrentUserChange = dispose(this.toDisposeOnCurrentUserChange);
+				}, () => {
+					dispose(this._currentUser);
+					this.toDisposeOnCurrentUserChange = dispose(this.toDisposeOnCurrentUserChange);
 
-				// If user is already signed in, notify them that their signout was successful and log telemetry.
-				// If not, it's possible they ran into this failed request during app launch.
-				if (this.currentUser) {
-					this.telemetryService.publicLog('LogoutClicked');
-					this.messageService.show(Severity.Info, localize('remote.auth.signedOutConfirmation', "Your editor has been signed out of Sourcegraph. Visit {0} to end your web session.", urlToSignOut(this.configurationService)));
-				}
+					// If user is already signed in, notify them that their signout was successful and log telemetry.
+					// If not, it's possible they ran into this failed request during app launch.
+					if (this.currentUser) {
+						this.telemetryService.publicLog('LogoutClicked');
+						this.messageService.show(Severity.Info, localize('remote.auth.signedOutConfirmation', "Your editor has been signed out of Sourcegraph. Visit {0} to end your web session.", urlToSignOut(this.configurationService)));
+					}
 
-				// Delete user from memory
-				this._currentUser = undefined;
-				this._currentSessionId = undefined;
+					// Delete user from memory
+					this._currentUser = undefined;
+					this._currentSessionId = undefined;
 
-				// Fire event
-				this.telemetryService.publicLog('CurrentUserSignedOut');
-				this.didChangeCurrentUser.fire();
-			});
+					// Fire event
+					this.telemetryService.publicLog('CurrentUserSignedOut');
+					this.didChangeCurrentUser.fire();
+				});
+		});
 	}
 
 	public refresh(): void {
