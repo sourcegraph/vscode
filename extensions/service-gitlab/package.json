@@ -1,0 +1,58 @@
+{
+  "name": "service-gitlab",
+  "displayName": "gitlab integration",
+  "description": "Provides access to gitlab repositories",
+  "categories": [
+    "Other"
+  ],
+  "main": "./out/main",
+  "version": "0.0.1",
+  "publisher": "sourcegraph",
+  "engines": {
+    "vscode": "*"
+  },
+  "activationEvents": [
+    "*"
+  ],
+  "enableProposedApi": true,
+  "contributes": {
+    "commands": [    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "gitlab.pullRequests.quickopen",
+          "when": "config.git.enabled && gitOpenRepositoryCount != 0"
+        }
+      ],
+      "scm/title": [
+        {
+          "command": "gitlab.pullRequests.quickopen",
+          "group": "gitlab",
+          "when": "config.git.enabled && scmProvider == git"
+        }
+      ]
+    },
+    "configuration": {
+      "type": "object",
+      "title": "gitlab",
+      "properties": {
+        "gitlab.token": {
+          "type": "string",
+          "description": "%config.token%"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "gulp compile-extension:service-gitlab",
+    "watch": "gulp watch-extension:service-gitlab"
+  },
+  "dependencies": {
+    "vscode-nls": "^2.0.2"
+  },
+  "devDependencies": {
+    "@types/mocha": "^2.2.38",
+    "@types/node": "^7.0.12",
+    "vscode": "1.0.1"
+  }
+}
