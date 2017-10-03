@@ -26,18 +26,13 @@ import { dispose, IDisposable } from 'vs/base/common/lifecycle';
 import { StrictResourceMap } from 'vs/base/common/map';
 import { IMessageService, Severity } from 'vs/platform/message/common/message';
 import { IModelContentChangedEvent } from 'vs/editor/common/model/textModelEvents';
-import { InterruptibleDelayer } from 'vs/base/common/async';
+import { InterruptibleDelayer, ThrottledDelayer } from 'vs/base/common/async';
 import { IAuthService } from 'vs/platform/auth/common/auth';
 import { DiffWorkerClient } from 'vs/workbench/services/codeComments/node/diffWorkerClient';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 import { TextModel } from 'vs/editor/common/model/textModel';
 
 export { Event }
-
-/**
- * Don't fetch threads from network more often than this.
- */
-const REFETCH_DELAY_MS = 2000;
 
 /**
  * A unique identifier for a file.
@@ -217,22 +212,20 @@ export class FileComments extends Disposable implements IFileComments {
 		return draft;
 	}
 
-	private refreshingThreads: TPromise<void> | undefined;
-
+	public refreshingThreads = TPromise.wrap<void>(undefined);
+	private refreshThreadsDelayer = new ThrottledDelayer<void>(100);
 	private didStartRefreshing = this.disposable(new Emitter<void>());
-	public onDidStartRefreshing = this.didStartRefreshing.event;
-	public get refreshing(): TPromise<void> {
-		return this.refreshingThreads || TPromise.wrap<void>(undefined);
-	}
+	public onDidStartRefreshingThreads = this.didStartRefreshing.event;
 
 	/**
 	 * See documentation on IFileComments.
 	 */
 	public refreshThreads(): TPromise<void> {
-		if (this.refreshingThreads) {
-			return this.refreshingThreads;
-		}
-		const refreshingThreads = this.getDocumentId()
+		return this.refreshThreadsDelayer.trigger(() => this.refreshThreadsNow());
+	}
+
+	private refreshThreadsNow(): TPromise<void> {
+		this.refreshingThreads = this.getDocumentId()
 			.then(documentId => {
 				if (!documentId) {
 					return TPromise.wrap(undefined);
@@ -281,16 +274,8 @@ export class FileComments extends Disposable implements IFileComments {
 				return this.updateDisplayRanges();
 			});
 
-		this.refreshingThreads = refreshingThreads;
-		this.refreshingThreads.done(() => {
-			setTimeout(() => {
-				this.refreshingThreads = undefined;
-			}, REFETCH_DELAY_MS);
-		}, err => {
-			this.refreshingThreads = undefined;
-		});
 		this.didStartRefreshing.fire();
-		return refreshingThreads;
+		return this.refreshingThreads;
 	}
 
 	/**
@@ -307,22 +292,35 @@ export class FileComments extends Disposable implements IFileComments {
 		return TPromise.join([
 			this.instantiationService.invokeFunction(getPathRelativeToRepo, this.modelWatcher.uri),
 			this.git.getRemoteRepo(),
-		]).then(([relativeFile, repo]) => {
-			return { repo, file: relativeFile };
-		});
+		])
+			.then(([relativeFile, repo]) => {
+				return { repo, file: relativeFile };
+			})
+			.then(docId => docId, err => {
+				// These errors happen a lot on startup because the source control providers
+				// arent registered yet. It isn't a problem on startup because we just retry later
+				// when the source control providers change. We still log the message in case there
+				// is a bug after starup and this information would be helpful.
+				const error = Array.isArray(err) ? err[0] : err;
+				console.log(error.message);
+				return undefined;
+			});
 	}
 
 	private updateDisplayRangeDelayer = new InterruptibleDelayer<void>(1000);
 
 	private updateDisplayRanges(): TPromise<void> {
 		return this.updateDisplayRangeDelayer.trigger(() => {
-			return this.updateDisplayRangesUnthrottled();
+			return this.updateDisplayRangesNow();
 		});
 	}
 
-	private updateDisplayRangesUnthrottled(): TPromise<void> {
+	private updateDisplayRangesNow(): TPromise<void> {
 		return this.getDocumentId()
 			.then(documentId => {
+				if (!documentId) {
+					return TPromise.wrap(undefined);
+				}
 				return TPromise.join(
 					this.threads
 						// TODO(nick): ideally we don't want to compute display ranges for archived threads
@@ -334,7 +332,7 @@ export class FileComments extends Disposable implements IFileComments {
 				);
 			})
 			.then(revContents => {
-				if (!this.modelWatcher.model) {
+				if (!revContents || !this.modelWatcher.model) {
 					return TPromise.as(undefined);
 				}
 				const revLines = revContents.map(revContent => {
@@ -811,6 +809,7 @@ export class Comment implements IComment {
 	}
 }
 
+// TODO(nick): this doesn't need to return a promise
 function getPathRelativeToRepo(accessor: ServicesAccessor, file: URI): TPromise<string> {
 	const repository = accessor.get(ISCMService).getRepositoryForResource(file);
 	if (!repository) {

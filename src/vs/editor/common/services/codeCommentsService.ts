@@ -35,8 +35,8 @@ export interface IFileComments extends IEventDisposable {
 	 * A promise that resolves when comments
 	 * are done refreshing on the file.
 	 */
-	readonly refreshing: TPromise<void>;
-	readonly onDidStartRefreshing: Event<void>;
+	readonly refreshingThreads: TPromise<void>;
+	readonly onDidStartRefreshingThreads: Event<void>;
 
 	/**
 	 * Returns all threads on the file.

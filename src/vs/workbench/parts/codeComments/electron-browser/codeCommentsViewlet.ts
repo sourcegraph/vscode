@@ -61,12 +61,6 @@ export class CodeCommentsViewlet extends Viewlet {
 	private title: string;
 	private actions: IAction[] = [];
 
-	/**
-	 * True if the threads list is rendered.
-	 * False if something else is rendered (e.g. create thread or thread view).
-	 */
-	private recentThreadsView = true;
-
 	constructor(
 		@ITelemetryService telemetryService: ITelemetryService,
 		@IThemeService themeService: IThemeService,
@@ -147,14 +141,12 @@ export class CodeCommentsViewlet extends Viewlet {
 		const modelUri = this.getModelUri(editor);
 		if (modelUri) {
 			const fileComments = this.codeCommentsService.getFileComments(modelUri);
-			this.activeEditorListeners.push(fileComments.onDidStartRefreshing(() => {
-				this.progressService.showWhile(fileComments.refreshing);
+			this.activeEditorListeners.push(fileComments.onDidStartRefreshingThreads(() => {
+				this.progressService.showWhile(fileComments.refreshingThreads);
 			}));
-			this.progressService.showWhile(fileComments.refreshing);
+			this.progressService.showWhile(fileComments.refreshingThreads);
 			this.activeEditorListeners.push(fileComments.onDidChangeThreads(() => {
-				if (this.recentThreadsView) {
-					this.render(modelUri);
-				}
+				this.render(modelUri);
 			}));
 		}
 		this.render(modelUri);
@@ -192,12 +184,9 @@ export class CodeCommentsViewlet extends Viewlet {
 	private render(modelUri: URI | undefined): void {
 		const authed = this.authService.currentUser && this.authService.currentUser.currentOrgMember;
 		if (!authed) {
-			// TODO(nick): differentiate between not signed in and not in an org.
-			this.recentThreadsView = false;
 			this.renderAuthenticationView();
 			return;
 		}
-		this.recentThreadsView = true;
 
 		if (!modelUri) {
 			this.renderCommentsNotAvailable();
