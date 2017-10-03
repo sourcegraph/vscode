@@ -101,17 +101,8 @@ query($query: String!) {
 }`,
 					{ query: `${query} fork:true` }).then((data: any) => data.search.nodes, showErrorImmediately);
 			} else {
-				request = requestGraphQL(`
-query {
-	viewer {
-		repositories(first: 30) {
-			nodes {
-				${repoFields}
-			}
-		}
-	}
-}`,
-					{}).then((data: any) => data.viewer.repositories.nodes, showErrorImmediately);
+				// viewer.repositories already includes the repos we want
+				request = Promise.resolve([]);
 			}
 
 			const [viewerRepos, searchResults] = await Promise.all([
@@ -249,6 +240,13 @@ class Viewer {
 	private repoRequest: Thenable<vscode.CatalogFolder[]> | null;
 	private usernameRequest: Thenable<string | null> | null;
 
+	constructor() {
+		// Pre-emptively fetch user related information
+		setTimeout(() => {
+			this.repositories();
+		}, 2000);
+	}
+
 	// Returns the github repositories for the current user. Best-effort, so
 	// should never be rejected. Also cached, so efficient to be repeatedly called.
 	public repositories(): Thenable<vscode.CatalogFolder[]> {
@@ -259,28 +257,50 @@ class Viewer {
 			return this.repoRequest;
 		}
 		const request = requestGraphQL(`
-			{
-				viewer {
-					contributedRepositories(first: 100) {
-						nodes {
-							...repoFields
-						}
+		{
+			viewer {
+				pinnedRepositories(first: 100, orderBy: {field: PUSHED_AT, direction: DESC}) {
+					nodes {
+						...repoFields
 					}
-					repositories(first: 100) {
-						nodes {
-							...repoFields
+				}
+				contributedRepositories(first: 100, orderBy: {field: PUSHED_AT, direction: DESC}) {
+					nodes {
+						...repoFields
+					}
+				}
+				starredRepositories(first: 100, orderBy: {field: STARRED_AT, direction: DESC}) {
+					nodes {
+						...repoFields
+					}
+				}
+				repositories(first: 100, orderBy: {field: PUSHED_AT, direction: DESC}) {
+					nodes {
+						...repoFields
+					}
+				}
+				organizations(first: 100) {
+					nodes {
+						repositories(first: 100, orderBy: {field: PUSHED_AT, direction: DESC}) {
+							nodes {
+								...repoFields
+							}
 						}
 					}
 				}
 			}
+		}
 
-			fragment repoFields on Repository {
-				${repoFields}
-			}
-			`, {}).then<vscode.CatalogFolder[]>((data: any) => {
+		fragment repoFields on Repository {
+			${repoFields}
+		}
+		  `, {}).then<vscode.CatalogFolder[]>((data: any) => {
 				return [].concat(
+					data.viewer.pinnedRepositories.nodes,
 					data.viewer.contributedRepositories.nodes,
+					data.viewer.starredRepositories.nodes,
 					data.viewer.repositories.nodes,
+					...data.viewer.organizations.nodes.map((org: any) => org.repositories.nodes),
 				).map(toCatalogFolder);
 			}, (reason) => {
 				// try again, but don't fail other requests if this fails
