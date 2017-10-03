@@ -6,7 +6,7 @@
 
 import { TPromise } from 'vs/base/common/winjs.base';
 import URI from 'vs/base/common/uri';
-import { TrieMap } from 'vs/base/common/map';
+import { TernarySearchTree } from 'vs/base/common/map';
 import { flatten } from 'vs/base/common/arrays';
 import { IDisposable, toDisposable } from 'vs/base/common/lifecycle';
 import { IFolderCatalogProvider, ICatalogFolder, IFolderCatalogService } from 'vs/platform/folders/common/folderCatalog';
@@ -28,7 +28,7 @@ export class FolderCatalogService implements IFolderCatalogService {
 	/**
 	 * Maps from a URI to the provider that registered for that URI.
 	 */
-	private providersMap: TrieMap<URI, IFolderCatalogProvider>;
+	private providersMap: TernarySearchTree<IFolderCatalogProvider>;
 
 	constructor() {
 		this.updateProvidersMap();
@@ -97,13 +97,13 @@ export class FolderCatalogService implements IFolderCatalogService {
 	}
 
 	private getProviderForResource(resource: URI): IFolderCatalogProvider {
-		return this.providersMap.findSubstr(resource);
+		return this.providersMap.findSubstr(resource.fsPath);
 	}
 
 	private updateProvidersMap(): void {
-		this.providersMap = new TrieMap<URI, IFolderCatalogProvider>(uri => [uri.scheme, uri.authority].concat(uri.path.split('/')));
+		this.providersMap = TernarySearchTree.forPaths<IFolderCatalogProvider>();
 		for (const { root, provider } of this.providers) {
-			this.providersMap.insert(root, provider);
+			this.providersMap.set(root.fsPath, provider);
 		}
 	}
 }

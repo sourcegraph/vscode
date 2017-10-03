@@ -10,7 +10,6 @@ import nls = require('vs/nls');
 import * as objects from 'vs/base/common/objects';
 import * as strings from 'vs/base/common/strings';
 import * as arrays from 'vs/base/common/arrays';
-import { compareByScore, IScorableResourceAccessor } from 'vs/base/common/comparers';
 import { defaultGenerator } from 'vs/base/common/idGenerator';
 import URI from 'vs/base/common/uri';
 import { IIconLabelOptions } from 'vs/base/browser/ui/iconLabel/iconLabel';
@@ -427,7 +426,7 @@ export class OpenAnyFolderHandler extends QuickOpenHandler {
 	 */
 	private createComparer(searchValue: string, normalizedSearchValue: string): (elementA: FolderEntry, elementB: FolderEntry) => number {
 		return (a: FolderEntry, b: FolderEntry) => {
-			return compareByScore<FolderEntry>(a, b, this.folderEntryAccessor(searchValue), searchValue, normalizedSearchValue, this.scorerCache, this.calcBoost(a), this.calcBoost(b));
+			return scorer.compareResourcesByScore<FolderEntry>(a, b, this.folderEntryAccessor(searchValue), searchValue, normalizedSearchValue, this.scorerCache, this.calcBoost(a), this.calcBoost(b));
 		};
 	}
 
@@ -452,10 +451,10 @@ export class OpenAnyFolderHandler extends QuickOpenHandler {
 		return 0;
 	}
 
-	private folderEntryAccessor(searchValue: string): IScorableResourceAccessor<FolderEntry> {
+	private folderEntryAccessor(searchValue: string): scorer.IScorableResourceAccessor<FolderEntry> {
 		const searchContainsSep = searchValue.indexOf('/') >= 0;
 		return {
-			getLabel(entry: FolderEntry): string {
+			getResourceLabel(entry: FolderEntry): string {
 				if (searchContainsSep) {
 					// Return full label if our query contains a /
 					return entry.getLabel();

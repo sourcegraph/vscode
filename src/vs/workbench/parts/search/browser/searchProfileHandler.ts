@@ -7,7 +7,6 @@
 import { TPromise } from 'vs/base/common/winjs.base';
 import nls = require('vs/nls');
 import strings = require('vs/base/common/strings');
-import scorer = require('vs/base/common/scorer');
 import arrays = require('vs/base/common/arrays');
 import { Mode, IEntryRunContext, IAutoFocus, IQuickNavigateConfiguration, IModel } from 'vs/base/parts/quickopen/common/quickOpen';
 import { QuickOpenModel, QuickOpenEntryGroup, QuickOpenEntry } from 'vs/base/parts/quickopen/browser/quickOpenModel';
@@ -81,7 +80,7 @@ export class ProfilePickerHandler extends QuickOpenHandler {
 				return true;
 			}
 
-			if (!scorer.matches(e.getLabel(), normalizedSearchValueLowercase)) {
+			if (!strings.fuzzyContains(e.getLabel(), normalizedSearchValueLowercase)) {
 				return false;
 			}
 

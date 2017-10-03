@@ -8,7 +8,7 @@
 import { IDisposable, toDisposable } from 'vs/base/common/lifecycle';
 import Event, { Emitter } from 'vs/base/common/event';
 import URI from 'vs/base/common/uri';
-import { TrieMap } from 'vs/base/common/map';
+import { TernarySearchTree } from 'vs/base/common/map';
 import { ISCMService, ISCMProvider, ISCMInput, ISCMRepository } from './scm';
 
 class SCMInput implements ISCMInput {
@@ -71,7 +71,7 @@ export class SCMService implements ISCMService {
 	 * Map of SCM root folders to the SCM repository that is used to provide SCM information
 	 * about resources inside the folder.
 	 */
-	private _folderRepositoriesMap: TrieMap<URI, ISCMRepository>;
+	private _folderRepositoriesMap: TernarySearchTree<ISCMRepository>;
 
 	constructor() {
 		this.updateFolderRepositoriesMap();
@@ -106,14 +106,14 @@ export class SCMService implements ISCMService {
 	}
 
 	getRepositoryForResource(resource: URI): ISCMRepository | undefined {
-		return this._folderRepositoriesMap.findSubstr(resource);
+		return this._folderRepositoriesMap.findSubstr(resource.fsPath);
 	}
 
 	private updateFolderRepositoriesMap(): void {
-		this._folderRepositoriesMap = new TrieMap<URI, ISCMRepository>(uri => [uri.scheme, uri.authority].concat(uri.path.split('/')));
+		this._folderRepositoriesMap = TernarySearchTree.forPaths<ISCMRepository>();
 		for (const repository of this._repositories) {
 			if (repository.provider.rootUri) {
-				this._folderRepositoriesMap.insert(repository.provider.rootUri, repository);
+				this._folderRepositoriesMap.set(repository.provider.rootUri.fsPath, repository);
 			}
 		}
 	}

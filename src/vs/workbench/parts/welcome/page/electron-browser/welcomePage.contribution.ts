@@ -14,8 +14,7 @@ import { IWorkbenchActionRegistry, Extensions as ActionExtensions } from 'vs/wor
 import { SyncActionDescriptor } from 'vs/platform/actions/common/actions';
 import { IConfigurationRegistry, Extensions as ConfigurationExtensions } from 'vs/platform/configuration/common/configurationRegistry';
 import { IGlobalActivityRegistry, GlobalActivityExtensions } from 'vs/workbench/common/activity';
-import { IEditorRegistry } from 'vs/workbench/common/editor';
-import { Extensions as EditorExtensions } from 'vs/workbench/browser/parts/editor/baseEditor';
+import { Extensions as EditorExtensions, IEditorInputFactoryRegistry } from 'vs/workbench/common/editor';
 
 Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration)
 	.registerConfiguration({
@@ -43,7 +42,7 @@ Registry.as<IWorkbenchContributionsRegistry>(WorkbenchExtensions.Workbench)
 Registry.as<IWorkbenchActionRegistry>(ActionExtensions.WorkbenchActions)
 	.registerWorkbenchAction(new SyncActionDescriptor(WelcomePageAction, WelcomePageAction.ID, WelcomePageAction.LABEL), 'Help: Welcome', localize('help', "Help"));
 
-Registry.as<IEditorRegistry>(EditorExtensions.Editors).registerEditorInputFactory(WelcomeInputFactory.ID, WelcomeInputFactory);
+Registry.as<IEditorInputFactoryRegistry>(EditorExtensions.EditorInputFactories).registerEditorInputFactory(WelcomeInputFactory.ID, WelcomeInputFactory);
 
 Registry.as<IGlobalActivityRegistry>(GlobalActivityExtensions)
 	.registerActivity(HomeContribution);

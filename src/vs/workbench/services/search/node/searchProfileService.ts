@@ -13,7 +13,6 @@ import { IWorkspaceContextService, WorkbenchState } from 'vs/platform/workspace/
 import { IRemoteService, requestGraphQL } from 'vs/platform/remote/node/remote';
 import { onUnexpectedError } from 'vs/base/common/errors';
 
-
 /**
  * A service which aggregates all the valid Search Profiles for a workspace.
  */

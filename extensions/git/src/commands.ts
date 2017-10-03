@@ -341,12 +341,13 @@ export class CommandCenter {
 	}
 
 	@command('git.clone')
-	async clone(initialValue?: string): Promise<void> {
-		const url = await window.showInputBox({
-			prompt: localize('repourl', "Repository URL"),
-			ignoreFocusOut: true,
-			value: initialValue,
-		});
+	async clone(url?: string): Promise<void> {
+		if (!url) {
+			url = await window.showInputBox({
+				prompt: localize('repourl', "Repository URL"),
+				ignoreFocusOut: true
+			});
+		}
 
 		if (!url) {
 			/* __GDPR__
