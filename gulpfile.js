@@ -15,13 +15,13 @@ const compilation = require('./build/lib/compilation');
 
 // Fast compile for development time
 gulp.task('clean-client', util.rimraf('out'));
-gulp.task('compile-client', ['clean-client', 'graphql'], compilation.compileTask('out', false));
-gulp.task('watch-client', ['clean-client', 'watch-graphql'], compilation.watchTask('out', false));
+gulp.task('compile-client', ['graphql', 'clean-client'], compilation.compileTask('out', false));
+gulp.task('watch-client', ['graphql', 'clean-client'], compilation.watchTask('out', false));
 
 // Full compile, including nls and inline sources in sourcemaps, for build
 gulp.task('clean-client-build', util.rimraf('out-build'));
-gulp.task('compile-client-build', ['clean-client-build', 'graphql'], compilation.compileTask('out-build', true));
-gulp.task('watch-client-build', ['clean-client-build', 'watch-graphql'], compilation.watchTask('out-build', true));
+gulp.task('compile-client-build', ['graphql', 'clean-client-build'], compilation.compileTask('out-build', true));
+gulp.task('watch-client-build', ['graphql', 'clean-client-build'], compilation.watchTask('out-build', true));
 
 // Default
 gulp.task('default', ['compile']);
@@ -29,12 +29,12 @@ gulp.task('default', ['compile']);
 // All
 gulp.task('clean', ['clean-client', 'clean-extensions']);
 gulp.task('compile', ['compile-client', 'compile-extensions']);
-gulp.task('watch', ['watch-client', 'watch-extensions']);
+gulp.task('watch', ['watch-graphql', 'watch-client', 'watch-extensions']);
 
 // All Build
 gulp.task('clean-build', ['clean-client-build', 'clean-extensions-build']);
 gulp.task('compile-build', ['compile-client-build', 'compile-extensions-build']);
-gulp.task('watch-build', ['watch-client-build', 'watch-extensions-build']);
+gulp.task('watch-build', ['watch-graphql', 'watch-client-build', 'watch-extensions-build']);
 
 var ALL_EDITOR_TASKS = [
 	// Always defined tasks
