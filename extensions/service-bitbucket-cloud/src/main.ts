@@ -44,7 +44,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		},
 		resolveLocalFolderResource(path: string): Thenable<vscode.Uri | null> {
 			return new Promise<string>((resolve, reject) => {
-				cp.exec('git ls-remote --get-url', { cwd: path }, (error, stdout, stderr) => resolve(stdout));
+				cp.exec('git ls-remote --get-url', { cwd: path }, (error, stdout, stderr) => resolve(stdout || ''));
 			}).then(gitURL => {
 				gitURL = decodeURIComponent(gitURL.trim()).replace(/\.git$/, '');
 				const match = gitURL.match(/bitbucket.org[\/:]([^/]+\/[^/]+)/);
