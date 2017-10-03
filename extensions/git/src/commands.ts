@@ -1260,6 +1260,17 @@ export class CommandCenter {
 		}
 	}
 
+	@command('git.fetchCommitFromRemoteRef', { repository: true })
+	async fetchCommitFromRemoteRef(repository: Repository, cloneURL: Uri, refName: string, refCommit: string): Promise<void> {
+		try {
+			await repository.getCommit(refCommit);
+		} catch (e) {
+			// We failed to get the commit, so fetch it.
+			const remote = cloneURL.with({ scheme: cloneURL.scheme.replace(/^git\+/, '') }).toString();
+			await repository.executeCommand(['fetch', remote, refName]);
+		}
+	}
+
 	@command('git.mergeBase', { repository: true })
 	async mergeBase(repository: Repository, ...args: string[]): Promise<string[]> {
 		return await repository.getMergeBase(args);

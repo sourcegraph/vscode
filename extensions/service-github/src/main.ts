@@ -34,20 +34,12 @@ const repoFields = [
 
 export function activate(context: vscode.ExtensionContext): void {
 	const viewer = new Viewer();
+	const github = new GitHub(viewer);
 
 	context.subscriptions.push(vscode.workspace.registerResourceResolutionProvider(GITHUB_SCHEME, {
 		async resolveResource(resource: vscode.Uri): Promise<vscode.Uri> {
-			const data = resourceToNameAndOwner(resource);
-			const protocol = vscode.workspace.getConfiguration('github').get<string>('cloneProtocol');
-			let user: string | null = null;
-			if (protocol === 'ssh') {
-				user = 'git';
-			} else {
-				user = await viewer.username();
-			}
-			const userAuthority = user ? `${user}@` : '';
-			return vscode.Uri.parse(`git+${protocol}://${userAuthority}github.com/${data.owner}/${data.name}.git`);
-		},
+			return await github.cloneURL(resource);
+		}
 	}));
 
 	vscode.commands.registerCommand('github.checkAccessToken', async (args) => {
@@ -79,9 +71,9 @@ query($owner: String!, $name: String!) {
 				cp.exec('git ls-remote --get-url', { cwd: path }, (error, stdout, stderr) => resolve(stdout));
 			}).then(gitURL => {
 				gitURL = decodeURIComponent(gitURL.trim()).replace(/\.git$/, '');
-				const match = gitURL.match(/github.com[\/:]([^/]+\/[^/]+)/);
+				const match = gitURL.match(/github.com[\/:]([^/]+)\/([^/]+)/);
 				if (match) {
-					return vscode.Uri.parse('github://github.com/repository/' + match[1]);
+					return nameAndOwnerToResource(match[1], match[2]);
 				}
 				return null;
 			});
@@ -148,13 +140,19 @@ query {
 			return;
 		}
 
+		type Ref = {
+			name: string;
+			repository: { nameWithOwner: string };
+			target: { oid: string };
+		};
+
 		type PullRequest = {
 			number: number;
 			title: string;
 			author: { login: string };
 			updatedAt: string;
-			baseRefName: string;
-			headRefName: string;
+			baseRef: Ref;
+			headRef: Ref;
 			isCrossRepository: boolean;
 		};
 
@@ -189,12 +187,21 @@ query($owner: String!, $name: String!) {
 					title
 					author { login }
 					updatedAt
-					baseRefName
-					headRefName
-					isCrossRepository
+					baseRef { ...refFields }
+					headRef { ...refFields }
 				}
 			}
 		}
+	}
+}
+
+fragment refFields on Ref {
+	name
+	repository {
+		nameWithOwner
+	}
+	target {
+		oid
 	}
 }
 `,
@@ -204,12 +211,11 @@ query($owner: String!, $name: String!) {
 			pullRequest: PullRequest;
 		}
 		const choice = await vscode.window.showQuickPick(pullRequests.then(pullRequests => pullRequests
-			.filter(pullRequest => !pullRequest.isCrossRepository) // TODO(sqs): support cross-repo PRs
 			.map(pullRequest => {
 				return {
 					label: `$(git-pull-request) ${pullRequest.title}`,
 					description: `#${pullRequest.number}`,
-					detail: `${pullRequest.headRefName} — @${pullRequest.author.login}`,
+					detail: `${pullRequest.headRef.name} — @${pullRequest.author.login}`,
 					pullRequest,
 				} as PullRequestItem;
 			})));
@@ -218,11 +224,17 @@ query($owner: String!, $name: String!) {
 			return;
 		}
 
+		await Promise.all([choice.pullRequest.baseRef, choice.pullRequest.headRef].map(async ref => {
+			const [name, owner] = ref.repository.nameWithOwner.split('/');
+			const cloneURL = await github.cloneURL(nameAndOwnerToResource(name, owner));
+			return vscode.commands.executeCommand('git.fetchCommitFromRemoteRef', sourceControl, cloneURL, ref.name, ref.target.oid);
+		}));
+
 		// Set head revision
-		const setRevisionArgs = (setRevisionCommand.arguments || []).concat(choice.pullRequest.headRefName);
+		const setRevisionArgs = (setRevisionCommand.arguments || []).concat(choice.pullRequest.headRef.target.oid);
 		await vscode.commands.executeCommand(setRevisionCommand.command, ...setRevisionArgs);
 
-		const mergeBase = (await vscode.commands.executeCommand('git.mergeBase', sourceControl, choice.pullRequest.baseRefName, 'HEAD') as string[])[0].slice(0, 7);
+		const mergeBase = (await vscode.commands.executeCommand('git.mergeBase', sourceControl, choice.pullRequest.baseRef.target.oid, 'HEAD') as string[])[0].slice(0, 7);
 
 		// Open comparison against merge base
 		await vscode.commands.executeCommand('git.openComparison', sourceControl, mergeBase);
@@ -322,6 +334,29 @@ class Viewer {
 	}
 }
 
+class GitHub {
+
+	constructor(private viewer: Viewer) { }
+
+	/**
+	 * Returns a clone URL for git for the github repository.
+	 * Note: this will include "git+" in the scheme.
+	 * @param resource The github:// repository resource
+	 */
+	async cloneURL(resource: vscode.Uri): Promise<vscode.Uri> {
+		const data = resourceToNameAndOwner(resource);
+		const protocol = vscode.workspace.getConfiguration('github').get<string>('cloneProtocol');
+		let user: string | null = null;
+		if (protocol === 'ssh') {
+			user = 'git';
+		} else {
+			user = await this.viewer.username();
+		}
+		const userAuthority = user ? `${user}@` : '';
+		return vscode.Uri.parse(`git+${protocol}://${userAuthority}github.com/${data.owner}/${data.name}.git`);
+	}
+}
+
 function parseGitHubRepositoryFullName(cloneUrl: vscode.Uri): { owner: string, name: string } | undefined {
 	const parts = cloneUrl.path.slice(1).replace(/(\.git)?\/?$/, '').split('/');
 	if (parts.length === 2) {
@@ -333,6 +368,10 @@ function parseGitHubRepositoryFullName(cloneUrl: vscode.Uri): { owner: string, n
 function resourceToNameAndOwner(resource: vscode.Uri): { owner: string, name: string } {
 	const parts = resource.path.replace(/^\/repository\//, '').split('/');
 	return { owner: parts[0], name: parts[1] };
+}
+
+function nameAndOwnerToResource(owner: string, name: string): vscode.Uri {
+	return vscode.Uri.parse(`github://github.com/repository/${owner}/${name}`);
 }
 
 /**
