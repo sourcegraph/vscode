@@ -36,6 +36,7 @@ const generateTypes = responseText => {
 
 gulp.task('watch-graphql', () => {
 	let previousResponseText;
+	let previousErrorMessage;
 	const poll = () =>
 		sendIntrospectionQuery()
 			.then(responseText => {
@@ -44,7 +45,13 @@ gulp.task('watch-graphql', () => {
 					return generateTypes(responseText);
 				}
 			})
-			.catch(err => gulpUtil.log(err))
+			.catch(err => {
+				// Don't log spam the same error when polling
+				if (previousErrorMessage !== err.message) {
+					previousErrorMessage = err.message;
+					gulpUtil.log(err);
+				}
+			})
 			.then(() => new Promise(resolve => setTimeout(resolve, 10000)))
 			.then(poll);
 	return poll();
