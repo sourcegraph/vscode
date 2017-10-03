@@ -386,7 +386,14 @@ export class BaseNewAction extends BaseFileAction {
 				folder = focus.isDirectory ? focus : focus.parent;
 			} else {
 				const input: FileStat | Model = this.tree.getInput();
-				folder = input instanceof Model ? input.roots[0] : input;
+				if (input instanceof Model) {
+					if (input.roots.length === 0) {
+						return TPromise.wrapError(new Error('No folders in workspace.'));
+					}
+					folder = input.roots[0];
+				} else {
+					folder = input;
+				}
 			}
 		}
 
