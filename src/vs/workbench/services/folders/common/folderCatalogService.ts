@@ -97,13 +97,13 @@ export class FolderCatalogService implements IFolderCatalogService {
 	}
 
 	private getProviderForResource(resource: URI): IFolderCatalogProvider {
-		return this.providersMap.findSubstr(resource.fsPath);
+		return this.providersMap.findSubstr(resource.toString());
 	}
 
 	private updateProvidersMap(): void {
 		this.providersMap = TernarySearchTree.forPaths<IFolderCatalogProvider>();
 		for (const { root, provider } of this.providers) {
-			this.providersMap.set(root.fsPath, provider);
+			this.providersMap.set(root.toString(), provider);
 		}
 	}
 }
