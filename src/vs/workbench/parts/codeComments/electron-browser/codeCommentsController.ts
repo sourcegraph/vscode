@@ -28,6 +28,7 @@ import { KeybindingsRegistry } from 'vs/platform/keybinding/common/keybindingsRe
 import { ServicesAccessor, CommonEditorRegistry } from 'vs/editor/common/editorCommonExtensions';
 import { IContextKey, IContextKeyService, RawContextKey } from 'vs/platform/contextkey/common/contextkey';
 import { getOuterEditor } from 'vs/editor/contrib/referenceSearch/browser/peekViewWidget';
+import { Delayer } from 'vs/base/common/async';
 
 /**
  * Decoration key for highlighting a comment range.
@@ -311,6 +312,7 @@ export class CodeCommentsController extends Disposable implements IEditorContrib
 	}
 
 	private disposeOnModelChange(): void {
+		this.toDisposeOnDidChangeThreads = dispose(this.toDisposeOnDidChangeThreads);
 		this.toDisposeOnModelChange = dispose(this.toDisposeOnModelChange);
 		this.openThreadWidgets.forEach(w => w.dispose());
 		this.openDraftThreadWidgets.forEach(w => w.dispose());
@@ -359,15 +361,30 @@ export class CodeCommentsController extends Disposable implements IEditorContrib
 			// Any time an editors model changes, initiate a refresh of the data.
 			this.fileComments.refreshThreads();
 			// Render decorations any time threads change (e.g. one was created, or data was fetched from network).
-			this.toDisposeOnModelChange.push(this.fileComments.onDidChangeThreads(() => this.renderDecorations(model)));
-			this.toDisposeOnModelChange.push(this.fileComments.onDidChangeDraftThreads(() => this.renderDecorations(model)));
-			this.toDisposeOnModelChange.push(model.onDidChangeContent(e => {
-				this.renderDecorations(model);
-			}));
+			this.toDisposeOnModelChange.push(this.fileComments.onDidChangeThreads(() => this.onDidChangeThreads()));
+			this.toDisposeOnModelChange.push(this.fileComments.onDidChangeDraftThreads(() => this.onDidChangeDraftThreads()));
 			this.renderDecorations(model);
 		} else {
 			this.fileComments = undefined;
 		}
+	}
+
+	private toDisposeOnDidChangeThreads: IDisposable[] = [];
+	private onDidChangeThreads(): void {
+		this.toDisposeOnDidChangeThreads = dispose(this.toDisposeOnDidChangeThreads);
+		for (const thread of this.fileComments.threads) {
+			this.toDisposeOnDidChangeThreads.push(thread.onDidChangeDisplayRange(() => this.renderCurrentModelDecorations()));
+		}
+		this.renderCurrentModelDecorations();
+	}
+
+	private toDisposeOnDidChangeDraftThreads: IDisposable[] = [];
+	private onDidChangeDraftThreads(): void {
+		this.toDisposeOnDidChangeDraftThreads = dispose(this.toDisposeOnDidChangeDraftThreads);
+		for (const draftThread of this.fileComments.draftThreads) {
+			this.toDisposeOnDidChangeDraftThreads.push(draftThread.onDidChangeDisplayRange(() => this.renderCurrentModelDecorations()));
+		}
+		this.renderCurrentModelDecorations();
 	}
 
 	/**
@@ -389,13 +406,26 @@ export class CodeCommentsController extends Disposable implements IEditorContrib
 		}
 	}
 
+	/**
+	 * Delay decoration rendering because multiple ranges can be updated in a single tick.
+	 */
+	private renderDecorationsDelayer = new Delayer<void>(10);
+	private renderDecorations(model: IModel): void {
+		this.renderDecorationsDelayer.trigger(() => {
+			this.renderDecorationsNow(model);
+		});
+	}
+
 	private gutterIcons: string[] = [];
 
 	/**
 	 * Renders a gutter icon on lines that have comment threads, and
 	 * renders a highlight of the range for the currently selected thread (if there is one).
 	 */
-	private renderDecorations(model: IModel): void {
+	private renderDecorationsNow(model: IModel): void {
+		if (model.isDisposed()) {
+			return;
+		}
 		const threads = this.fileComments.threads.filter(t => {
 			if (!t.displayRange) {
 				// Display range not computed yet.
