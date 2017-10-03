@@ -10,7 +10,7 @@ import Event, { Emitter, once } from 'vs/base/common/event';
 import { debounce } from 'vs/base/common/decorators';
 import { dispose, IDisposable } from 'vs/base/common/lifecycle';
 import { asWinJsPromise } from 'vs/base/common/async';
-import { TrieMap } from 'vs/base/common/map';
+import { TernarySearchTree } from 'vs/base/common/map';
 import { IExtensionDescription } from 'vs/platform/extensions/common/extensions';
 import { ExtHostCommands } from 'vs/workbench/api/node/extHostCommands';
 import { MainContext, MainThreadSCMShape, SCMRawResource, SCMRawResourceSplice, SCMRawResourceSplices, IMainContext } from './extHost.protocol';
@@ -482,7 +482,7 @@ export class ExtHostSCM {
 	 * SCM information about resources under the URI. This data structure is kept in
 	 * sync with the equivalent map in the main process.
 	 */
-	private _sourceControlRootsMap: TrieMap<URI, SourceControlHandle>;
+	private _sourceControlRootsMap: TernarySearchTree<SourceControlHandle>;
 
 	constructor(
 		mainContext: IMainContext,
@@ -608,7 +608,7 @@ export class ExtHostSCM {
 	}
 
 	getSourceControlForResource(resource: vscode.Uri): vscode.SourceControl | undefined {
-		const handle = this._sourceControlRootsMap.findSubstr(resource);
+		const handle = this._sourceControlRootsMap.findSubstr(resource.fsPath);
 		if (!handle) {
 			return undefined;
 		}
@@ -616,9 +616,9 @@ export class ExtHostSCM {
 	}
 
 	private updateFolderSourceControlsMap(): void {
-		this._sourceControlRootsMap = new TrieMap<URI, SourceControlHandle>(uri => [uri.scheme, uri.authority].concat(uri.path.split('/')));
+		this._sourceControlRootsMap = TernarySearchTree.forPaths<SourceControlHandle>();
 		for (const { handle, rootUri } of this._sourceControlRoots) {
-			this._sourceControlRootsMap.insert(rootUri, { handle });
+			this._sourceControlRootsMap.set(rootUri.fsPath, { handle });
 		}
 	}
 }

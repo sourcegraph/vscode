@@ -9,7 +9,7 @@ import { TPromise } from 'vs/base/common/winjs.base';
 import Event, { Emitter, any } from 'vs/base/common/event';
 import { IDisposable, combinedDisposable, empty as EmptyDisposable } from 'vs/base/common/lifecycle';
 import * as arrays from 'vs/base/common/arrays';
-import { TrieMap } from 'vs/base/common/map';
+import { TernarySearchTree } from 'vs/base/common/map';
 import { ISCMRepository, ISCMProvider, ISCMResource, ISCMResourceSplice, ISCMResourceGroup, ISCMResourceCollection, ICommandOptions } from 'vs/workbench/services/scm/common/scm';
 import { SCMRepository } from 'vs/workbench/services/scm/common/scmService';
 
@@ -63,7 +63,7 @@ export class CombinedSCMProvider implements ISCMProvider {
 	private _onDidChange = new Emitter<void>();
 	public get onDidChange(): Event<void> { return this._onDidChange.event; }
 
-	private _rootUriMap: TrieMap<URI, ISCMProvider>;
+	private _rootUriMap: TernarySearchTree<ISCMProvider>;
 
 	constructor(
 		public readonly id: string,
@@ -120,10 +120,10 @@ export class CombinedSCMProvider implements ISCMProvider {
 	}
 
 	private updateRootUriMap(): void {
-		this._rootUriMap = new TrieMap<URI, ISCMProvider>(uri => [uri.scheme, uri.authority].concat(uri.path.split('/')));
+		this._rootUriMap = TernarySearchTree.forPaths<ISCMProvider>();
 		for (const { provider } of this._providerData) {
 			if (provider.rootUri) {
-				this._rootUriMap.insert(provider.rootUri, provider);
+				this._rootUriMap.set(provider.rootUri.fsPath, provider);
 			}
 		}
 	}
@@ -167,7 +167,7 @@ export class CombinedSCMProvider implements ISCMProvider {
 	}
 
 	public getOriginalResource(uri: URI): TPromise<URI> {
-		const provider = this._rootUriMap.findSubstr(uri);
+		const provider = this._rootUriMap.findSubstr(uri.fsPath);
 		if (provider) {
 			return provider.getOriginalResource(uri);
 		}

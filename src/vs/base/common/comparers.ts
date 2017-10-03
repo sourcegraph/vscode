@@ -4,8 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 'use strict';
 
-import scorer = require('vs/base/common/scorer');
-import strings = require('vs/base/common/strings');
+import * as strings from 'vs/base/common/strings';
 import * as paths from 'vs/base/common/paths';
 
 let intlFileNameCollator: Intl.Collator;
@@ -186,68 +185,4 @@ export function compareByPrefix(one: string, other: string, lookFor: string): nu
 	}
 
 	return 0;
-}
-
-export interface IScorableResourceAccessor<T> {
-	getLabel(t: T): string;
-	getResourcePath(t: T): string;
-}
-
-export function compareByScore<T>(elementA: T, elementB: T, accessor: IScorableResourceAccessor<T>, lookFor: string, lookForNormalizedLower: string, scorerCache?: { [key: string]: number }, boostA: number = 0, boostB: number = 0): number {
-	const labelA = accessor.getLabel(elementA);
-	const labelB = accessor.getLabel(elementB);
-
-	// treat prefix matches highest in any case
-	const prefixCompare = compareByPrefix(labelA, labelB, lookFor);
-	if (prefixCompare) {
-		return prefixCompare;
-	}
-
-	// Give higher importance to label score
-	let labelAScore = scorer.score(labelA, lookFor, scorerCache);
-	let labelBScore = scorer.score(labelB, lookFor, scorerCache);
-	if (labelAScore > 0) {
-		labelAScore += boostA;
-	}
-	if (labelBScore > 0) {
-		labelBScore += boostB;
-	}
-
-	if (labelAScore !== labelBScore) {
-		return labelAScore > labelBScore ? -1 : 1;
-	}
-
-	// Score on full resource path comes next (if available)
-	let resourcePathA = accessor.getResourcePath(elementA);
-	let resourcePathB = accessor.getResourcePath(elementB);
-	if (resourcePathA && resourcePathB) {
-		let resourceAScore = scorer.score(resourcePathA, lookFor, scorerCache);
-		let resourceBScore = scorer.score(resourcePathB, lookFor, scorerCache);
-		if (resourceAScore > 0) {
-			resourceAScore += boostA;
-		}
-		if (resourceBScore > 0) {
-			resourceBScore += boostB;
-		}
-
-		if (resourceAScore !== resourceBScore) {
-			return resourceAScore > resourceBScore ? -1 : 1;
-		}
-	}
-
-	// At this place, the scores are identical so we check for string lengths and favor shorter ones
-	if (labelA.length !== labelB.length) {
-		return labelA.length < labelB.length ? -1 : 1;
-	}
-
-	if (resourcePathA && resourcePathB && resourcePathA.length !== resourcePathB.length) {
-		return resourcePathA.length < resourcePathB.length ? -1 : 1;
-	}
-
-	// Finally compare by label or resource path
-	if (labelA === labelB && resourcePathA && resourcePathB) {
-		return compareAnything(resourcePathA, resourcePathB, lookForNormalizedLower);
-	}
-
-	return compareAnything(labelA, labelB, lookForNormalizedLower);
 }
