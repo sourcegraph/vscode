@@ -15,6 +15,7 @@ import * as path from 'path';
 import * as nls from 'vscode-nls';
 import * as fs from 'fs';
 import { StatusBarCommands } from './statusbar';
+import { ReviewManager } from './reviewManager';
 
 const timeout = (millis: number) => new Promise(c => setTimeout(c, millis));
 
@@ -435,6 +436,8 @@ export class Repository implements Disposable {
 
 		this.updateCommitTemplate();
 		this.status();
+
+		this.disposables.push(new ReviewManager(this));
 	}
 
 	provideOriginalResource(uri: Uri): Uri | undefined {
