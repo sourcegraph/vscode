@@ -25,14 +25,6 @@
         "title": "Download dependent sources"
       }
     ],
-    "menus": {
-      "editor/context": [
-        {
-          "command": "xrepo.goToSource",
-          "group": "navigation@4"
-        }
-      ]
-    },
     "keybindings": []
   },
   "scripts": {
