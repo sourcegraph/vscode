@@ -31,18 +31,17 @@ async function showCreategitlabTokenWalkthrough(skipInfoMessage?: boolean): Prom
 	const enterTokenItem: vscode.MessageItem = { title: localize('enterToken', "Enter Token") };
 	const cancelItem: vscode.MessageItem = { title: localize('cancel', "Cancel"), isCloseAffordance: true };
 	
-	const createHostItem: vscode.MessageItem = { title: localize('createToken', "Create Token on gitlab.com") };
-	const enterHostItem: vscode.MessageItem = { title: localize('enterToken', "Enter Token") };
+	const enterHostItem: vscode.MessageItem = { title: localize('enterToken', "Enter host name.") };
 
 	const value = await vscode.window.showInformationMessage(
 		localize('nogitlabToken', "A GitLab host is needed to search for repositories"),
 		{ modal: false },
-		createHostItem, enterHostItem, cancelItem,
+		enterHostItem, cancelItem,
 	);
 	
 	// Display host message
 	let host;
-	if (value === createHostItem) {
+	if (value === enterHostItem) {
 		host = await vscode.window.showInputBox({
 			prompt: localize('hostPrompt', "GitLab host is required to search for repositories (defaults to gitlab.com)"),
 			ignoreFocusOut: true,
@@ -61,10 +60,10 @@ async function showCreategitlabTokenWalkthrough(skipInfoMessage?: boolean): Prom
 		return false;
 	}
 
-	// TODO: use host instead of hardcoded value for urls
+	const url = `http://${host}/profile/personal_access_tokens`;
 
 	if (skipInfoMessage) {
-		await vscode.commands.executeCommand('vscode.open', vscode.Uri.parse(`${host}/profile/personal_access_tokens`));
+		await vscode.commands.executeCommand('vscode.open', vscode.Uri.parse(url));
 	} else {
 		const value = await vscode.window.showInformationMessage(
 			localize('nogitlabToken', "A GitLab personal access token is required to search for repositories."),
@@ -72,7 +71,7 @@ async function showCreategitlabTokenWalkthrough(skipInfoMessage?: boolean): Prom
 			createTokenItem, enterTokenItem, cancelItem,
 		);
 		if (value === createTokenItem) {
-			await vscode.commands.executeCommand('vscode.open', vscode.Uri.parse(`${host}/profile/personal_access_tokens`));
+			await vscode.commands.executeCommand('vscode.open', vscode.Uri.parse(url));
 		} else if (!value || value === cancelItem) {
 			return false;
 		}

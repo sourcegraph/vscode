@@ -9,27 +9,25 @@
   "version": "0.0.1",
   "publisher": "sourcegraph",
   "engines": {
-    "vscode": "*"
+    "vscode": "^0.10.5"
   },
   "activationEvents": [
     "*"
   ],
   "enableProposedApi": true,
   "contributes": {
-    "commands": [    ],
+    "commands": [
+      {
+        "command": "gitlab.showCreateAccessTokenWalkthrough",
+        "title": "Initialize GitLab",
+        "category": "GitLab"
+      }
+    ],
     "menus": {
       "commandPalette": [
-        {
-          "command": "gitlab.pullRequests.quickopen",
-          "when": "config.git.enabled && gitOpenRepositoryCount != 0"
-        }
+
       ],
       "scm/title": [
-        {
-          "command": "gitlab.pullRequests.quickopen",
-          "group": "gitlab",
-          "when": "config.git.enabled && scmProvider == git"
-        }
       ]
     },
     "configuration": {
@@ -48,8 +46,8 @@
     }
   },
   "scripts": {
-    "compile": "gulp compile-extension:service-gitlab",
-    "watch": "gulp watch-extension:service-gitlab"
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
   },
   "dependencies": {
     "vscode-nls": "^2.0.2"
