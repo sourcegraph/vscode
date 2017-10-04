@@ -57,13 +57,14 @@ async function showCreategitlabTokenWalkthrough(skipInfoMessage?: boolean): Prom
 	
 	if (host) {
 		await vscode.workspace.getConfiguration('gitlab').update('host', host, vscode.ConfigurationTarget.Global);
-		return true;
+	} else {
+		return false;
 	}
 
 	// TODO: use host instead of hardcoded value for urls
 
 	if (skipInfoMessage) {
-		await vscode.commands.executeCommand('vscode.open', vscode.Uri.parse('https://gitlab.com/profile/personal_access_tokens'));
+		await vscode.commands.executeCommand('vscode.open', vscode.Uri.parse(`${host}/profile/personal_access_tokens`));
 	} else {
 		const value = await vscode.window.showInformationMessage(
 			localize('nogitlabToken', "A GitLab personal access token is required to search for repositories."),
@@ -71,7 +72,7 @@ async function showCreategitlabTokenWalkthrough(skipInfoMessage?: boolean): Prom
 			createTokenItem, enterTokenItem, cancelItem,
 		);
 		if (value === createTokenItem) {
-			await vscode.commands.executeCommand('vscode.open', vscode.Uri.parse('https://gitlab.com/profile/personal_access_tokens'));
+			await vscode.commands.executeCommand('vscode.open', vscode.Uri.parse(`${host}/profile/personal_access_tokens`));
 		} else if (!value || value === cancelItem) {
 			return false;
 		}
