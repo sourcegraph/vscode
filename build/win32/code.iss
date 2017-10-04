@@ -7,7 +7,7 @@
 AppId={#AppId}
 AppName={#NameLong}
 AppVerName={#NameVersion}
-AppPublisher=Microsoft Corporation
+AppPublisher=Sourcegraph
 AppPublisherURL=https://sourcegraph.com
 AppSupportURL=https://sourcegraph.com
 AppUpdatesURL=https://sourcegraph.com
