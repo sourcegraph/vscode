@@ -227,7 +227,7 @@ export class FileComments extends Disposable implements IFileComments {
 	private refreshThreadsNow(): TPromise<void> {
 		this.refreshingThreads = this.getDocumentId()
 			.then(documentId => {
-				if (!documentId) {
+				if (!documentId || !this.authService.currentUser || !this.authService.currentUser.currentOrgMember) {
 					return TPromise.wrap(undefined);
 				}
 				return requestGraphQL<{ org: { repo: { threads: GQL.IThread[] } } }>(this.remoteService, `query ThreadsForFile (
