@@ -5802,6 +5802,47 @@ declare module 'vscode' {
 		export function createSourceControl(id: string, label: string, rootUri?: Uri): SourceControl;
 	}
 
+	export namespace review {
+
+		/**
+		 * Creates a new [review control](#ReviewControl) instance.
+		 * @param id An `id` for the review control.
+		 * @param label A human-readable string for the review control.
+		 */
+		export function createReviewControl(id: string, label: string): ReviewControl;
+	}
+
+	/**
+	 * A review control is able to provide [resource states](#SourceControlResourceState)
+	 * to the editor for the purpose of doing code review.
+	 */
+	export interface ReviewControl {
+		/**
+		 * The id of this review control.
+		 */
+		readonly id: string;
+
+		/**
+		 * The human-readable label of this source control.
+		 */
+		readonly label: string;
+
+		/**
+		 * Actions that can be taken to on a review.
+		 */
+		reviewCommands?: Command[];
+
+		/**
+		 * Create a new [resource group](#SourceControlResourceGroup).
+		 */
+		createResourceGroup(id: string, label: string): SourceControlResourceGroup;
+
+		/**
+		 * Dispose this review control.
+		 */
+		dispose(): void;
+	}
+
 	/**
 	 * Configuration for a debug session.
 	 */

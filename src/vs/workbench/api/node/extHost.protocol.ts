@@ -354,7 +354,16 @@ export interface SCMProviderFeatures {
 	remoteResources?: URI[];
 }
 
+export interface ReviewProviderFeatures {
+	reviewCommands?: modes.Command[];
+	remoteResources?: URI[];
+}
+
 export interface SCMGroupFeatures {
+	hideWhenEmpty?: boolean;
+}
+
+export interface ReviewGroupFeatures {
 	hideWhenEmpty?: boolean;
 }
 
@@ -391,6 +400,19 @@ export interface MainThreadSCMShape extends IDisposable {
 	$spliceResourceStates(sourceControlHandle: number, splices: SCMRawResourceSplices[]): void;
 
 	$setInputBoxValue(sourceControlHandle: number, value: string): void;
+}
+
+export interface MainThreadReviewShape extends IDisposable {
+	$registerReviewControl(handle: number, id: string, label: string): void;
+	$updateReviewControl(handle: number, features: ReviewProviderFeatures): void;
+	$unregisterReviewControl(handle: number): void;
+
+	$registerGroup(reviewControlHandle: number, handle: number, id: string, label: string): void;
+	$updateGroup(reviewControlHandle: number, handle: number, features: ReviewGroupFeatures): void;
+	$updateGroupLabel(reviewControlHandle: number, handle: number, label: string): void;
+	$unregisterGroup(reviewControlHandle: number, handle: number): void;
+
+	$spliceResourceStates(reviewControlHandle: number, splices: SCMRawResourceSplices[]): void;
 }
 
 export type DebugSessionUUID = string;
@@ -595,6 +617,10 @@ export interface ExtHostSCMShape {
 	$executeResourceCommand(sourceControlHandle: number, groupHandle: number, handle: number): TPromise<void>;
 }
 
+export interface ExtHostReviewShape {
+	$executeResourceCommand(reviewControlHandle: number, groupHandle: number, handle: number): TPromise<void>;
+}
+
 export interface ExtHostTaskShape {
 	$provideTasks(handle: number): TPromise<TaskSet>;
 }
@@ -642,6 +668,7 @@ export const MainContext = {
 	MainThreadFileSystem: createMainId<MainThreadFileSystemShape>('MainThreadFileSystem'),
 	MainThreadExtensionService: createMainId<MainThreadExtensionServiceShape>('MainThreadExtensionService'),
 	MainThreadSCM: createMainId<MainThreadSCMShape>('MainThreadSCM'),
+	MainThreadReview: createMainId<MainThreadReviewShape>('MainThreadReview'),
 	MainThreadTask: createMainId<MainThreadTaskShape>('MainThreadTask'),
 	MainThreadCredentials: createMainId<MainThreadCredentialsShape>('MainThreadCredentials'),
 	MainThreadWindow: createMainId<MainThreadWindowShape>('MainThreadWindow'),
@@ -666,6 +693,7 @@ export const ExtHostContext = {
 	ExtHostExtensionService: createExtId<ExtHostExtensionServiceShape>('ExtHostExtensionService'),
 	ExtHostTerminalService: createExtId<ExtHostTerminalServiceShape>('ExtHostTerminalService'),
 	ExtHostSCM: createExtId<ExtHostSCMShape>('ExtHostSCM'),
+	ExtHostReview: createExtId<ExtHostReviewShape>('ExtHostReview'),
 	ExtHostTask: createExtId<ExtHostTaskShape>('ExtHostTask'),
 	ExtHostWorkspace: createExtId<ExtHostWorkspaceShape>('ExtHostWorkspace'),
 	ExtHostCredentials: createExtId<ExtHostCredentialsShape>('ExtHostCredentials'),

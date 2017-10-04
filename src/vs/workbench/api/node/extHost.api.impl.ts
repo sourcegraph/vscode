@@ -23,6 +23,7 @@ import { ExtHostWorkspace } from 'vs/workbench/api/node/extHostWorkspace';
 import { ExtHostQuickOpen } from 'vs/workbench/api/node/extHostQuickOpen';
 import { ExtHostProgress } from 'vs/workbench/api/node/extHostProgress';
 import { ExtHostSCM } from 'vs/workbench/api/node/extHostSCM';
+import { ExtHostReview } from 'vs/workbench/api/node/extHostReview';
 import { ExtHostHeapService } from 'vs/workbench/api/node/extHostHeapService';
 import { ExtHostStatusBar } from 'vs/workbench/api/node/extHostStatusBar';
 import { ExtHostCommands } from 'vs/workbench/api/node/extHostCommands';
@@ -100,6 +101,7 @@ export function createApiFactory(
 	const extHostQuickOpen = threadService.set(ExtHostContext.ExtHostQuickOpen, new ExtHostQuickOpen(threadService, extHostWorkspace, extHostCommands));
 	const extHostTerminalService = threadService.set(ExtHostContext.ExtHostTerminalService, new ExtHostTerminalService(threadService));
 	const extHostSCM = threadService.set(ExtHostContext.ExtHostSCM, new ExtHostSCM(threadService, extHostCommands));
+	const extHostReview = threadService.set(ExtHostContext.ExtHostReview, new ExtHostReview(threadService, extHostCommands));
 	const extHostTask = threadService.set(ExtHostContext.ExtHostTask, new ExtHostTask(threadService, extHostWorkspace));
 	const extHostCredentials = threadService.set(ExtHostContext.ExtHostCredentials, new ExtHostCredentials(threadService));
 	const extHostWindow = threadService.set(ExtHostContext.ExtHostWindow, new ExtHostWindow(threadService));
@@ -532,6 +534,30 @@ export function createApiFactory(
 			},
 		};
 
+		// namespace: review
+		const review: typeof vscode.review = {
+			createReviewControl(id: string, label: string) {
+				/* __GDPR__
+					"registerReviewProvider" : {
+						"extensionId" : { "classification": "SystemMetaData", "purpose": "FeatureInsight" },
+						"providerId": { "classification": "PublicNonPersonalData", "purpose": "FeatureInsight" },
+						"providerLabel": { "classification": "PublicPersonalData", "purpose": "FeatureInsight" },
+						"${include}": [
+							"${MainThreadData}"
+						]
+					}
+				*/
+				mainThreadTelemetry.$publicLog('registerReviewProvider', {
+					extensionId: extension.id,
+					providerId: id,
+					providerLabel: label,
+				});
+
+				return extHostReview.createReviewControl(extension, id, label);
+			},
+		};
+
+
 		// namespace: debug
 		const debug: typeof vscode.debug = {
 			get activeDebugSession() {
@@ -581,6 +607,7 @@ export function createApiFactory(
 			window,
 			workspace,
 			scm,
+			review,
 			debug,
 			// types
 			CancellationTokenSource: CancellationTokenSource,

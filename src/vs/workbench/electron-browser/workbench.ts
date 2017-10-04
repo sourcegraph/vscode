@@ -83,6 +83,8 @@ import { TextFileService } from 'vs/workbench/services/textfile/electron-browser
 import { ITextFileService } from 'vs/workbench/services/textfile/common/textfiles';
 import { ISCMService } from 'vs/workbench/services/scm/common/scm';
 import { SCMService } from 'vs/workbench/services/scm/common/scmService';
+import { IReviewService } from 'vs/workbench/services/review/common/review';
+import { ReviewService } from 'vs/workbench/services/review/common/reviewService';
 import { IProgressService2 } from 'vs/platform/progress/common/progress';
 import { ProgressService2 } from 'vs/workbench/services/progress/browser/progressService2';
 import { TextModelResolverService } from 'vs/workbench/services/textmodelResolver/common/textModelResolverService';
@@ -644,6 +646,9 @@ export class Workbench implements IPartService {
 
 		// SCM Service
 		serviceCollection.set(ISCMService, new SyncDescriptor(SCMService));
+
+		// Review Service
+		serviceCollection.set(IReviewService, new SyncDescriptor(ReviewService));
 
 		// Text Model Resolver Service
 		serviceCollection.set(ITextModelService, new SyncDescriptor(TextModelResolverService));
