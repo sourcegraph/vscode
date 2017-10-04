@@ -8,52 +8,14 @@ import * as vscode from 'vscode';
 import * as cp from 'child_process';
 import * as nls from 'vscode-nls';
 import * as path from 'path';
-import * as go from './go';
-import * as python from './python';
-import * as typescript from './typescript';
 import * as deps from './deps';
 
 const localize = nls.loadMessageBundle();
 
 export function activate(context: vscode.ExtensionContext) {
-	context.subscriptions.push(vscode.commands.registerCommand('xrepo.goToSource', goToSourceFile));
 	context.subscriptions.push(vscode.commands.registerCommand('xrepo.initializeWorkspaceFolder', initializeWorkspaceFolderCmd));
 	context.subscriptions.push(vscode.workspace.onDidChangeWorkspaceFolders(onWorkspaceFolderAdded));
 	deps.activate(context);
-}
-
-async function goToSourceFile(): Promise<any> {
-	const editor = vscode.window.activeTextEditor;
-	if (!editor) {
-		return;
-	}
-	const lang = editor.document.languageId;
-	let sourceFileLocations: vscode.Location[];
-	switch (lang) {
-		case 'go':
-			sourceFileLocations = await go.getSourceLocation(editor.document.uri, editor.selection);
-			break;
-		case 'python':
-			sourceFileLocations = await python.getSourceLocation(editor.document.uri, editor.selection);
-			break;
-		case 'typescript':
-			sourceFileLocations = await typescript.getSourceLocation(editor.document.uri, editor.selection);
-			break;
-		default:
-			vscode.window.showWarningMessage('Go to Source File is unsupported for this type of file');
-			vscode.commands.executeCommand('_telemetry.publicLog', 'stub:goToSource');
-			return;
-	}
-	if (!sourceFileLocations || sourceFileLocations.length === 0) {
-		vscode.window.showWarningMessage(localize('sourceFileNotFoundInWorkspace', "Source file was not found in workspace."));
-		return;
-	}
-	// Just jump to first choice for now (later we can add an API to display the same picker as for jump-to-definition
-	const dstLoc = sourceFileLocations[0];
-	const dstEditor = await vscode.window.showTextDocument(dstLoc.uri, { selection: new vscode.Selection(dstLoc.range.start, dstLoc.range.end) });
-	if (dstLoc.uri.toString() !== editor.document.uri.toString() || !dstLoc.range.isEqual(editor.selection)) {
-		dstEditor.revealRange(dstLoc.range, vscode.TextEditorRevealType.InCenter);
-	}
 }
 
 const initializeWorkspaceFolderGroup = 'init';

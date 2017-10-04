@@ -17,10 +17,6 @@
   "contributes": {
     "commands": [
       {
-        "command": "xrepo.goToSource",
-        "title": "Go to Source File"
-      },
-      {
         "command": "xrepo.initializeWorkspaceFolder",
         "title": "Initialize Workspace Folder Dev Environment"
       },
