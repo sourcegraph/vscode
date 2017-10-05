@@ -33,6 +33,9 @@ export interface IReviewResourceCollection {
 	readonly onDidSplice: Event<IReviewResourceSplice>;
 }
 
+/**
+ * e.g. a file in the changes panel
+ */
 export interface IReviewResource {
 	readonly resourceGroup: IReviewResourceGroup;
 	readonly sourceUri: URI;
@@ -40,6 +43,9 @@ export interface IReviewResource {
 	open(): TPromise<void>;
 }
 
+/**
+ * E.g. the "changes" or "discussions" sections
+ */
 export interface IReviewResourceGroup {
 	readonly provider: IReviewProvider;
 	readonly label: string;
@@ -48,6 +54,9 @@ export interface IReviewResourceGroup {
 	readonly hideWhenEmpty: boolean;
 }
 
+/**
+ * Examples: a branches provider, a GitHub PR provider
+ */
 export interface IReviewProvider extends IDisposable {
 	readonly label: string;
 	readonly id: string;

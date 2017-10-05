@@ -54,7 +54,7 @@ export class ReviewService implements IReviewService {
 		this._providerIds.add(provider.id);
 
 		const disposable = toDisposable(() => {
-			const index = this._reviewItems.indexOf(repository);
+			const index = this._reviewItems.indexOf(reviewItem);
 
 			if (index < 0) {
 				return;
@@ -62,13 +62,13 @@ export class ReviewService implements IReviewService {
 
 			this._providerIds.delete(provider.id);
 			this._reviewItems.splice(index, 1);
-			this._onDidRemoveProvider.fire(repository);
+			this._onDidRemoveProvider.fire(reviewItem);
 		});
 
-		const repository = new ReviewItem(provider, disposable);
-		this._reviewItems.push(repository);
-		this._onDidAddProvider.fire(repository);
+		const reviewItem = new ReviewItem(provider, disposable);
+		this._reviewItems.push(reviewItem);
+		this._onDidAddProvider.fire(reviewItem);
 
-		return repository;
+		return reviewItem;
 	}
 }

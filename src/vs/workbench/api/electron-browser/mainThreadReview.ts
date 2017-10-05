@@ -257,84 +257,84 @@ export class MainThreadReview implements MainThreadReviewShape {
 
 	$registerReviewControl(handle: number, id: string, label: string): void {
 		const provider = new MainThreadReviewProvider(this._proxy, handle, id, label, this.reviewService, this.commandService);
-		const repository = this.reviewService.registerReviewProvider(provider);
-		this._reviewItems[handle] = repository;
+		const reviewItem = this.reviewService.registerReviewProvider(provider);
+		this._reviewItems[handle] = reviewItem;
 	}
 
 	$updateReviewControl(handle: number, features: ReviewProviderFeatures): void {
-		const repository = this._reviewItems[handle];
+		const reviewItem = this._reviewItems[handle];
 
-		if (!repository) {
+		if (!reviewItem) {
 			return;
 		}
 
-		const provider = repository.provider as MainThreadReviewProvider;
+		const provider = reviewItem.provider as MainThreadReviewProvider;
 		provider.$updateReviewControl(features);
 	}
 
 	$unregisterReviewControl(handle: number): void {
-		const repository = this._reviewItems[handle];
+		const reviewItem = this._reviewItems[handle];
 
-		if (!repository) {
+		if (!reviewItem) {
 			return;
 		}
 
-		repository.dispose();
+		reviewItem.dispose();
 		delete this._reviewItems[handle];
 	}
 
 	$registerGroup(reviewControlHandle: number, groupHandle: number, id: string, label: string): void {
-		const repository = this._reviewItems[reviewControlHandle];
+		const reviewItem = this._reviewItems[reviewControlHandle];
 
-		if (!repository) {
+		if (!reviewItem) {
 			return;
 		}
 
-		const provider = repository.provider as MainThreadReviewProvider;
+		const provider = reviewItem.provider as MainThreadReviewProvider;
 		provider.$registerGroup(groupHandle, id, label);
 	}
 
 	$updateGroup(reviewControlHandle: number, groupHandle: number, features: ReviewGroupFeatures): void {
-		const repository = this._reviewItems[reviewControlHandle];
+		const reviewItem = this._reviewItems[reviewControlHandle];
 
-		if (!repository) {
+		if (!reviewItem) {
 			return;
 		}
 
-		const provider = repository.provider as MainThreadReviewProvider;
+		const provider = reviewItem.provider as MainThreadReviewProvider;
 		provider.$updateGroup(groupHandle, features);
 	}
 
 	$updateGroupLabel(reviewControlHandle: number, groupHandle: number, label: string): void {
-		const repository = this._reviewItems[reviewControlHandle];
+		const reviewItem = this._reviewItems[reviewControlHandle];
 
-		if (!repository) {
+		if (!reviewItem) {
 			return;
 		}
 
-		const provider = repository.provider as MainThreadReviewProvider;
+		const provider = reviewItem.provider as MainThreadReviewProvider;
 		provider.$updateGroupLabel(groupHandle, label);
 	}
 
 	$spliceResourceStates(reviewControlHandle: number, splices: SCMRawResourceSplices[]): void {
-		const repository = this._reviewItems[reviewControlHandle];
+		const reviewItem = this._reviewItems[reviewControlHandle];
 
-		if (!repository) {
+		if (!reviewItem) {
 			return;
 		}
 
-		const provider = repository.provider as MainThreadReviewProvider;
+		const provider = reviewItem.provider as MainThreadReviewProvider;
 		provider.$spliceGroupResourceStates(splices);
 	}
 
 	$unregisterGroup(reviewControlHandle: number, handle: number): void {
-		const repository = this._reviewItems[reviewControlHandle];
+		const reviewItem = this._reviewItems[reviewControlHandle];
 
-		if (!repository) {
+		if (!reviewItem) {
 			return;
 		}
 
-		const provider = repository.provider as MainThreadReviewProvider;
+		const provider = reviewItem.provider as MainThreadReviewProvider;
 		provider.$unregisterGroup(handle);
 	}
 }
