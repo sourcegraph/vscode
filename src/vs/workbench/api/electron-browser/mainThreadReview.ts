@@ -102,6 +102,15 @@ class MainThreadReviewProvider implements IReviewProvider {
 	get label(): string { return this._label; }
 	get contextValue(): string { return this._contextValue; }
 
+	private _active = false;
+	public get active(): boolean { return this._active; }
+	public set active(active: boolean) {
+		if (this._active !== active) {
+			this._active = active;
+			this.proxy.$setActive(this.handle, active);
+		}
+	}
+
 	get reviewCommands(): Command[] | undefined { return this.features.reviewCommands; }
 	get remoteResources(): URI[] | undefined { return this.features.remoteResources; }
 

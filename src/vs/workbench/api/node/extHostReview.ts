@@ -6,7 +6,7 @@
 
 import URI from 'vs/base/common/uri';
 import { TPromise } from 'vs/base/common/winjs.base';
-import { once } from 'vs/base/common/event';
+import { once, Emitter } from 'vs/base/common/event';
 import { debounce } from 'vs/base/common/decorators';
 import { IExtensionDescription } from 'vs/platform/extensions/common/extensions';
 import { ExtHostCommands } from 'vs/workbench/api/node/extHostCommands';
@@ -68,7 +68,7 @@ class MainThreadSCMShapeShim implements MainThreadSCMShape {
 class ExtHostReviewControl implements vscode.ReviewControl {
 
 	private static _handlePool: number = 0;
-	private _groups: Map<GroupHandle, ExtHostSourceControlResourceGroup> = new Map<GroupHandle, ExtHostSourceControlResourceGroup>();
+	private _groups = new Map<GroupHandle, ExtHostSourceControlResourceGroup>();
 
 	get id(): string {
 		return this._id;
@@ -78,7 +78,16 @@ class ExtHostReviewControl implements vscode.ReviewControl {
 		return this._label;
 	}
 
-	public commandExecutor?: vscode.CommandExecutor;
+	private _active = false;
+	private didChangeActive = new Emitter<void>();
+	public readonly onDidChangeActive = this.didChangeActive.event;
+	get active(): boolean { return this._active; }
+	set active(active: boolean) {
+		if (this._active !== active) {
+			this._active = active;
+			this.didChangeActive.fire();
+		}
+	}
 
 	private _reviewCommands: vscode.Command[] | undefined = undefined;
 
@@ -252,5 +261,13 @@ export class ExtHostReview {
 		}
 
 		group.$executeResourceCommand(handle);
+	}
+
+	public $setActive(reviewControlHandle: number, active: boolean): void {
+		const reviewControl = this.reviewControls.get(reviewControlHandle);
+		if (!reviewControl) {
+			return;
+		}
+		reviewControl.active = active;
 	}
 }

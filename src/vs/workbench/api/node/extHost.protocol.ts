@@ -619,6 +619,7 @@ export interface ExtHostSCMShape {
 
 export interface ExtHostReviewShape {
 	$executeResourceCommand(reviewControlHandle: number, groupHandle: number, handle: number): TPromise<void>;
+	$setActive(reviewControlHandle: number, active: boolean): void;
 }
 
 export interface ExtHostTaskShape {

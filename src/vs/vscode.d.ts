@@ -5833,6 +5833,17 @@ declare module 'vscode' {
 		reviewCommands?: Command[];
 
 		/**
+		 * True if the review is active in the UI.
+		 * Usually only one ReviewControl is active at a time.
+		 */
+		active: boolean;
+
+		/**
+		 * An [event](#Event) which fires when the review control becomes active.
+		 */
+		onDidChangeActive: Event<void>;
+
+		/**
 		 * Create a new [resource group](#SourceControlResourceGroup).
 		 */
 		createResourceGroup(id: string, label: string): SourceControlResourceGroup;
