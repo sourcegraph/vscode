@@ -15,7 +15,7 @@ import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
 import { ISearchProfileService } from 'vs/platform/search/common/search';
 import { VIEWLET_ID as SEARCH_VIEWLET_ID } from 'vs/workbench/parts/search/common/constants';
 import { SourcegraphSearchViewlet } from 'vs/workbench/parts/search/browser/sourcegraphSearchViewlet';
-
+import filters = require('vs/base/common/filters');
 
 export const PROFILE_PICKER_PREFIX = 'sp ';
 
@@ -63,6 +63,8 @@ class ProfileEntry extends QuickOpenEntryGroup {
 }
 
 export class ProfilePickerHandler extends QuickOpenHandler {
+
+	public static readonly ID = 'workbench.picker.searchProfile';
 
 	constructor(
 		@IViewletService private viewletService: IViewletService,
@@ -137,7 +139,8 @@ export class ProfilePickerHandler extends QuickOpenHandler {
 
 			const entries = profileEntries.concat(workspaceActionEntries).concat(workspaceEntries).map(e => {
 				if (searchValue) {
-					const { labelHighlights, descriptionHighlights } = QuickOpenEntry.highlight(e, searchValue);
+					const labelHighlights = filters.matchesFuzzy(searchValue, e.getLabel());
+					const descriptionHighlights = filters.matchesFuzzy(searchValue, e.getDescription());
 					e.setHighlights(labelHighlights, descriptionHighlights);
 				}
 				return e;

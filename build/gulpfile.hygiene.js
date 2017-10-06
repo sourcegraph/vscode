@@ -6,7 +6,6 @@
 'use strict';
 
 const gulp = require('gulp');
-const path = require('path');
 const filter = require('gulp-filter');
 const es = require('event-stream');
 const gulptslint = require('gulp-tslint');
@@ -55,6 +54,7 @@ const indentationFilter = [
 	'!**/*.md',
 	'!**/*.ps1',
 	'!**/*.template',
+	'!**/*.yaml',
 	'!**/*.yml',
 	'!**/lib/**',
 	'!extensions/**/*.d.ts',
@@ -94,6 +94,7 @@ const copyrightFilter = [
 	'!**/*.opts',
 	'!**/*.disabled',
 	'!build/**/*.init',
+	'!resources/linux/snap/snapcraft.yaml',
 	'!resources/win32/bin/code.js',
 	'!extensions/markdown/media/tomorrow.css',
 	'!extensions/html/server/src/modes/typescript/*'
@@ -175,33 +176,29 @@ const hygiene = exports.hygiene = (some, options) => {
 
 	const indentation = es.through(function (file) {
 		let inRawString = false;
-		// Only do the indentation check for non-YAML files as they forbid tabs
-		// for indentation
-		const extname = path.extname(file.relative);
-		if (extname !== '.yaml' && extname !== '.yml') {
-			file.contents
-				.toString('utf8')
-				.split(/\r\n|\r|\n/)
-				.forEach((line, i) => {
-					if (/^\s*$/.test(line)) {
-						// empty or whitespace lines are OK
-					} else if (/^[\t]*[^\s]/.test(line)) {
-						// good indent
-					} else if (/^[\t]* \*/.test(line)) {
-						// block comment using an extra space
-					} else if (inRawString) {
-						// the start of this line is in a raw string so indentation rules don't apply
-					} else {
-						console.error(file.relative + '(' + (i + 1) + ',1): Bad whitespace indentation');
-						errorCount++;
+
+		file.contents
+			.toString('utf8')
+			.split(/\r\n|\r|\n/)
+			.forEach((line, i) => {
+				if (/^\s*$/.test(line)) {
+					// empty or whitespace lines are OK
+				} else if (/^[\t]*[^\s]/.test(line)) {
+					// good indent
+				} else if (/^[\t]* \*/.test(line)) {
+					// block comment using an extra space
+				} else if (inRawString) {
+					// the start of this line is in a raw string so indentation rules don't apply
+				} else {
+					console.error(file.relative + '(' + (i + 1) + ',1): Bad whitespace indentation');
+					errorCount++;
+				}
+				for (let c of line) {
+					if (c === '`') {
+						inRawString = !inRawString;
 					}
-					for (let c of line) {
-						if (c === '`') {
-							inRawString = !inRawString;
-						}
-					}
-				});
-		}
+				}
+			});
 
 		this.emit('data', file);
 	});

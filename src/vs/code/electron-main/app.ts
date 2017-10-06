@@ -303,7 +303,7 @@ export class CodeApplication {
 		services.set(ICredentialsService, new SyncDescriptor(CredentialsService));
 
 		// Telemtry
-		if (this.environmentService.eventLogDebug || (this.environmentService.isBuilt && !this.environmentService.isExtensionDevelopment && !!product.enableTelemetry)) {
+		if (this.environmentService.eventLogDebug || (this.environmentService.isBuilt && !this.environmentService.isExtensionDevelopment && !this.environmentService.args['disable-telemetry'] && !!product.enableTelemetry)) {
 			const channel = getDelayedChannel<ITelemetryAppenderChannel>(this.sharedProcessClient.then(c => c.getChannel('telemetryAppender')));
 			const appender = new TelemetryAppenderClient(channel, WindowLevel.Main);
 			const commonProperties = resolveCommonProperties(product.commit, pkg.version, this.environmentService.installSource)

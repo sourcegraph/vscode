@@ -5,10 +5,10 @@
 'use strict';
 
 import 'vs/css!./media/task.contribution';
-import 'vs/workbench/parts/tasks/browser/taskQuickOpen';
 
 import * as nls from 'vs/nls';
 
+import { QuickOpenHandler } from 'vs/workbench/parts/tasks/browser/taskQuickOpen';
 import { TPromise } from 'vs/base/common/winjs.base';
 import Severity from 'vs/base/common/severity';
 import * as Objects from 'vs/base/common/objects';
@@ -797,6 +797,10 @@ class TaskService extends EventEmitter implements ITaskService {
 	}
 
 	public getTask(folder: IWorkspaceFolder | string, alias: string): TPromise<Task> {
+		let name = Types.isString(folder) ? folder : folder.name;
+		if (this.ignoredWorkspaceFolders.some(ignored => ignored.name === name)) {
+			return TPromise.wrapError(new Error(nls.localize('TaskServer.folderIgnored', 'The folder {0} is ignored since it uses task version 0.1.0', name)));
+		}
 		return this.getGroupedTasks().then((map) => {
 			let values = map.get(folder);
 			if (!values) {
@@ -2428,8 +2432,8 @@ const tasksPickerContextKey = 'inTasksPicker';
 
 quickOpenRegistry.registerQuickOpenHandler(
 	new QuickOpenHandlerDescriptor(
-		'vs/workbench/parts/tasks/browser/taskQuickOpen',
-		'QuickOpenHandler',
+		QuickOpenHandler,
+		QuickOpenHandler.ID,
 		'task ',
 		tasksPickerContextKey,
 		nls.localize('quickOpen.task', "Run Task")

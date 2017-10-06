@@ -1187,7 +1187,8 @@ export class GlobalCompareResourcesAction extends Action {
 	}
 
 	public run(): TPromise<any> {
-		const activeResource = toResource(this.editorService.getActiveEditorInput());
+		const activeInput = this.editorService.getActiveEditorInput();
+		const activeResource = activeInput ? activeInput.getResource() : void 0;
 		if (activeResource) {
 
 			// Keep as resource to compare
@@ -1205,7 +1206,7 @@ export class GlobalCompareResourcesAction extends Action {
 				let description: string;
 
 				if (input instanceof EditorInput) {
-					resource = toResource(input);
+					resource = input.getResource();
 				} else {
 					resource = (input as IResourceInput).resource;
 				}
@@ -1661,7 +1662,7 @@ export class SaveAllInGroupAction extends BaseSaveAllAction {
 export class SaveFilesAction extends BaseSaveAllAction {
 
 	public static ID = 'workbench.action.files.saveFiles';
-	public static LABEL = nls.localize('saveFiles', "Save Dirty Files");
+	public static LABEL = nls.localize('saveFiles', "Save All Files");
 
 	protected getSaveAllArguments(): boolean {
 		return this.includeUntitled();

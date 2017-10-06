@@ -10,8 +10,7 @@ import { Registry } from 'vs/platform/registry/common/platform';
 import { IConfigurationRegistry, Extensions as ConfigurationExtensions } from 'vs/platform/configuration/common/configurationRegistry';
 import { SyncActionDescriptor } from 'vs/platform/actions/common/actions';
 import { IWorkbenchActionRegistry, Extensions as ActionExtensions } from 'vs/workbench/common/actions';
-import { EditorDescriptor, Extensions as EditorExtensions } from 'vs/workbench/browser/parts/editor/baseEditor';
-import { IEditorRegistry } from 'vs/workbench/common/editor';
+import { EditorDescriptor, IEditorRegistry, Extensions as EditorExtensions } from 'vs/workbench/browser/editor';
 import { SyncDescriptor } from 'vs/platform/instantiation/common/descriptors';
 import { WebBrowserEditor } from 'vs/workbench/parts/webbrowser/electron-browser/webBrowserEditor';
 import { BrowserOpenLocationAction } from 'vs/workbench/parts/webbrowser/electron-browser/webBrowserActions';
@@ -19,10 +18,9 @@ import { WebBrowserInput } from 'vs/workbench/parts/webbrowser/common/webBrowser
 
 // Editor
 const editorDescriptor = new EditorDescriptor(
+	WebBrowserEditor,
 	WebBrowserEditor.ID,
 	nls.localize('webbrowser', "Web Browser"),
-	'vs/workbench/parts/webbrowser/electron-browser/webBrowserEditor',
-	'WebBrowserEditor'
 );
 
 Registry.as<IEditorRegistry>(EditorExtensions.Editors)

@@ -10,6 +10,7 @@ import nls = require('vs/nls');
 import * as objects from 'vs/base/common/objects';
 import * as strings from 'vs/base/common/strings';
 import * as arrays from 'vs/base/common/arrays';
+import filters = require('vs/base/common/filters');
 import { defaultGenerator } from 'vs/base/common/idGenerator';
 import URI from 'vs/base/common/uri';
 import { IIconLabelOptions } from 'vs/base/browser/ui/iconLabel/iconLabel';
@@ -270,6 +271,8 @@ export type FolderEntryOrGroup = FolderEntry | FolderEntryGroup;
 */
 export class OpenAnyFolderHandler extends QuickOpenHandler {
 
+	public static readonly ID = 'workbench.picker.anyFolder';
+
 	private static MAX_DISPLAYED_RESULTS = 150;
 
 	private static LOG_VERBOSE = false;
@@ -373,7 +376,8 @@ export class OpenAnyFolderHandler extends QuickOpenHandler {
 				// Highlight
 				const unhighlightedResultTime = Date.now();
 				viewResults.forEach(entry => {
-					const { labelHighlights, descriptionHighlights } = QuickOpenEntry.highlight(entry, searchValue, true /* fuzzy highlight */);
+					const labelHighlights = filters.matchesFuzzy(searchValue, entry.getLabel());
+					const descriptionHighlights = filters.matchesFuzzy(searchValue, entry.getDescription());
 					entry.setHighlights(labelHighlights, descriptionHighlights);
 				});
 				const highlightedResultTime = Date.now();
@@ -725,7 +729,8 @@ export class OpenRecentFolderHandler extends AbstractOpenFolderHandler {
 }
 function setHighlights(result: FolderEntry, query: string): void {
 	if (!query) { return; }
-	const { labelHighlights, descriptionHighlights } = QuickOpenEntry.highlight(result, query, true /* fuzzy highlight */);
+	const labelHighlights = filters.matchesFuzzy(query, result.getLabel());
+	const descriptionHighlights = filters.matchesFuzzy(query, result.getDescription());
 	result.setHighlights(labelHighlights, descriptionHighlights);
 }
 

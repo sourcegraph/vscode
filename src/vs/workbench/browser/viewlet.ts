@@ -147,19 +147,14 @@ export abstract class ViewerViewlet extends Viewlet {
 export class ViewletDescriptor extends CompositeDescriptor<Viewlet> {
 
 	constructor(
-		moduleId: string,
-		ctorName: string,
+		ctor: IConstructorSignature0<Viewlet>,
 		id: string,
 		name: string,
 		cssClass?: string,
 		order?: number,
 		protected _extensionId?: string
 	) {
-		super(moduleId, ctorName, id, name, cssClass, order);
-
-		if (_extensionId) {
-			this.appendStaticArguments([id]); // Pass viewletId to external viewlet, which doesn't know its id until runtime.
-		}
+		super(ctor, id, name, cssClass, order);
 	}
 
 	public get extensionId(): string {
@@ -169,8 +164,7 @@ export class ViewletDescriptor extends CompositeDescriptor<Viewlet> {
 
 export class GlobalViewletDescriptor extends ViewletDescriptor {
 	constructor(
-		moduleId: string,
-		ctorName: string,
+		ctor: IConstructorSignature0<Viewlet>,
 		id: string,
 		name: string,
 		cssClass?: string,
@@ -178,7 +172,7 @@ export class GlobalViewletDescriptor extends ViewletDescriptor {
 		public globalActivity?: IConstructorSignature0<IGlobalActivity>,
 		protected _extensionId?: string
 	) {
-		super(moduleId, ctorName, id, name, cssClass, order);
+		super(ctor, id, name, cssClass, order);
 	}
 }
 

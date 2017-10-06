@@ -110,12 +110,10 @@ function _divideAndMerge<T>(data: T[], compare: (a: T, b: T) => number): void {
 	}
 }
 
-export function groupBy<T>(data: T[], compare: (a: T, b: T) => number, stable = false): T[][] {
-	const sortedElements = stable ? mergeSort(data.slice(0), compare) : data.slice(0).sort(compare);
-
+export function groupBy<T>(data: T[], compare: (a: T, b: T) => number): T[][] {
 	const result: T[][] = [];
 	let currentGroup: T[];
-	for (const element of sortedElements) {
+	for (const element of mergeSort(data.slice(0), compare)) {
 		if (!currentGroup || compare(currentGroup[0], element) !== 0) {
 			currentGroup = [element];
 			result.push(currentGroup);
@@ -369,7 +367,7 @@ export function commonPrefixLength<T>(one: T[], other: T[], equals: (a: T, b: T)
 }
 
 export function flatten<T>(arr: T[][]): T[] {
-	return arr.reduce((r, v) => r.concat(v), []);
+	return [].concat(...arr);
 }
 
 export function range(to: number): number[];

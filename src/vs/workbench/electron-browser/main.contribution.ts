@@ -18,7 +18,7 @@ import { CloseEditorAction, KeybindingsReferenceAction, OpenDocumentationUrlActi
 import { MessagesVisibleContext } from 'vs/workbench/electron-browser/workbench';
 import { IJSONSchema } from 'vs/base/common/jsonSchema';
 import { registerCommands } from 'vs/workbench/electron-browser/commands';
-import { AddRootFolderAction, GlobalRemoveRootFolderAction, OpenWorkspaceAction, SaveWorkspaceAsAction, OpenWorkspaceConfigFileAction, ExportWorkspaceAction } from 'vs/workbench/browser/actions/workspaceActions';
+import { AddRootFolderAction, GlobalRemoveRootFolderAction, OpenWorkspaceAction, SaveWorkspaceAsAction, OpenWorkspaceConfigFileAction, OpenFolderAsWorkspaceInNewWindowAction, ExportWorkspaceAction } from 'vs/workbench/browser/actions/workspaceActions';
 import { ContextKeyExpr } from 'vs/platform/contextkey/common/contextkey';
 import { inQuickOpenContext, getQuickNavigateHandler } from 'vs/workbench/browser/parts/quickopen/quickopen';
 import { KeybindingsRegistry } from 'vs/platform/keybinding/common/keybindingsRegistry';
@@ -93,6 +93,7 @@ if (product.quality !== 'stable') {
 	workbenchActionsRegistry.registerWorkbenchAction(new SyncActionDescriptor(SaveWorkspaceAsAction, SaveWorkspaceAsAction.ID, SaveWorkspaceAsAction.LABEL), 'Workspaces: Save Workspace As...', workspacesCategory);
 	workbenchActionsRegistry.registerWorkbenchAction(new SyncActionDescriptor(ExportWorkspaceAction, ExportWorkspaceAction.ID, ExportWorkspaceAction.LABEL), 'Workspaces: Export Workspace...', workspacesCategory);
 	workbenchActionsRegistry.registerWorkbenchAction(new SyncActionDescriptor(OpenWorkspaceConfigFileAction, OpenWorkspaceConfigFileAction.ID, OpenWorkspaceConfigFileAction.LABEL), 'Workspaces: Open Workspace Configuration File', workspacesCategory);
+	workbenchActionsRegistry.registerWorkbenchAction(new SyncActionDescriptor(OpenFolderAsWorkspaceInNewWindowAction, OpenFolderAsWorkspaceInNewWindowAction.ID, OpenFolderAsWorkspaceInNewWindowAction.LABEL), 'Workspaces: Open Folder as Workspace in New Window', workspacesCategory);
 }
 
 // Developer related actions
@@ -182,7 +183,7 @@ let workbenchProperties: { [path: string]: IJSONSchema; } = {
 	},
 	'workbench.commandPalette.history': {
 		'type': 'number',
-		'description': nls.localize('commandHistory', "Controls if the number of recently used commands to keep in history for the command palette. Set to 0 to disable command history."),
+		'description': nls.localize('commandHistory', "Controls the number of recently used commands to keep in history for the command palette. Set to 0 to disable command history."),
 		'default': 50
 	},
 	'workbench.commandPalette.preserveInput': {
@@ -334,13 +335,13 @@ READ: This setting is ignored for the Sourcegraph editor (for now). All folders 
 		'default': isMacintosh ? '${activeEditorShort}${separator}${rootName}' : '${dirty}${activeEditorShort}${separator}${rootName}${separator}${appName}',
 		'description': nls.localize({ comment: ['This is the description for a setting. Values surrounded by parenthesis are not to be translated.'], key: 'title' },
 			`Controls the window title based on the active editor. Variables are substituted based on the context:
-\${activeEditorShort}: e.g. myFile.txt
-\${activeEditorMedium}: e.g. myFolder/myFile.txt
-\${activeEditorLong}: e.g. /Users/Development/myProject/myFolder/myFile.txt
-\${folderName}: e.g. myFolder
-\${folderPath}: e.g. /Users/Development/myFolder
-\${rootName}: e.g. myFolder1, myFolder2, myFolder3
-\${rootPath}: e.g. /Users/Development/myWorkspace
+\${activeEditorShort}: e.g. the file name (myFile.txt)
+\${activeEditorMedium}: e.g. the path of the file relative to the workspace folder (myFolder/myFile.txt)
+\${activeEditorLong}: e.g. the full path of the file (/Users/Development/myProject/myFolder/myFile.txt)
+\${folderName}: name of the workspace folder the file is contained in (e.g. myFolder)
+\${folderPath}: file path of the workspace folder the file is contained in (e.g. /Users/Development/myFolder)
+\${rootName}: name of the workspace (e.g. myFolder or myWorkspace)
+\${rootPath}: file path of the workspace (e.g. /Users/Development/myWorkspace)
 \${appName}: e.g. VS Code
 \${dirty}: a dirty indicator if the active editor is dirty
 \${separator}: a conditional separator (" - ") that only shows when surrounded by variables with values`)
