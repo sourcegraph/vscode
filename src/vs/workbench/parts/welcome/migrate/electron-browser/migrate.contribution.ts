@@ -10,4 +10,4 @@ import { SyncActionDescriptor } from 'vs/platform/actions/common/actions';
 import { VSCodeMigrateAction } from 'vs/workbench/parts/welcome/migrate/electron-browser/migrate';
 
 Registry.as<IWorkbenchActionRegistry>(ActionExtensions.WorkbenchActions)
-	.registerWorkbenchAction(new SyncActionDescriptor(VSCodeMigrateAction, VSCodeMigrateAction.ID, VSCodeMigrateAction.LABEL), 'Migrate Settings from Visual Studio Code');
+	.registerWorkbenchAction(new SyncActionDescriptor(VSCodeMigrateAction, VSCodeMigrateAction.ID, VSCodeMigrateAction.LABEL), 'Migrate Extensions and User Settings from Visual Studio Code');
