@@ -17,6 +17,7 @@ import Event, { Emitter } from 'vs/base/common/event';
 import { INavService } from 'vs/workbench/services/nav/common/nav';
 import { IEditorInput, IResourceInput } from 'vs/platform/editor/common/editor';
 import { IWorkbenchEditorService, IResourceInputType } from 'vs/workbench/services/editor/common/editorService';
+import { IEditorGroupService } from 'vs/workbench/services/group/common/groupService';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IResourceResolverService } from 'vs/platform/resourceResolver/common/resourceResolver';
 import { IFoldersWorkbenchService } from 'vs/workbench/services/folders/common/folders';
@@ -61,6 +62,7 @@ export class NavService extends Disposable implements INavService {
 		@IViewletService private viewletService: IViewletService,
 		@IMessageService private messageService: IMessageService,
 		@IWorkbenchEditorService private editorService: IWorkbenchEditorService,
+		@IEditorGroupService private editorGroupService: IEditorGroupService,
 		@IHistoryService private historyService: IHistoryService,
 		@ISCMService private scmService: ISCMService,
 		@ITelemetryService private telemetryService: ITelemetryService,
@@ -77,6 +79,7 @@ export class NavService extends Disposable implements INavService {
 
 	private registerListeners(): void {
 		this._register(this.historyService.onDidChange(this.onHistoryChange, this));
+		this._register(this.editorGroupService.onEditorsChanged(this.onEditorsChanged, this));
 	}
 
 	public handle(location: URI): TPromise<void> {
@@ -273,5 +276,14 @@ export class NavService extends Disposable implements INavService {
 		}
 
 		this._onDidNavigate.fire(this.location);
+	}
+
+	private onEditorsChanged(): void {
+		// If the last editor is closed, we clear the location bar. This doesn't make sense to
+		// include as a history item, so we need a special, non-history handler.
+		if (!this.editorService.getActiveEditor()) {
+			this.location = undefined;
+			this._onDidNavigate.fire(this.location);
+		}
 	}
 }
