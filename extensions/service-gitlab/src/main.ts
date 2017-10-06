@@ -31,10 +31,10 @@ async function showCreategitlabTokenWalkthrough(skipInfoMessage?: boolean): Prom
 	const enterTokenItem: vscode.MessageItem = { title: localize('enterToken', "Enter Token") };
 	const cancelItem: vscode.MessageItem = { title: localize('cancel', "Cancel"), isCloseAffordance: true };
 	
-	const enterHostItem: vscode.MessageItem = { title: localize('enterToken', "Enter host name.") };
+	const enterHostItem: vscode.MessageItem = { title: localize('enterHost', "Enter host name.") };
 
 	const value = await vscode.window.showInformationMessage(
-		localize('nogitlabToken', "A GitLab host is needed to search for repositories"),
+		localize('nogitlabHost', "A GitLab host is needed to search for repositories"),
 		{ modal: false },
 		enterHostItem, cancelItem,
 	);
@@ -47,8 +47,8 @@ async function showCreategitlabTokenWalkthrough(skipInfoMessage?: boolean): Prom
 			ignoreFocusOut: true,
 		});
 		
-		if(host == undefined) {
-			host = "gitlab.com"
+		if(host === undefined) {
+			host = 'gitlab.com';
 		}
 	} else if (!value || value === cancelItem) {
 		return false;
@@ -93,17 +93,4 @@ async function showCreategitlabTokenWalkthrough(skipInfoMessage?: boolean): Prom
  */
 function checkgitlabToken(): boolean {
 	return !!vscode.workspace.getConfiguration('gitlab').get<string>('token');
-}
-
-function iconForRepo(repo: { isPrivate: boolean, isFork: boolean, isMirror: boolean }) {
-	if (repo.isPrivate) {
-		return 'lock';
-	}
-	if (repo.isFork) {
-		return 'repo-forked';
-	}
-	if (repo.isMirror) {
-		return 'mirror';
-	}
-	return 'repo';
 }
