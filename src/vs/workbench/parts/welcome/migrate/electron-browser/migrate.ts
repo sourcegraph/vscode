@@ -27,7 +27,7 @@ import * as cp from 'child_process';
 export class VSCodeMigrateAction extends Action {
 
 	public static ID = 'workbench.action.vscodeMigrate';
-	public static LABEL = localize('migrateLabel', "Migrate Settings from Visual Studio Code");
+	public static LABEL = localize('migrateLabel', "Migrate Extensions and User Settings from Visual Studio Code");
 
 	constructor(
 		id: string,
@@ -57,7 +57,7 @@ export class VSCodeMigrateAction extends Action {
 		}
 
 		const confirmed = this.messageService.confirm({
-			message: localize('migrateConfirm', "This action will overwrite existing settings. Are you sure you want to migrate?"),
+			message: localize('migrateConfirm', "This action will overwrite existing extensions and user settings. Are you sure you want to migrate?"),
 		});
 		if (!confirmed) {
 			return;
