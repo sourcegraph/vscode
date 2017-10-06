@@ -249,7 +249,7 @@ export class FileComments extends Disposable implements IFileComments {
 					});
 			})
 			.then(response => {
-				const threads = response ? response.org.repo.threads : [];
+				const threads = (response && response.org.repo && response.org.repo.threads) || [];
 				const oldThreads = this._threads.reduce((threads, thread) => {
 					threads.set(thread.id, thread);
 					return threads;
