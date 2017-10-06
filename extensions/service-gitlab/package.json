@@ -24,11 +24,8 @@
       }
     ],
     "menus": {
-      "commandPalette": [
-
-      ],
-      "scm/title": [
-      ]
+      "commandPalette": [],
+      "scm/title": []
     },
     "configuration": {
       "type": "object",
@@ -50,6 +47,7 @@
     "watch": "tsc -watch -p ./"
   },
   "dependencies": {
+    "isomorphic-fetch": "^2.2.1",
     "vscode-nls": "^2.0.2"
   },
   "devDependencies": {

@@ -9,6 +9,8 @@ import * as nls from 'vscode-nls';
 
 const localize = nls.loadMessageBundle();
 
+const GITLAB_SCHEME = 'gitlab';
+
 export function activate(context: vscode.ExtensionContext): void {
 	vscode.commands.registerCommand('gitlab.checkAccessToken', async (args) => {
 		return checkgitlabToken();
