@@ -10,7 +10,7 @@ import errors = require('vs/base/common/errors');
 import URI from 'vs/base/common/uri';
 import { IEditor } from 'vs/editor/common/editorCommon';
 import { IEditor as IBaseEditor, IEditorInput, ITextEditorOptions, IResourceInput, ITextEditorSelection, Position as GroupPosition } from 'vs/platform/editor/common/editor';
-import { Extensions as EditorExtensions, EditorInput, IEditorCloseEvent, IEditorRegistry, toResource, IEditorGroup, IEditorInputFactoryRegistry } from 'vs/workbench/common/editor';
+import { Extensions as EditorExtensions, EditorInput, IEditorCloseEvent, IEditorGroup, IEditorInputFactoryRegistry } from 'vs/workbench/common/editor';
 import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { IHistoryService, IStackEntry } from 'vs/workbench/services/history/common/history';
 import { FileChangesEvent, IFileService, FileChangeType } from 'vs/platform/files/common/files';
@@ -30,7 +30,7 @@ import { parse, IExpression } from 'vs/base/common/glob';
 import { ICursorPositionChangedEvent } from 'vs/editor/common/controller/cursorEvents';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { ResourceGlobMatcher } from 'vs/workbench/common/resources';
-import { Extensions } from 'vs/workbench/browser/parts/editor/baseEditor';
+import { IEditorRegistry, Extensions } from 'vs/workbench/browser/editor';
 
 /**
  * Stores the selection & view state of an editor and allows to compare it to other selection states.
@@ -243,7 +243,7 @@ export class HistoryService extends BaseHistoryService implements IHistoryServic
 
 		// Track closing of pinned editor to support to reopen closed editors
 		if (event.pinned) {
-			const resource = toResource(event.editor);
+			const resource = event.editor ? event.editor.getResource() : void 0;
 			const supportsReopen = resource && this.fileService.canHandleResource(resource); // we only support file'ish things to reopen
 			if (supportsReopen) {
 
@@ -607,7 +607,7 @@ export class HistoryService extends BaseHistoryService implements IHistoryServic
 	}
 
 	private preferResourceInput(input: IEditorInput): IEditorInput | IResourceInput {
-		const resource = toResource(input);
+		const resource = input ? input.getResource() : void 0;
 		const preferResourceInput = resource && this.fileService.canHandleResource(resource); // file'ish things prefer resources
 		if (preferResourceInput) {
 			return { resource };
@@ -696,9 +696,9 @@ export class HistoryService extends BaseHistoryService implements IHistoryServic
 		}
 
 		if (arg2 instanceof EditorInput) {
-			const resource = toResource(arg2);
+			const inputResource = arg2.getResource();
 
-			return resource && this.fileService.canHandleResource(resource) && resource.toString() === resource.toString();
+			return inputResource && this.fileService.canHandleResource(inputResource) && inputResource.toString() === resource.toString();
 		}
 
 		const resourceInput = arg2 as IResourceInput;

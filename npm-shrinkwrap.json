@@ -330,9 +330,9 @@
       "resolved": "https://registry.npmjs.org/node-machine-id/-/node-machine-id-1.1.9.tgz"
     },
     "node-pty": {
-      "version": "0.7.0",
-      "from": "node-pty@0.7.0",
-      "resolved": "https://registry.npmjs.org/node-pty/-/node-pty-0.7.0.tgz",
+      "version": "0.7.1",
+      "from": "node-pty@0.7.1",
+      "resolved": "https://registry.npmjs.org/node-pty/-/node-pty-0.7.1.tgz",
       "dependencies": {
         "nan": {
           "version": "2.5.0",
@@ -702,7 +702,7 @@
     "xterm": {
       "version": "2.9.1",
       "from": "Tyriar/xterm.js#vscode-release/1.18",
-      "resolved": "git+https://github.com/Tyriar/xterm.js.git#45eadc82ffeac0dde3bb6e6b7e1b7635d2d9577d"
+      "resolved": "git+https://github.com/Tyriar/xterm.js.git#b49fe4a329ca792e1eb59d647042e0460e860b4d"
     },
     "yauzl": {
       "version": "2.8.0",

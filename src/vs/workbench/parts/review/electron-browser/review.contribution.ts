@@ -20,6 +20,7 @@ import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
 import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
 // import { ISCMService } from 'vs/workbench/services/scm/common/scm';
 // import { StatusUpdater, StatusBarController } from './scmActivity';
+import { ReviewViewlet } from 'vs/workbench/parts/review/electron-browser/reviewViewlet';
 
 class OpenReviewViewletAction extends ToggleViewletAction {
 
@@ -35,8 +36,7 @@ class OpenReviewViewletAction extends ToggleViewletAction {
 // 	.registerWorkbenchContribution(DirtyDiffDecorator);
 
 const viewletDescriptor = new ViewletDescriptor(
-	'vs/workbench/parts/review/electron-browser/reviewViewlet',
-	'ReviewViewlet',
+	ReviewViewlet,
 	VIEWLET_ID,
 	localize('review', "Review"),
 	'review',

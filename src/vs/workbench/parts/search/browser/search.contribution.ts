@@ -41,6 +41,10 @@ import { SearchViewlet } from 'vs/workbench/parts/search/browser/searchViewlet';
 import { ListFocusContext } from 'vs/platform/list/browser/listService';
 import { IOutputChannelRegistry, Extensions as OutputExt } from 'vs/workbench/parts/output/common/output';
 import { defaultQuickOpenContextKey } from 'vs/workbench/browser/parts/quickopen/quickopen';
+import { OpenSymbolHandler } from 'vs/workbench/parts/search/browser/openSymbolHandler';
+import { OpenAnythingHandler } from 'vs/workbench/parts/search/browser/openAnythingHandler';
+import { OpenAnyFolderHandler } from 'vs/workbench/parts/search/browser/openFolderHandler';
+import { ProfilePickerHandler, PROFILE_PICKER_PREFIX } from 'vs/workbench/parts/search/browser/searchProfileHandler';
 
 registerSingleton(ISearchWorkbenchService, SearchWorkbenchService);
 replaceContributions();
@@ -273,8 +277,7 @@ class ProfilePickerAction extends QuickOpenAction {
 // Register Viewlet
 import 'vs/workbench/parts/search/browser/sourcegraphSearchViewlet'; // ensure it's in the synchronous bundle
 Registry.as<ViewletRegistry>(ViewletExtensions.Viewlets).registerViewlet(new ViewletDescriptor(
-	'vs/workbench/parts/search/browser/sourcegraphSearchViewlet', // SOURCEGRAPH PATCH: use our viewlet instead
-	'SourcegraphSearchViewlet', // SOURCEGRAPH PATCH: user our viewlet instead
+	SearchViewlet,
 	Constants.VIEWLET_ID,
 	nls.localize('name', "Search"),
 	'search',
@@ -322,8 +325,8 @@ actionBarRegistry.registerActionBarContributor(Scope.VIEWER, ExplorerViewerActio
 // Register Quick Open Handler
 Registry.as<IQuickOpenRegistry>(QuickOpenExtensions.Quickopen).registerDefaultQuickOpenHandler(
 	new QuickOpenHandlerDescriptor(
-		'vs/workbench/parts/search/browser/openAnythingHandler',
-		'OpenAnythingHandler',
+		OpenAnythingHandler,
+		OpenAnythingHandler.ID,
 		'',
 		defaultQuickOpenContextKey,
 		nls.localize('openAnythingHandlerDescription', "Go to File")
@@ -332,8 +335,8 @@ Registry.as<IQuickOpenRegistry>(QuickOpenExtensions.Quickopen).registerDefaultQu
 
 Registry.as<IQuickOpenRegistry>(QuickOpenExtensions.Quickopen).registerQuickOpenHandler(
 	new QuickOpenHandlerDescriptor(
-		'vs/workbench/parts/search/browser/openAnythingHandler',
-		'OpenSymbolHandler',
+		OpenSymbolHandler,
+		OpenSymbolHandler.ID,
 		ALL_SYMBOLS_PREFIX,
 		'inWorkspaceSymbolsPicker',
 		[
@@ -346,11 +349,10 @@ Registry.as<IQuickOpenRegistry>(QuickOpenExtensions.Quickopen).registerQuickOpen
 	)
 );
 
-import 'vs/workbench/parts/search/browser/openFolderHandler'; // ensure it's in the synchronous bundle
 Registry.as<IQuickOpenRegistry>(QuickOpenExtensions.Quickopen).registerQuickOpenHandler(
 	new QuickOpenHandlerDescriptor(
-		'vs/workbench/parts/search/browser/openFolderHandler',
-		'OpenAnyFolderHandler',
+		OpenAnyFolderHandler,
+		OpenAnyFolderHandler.ID,
 		ALL_REPOS_PREFIX,
 		'',
 		[
@@ -363,11 +365,10 @@ Registry.as<IQuickOpenRegistry>(QuickOpenExtensions.Quickopen).registerQuickOpen
 	)
 );
 
-import { PROFILE_PICKER_PREFIX } from 'vs/workbench/parts/search/browser/searchProfileHandler';
 Registry.as<IQuickOpenRegistry>(QuickOpenExtensions.Quickopen).registerQuickOpenHandler(
 	new QuickOpenHandlerDescriptor(
-		'vs/workbench/parts/search/browser/searchProfileHandler',
-		'ProfilePickerHandler',
+		ProfilePickerHandler,
+		ProfilePickerHandler.ID,
 		PROFILE_PICKER_PREFIX,
 		'',
 		[
@@ -419,7 +420,7 @@ configurationRegistry.registerConfiguration({
 		},
 		'search.useRipgrep': {
 			'type': 'boolean',
-			'description': nls.localize('useRipgrep', "Controls whether to use ripgrep in text search"),
+			'description': nls.localize('useRipgrep', "Controls whether to use ripgrep in text and file search"),
 			'default': true
 		},
 		'search.useIgnoreFilesByDefault': {

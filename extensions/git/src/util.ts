@@ -8,6 +8,7 @@
 import { Event } from 'vscode';
 import { dirname } from 'path';
 import * as fs from 'fs';
+import * as byline from 'byline';
 
 export function log(...args: any[]): void {
 	console.log.apply(console, ['git:', ...args]);
@@ -198,5 +199,21 @@ export function replaceVariables(value: string, vars: { [name: string]: string }
 			return newValue;
 		}
 		return match;
+	});
+}
+
+export async function grep(filename: string, pattern: RegExp): Promise<boolean> {
+	return new Promise<boolean>((c, e) => {
+		const fileStream = fs.createReadStream(filename, { encoding: 'utf8' });
+		const stream = byline(fileStream);
+		stream.on('data', (line: string) => {
+			if (pattern.test(line)) {
+				fileStream.close();
+				c(true);
+			}
+		});
+
+		stream.on('error', e);
+		stream.on('end', () => c(false));
 	});
 }

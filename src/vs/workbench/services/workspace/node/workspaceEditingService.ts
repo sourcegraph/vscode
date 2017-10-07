@@ -7,6 +7,7 @@
 
 import { IWorkspaceEditingService } from 'vs/workbench/services/workspace/common/workspaceEditing';
 import URI from 'vs/base/common/uri';
+import { Schemas } from 'vs/base/common/network';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { IWorkspaceContextService, WorkbenchState } from 'vs/platform/workspace/common/workspace';
 import { IWindowsService, IWindowService, IEnterWorkspaceResult } from 'vs/platform/windows/common/windows';
@@ -58,21 +59,35 @@ export class WorkspaceEditingService implements IWorkspaceEditingService {
 
 		const workspaceConfigFolder = dirname(this.contextService.getWorkspace().configuration.fsPath);
 
-		const storedFoldersToAdd: TPromise<IStoredWorkspaceFolder[]> = TPromise.join(foldersToAdd
+		const resolvedFoldersToAdd: TPromise<URI[]> = TPromise.join(foldersToAdd
 			.filter(folder => {
 				return !this.contains(currentWorkspaceFolderUris, folder);
 			})
-			.map(folder => this.resourceResolverService.resolveResource(folder).then(folder => ({
-				path: massageFolderPathForWorkspace(folder.fsPath, workspaceConfigFolder, currentStoredFolders)
-			})))
+			.map(folder => this.resourceResolverService.resolveResource(folder))
 		);
 
-		return storedFoldersToAdd.then(storedFoldersToAdd => {
-			if (storedFoldersToAdd.length > 0) {
-				return this.doSetFolders([...currentStoredFolders, ...storedFoldersToAdd]);
+		const storedFoldersToAdd: IStoredWorkspaceFolder[] = [];
+		return resolvedFoldersToAdd.then(resolvedFoldersToAdd => resolvedFoldersToAdd.map(folderToAdd => {
+			// File resource: use "path" property
+			if (folderToAdd.scheme === Schemas.file) {
+				storedFoldersToAdd.push({
+					path: massageFolderPathForWorkspace(folderToAdd.fsPath, workspaceConfigFolder, currentStoredFolders)
+				});
 			}
-			return TPromise.as(void 0);
-		});
+
+			// Any other resource: use "uri" property
+			else {
+				storedFoldersToAdd.push({
+					uri: folderToAdd.toString(true)
+				});
+			}
+		}))
+			.then(() => {
+				if (storedFoldersToAdd.length > 0) {
+					return this.doSetFolders([...currentStoredFolders, ...storedFoldersToAdd]);
+				}
+				return TPromise.as(void 0);
+			});
 	}
 
 	public removeFolders(foldersToRemove: URI[]): TPromise<void> {
@@ -122,8 +137,8 @@ export class WorkspaceEditingService implements IWorkspaceEditingService {
 		});
 	}
 
-	public createAndEnterWorkspace(folders?: string[], path?: string): TPromise<void> {
-		return this.doEnterWorkspace(() => this.windowService.createAndEnterWorkspace(folders, path));
+	public createAndEnterWorkspace(folderPaths?: string[], path?: string): TPromise<void> {
+		return this.doEnterWorkspace(() => this.windowService.createAndEnterWorkspace(folderPaths, path));
 	}
 
 	public saveAndEnterWorkspace(path: string): TPromise<void> {
@@ -158,9 +173,16 @@ export class WorkspaceEditingService implements IWorkspaceEditingService {
 	}
 
 	private migrate(toWorkspace: IWorkspaceIdentifier): TPromise<void> {
+
+		// Storage (UI State) migration
 		this.migrateStorage(toWorkspace);
 
-		return this.migrateConfiguration(toWorkspace);
+		// Settings migration (only if we come from a folder workspace)
+		if (this.contextService.getWorkbenchState() === WorkbenchState.FOLDER) {
+			return this.copyWorkspaceSettings(toWorkspace);
+		}
+
+		return TPromise.as(void 0);
 	}
 
 	private migrateStorage(toWorkspace: IWorkspaceIdentifier): void {
@@ -171,11 +193,7 @@ export class WorkspaceEditingService implements IWorkspaceEditingService {
 		storageImpl.setWorkspaceId(newWorkspaceId);
 	}
 
-	private migrateConfiguration(toWorkspace: IWorkspaceIdentifier): TPromise<void> {
-		if (this.contextService.getWorkbenchState() !== WorkbenchState.FOLDER) {
-			return TPromise.as(void 0); // return early if not a folder workspace is opened
-		}
-
+	public copyWorkspaceSettings(toWorkspace: IWorkspaceIdentifier): TPromise<void> {
 		const configurationProperties = Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration).getConfigurationProperties();
 		const targetWorkspaceConfiguration = {};
 		for (const key of this.workspaceConfigurationService.keys().workspace) {

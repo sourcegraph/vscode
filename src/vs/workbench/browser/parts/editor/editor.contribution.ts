@@ -10,8 +10,8 @@ import URI from 'vs/base/common/uri';
 import { Action, IAction } from 'vs/base/common/actions';
 import { IEditorQuickOpenEntry, IQuickOpenRegistry, Extensions as QuickOpenExtensions, QuickOpenHandlerDescriptor } from 'vs/workbench/browser/quickopen';
 import { StatusbarItemDescriptor, StatusbarAlignment, IStatusbarRegistry, Extensions as StatusExtensions } from 'vs/workbench/browser/parts/statusbar/statusbar';
-import { EditorDescriptor, Extensions as EditorExtensions } from 'vs/workbench/browser/parts/editor/baseEditor';
-import { EditorInput, IEditorRegistry, IEditorInputFactory, SideBySideEditorInput, IEditorInputFactoryRegistry, Extensions as EditorInputExtensions } from 'vs/workbench/common/editor';
+import { IEditorRegistry, EditorDescriptor, Extensions as EditorExtensions } from 'vs/workbench/browser/editor';
+import { EditorInput, IEditorInputFactory, SideBySideEditorInput, IEditorInputFactoryRegistry, Extensions as EditorInputExtensions } from 'vs/workbench/common/editor';
 import { TextResourceEditor } from 'vs/workbench/browser/parts/editor/textResourceEditor';
 import { SideBySideEditor } from 'vs/workbench/browser/parts/editor/sideBySideEditor';
 import { DiffEditorInput } from 'vs/workbench/common/editor/diffEditorInput';
@@ -42,14 +42,14 @@ import { ContextKeyExpr } from 'vs/platform/contextkey/common/contextkey';
 import { isMacintosh } from 'vs/base/common/platform';
 import { IWorkbenchContributionsRegistry, Extensions as WorkbenchExtensions } from 'vs/workbench/common/contributions';
 import { EditorViewTelemetryHandler } from 'vs/workbench/browser/parts/editor/editorTelemetry';
+import { GroupOnePicker, GroupTwoPicker, GroupThreePicker, AllEditorsPicker } from 'vs/workbench/browser/parts/editor/editorPicker';
 
 // Register String Editor
 Registry.as<IEditorRegistry>(EditorExtensions.Editors).registerEditor(
 	new EditorDescriptor(
+		TextResourceEditor,
 		TextResourceEditor.ID,
 		nls.localize('textEditor', "Text Editor"),
-		'vs/workbench/browser/parts/editor/textResourceEditor',
-		'TextResourceEditor'
 	),
 	[
 		new SyncDescriptor(UntitledEditorInput),
@@ -60,10 +60,9 @@ Registry.as<IEditorRegistry>(EditorExtensions.Editors).registerEditor(
 // Register Text Diff Editor
 Registry.as<IEditorRegistry>(EditorExtensions.Editors).registerEditor(
 	new EditorDescriptor(
+		TextDiffEditor,
 		TextDiffEditor.ID,
-		nls.localize('textDiffEditor', "Text Diff Editor"),
-		'vs/workbench/browser/parts/editor/textDiffEditor',
-		'TextDiffEditor'
+		nls.localize('textDiffEditor', "Text Diff Editor")
 	),
 	[
 		new SyncDescriptor(DiffEditorInput)
@@ -73,10 +72,9 @@ Registry.as<IEditorRegistry>(EditorExtensions.Editors).registerEditor(
 // Register Binary Resource Diff Editor
 Registry.as<IEditorRegistry>(EditorExtensions.Editors).registerEditor(
 	new EditorDescriptor(
+		BinaryResourceDiffEditor,
 		BinaryResourceDiffEditor.ID,
-		nls.localize('binaryDiffEditor', "Binary Diff Editor"),
-		'vs/workbench/browser/parts/editor/binaryDiffEditor',
-		'BinaryResourceDiffEditor'
+		nls.localize('binaryDiffEditor', "Binary Diff Editor")
 	),
 	[
 		new SyncDescriptor(DiffEditorInput)
@@ -85,10 +83,9 @@ Registry.as<IEditorRegistry>(EditorExtensions.Editors).registerEditor(
 
 Registry.as<IEditorRegistry>(EditorExtensions.Editors).registerEditor(
 	new EditorDescriptor(
+		SideBySideEditor,
 		SideBySideEditor.ID,
-		nls.localize('sideBySideEditor', "Side by Side Editor"),
-		'vs/workbench/browser/parts/editor/sideBySideEditor',
-		'SideBySideEditor'
+		nls.localize('sideBySideEditor', "Side by Side Editor")
 	),
 	[
 		new SyncDescriptor(SideBySideEditorInput)
@@ -268,8 +265,8 @@ const editorPickerContext = ContextKeyExpr.and(inQuickOpenContext, ContextKeyExp
 
 Registry.as<IQuickOpenRegistry>(QuickOpenExtensions.Quickopen).registerQuickOpenHandler(
 	new QuickOpenHandlerDescriptor(
-		'vs/workbench/browser/parts/editor/editorPicker',
-		'GroupOnePicker',
+		GroupOnePicker,
+		GroupOnePicker.ID,
 		NAVIGATE_IN_GROUP_ONE_PREFIX,
 		editorPickerContextKey,
 		[
@@ -294,8 +291,8 @@ Registry.as<IQuickOpenRegistry>(QuickOpenExtensions.Quickopen).registerQuickOpen
 
 Registry.as<IQuickOpenRegistry>(QuickOpenExtensions.Quickopen).registerQuickOpenHandler(
 	new QuickOpenHandlerDescriptor(
-		'vs/workbench/browser/parts/editor/editorPicker',
-		'GroupTwoPicker',
+		GroupTwoPicker,
+		GroupTwoPicker.ID,
 		NAVIGATE_IN_GROUP_TWO_PREFIX,
 		editorPickerContextKey,
 		[]
@@ -304,8 +301,8 @@ Registry.as<IQuickOpenRegistry>(QuickOpenExtensions.Quickopen).registerQuickOpen
 
 Registry.as<IQuickOpenRegistry>(QuickOpenExtensions.Quickopen).registerQuickOpenHandler(
 	new QuickOpenHandlerDescriptor(
-		'vs/workbench/browser/parts/editor/editorPicker',
-		'GroupThreePicker',
+		GroupThreePicker,
+		GroupThreePicker.ID,
 		NAVIGATE_IN_GROUP_THREE_PREFIX,
 		editorPickerContextKey,
 		[]
@@ -314,8 +311,8 @@ Registry.as<IQuickOpenRegistry>(QuickOpenExtensions.Quickopen).registerQuickOpen
 
 Registry.as<IQuickOpenRegistry>(QuickOpenExtensions.Quickopen).registerQuickOpenHandler(
 	new QuickOpenHandlerDescriptor(
-		'vs/workbench/browser/parts/editor/editorPicker',
-		'AllEditorsPicker',
+		AllEditorsPicker,
+		AllEditorsPicker.ID,
 		NAVIGATE_ALL_EDITORS_GROUP_PREFIX,
 		editorPickerContextKey,
 		[

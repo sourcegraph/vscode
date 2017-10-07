@@ -19,13 +19,12 @@ import { IKeybindings } from 'vs/platform/keybinding/common/keybindingsRegistry'
 import { SyncActionDescriptor } from 'vs/platform/actions/common/actions';
 import { KeyMod, KeyCode } from 'vs/base/common/keyCodes';
 import { OpenCodeCommentsViewletAction } from 'vs/workbench/parts/codeComments/electron-browser/codeCommentsActions';
-import 'vs/workbench/parts/codeComments/electron-browser/codeCommentsViewlet';
+import { CodeCommentsViewlet } from 'vs/workbench/parts/codeComments/electron-browser/codeCommentsViewlet';
 
 registerSingleton(ICodeCommentsService, CodeCommentsService);
 
 Registry.as<ViewletRegistry>(ViewletExtensions.Viewlets).registerViewlet(new ViewletDescriptor(
-	'vs/workbench/parts/codeComments/electron-browser/codeCommentsViewlet',
-	'CodeCommentsViewlet',
+	CodeCommentsViewlet,
 	Constants.VIEWLET_ID,
 	localize('name', "Code Comments"),
 	'codeComments',

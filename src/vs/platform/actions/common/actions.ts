@@ -91,7 +91,7 @@ export interface IMenuRegistry {
 	getMenuItems(loc: MenuId): IMenuItem[];
 }
 
-export const MenuRegistry: IMenuRegistry = new class {
+export const MenuRegistry: IMenuRegistry = new class implements IMenuRegistry {
 
 	private _commands: { [id: string]: ICommandAction } = Object.create(null);
 

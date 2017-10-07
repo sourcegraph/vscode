@@ -307,7 +307,7 @@ export class WorkbenchShell {
 
 		// Telemetry
 		this.sendMachineIdToMain(this.storageService);
-		if (this.environmentService.eventLogDebug || (this.environmentService.isBuilt && !this.environmentService.isExtensionDevelopment && !!product.enableTelemetry)) {
+		if (this.environmentService.eventLogDebug || (this.environmentService.isBuilt && !this.environmentService.isExtensionDevelopment && !this.environmentService.args['disable-telemetry'] && !!product.enableTelemetry)) {
 			const channel = getDelayedChannel<ITelemetryAppenderChannel>(sharedProcess.then(c => c.getChannel('telemetryAppender')));
 			const commit = product.commit;
 			const version = pkg.version;

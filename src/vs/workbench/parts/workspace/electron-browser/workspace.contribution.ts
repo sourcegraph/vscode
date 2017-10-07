@@ -16,11 +16,11 @@ import { VIEWLET_ID } from 'vs/workbench/parts/workspace/common/workspace';
 import { OpenWorkspaceViewletAction, AddRootFolderResourceAction } from 'vs/workbench/parts/workspace/browser/folderActions';
 import { IKeybindings } from 'vs/platform/keybinding/common/keybindingsRegistry';
 import { KeyMod, KeyCode } from 'vs/base/common/keyCodes';
+import { WorkspaceViewlet } from 'vs/workbench/parts/workspace/electron-browser/workspaceViewlet';
 
 // Register Viewlet
 Registry.as<ViewletRegistry>(ViewletExtensions.Viewlets).registerViewlet(new ViewletDescriptor(
-	'vs/workbench/parts/workspace/electron-browser/workspaceViewlet',
-	'WorkspaceViewlet',
+	WorkspaceViewlet,
 	VIEWLET_ID,
 	nls.localize('workspace', "Workspace"),
 	'workspace',
