@@ -20,6 +20,7 @@ import { SyncActionDescriptor } from 'vs/platform/actions/common/actions';
 import { KeyMod, KeyCode } from 'vs/base/common/keyCodes';
 import { OpenCodeCommentsViewletAction } from 'vs/workbench/parts/codeComments/electron-browser/codeCommentsActions';
 import { CodeCommentsViewlet } from 'vs/workbench/parts/codeComments/electron-browser/codeCommentsViewlet';
+import { IOutputChannelRegistry, Extensions as OutputExtensions } from 'vs/workbench/parts/output/common/output';
 
 registerSingleton(ICodeCommentsService, CodeCommentsService);
 
@@ -30,6 +31,9 @@ Registry.as<ViewletRegistry>(ViewletExtensions.Viewlets).registerViewlet(new Vie
 	'codeComments',
 	11 // after search viewlet
 ));
+
+Registry.as<IOutputChannelRegistry>(OutputExtensions.OutputChannels)
+	.registerChannel(Constants.CommentsChannelId, Constants.CommentsLabel);
 
 const openViewletKb: IKeybindings = {
 	primary: KeyMod.CtrlCmd | KeyMod.Alt | KeyMod.Shift | KeyCode.KEY_M

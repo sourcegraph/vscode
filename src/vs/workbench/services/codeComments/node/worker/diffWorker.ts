@@ -35,6 +35,11 @@ export class DiffWorker implements IDiffWorker {
 				const diffResult: IDiffResult = {};
 				for (const revRange of args.revRanges) {
 					const diff = diffs.get(revRange.revision);
+					if (!diff) {
+						// It is possible that our caller asked us to resolve range at a revision and
+						// did not provide lines to diff because the revision is no longer reachable.
+						continue;
+					}
 					const fromRange = Range.lift(revRange.range);
 					const range = diff.transformRange(fromRange);
 					if (!diffResult[revRange.revision]) {

@@ -31,6 +31,12 @@ import { IAuthService } from 'vs/platform/auth/common/auth';
 import { DiffWorkerClient } from 'vs/workbench/services/codeComments/node/diffWorkerClient';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 import { TextModel } from 'vs/editor/common/model/textModel';
+// TODO(nick): fix this
+// tslint:disable-next-line:import-patterns
+import { IOutputService } from 'vs/workbench/parts/output/common/output';
+// TODO(nick): fix this
+// tslint:disable-next-line:import-patterns
+import { CommentsChannelId } from 'vs/workbench/parts/codeComments/common/constants';
 
 export { Event }
 
@@ -95,7 +101,7 @@ export class CodeCommentsService implements ICodeCommentsService {
 	constructor(
 		@IEnvironmentService environmentService: IEnvironmentService,
 		@IInstantiationService private instantiationService: IInstantiationService,
-
+		@IOutputService private outputService: IOutputService,
 	) {
 		this.diffWorkerProvider = new DiffWorkerClient(environmentService.debugDiff);
 	}
@@ -155,6 +161,7 @@ export class FileComments extends Disposable implements IFileComments {
 		@IInstantiationService private instantiationService: IInstantiationService,
 		@IRemoteService private remoteService: IRemoteService,
 		@IAuthService private authService: IAuthService,
+		@IOutputService private outputService: IOutputService,
 	) {
 		super();
 		this.git = instantiationService.createInstance(Git, uri);
@@ -299,10 +306,9 @@ export class FileComments extends Disposable implements IFileComments {
 			.then(docId => docId, err => {
 				// These errors happen a lot on startup because the source control providers
 				// arent registered yet. It isn't a problem on startup because we just retry later
-				// when the source control providers change. We still log the message in case there
-				// is a bug after starup and this information would be helpful.
+				// when the source control providers change.
 				const error = Array.isArray(err) ? err[0] : err;
-				console.log(error.message);
+				this.outputService.getChannel(CommentsChannelId).append(error.message);
 				return undefined;
 			});
 	}
@@ -317,7 +323,7 @@ export class FileComments extends Disposable implements IFileComments {
 
 	private updateDisplayRangesNow(): TPromise<void> {
 		return this.getDocumentId()
-			.then(documentId => {
+			.then<{ revision: string, content: string }[]>(documentId => {
 				if (!documentId) {
 					return TPromise.wrap(undefined);
 				}
@@ -328,17 +334,25 @@ export class FileComments extends Disposable implements IFileComments {
 						// we don't have lazy computation yet.
 						// .filter(thread => !thread.archived)
 						.filter(uniqueFilter(thread => thread.revision))
-						.map(thread => this.instantiationService.invokeFunction(resolveContent, this.git, documentId, thread.revision))
+						.map(thread => this.instantiationService.invokeFunction(resolveContent, this.git, documentId, thread.revision)
+							.then(content => content, err => {
+								this.outputService.getChannel(CommentsChannelId).append(err.message);
+								return undefined;
+							})
+						)
 				);
 			})
 			.then(revContents => {
 				if (!revContents || !this.modelWatcher.model) {
 					return TPromise.as(undefined);
 				}
-				const revLines = revContents.map(revContent => {
-					const lines = RawTextSource.fromString(revContent.content).lines;
-					return { revision: revContent.revision, lines };
-				});
+				const revLines = revContents
+					// Filter out revisions that failed to resolve
+					.filter(revContent => revContent)
+					.map(revContent => {
+						const lines = RawTextSource.fromString(revContent.content).lines;
+						return { revision: revContent.revision, lines };
+					});
 				const revRanges = this.threads.map(thread => {
 					return {
 						revision: thread.revision,
