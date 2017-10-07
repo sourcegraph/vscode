@@ -15,7 +15,6 @@ import * as path from 'path';
 import * as nls from 'vscode-nls';
 import * as fs from 'fs';
 import { StatusBarCommands } from './statusbar';
-import { ReviewManager } from './reviewManager';
 
 const timeout = (millis: number) => new Promise(c => setTimeout(c, millis));
 
@@ -311,6 +310,12 @@ export interface CommitOptions {
 export interface GitResourceGroup extends SourceControlResourceGroup {
 	resourceStates: Resource[];
 }
+
+// This import is down here to avoid a circular dependency.
+// A proper restructuring of this code would involve moving
+// Resource and its dependencies to its own file but that
+// would be a nightmare to maintain when merging from upstream.
+import { ReviewManager } from './reviewManager';
 
 export class Repository implements Disposable {
 

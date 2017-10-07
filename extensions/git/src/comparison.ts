@@ -62,7 +62,7 @@ export class ComparisonArgs {
 	 *
 	 * @param args to `git diff`
 	 */
-	static parse(argsString: string): ParsedUnresolvedComparisonArgs {
+	public static parse(argsString: string): ParsedUnresolvedComparisonArgs {
 		let args = argsString.split(/\s+/);
 		if (args.includes('--')) {
 			args = args.slice(0, args.indexOf('--'));
@@ -89,6 +89,23 @@ export class ComparisonArgs {
 
 			default: throw new Error(`invalid comparison args: ${argsString}`);
 		}
+	}
+
+	public static async resolve(repository: Repository, parsedArgs: ParsedUnresolvedComparisonArgs): Promise<ComparisonArgs> {
+		let argsToVerify: string[];
+		if (Array.isArray(parsedArgs)) {
+			argsToVerify = parsedArgs;
+		} else {
+			const mergeBase = await repository.getMergeBase([parsedArgs.left, parsedArgs.right]);
+			if (mergeBase.length !== 1 || !mergeBase[0]) {
+				throw new Error(`unable to determine merge-base for '${parsedArgs.left} ${parsedArgs.right}'`);
+			}
+			argsToVerify = [mergeBase[0], parsedArgs.right];
+		}
+
+		await Promise.all(argsToVerify.map(arg => repository.revParse(['--verify', arg + '^{commit}'])));
+
+		return new ComparisonArgs(argsToVerify[0], argsToVerify[1]);
 	}
 }
 
@@ -210,20 +227,7 @@ export class Comparison implements Disposable {
 
 	private async resolveArgs(): Promise<ComparisonArgs> {
 		const parsedArgs = ComparisonArgs.parse(this.args);
-		let argsToVerify: string[];
-		if (Array.isArray(parsedArgs)) {
-			argsToVerify = parsedArgs;
-		} else {
-			const mergeBase = await this.repository.getMergeBase([parsedArgs.left, parsedArgs.right]);
-			if (mergeBase.length !== 1 || !mergeBase[0]) {
-				throw new Error(`unable to determine merge-base for '${this.args}'`);
-			}
-			argsToVerify = [mergeBase[0], parsedArgs.right];
-		}
-
-		await Promise.all(argsToVerify.map(arg => this.repository.revParse(['--verify', arg + '^{commit}'])));
-
-		return new ComparisonArgs(argsToVerify[0], argsToVerify[1]);
+		return ComparisonArgs.resolve(this.repository, parsedArgs);
 	}
 
 	@throttle
@@ -254,40 +258,9 @@ export class Comparison implements Disposable {
 		this._resolvedArgs = resolvedArgs;
 		this.state = ComparisonState.Idle;
 
-		const { diff, didHitLimit } = await this.repository.getDiff(this.args.split(/\s+/));
-
-		const config = workspace.getConfiguration('git');
-		const shouldIgnore = config.get<boolean>('ignoreComparisonLimitWarning') === true;
-		if (didHitLimit && !shouldIgnore && !this.didWarnAboutLimit) {
-			const ok = { title: localize('ok', "OK"), isCloseAffordance: true };
-			const neverAgain = { title: localize('neveragain', "Never Show Again") };
-
-			window.showWarningMessage(localize('hugeComparison', "The git repository comparison at '{0}' has too many active changes, only a subset of Git features will be enabled.", this.repository.root), ok, neverAgain).then(result => {
-				if (result === neverAgain) {
-					config.update('ignoreComparisonLimitWarning', true, false);
-				}
-			});
-
-			this.didWarnAboutLimit = true;
-		}
-
-		const changes: Resource[] = [];
-		diff.forEach(raw => {
-			const uri = Uri.file(path.join(this.repository.root, raw.path));
-			const renameUri = raw.rename ? Uri.file(path.join(this.repository.root, raw.rename)) : undefined;
-
-			switch (raw.status) {
-				case 'A': changes.push(new ComparisonResource(resolvedArgs, ResourceGroupType.Committed, uri, Status.ADDED)); break;
-				case 'C': changes.push(new ComparisonResource(resolvedArgs, ResourceGroupType.Committed, renameUri!, Status.COPIED, uri)); break;
-				case 'D': changes.push(new ComparisonResource(resolvedArgs, ResourceGroupType.Committed, uri, Status.DELETED)); break;
-				case 'M': changes.push(new ComparisonResource(resolvedArgs, ResourceGroupType.Committed, uri, Status.MODIFIED)); break;
-				case 'R': changes.push(new ComparisonResource(resolvedArgs, ResourceGroupType.Committed, renameUri!, Status.RENAMED, uri)); break;
-				case 'T': changes.push(new ComparisonResource(resolvedArgs, ResourceGroupType.Committed, uri, Status.MODIFIED)); break;
-				case 'U': changes.push(new ComparisonResource(resolvedArgs, ResourceGroupType.Committed, uri, Status.BOTH_MODIFIED, renameUri)); break;
-				case 'X': changes.push(new ComparisonResource(resolvedArgs, ResourceGroupType.Committed, uri, Status.MODIFIED)); break;
-			}
-		});
-		this.changesGroup.resourceStates = changes;
+		const { resources, didHitLimit } = await getResourceStatesForComparison(this.repository, resolvedArgs, this.didWarnAboutLimit);
+		this.didWarnAboutLimit = didHitLimit;
+		this.changesGroup.resourceStates = resources;
 	}
 
 	private onDidChangeRepositoryState(state: RepositoryState): void {
@@ -306,4 +279,41 @@ export class Comparison implements Disposable {
 		}
 		this.disposables = dispose(this.disposables);
 	}
+}
+
+/**
+ * Computes the list of resources in the diff for the provided diff arguments.
+ * It will warn the user if the diff gets truncated unless didWarnAboutLimit is true.
+ */
+export async function getResourceStatesForComparison(repository: Repository, resolvedArgs: ComparisonArgs, didWarnAboutLimit: boolean): Promise<{ resources: Resource[], didHitLimit: boolean }> {
+	const diffArgs = resolvedArgs.right ? [resolvedArgs.left, resolvedArgs.right] : [resolvedArgs.left];
+	const { diff, didHitLimit } = await repository.getDiff(diffArgs);
+
+	const config = workspace.getConfiguration('git');
+	const shouldIgnore = config.get<boolean>('ignoreComparisonLimitWarning') === true;
+	if (didHitLimit && !shouldIgnore && !didWarnAboutLimit) {
+		const ok = { title: localize('ok', "OK"), isCloseAffordance: true };
+		const neverAgain = { title: localize('neveragain', "Never Show Again") };
+		window.showWarningMessage(localize('hugeComparison', "The git repository comparison at '{0}' has too many active changes, only a subset of Git features will be enabled.", repository.root), ok, neverAgain).then(result => {
+			if (result === neverAgain) {
+				config.update('ignoreComparisonLimitWarning', true, false);
+			}
+		});
+	}
+
+	const resources = diff.map(raw => {
+		const uri = Uri.file(path.join(repository.root, raw.path));
+		const renameUri = raw.rename ? Uri.file(path.join(repository.root, raw.rename)) : undefined;
+		switch (raw.status) {
+			case 'A': return new ComparisonResource(resolvedArgs, ResourceGroupType.Committed, uri, Status.ADDED);
+			case 'C': return new ComparisonResource(resolvedArgs, ResourceGroupType.Committed, renameUri!, Status.COPIED, uri);
+			case 'D': return new ComparisonResource(resolvedArgs, ResourceGroupType.Committed, uri, Status.DELETED);
+			case 'M': return new ComparisonResource(resolvedArgs, ResourceGroupType.Committed, uri, Status.MODIFIED);
+			case 'R': return new ComparisonResource(resolvedArgs, ResourceGroupType.Committed, renameUri!, Status.RENAMED, uri);
+			case 'T': return new ComparisonResource(resolvedArgs, ResourceGroupType.Committed, uri, Status.MODIFIED);
+			case 'U': return new ComparisonResource(resolvedArgs, ResourceGroupType.Committed, uri, Status.BOTH_MODIFIED, renameUri);
+			case 'X': return new ComparisonResource(resolvedArgs, ResourceGroupType.Committed, uri, Status.MODIFIED);
+		}
+	});
+	return { resources, didHitLimit };
 }
