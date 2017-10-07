@@ -71,7 +71,7 @@ export class CommentInput extends Disposable {
 
 			div.div({ class: 'submit' }, div => {
 				div.div({ class: 'hint' }, div => {
-					div.text(localize('submitHint', "Markdown supported. \"+email@domain.com\" to mention someone."));
+					div.text(localize('submitHint', "Markdown supported."));
 				});
 
 				this.secondaryButton = new Button(div.getContainer());
