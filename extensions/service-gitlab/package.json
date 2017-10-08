@@ -38,6 +38,10 @@
         "gitlab.host": {
           "type": "string",
           "description": "%config.host%"
+        },
+        "gitlab.userid": {
+          "type": "number",
+          "description": "%config.userid%"
         }
       }
     }
