@@ -42,6 +42,15 @@
         "gitlab.userid": {
           "type": "number",
           "description": "%config.userid%"
+        },
+        "gitlab.cloneProtocol": {
+          "type": "string",
+          "default": "https",
+          "enum": [
+            "https",
+            "ssh"
+          ],
+          "description": "%config.cloneProtocol%"
         }
       }
     }

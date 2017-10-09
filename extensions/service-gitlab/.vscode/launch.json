@@ -3,17 +3,6 @@
 	"version": "0.1.0",
 	"configurations": [
 		{
-			"name": "Launch Tests",
-			"type": "extensionHost",
-			"request": "launch",
-			"runtimeExecutable": "${execPath}",
-			"args": ["${workspaceRoot}/../../", "${workspaceRoot}/test", "--extensionDevelopmentPath=${workspaceRoot}", "--extensionTestsPath=${workspaceRoot}/out" ],
-			"stopOnEntry": false,
-			"sourceMaps": true,
-			"outDir": "${workspaceRoot}/out",
-			"preLaunchTask": "npm"
-		},
-		{
             "name": "Launch Extension",
             "type": "extensionHost",
             "request": "launch",

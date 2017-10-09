@@ -6,28 +6,73 @@
 
 import * as vscode from 'vscode';
 import * as nls from 'vscode-nls';
-import { GitlabViewer } from './GitlabViewer';
+import { Gitlab, GITLAB_SCHEME } from './GitlabViewer';
+import * as cp from 'child_process';
 
 const localize = nls.loadMessageBundle();
 
 //const GITLAB_SCHEME = 'gitlab';
 
 export function activate(context: vscode.ExtensionContext): void {
-	const viewer = new GitlabViewer();
+	const gitlab = new Gitlab();
+
+	context.subscriptions.push(vscode.workspace.registerResourceResolutionProvider(GITLAB_SCHEME, {
+		async resolveResource(resource: vscode.Uri): Promise<vscode.Uri> {
+			return await gitlab.createCloneUrl(resource);
+		}
+	}));
 
 	vscode.commands.registerCommand('gitlab.checkAccessToken', async (args) => {
 		return checkgitlabToken();
 	});
 
 	vscode.commands.registerCommand('gitlab.showCreateAccessTokenWalkthrough', async (skipInfoMessage) => {
-		return await showCreategitlabTokenWalkthrough(viewer, skipInfoMessage);
+		return await showCreategitlabTokenWalkthrough(gitlab, skipInfoMessage);
 	});
+
+	context.subscriptions.push(vscode.workspace.registerFolderCatalogProvider(vscode.Uri.parse('github://gitlab.com'), {
+		resolveFolder(resource: vscode.Uri): Thenable<vscode.CatalogFolder> {
+			const owner = resourceToNameAndOwner(resource);
+
+			return gitlab.repository(owner.owner, owner.name);
+		},
+		resolveLocalFolderResource(path: string): Thenable<vscode.Uri | null> {
+			return new Promise<string>((resolve, reject) => {
+				cp.exec('git ls-remote --get-url', { cwd: path }, (error, stdout, stderr) => resolve(stdout || ''));
+			}).then(gitURL => {
+				gitURL = decodeURIComponent(gitURL.trim()).replace(/\.git$/, '');
+				// TODO: Look if it needs adjusting for custom gitlab hosts
+				const match = gitURL.match(/gitlab.com[\/:]([^/]+)\/([^/]+)/);
+
+				if (match) {
+					return nameAndOwnerToResource(match[1], match[2]);
+				}
+				return null;
+			});
+		},
+		async search(query: string): Promise<vscode.CatalogFolder[]> {
+			const token = checkgitlabToken();
+			if (!token) {
+				const ok = await showCreategitlabTokenWalkthrough(gitlab);
+				if (!ok) {
+					return [];
+				}
+			}
+
+			if (query) {
+				return gitlab.search(query);
+			}
+			else {
+				return Promise.resolve([]);
+			}
+		}
+	}));
 }
 
 /**
  * Shows the gitlab token creation walkthrough and returns if a gitlab token was added.
  */
-async function showCreategitlabTokenWalkthrough(viewer: GitlabViewer, skipInfoMessage?: boolean): Promise<boolean> {
+async function showCreategitlabTokenWalkthrough(viewer: Gitlab, skipInfoMessage?: boolean): Promise<boolean> {
 	// Close quickopen so the user sees our message.
 	await vscode.commands.executeCommand('workbench.action.closeQuickOpen');
 	await vscode.commands.executeCommand('workbench.action.closeMessages');
@@ -115,7 +160,7 @@ function checkgitlabToken(): boolean {
  * of only when they close the quickopen (which probably isn't showing any results because of
  * the error).
  */
-function showErrorImmediately<T>(error: string, viewer: GitlabViewer): T | Thenable<T> {
+function showErrorImmediately<T>(error: string, viewer: Gitlab): T | Thenable<T> {
 	return vscode.commands.executeCommand('workbench.action.closeQuickOpen').then(() => vscode.commands.executeCommand('workbench.action.closeMessages').then(() => {
 		const resetTokenItem: vscode.MessageItem = { title: localize('resetToken', "Reset Token") };
 		const cancelItem: vscode.MessageItem = { title: localize('cancel', "Cancel"), isCloseAffordance: true };
@@ -134,4 +179,13 @@ function showErrorImmediately<T>(error: string, viewer: GitlabViewer): T | Thena
 
 		return Promise.reject(error);
 	}));
+}
+
+function resourceToNameAndOwner(resource: vscode.Uri): { owner: string, name: string } {
+	const parts = resource.path.replace(/^\/repository\//, '').split('/');
+	return { owner: parts[0], name: parts[1] };
+}
+
+function nameAndOwnerToResource(owner: string, name: string): vscode.Uri {
+	return vscode.Uri.parse(`github://gitlab.com/repository/${owner}/${name}`);
 }
