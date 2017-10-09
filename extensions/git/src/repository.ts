@@ -316,6 +316,7 @@ export interface GitResourceGroup extends SourceControlResourceGroup {
 // Resource and its dependencies to its own file but that
 // would be a nightmare to maintain when merging from upstream.
 import { ReviewManager } from './reviewManager';
+import { Comparison } from './comparison';
 
 export class Repository implements Disposable {
 
@@ -442,6 +443,7 @@ export class Repository implements Disposable {
 		this.updateCommitTemplate();
 		this.status();
 
+		this.disposables.push(new Comparison(this));
 		this.disposables.push(new ReviewManager(this));
 	}
 

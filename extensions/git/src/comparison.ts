@@ -5,10 +5,10 @@
 
 'use strict';
 
-import { Uri, EventEmitter, Event, scm, SourceControl, SourceControlInputBox, SourceControlResourceGroup, SourceControlResourceState, Disposable, Command, window, workspace } from 'vscode';
+import { Uri, scm, SourceControlResourceGroup, SourceControlResourceState, Disposable, window, workspace } from 'vscode';
 import { dispose } from './util';
 import { throttle, sequentialize } from './decorators';
-import { Repository, RepositoryState, Resource, GitResourceGroup, ResourceGroupType, Status } from './repository';
+import { Repository, Resource, GitResourceGroup, ResourceGroupType, Status } from './repository';
 import * as path from 'path';
 import * as nls from 'vscode-nls';
 
@@ -27,11 +27,6 @@ export class ComparisonResource extends Resource implements SourceControlResourc
 	}
 }
 
-export type ParsedUnresolvedComparisonArgs =
-	[string] | // diff against working tree
-	[string, string] | // diff between two arbitrary commits
-	{ mergeBase: true, left: string, right: string }; // diff a...b
-
 export class ComparisonArgs {
 	/**
 	 * Create a new object representing the arguments to a comparison.
@@ -45,189 +40,32 @@ export class ComparisonArgs {
 	) { }
 
 	get rightLabel(): string { return this.right || localize('workingTree', "Working Tree"); }
-
-	/**
-	 * Parses args to `git diff`. See `git diff --help` for documentation about valid arguments.
-	 * The following invocations are supported:
-	 *
-	 * Diff against working tree:
-	 *   git diff <commit> -- [<path>...]
-	 *
-	 * Diff between two arbitrary commits:
-	 *   git diff <commit> <commit> -- [<path>...]
-	 *   git diff <commit>..<commit> -- [<path>...]
-	 *
-	 * Diff between $(git merge-base A B) and B:
-	 *   git diff A...B [--] [<path>...]
-	 *
-	 * @param args to `git diff`
-	 */
-	public static parse(argsString: string): ParsedUnresolvedComparisonArgs {
-		let args = argsString.split(/\s+/);
-		if (args.includes('--')) {
-			args = args.slice(0, args.indexOf('--'));
-		}
-		args = args.filter(arg => !arg.startsWith('-'));
-
-		switch (args.length) {
-			case 0:
-				return ['HEAD'];
-
-			case 1:
-				if (args[0].includes('...')) {
-					const [left, right] = args[0].split('...', 2);
-					return { mergeBase: true, left: left || 'HEAD', right: right || 'HEAD' };
-				}
-				if (args[0].includes('..')) {
-					const [a, b] = args[0].split('..', 2);
-					return [a || 'HEAD', b || 'HEAD'];
-				}
-				return [args[0]];
-
-			case 2:
-				return [args[0], args[1]];
-
-			default: throw new Error(`invalid comparison args: ${argsString}`);
-		}
-	}
-
-	public static async resolve(repository: Repository, parsedArgs: ParsedUnresolvedComparisonArgs): Promise<ComparisonArgs> {
-		let argsToVerify: string[];
-		if (Array.isArray(parsedArgs)) {
-			argsToVerify = parsedArgs;
-		} else {
-			const mergeBase = await repository.getMergeBase([parsedArgs.left, parsedArgs.right]);
-			if (mergeBase.length !== 1 || !mergeBase[0]) {
-				throw new Error(`unable to determine merge-base for '${parsedArgs.left} ${parsedArgs.right}'`);
-			}
-			argsToVerify = [mergeBase[0], parsedArgs.right];
-		}
-
-		await Promise.all(argsToVerify.map(arg => repository.revParse(['--verify', arg + '^{commit}'])));
-
-		return new ComparisonArgs(argsToVerify[0], argsToVerify[1]);
-	}
-}
-
-export enum ComparisonState {
-	Idle,
-	Invalid,
-	Disposed
 }
 
 export class Comparison implements Disposable {
 
-	private _args: string;
-	private _parsedArgs: ParsedUnresolvedComparisonArgs;
-	get args(): string { return this._args; }
-	set args(value: string) {
-		this._args = value;
-		this._parsedArgs = ComparisonArgs.parse(value);
-		this._resolvedArgs = undefined;
-		this.changesGroup.resourceStates = [];
-		this._onDidChangeArgs.fire();
-		this.updateModelState();
-	}
-
-	private _resolvedArgs: ComparisonArgs | undefined;
-	get resolvedArgs(): ComparisonArgs | undefined { return this._resolvedArgs; }
-
-	get displayArgs(): string {
-		if (Array.isArray(this._parsedArgs)) {
-			if (this._parsedArgs.length === 1) {
-				return localize('compare to working tree', "{0}", this._parsedArgs[0]);
-			}
-			return localize('compare two arbitrary commits', "{0}..{1}", this._parsedArgs[0], this._parsedArgs[1]);
-		}
-		return localize('compare with merge base', "{0}...{1}", this._parsedArgs.left, this._parsedArgs.right);
-	}
-
-	private _onDidChangeArgs = new EventEmitter<void>();
-	readonly onDidChangeArgs: Event<void> = this._onDidChangeArgs.event;
-
-	private _onDidChangeState = new EventEmitter<ComparisonState>();
-	readonly onDidChangeState: Event<ComparisonState> = this._onDidChangeState.event;
-
-	private _sourceControl: SourceControl;
-	get sourceControl(): SourceControl { return this._sourceControl; }
-
 	private _changesGroup: SourceControlResourceGroup;
 	get changesGroup(): GitResourceGroup { return this._changesGroup as GitResourceGroup; }
-
-	get inputBox(): SourceControlInputBox { return this._sourceControl.inputBox; }
-
-	private _state = ComparisonState.Idle;
-	get state(): ComparisonState { return this._state; }
-	set state(state: ComparisonState) {
-		if (state !== this._state) {
-			this._state = state;
-			this._onDidChangeState.fire(state);
-		}
-	}
 
 	private didWarnAboutLimit: boolean;
 	private disposables: Disposable[] = [];
 
+	// TODO(nick): figure this out intelligently?
+	private baseBranch = 'master';
+
 	constructor(
 		public readonly repository: Repository,
-		args: string,
 	) {
-		this._args = args;
-		this._parsedArgs = ComparisonArgs.parse(args);
+		const sourceControl = scm.createSourceControl('gitcomparison', `${path.basename(repository.root)} compare to ${this.baseBranch}`);
+		this.disposables.push(sourceControl);
 
-		this._sourceControl = scm.createSourceControl('gitcomparison', `Compare: ${path.basename(repository.root)}`);
-		this.disposables.push(this._sourceControl);
-
-		this._changesGroup = this._sourceControl.createResourceGroup('changes', localize('changes', "Changes"));
+		this._changesGroup = sourceControl.createResourceGroup('changes', localize('changes', "Changes"));
 		this.disposables.push(this._changesGroup);
 
-		this._sourceControl.statusBarCommands = this.statusBarCommands;
-		this.disposables.push(this.onDidChangeArgs(() => this._sourceControl.statusBarCommands = this.statusBarCommands));
-		this.disposables.push(this.onDidChangeState(() => this._sourceControl.statusBarCommands = this.statusBarCommands));
-
 		// Suppress count to avoid double-counting changes.
-		this._sourceControl.count = 0;
+		sourceControl.count = 0;
 
 		this.disposables.push(repository.onDidChangeStatus(() => this.throttledUpdate()));
-		this.disposables.push(repository.onDidChangeState(state => this.onDidChangeRepositoryState(state)));
-	}
-
-	private get statusBarCommands(): Command[] {
-		if (this.state === ComparisonState.Disposed) {
-			return [];
-		}
-
-		let comparisonCommand: Command;
-		if (this.state === ComparisonState.Idle) {
-			comparisonCommand = {
-				command: 'git.changeComparison',
-				title: ['$(git-compare)', this.displayArgs].join(' ').trim(),
-				tooltip: localize('change comparison', "Change Comparison..."),
-				arguments: [this.sourceControl],
-			};
-		} else {
-			comparisonCommand = {
-				command: 'git.changeComparison',
-				title: ['$(question)', this.displayArgs].join(' ').trim(),
-				tooltip: localize('comparison invalid', "Comparison Invalid: Fix..."),
-				arguments: [this.sourceControl],
-			};
-		}
-
-		return [
-			comparisonCommand,
-			{
-				command: 'git.closeComparison',
-				title: '$(x)',
-				tooltip: localize('close comparison', "Close Comparison"),
-				arguments: [this.sourceControl],
-			},
-		];
-	}
-
-	private async resolveArgs(): Promise<ComparisonArgs> {
-		const parsedArgs = ComparisonArgs.parse(this.args);
-		return ComparisonArgs.resolve(this.repository, parsedArgs);
 	}
 
 	@throttle
@@ -248,35 +86,17 @@ export class Comparison implements Disposable {
 	}
 
 	private async updateModelState(): Promise<void> {
-		let resolvedArgs: ComparisonArgs;
-		try {
-			resolvedArgs = await this.resolveArgs();
-		} catch (err) {
-			this.state = ComparisonState.Invalid;
-			throw err;
+		const [mergeBase] = await this.repository.getMergeBase([this.baseBranch, 'HEAD']);
+		if (!mergeBase) {
+			throw new Error(`unable to determine merge-base for '${this.baseBranch}'`);
 		}
-		this._resolvedArgs = resolvedArgs;
-		this.state = ComparisonState.Idle;
-
-		const { resources, didHitLimit } = await getResourceStatesForComparison(this.repository, resolvedArgs, this.didWarnAboutLimit);
+		const args = new ComparisonArgs(mergeBase);
+		const { resources, didHitLimit } = await getResourceStatesForComparison(this.repository, args, this.didWarnAboutLimit);
 		this.didWarnAboutLimit = didHitLimit;
 		this.changesGroup.resourceStates = resources;
 	}
 
-	private onDidChangeRepositoryState(state: RepositoryState): void {
-		switch (state) {
-			case RepositoryState.Idle: break;
-			case RepositoryState.Disposed:
-				this.state = ComparisonState.Disposed;
-		}
-	}
-
 	dispose(): void {
-		if (this.state !== ComparisonState.Disposed) {
-			this.state = ComparisonState.Disposed;
-		} else {
-			console.log('Warning: dispose called twice for comparison');
-		}
 		this.disposables = dispose(this.disposables);
 	}
 }

@@ -8,7 +8,7 @@
 import { Uri, commands, Disposable, window, workspace, QuickPickItem, OutputChannel, Range, WorkspaceEdit, Position, LineChange, SourceControlResourceState, TextDocumentShowOptions, ViewColumn, ProgressLocation } from 'vscode';
 import { Ref, RefType, Git, GitErrorCodes, Branch } from './git';
 import { Repository, Resource, Status, CommitOptions, ResourceGroupType } from './repository';
-import { Comparison, ComparisonResource } from './comparison';
+import { ComparisonResource } from './comparison';
 import { Model } from './model';
 import { toGitUri, fromGitUri } from './uri';
 import { grep } from './util';
@@ -141,7 +141,6 @@ class AddWorktreeRemoteHeadItem extends AddWorktreeItem {
 
 interface CommandOptions {
 	repository?: boolean;
-	comparison?: boolean;
 	diff?: boolean;
 }
 
@@ -1055,61 +1054,6 @@ export class CommandCenter {
 		await choice.run(repository);
 	}
 
-	@command('git.openComparison', { repository: true })
-	async openComparison(repository: Repository, args?: string): Promise<void> {
-		if (typeof args !== 'string') {
-			let defaultValue = '';
-			if (repository.HEAD) {
-				defaultValue = `${repository.HEAD.remote || 'origin'}/master`;
-			}
-
-			const input = await window.showInputBox({
-				prompt: localize('specifier', "Specify Git comparison"),
-				value: defaultValue,
-				ignoreFocusOut: true,
-			});
-
-			if (typeof input !== 'string') {
-				return;
-			}
-
-			args = input;
-		}
-
-		const comparison = this.model.openComparison(repository, args);
-		await comparison.update();
-	}
-
-	@command('git.changeComparison', { comparison: true })
-	async changeComparison(comparison: Comparison, args: string): Promise<void> {
-		if (typeof args !== 'string') {
-			const input = await window.showInputBox({
-				prompt: localize('specifier', "Specify Git comparison"),
-				value: comparison.args,
-				ignoreFocusOut: true,
-			});
-
-			if (typeof input !== 'string') {
-				return;
-			}
-
-			args = input;
-		}
-
-		comparison.args = args;
-		await comparison.update();
-	}
-
-	@command('git.refreshComparison', { comparison: true })
-	async refreshComparison(comparison: Comparison): Promise<void> {
-		await comparison.update();
-	}
-
-	@command('git.closeComparison', { comparison: true })
-	async closeComparison(comparison: Comparison): Promise<void> {
-		comparison.dispose();
-	}
-
 	@command('git.worktreePrune', { repository: true })
 	async worktreePrune(repository: Repository): Promise<void> {
 		await repository.worktreePrune();
@@ -1559,26 +1503,7 @@ export class CommandCenter {
 		const result = (...args) => {
 			let result: Promise<any>;
 
-			if (options.comparison) {
-				// try to guess the comparison based on the first argument
-				const comparison = this.model.getComparison(args[0]);
-				let comparisonPromise: Promise<Comparison | undefined>;
-
-				if (comparison) {
-					comparisonPromise = Promise.resolve(comparison);
-					args.shift();
-				} else {
-					comparisonPromise = this.model.pickComparison();
-				}
-
-				result = comparisonPromise.then(comparison => {
-					if (!comparison) {
-						return Promise.resolve();
-					}
-
-					return Promise.resolve(method.apply(this, [comparison, ...args]));
-				});
-			} else if (!options.repository) {
+			if (!options.repository) {
 				result = Promise.resolve(method.apply(this, args));
 			} else {
 				// try to guess the repository based on the first argument

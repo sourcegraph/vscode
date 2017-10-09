@@ -16,7 +16,7 @@ import * as nls from 'vscode-nls';
 import * as events from 'events';
 import * as os from 'os';
 import { GlobalRepositories } from './globalRepositories';
-import { Comparison, ComparisonState } from './comparison';
+import { Comparison } from './comparison';
 
 const localize = nls.loadMessageBundle();
 
@@ -41,18 +41,6 @@ export interface ModelChangeEvent {
 
 interface OpenRepository extends Disposable {
 	repository: Repository;
-}
-
-class ComparisonPick implements QuickPickItem {
-	@memoize get label(): string {
-		return path.basename(this.comparison.repository.root);
-	}
-
-	@memoize get description(): string {
-		return `${this.comparison.displayArgs}`;
-	}
-
-	constructor(public readonly comparison: Comparison) { }
 }
 
 function isParent(parent: string, child: string): boolean {
@@ -399,46 +387,6 @@ export class Model {
 		}
 
 		return undefined;
-	}
-
-	openComparison(repository: Repository, args: string): Comparison {
-		const comparison = new Comparison(repository, args);
-
-		const onDidDisappearComparison = filterEvent(comparison.onDidChangeState, state => state === ComparisonState.Disposed);
-		const disappearListener = onDidDisappearComparison(() => dispose());
-		const dispose = () => {
-			disappearListener.dispose();
-			comparison.dispose();
-			this._comparisons = this._comparisons.filter(e => e !== comparison);
-			this._onDidCloseComparison.fire(comparison);
-		};
-
-		this.comparisons.push(comparison);
-		this._onDidOpenComparison.fire();
-
-		return comparison;
-	}
-
-	getComparison(sourceControl: SourceControl): Comparison | undefined {
-		for (const comparison of this.comparisons) {
-			if (comparison.sourceControl === sourceControl) {
-				return comparison;
-			}
-		}
-
-		return undefined;
-	}
-
-	async pickComparison(): Promise<Comparison | undefined> {
-		if (this.comparisons.length === 0) {
-			throw new Error(localize('no comparisons', "There are no available comparisons"));
-		}
-
-		const picks = this.comparisons.map(comparison => new ComparisonPick(comparison));
-		const placeHolder = localize('pick comparison', "Choose a comparison");
-		const pick = await window.showQuickPick(picks, { placeHolder });
-
-		return pick && pick.comparison;
 	}
 
 	dispose(): void {
