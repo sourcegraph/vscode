@@ -66,7 +66,7 @@ class BlameLineDecorator extends Disposable {
 		super();
 		this.registerListeners();
 
-		this.debouncedUpdate = debounce(this.debouncedUpdate, SELECTION_DEBOUNCE_WAIT_MSEC, { leading: true, trailing: true });
+		this.debouncedUpdate = debounce(this.debouncedUpdate, SELECTION_DEBOUNCE_WAIT_MSEC, { trailing: true });
 
 		this.onDidChangeConfiguration();
 	}
