@@ -83,6 +83,11 @@ export enum EventCategory {
 	CodeComments = 'CodeComments',
 
 	/**
+	 * Events related to code reviews.
+	 */
+	CodeReview = 'CodeReview',
+
+	/**
 	 * Events related to the workspace.
 	 */
 	Workspace = 'Workspace',
@@ -307,6 +312,9 @@ export const SOURCEGRAPH_EVENT_MAP: { [eventName: string]: EventMapEntry } = {
 	// User state
 	'UserIdleStart': { eventCategory: EventCategory.UserState, eventAction: EventAction.Passive, topLevelOnly: true },
 	'UserIdleStop': { eventCategory: EventCategory.UserState, eventAction: EventAction.Passive, topLevelOnly: true },
+
+	// Code review
+	'registerReviewProvider': { eventCategory: EventCategory.CodeReview, eventAction: EventAction.Passive, shouldLog: false },
 
 	// Code comments
 	'codeComments.replyToThread': { eventCategory: EventCategory.CodeComments, eventAction: EventAction.Submit },
