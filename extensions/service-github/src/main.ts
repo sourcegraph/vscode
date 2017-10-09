@@ -152,20 +152,16 @@ query($query: String!) {
 			return;
 		}
 
-		// TODO(sqs): handle multiple remotes (merge, or disambiguate?).
-
-		const firstGitHubRemote = sourceControl.remoteResources.find(r => r.authority.endsWith('github.com'));
-		if (!firstGitHubRemote) {
+		const gitHubRemotes = sourceControl.remoteResources
+			.filter(r => r.authority.endsWith('github.com'))
+			.map(parseGitHubRepositoryFullName)
+			.filter(v => !!v) as { owner: string; name: string }[];
+		if (gitHubRemotes.length === 0) {
 			vscode.window.showErrorMessage(localize('notAGitHubRepository', "The repository does not have any github.com Git remote URLs."));
 			return;
 		}
-		const parts = parseGitHubRepositoryFullName(firstGitHubRemote);
-		if (!parts) {
-			vscode.window.showErrorMessage(localize('unableToParse', "Unable to determine GitHub repository name from remote: {0}", firstGitHubRemote.toString()));
-			return;
-		}
 
-		const pullRequests = requestGraphQL(`
+		const pullRequests = Promise.all(gitHubRemotes.map(parts => requestGraphQL(`
 query($owner: String!, $name: String!) {
 	repository(owner: $owner, name: $name) {
 		nameWithOwner
@@ -196,12 +192,15 @@ fragment refFields on Ref {
 	}
 }
 `,
-			{ owner: parts.owner, name: parts.name }).then<PullRequest[]>((data: any) => data.repository.pullRequests.nodes, showErrorImmediately);
+			{ owner: parts.owner, name: parts.name }))).then<PullRequest[]>((data: any[]) => {
+				return data.reduce((r, d) => r.concat(d.repository.pullRequests.nodes), []);
+			}, showErrorImmediately);
 
 		interface PullRequestItem extends vscode.QuickPickItem {
 			pullRequest: PullRequest;
 		}
 		const choice = await vscode.window.showQuickPick(pullRequests.then(pullRequests => pullRequests
+			.filter(pullRequest => !!pullRequest.headRef) // The head repo can be deleted for a PR
 			.map(pullRequest => {
 				return {
 					label: `$(git-pull-request) ${pullRequest.title}`,
