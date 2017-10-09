@@ -11,8 +11,6 @@ import * as cp from 'child_process';
 
 const localize = nls.loadMessageBundle();
 
-//const GITLAB_SCHEME = 'gitlab';
-
 export function activate(context: vscode.ExtensionContext): void {
 	const gitlab = new Gitlab();
 
@@ -30,7 +28,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		return await showCreategitlabTokenWalkthrough(gitlab, skipInfoMessage);
 	});
 
-	context.subscriptions.push(vscode.workspace.registerFolderCatalogProvider(vscode.Uri.parse('github://gitlab.com'), {
+	context.subscriptions.push(vscode.workspace.registerFolderCatalogProvider(vscode.Uri.parse('gitlab://gitlab.com'), {
 		resolveFolder(resource: vscode.Uri): Thenable<vscode.CatalogFolder> {
 			const owner = resourceToNameAndOwner(resource);
 
@@ -63,7 +61,7 @@ export function activate(context: vscode.ExtensionContext): void {
 				return gitlab.search(query);
 			}
 			else {
-				return Promise.resolve([]);
+				return gitlab.repositories();
 			}
 		}
 	}));
@@ -167,9 +165,9 @@ function showErrorImmediately<T>(error: string, viewer: Gitlab): T | Thenable<T>
 		vscode.window.showErrorMessage(error, resetTokenItem, cancelItem)
 			.then(async (value) => {
 				if (value === resetTokenItem) {
-					const hasToken = vscode.workspace.getConfiguration('github').get<string>('token');
+					const hasToken = vscode.workspace.getConfiguration('gitlab').get<string>('token');
 					if (hasToken) {
-						await vscode.workspace.getConfiguration('github').update('token', undefined, vscode.ConfigurationTarget.Global);
+						await vscode.workspace.getConfiguration('gitlab').update('token', undefined, vscode.ConfigurationTarget.Global);
 					}
 					if (checkgitlabToken()) {
 						showCreategitlabTokenWalkthrough(viewer); // will walk the user through recreating the token
@@ -187,5 +185,5 @@ function resourceToNameAndOwner(resource: vscode.Uri): { owner: string, name: st
 }
 
 function nameAndOwnerToResource(owner: string, name: string): vscode.Uri {
-	return vscode.Uri.parse(`github://gitlab.com/repository/${owner}/${name}`);
+	return vscode.Uri.parse(`gitlab://gitlab.com/repository/${owner}/${name}`);
 }

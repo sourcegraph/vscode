@@ -21,6 +21,18 @@ export class Gitlab {
 	private usernameRequest: Thenable<string | null> | null;
 	private userIdRequest: Thenable<number | null>;
 
+	constructor() {
+		// Pre-emptively fetch user related information
+		setTimeout(async () => {
+			try {
+				await this.repositories();
+			}
+			catch (error) {
+				console.error(error);
+			};
+		}, 2000);
+	}
+
 	// Returns the username of the currently logged in user. It is best-effort, so if the
 	// network request fails or there is no logged in user null is returned.
 	public username(): Thenable<string | null> {
@@ -35,7 +47,7 @@ export class Gitlab {
 		const request = this.doGitlabRequest(this.host, this.token, '/user')
 
 			.then<string | null>((data: any) => {
-				return data.viewer.login;
+				return data.username;
 			}, (reason) => {
 				// try again, but don't fail other requests if this fails
 				console.error(reason);
@@ -54,7 +66,7 @@ export class Gitlab {
 			return Promise.resolve(null);
 		}
 
-		if (this.usernameRequest !== null) {
+		if (this.userIdRequest !== null) {
 			return this.userIdRequest;
 		}
 
@@ -111,7 +123,7 @@ export class Gitlab {
 
 		const request = this.doGitlabRequest(this.host, this.token, url)
 			.then<vscode.CatalogFolder[]>((data: any[]) => {
-				return data.map(this.toCatalogFolder);
+				return data.map(repo => this.toCatalogFolder(repo));
 			},
 			(reason) => {
 				console.error(reason);
@@ -141,7 +153,7 @@ export class Gitlab {
 		}
 		const userAuthority = user ? `${user}@` : '';
 
-		return vscode.Uri.parse(`git+${protocol}://${userAuthority}github.com/${data.owner}/${data.name}.git`);
+		return vscode.Uri.parse(`git+${protocol}://${userAuthority}gitlab.com/${data.owner}/${data.name}.git`);
 	}
 
 	// Returns true if you can do a request or use a cached request.
@@ -204,7 +216,7 @@ export class Gitlab {
 	private toCatalogFolder(repository: any): vscode.CatalogFolder {
 		return {
 			resource: vscode.Uri.parse('').with({ scheme: GITLAB_SCHEME, authority: this.host, path: `/repository/${repository.path_with_namespace}` }),
-			displayPath: repository.repository.path_with_namespace,
+			displayPath: repository.path_with_namespace,
 			displayName: repository.name,
 			genericIconClass: this.iconForRepo(repository),
 			cloneUrl: vscode.Uri.parse('').with({ scheme: 'https', authority: this.host, path: `/${repository.path_with_namespace}.git` }),
