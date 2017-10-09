@@ -229,6 +229,15 @@ fragment refFields on Ref {
 
 		// Open comparison against merge base
 		await vscode.commands.executeCommand('git.openComparison', sourceControl, mergeBase);
+
+		// Some language extensions rely purely on onDid*TextDocument events
+		// to decide if they need to evict stale information. However, a
+		// checkout can have lots of files changing which are not open. So
+		// we reload problematic extensions.
+		const tsExt = vscode.extensions.getExtension('vscode.typescript');
+		if (tsExt && tsExt.isActive) {
+			vscode.commands.executeCommand('typescript.reloadProjects');
+		}
 	});
 
 
