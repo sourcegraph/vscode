@@ -19,6 +19,8 @@ import { ModalIdentifiers } from 'vs/workbench/parts/modal/modal';
 import { IWindowsService } from 'vs/platform/windows/common/windows';
 import { ThrottledDelayer } from 'vs/base/common/async';
 import { TPromise } from 'vs/base/common/winjs.base';
+import { IStorageService } from 'vs/platform/storage/common/storage';
+import { Memento } from 'vs/workbench/common/memento';
 
 export { Event }
 
@@ -27,6 +29,12 @@ export { Event }
  */
 export class AuthService extends Disposable implements IAuthService {
 	_serviceBrand: any;
+
+	private static MEMENTO_KEY = 'auth.currentuser';
+	private static CURRENT_USER_KEY = 'currentUser';
+
+	private globalState: Memento;
+	private memento: object;
 
 	private didChangeCurrentUser = this._register(new Emitter<void>());
 	public onDidChangeCurrentUser = this.didChangeCurrentUser.event;
@@ -48,10 +56,16 @@ export class AuthService extends Disposable implements IAuthService {
 		@IConfigurationEditingService private configurationEditingService: IConfigurationEditingService,
 		@ICommandService private commandService: ICommandService,
 		@IMessageService private messageService: IMessageService,
-		@IWindowsService private windowsService: IWindowsService
-
+		@IWindowsService private windowsService: IWindowsService,
+		@IStorageService private storageService: IStorageService,
 	) {
 		super();
+		this.globalState = new Memento(AuthService.MEMENTO_KEY);
+		this.memento = this.globalState.getMemento(storageService);
+		if (this.memento[AuthService.CURRENT_USER_KEY]) {
+			this._currentUser = new User(this.memento[AuthService.CURRENT_USER_KEY], this.telemetryService);
+		}
+
 		this.updateConfigDelayer = new ThrottledDelayer<void>(1000);
 
 		// Load user profile data from remote endpoint on initial load
@@ -66,6 +80,27 @@ export class AuthService extends Disposable implements IAuthService {
 
 	public get currentUser(): IUser | undefined {
 		return this._currentUser;
+	}
+
+	private setCurrentUser(user: User | undefined) {
+		if (user === this._currentUser) {
+			return;
+		}
+		dispose(this._currentUser);
+		this.toDisposeOnCurrentUserChange = dispose(this.toDisposeOnCurrentUserChange);
+
+		this._currentUser = user;
+		if (this._currentUser) {
+			this.toDisposeOnCurrentUserChange.push(this._currentUser.onDidChangeCurrentOrgMember(() => {
+				this.globalState.saveMemento();
+				this.didChangeCurrentUser.fire();
+			}));
+			this.memento[AuthService.CURRENT_USER_KEY] = user.toGQL();
+		} else {
+			this.memento[AuthService.CURRENT_USER_KEY] = undefined;
+		}
+		this.globalState.saveMemento();
+		this.didChangeCurrentUser.fire();
 	}
 
 	private toDisposeOnCurrentUserChange: IDisposable[] = [];
@@ -85,6 +120,19 @@ export class AuthService extends Disposable implements IAuthService {
 				return TPromise.as(null);
 			}
 			this._currentSessionId = config.remote.cookie;
+			if (!this._currentSessionId) {
+				// If user is already signed in, notify them that their signout was successful and log telemetry.
+				// If not, it's possible they ran into this failed request during app launch.
+				if (this.currentUser) {
+					this.telemetryService.publicLog('LogoutClicked');
+					this.messageService.show(Severity.Info, localize('remote.auth.signedOutConfirmation', "Your editor has been signed out of Sourcegraph. Visit {0} to end your web session.", urlToSignOut(this.configurationService)));
+				}
+
+				// Delete user from memory
+				this.setCurrentUser(undefined);
+				this.telemetryService.publicLog('CurrentUserSignedOut');
+				return TPromise.as(null);
+			}
 			// Request updated user profile information
 			return requestGraphQL<{ currentUser: GQL.IUser }>(this.remoteService, `query CurrentUser {
 					root {
@@ -109,33 +157,8 @@ export class AuthService extends Disposable implements IAuthService {
 					}
 				}`, {})
 				.then(response => {
-					dispose(this._currentUser);
-					this.toDisposeOnCurrentUserChange = dispose(this.toDisposeOnCurrentUserChange);
-
-					this._currentUser = new User(response.currentUser, this.telemetryService);
-					this.toDisposeOnCurrentUserChange.push(this._currentUser.onDidChangeCurrentOrgMember(() => {
-						this.didChangeCurrentUser.fire();
-					}));
+					this.setCurrentUser(new User(response.currentUser, this.telemetryService));
 					this.telemetryService.publicLog('CurrentUserSignedIn', this._currentUser.getTelemetryData());
-					this.didChangeCurrentUser.fire();
-				}, () => {
-					dispose(this._currentUser);
-					this.toDisposeOnCurrentUserChange = dispose(this.toDisposeOnCurrentUserChange);
-
-					// If user is already signed in, notify them that their signout was successful and log telemetry.
-					// If not, it's possible they ran into this failed request during app launch.
-					if (this.currentUser) {
-						this.telemetryService.publicLog('LogoutClicked');
-						this.messageService.show(Severity.Info, localize('remote.auth.signedOutConfirmation', "Your editor has been signed out of Sourcegraph. Visit {0} to end your web session.", urlToSignOut(this.configurationService)));
-					}
-
-					// Delete user from memory
-					this._currentUser = undefined;
-					this._currentSessionId = undefined;
-
-					// Fire event
-					this.telemetryService.publicLog('CurrentUserSignedOut');
-					this.didChangeCurrentUser.fire();
 				});
 		});
 	}
@@ -188,6 +211,24 @@ class User extends Disposable implements IUser {
 		this._currentOrgMember = this.orgMemberships[0];
 	}
 
+	public toGQL(): GQL.IUser {
+		return {
+			__typename: 'User',
+			sourcegraphID: this.id,
+			id: this.auth0Id,
+			username: this.username,
+			email: this.email,
+			avatarURL: this.avatarUrl,
+			orgMemberships: this.orgMemberships.map(m => m.toGQL()),
+			hasSourcegraphUser: null,
+			displayName: null,
+			createdAt: null,
+			updatedAt: null,
+			tags: [],
+			orgs: [],
+		};
+	}
+
 	private _currentOrgMember: OrgMember | undefined;
 	private didChangeCurrentOrgMember = this._register(new Emitter<void>());
 	public onDidChangeCurrentOrgMember = this.didChangeCurrentOrgMember.event;
@@ -232,6 +273,22 @@ class OrgMember implements IOrgMember {
 		this.avatarUrl = member.avatarURL;
 		this.org = new Org(member.org);
 	}
+
+	public toGQL(): GQL.IOrgMember {
+		return {
+			__typename: 'OrgMember',
+			id: this.id,
+			email: this.email,
+			username: this.username,
+			displayName: this.displayName,
+			avatarURL: this.avatarUrl,
+			org: this.org.toGQL(),
+			user: null,
+			userID: null,
+			createdAt: null,
+			updatedAt: null,
+		};
+	}
 }
 
 class Org implements IOrg {
@@ -241,6 +298,20 @@ class Org implements IOrg {
 	constructor(org: GQL.IOrg) {
 		this.id = org.id;
 		this.name = org.name;
+	}
+
+	public toGQL(): GQL.IOrg {
+		return {
+			__typename: 'Org',
+			id: this.id,
+			name: this.name,
+			displayName: null,
+			members: [],
+			repos: [],
+			repo: null,
+			threads: [],
+			tags: [],
+		};
 	}
 }
 

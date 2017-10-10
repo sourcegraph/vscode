@@ -6,7 +6,7 @@
 
 import 'vs/css!./media/codeComments';
 import { localize } from 'vs/nls';
-import { dispose, IDisposable } from 'vs/base/common/lifecycle';
+import { dispose, IDisposable, Disposable } from 'vs/base/common/lifecycle';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { clearNode } from 'vs/base/browser/dom';
 import { Dimension, Builder, $ } from 'vs/base/browser/builder';
@@ -33,6 +33,7 @@ import { CodeCommentsController } from 'vs/workbench/parts/codeComments/electron
 import { Button } from 'vs/base/browser/ui/button/button';
 import { attachButtonStyler } from 'vs/platform/theme/common/styler';
 import { IAuthService } from 'vs/platform/auth/common/auth';
+import { Emitter } from 'vs/base/common/event';
 
 /**
  * Renders code comments in a viewlet.
@@ -56,6 +57,8 @@ export class CodeCommentsViewlet extends Viewlet {
 	private title: string;
 	private actions: IAction[] = [];
 
+	private model: CodeCommentsViewletModel;
+
 	constructor(
 		@ITelemetryService telemetryService: ITelemetryService,
 		@IThemeService themeService: IThemeService,
@@ -67,10 +70,14 @@ export class CodeCommentsViewlet extends Viewlet {
 		@IAuthService private authService: IAuthService,
 	) {
 		super(Constants.VIEWLET_ID, telemetryService, themeService);
+		this.model = new CodeCommentsViewletModel();
+		this.toUnbind.push(this.model.onDidChange(() => this.render()));
+		this.toUnbind.push(this.authService.onDidChangeCurrentUser(() => this.render()));
 	}
 
 	public dispose(): void {
 		this.activeEditorListeners = dispose(this.activeEditorListeners);
+		this.model.dispose();
 		super.dispose();
 	}
 
@@ -84,6 +91,7 @@ export class CodeCommentsViewlet extends Viewlet {
 
 	public setVisible(visible: boolean): TPromise<void> {
 		if (visible) {
+			this.render(); // re-render in case anything changed
 			this.telemetryService.publicLog('codeComments.openViewlet');
 		}
 		return super.setVisible(visible);
@@ -122,14 +130,16 @@ export class CodeCommentsViewlet extends Viewlet {
 	private onEditorsChanged(): void {
 		const editor = this.getActiveCodeEditor();
 		if (!editor) {
-			this.render(undefined);
+			this.model.uri = undefined;
 			return;
 		}
 		this.activeEditorListeners = dispose(this.activeEditorListeners);
-		this.activeEditorListeners.push(editor.onDidChangeModel(e => this.render(e.newModelUrl)));
+		this.activeEditorListeners.push(editor.onDidChangeModel(e => {
+			this.model.uri = e.newModelUrl;
+		}));
 		this.activeEditorListeners.push(editor.onDidChangeModelContent(e => {
 			if (e.isFlush) {
-				this.render(this.getModelUri(editor));
+				this.model.uri = this.getModelUri(editor);
 			}
 		}));
 		const modelUri = this.getModelUri(editor);
@@ -140,10 +150,10 @@ export class CodeCommentsViewlet extends Viewlet {
 			}));
 			this.progressService.showWhile(fileComments.refreshingThreads);
 			this.activeEditorListeners.push(fileComments.onDidChangeThreads(() => {
-				this.render(modelUri);
+				this.model.uri = modelUri;
 			}));
 		}
-		this.render(modelUri);
+		this.model.uri = modelUri;
 	}
 
 	private getActiveCodeEditor(): ICommonCodeEditor | undefined {
@@ -171,22 +181,21 @@ export class CodeCommentsViewlet extends Viewlet {
 
 	/**
 	 * Renders the list of threads for a file.
-	 * Will use cached thread data unless refreshData is true.
 	 *
 	 * TODO: refactor thread list view into separate class like CreateThreadView and ThreadView.
 	 */
-	private render(modelUri: URI | undefined): void {
+	private render(): void {
 		const authed = this.authService.currentUser && this.authService.currentUser.currentOrgMember;
 		if (!authed) {
 			this.renderAuthenticationView();
 			return;
 		}
 
-		if (!modelUri) {
+		if (!this.model.uri) {
 			this.renderCommentsNotAvailable();
 			return;
 		}
-		this.renderRecentThreadsView(modelUri);
+		this.renderRecentThreadsView(this.model.uri);
 	}
 
 	private renderAuthenticationView(): void {
@@ -309,3 +318,24 @@ registerThemingParticipant((theme, collector) => {
 		collector.addRule(`.codeComments .thread:hover { background-color: ${listHoverColor}; }`);
 	}
 });
+
+class CodeCommentsViewletModel extends Disposable {
+	private _uri: URI | undefined;
+	private didChange = this._register(new Emitter<void>());
+	public onDidChange = this.didChange.event;
+
+	get uri() {
+		return this._uri;
+	}
+
+	set uri(uri: URI | undefined) {
+		if (this.uri === uri) {
+			return;
+		}
+		if (this.uri && uri && this.uri.toString() === uri.toString()) {
+			return;
+		}
+		this._uri = uri;
+		this.didChange.fire();
+	}
+}
