@@ -204,7 +204,7 @@ class User extends Disposable implements IUser {
 		return {
 			auth: {
 				user: {
-					sourcegraph_id: this.id,
+					id: this.id,
 					auth0_id: this.auth0Id,
 					username: this.username,
 					email: this.email,
