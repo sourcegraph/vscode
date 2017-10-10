@@ -51,11 +51,6 @@ export class CodeCommentsViewlet extends Viewlet {
 	 */
 	private list: HTMLElement;
 
-	/**
-	 * These are disposed on every render.
-	 */
-	private renderDisposables: IDisposable[] = [];
-
 	private scrollbar: ScrollableElement;
 	private scrollContainer: HTMLElement;
 	private title: string;
@@ -76,7 +71,6 @@ export class CodeCommentsViewlet extends Viewlet {
 
 	public dispose(): void {
 		this.activeEditorListeners = dispose(this.activeEditorListeners);
-		this.renderDisposables = dispose(this.renderDisposables);
 		super.dispose();
 	}
 
@@ -199,7 +193,6 @@ export class CodeCommentsViewlet extends Viewlet {
 		this.title = localize('comment', "Code Comments");
 		this.actions = [];
 		this.updateTitleArea();
-		this.renderDisposables = dispose(this.renderDisposables);
 		clearNode(this.list);
 		let container = $('div').addClass('auth-view');
 		container.appendTo(this.list);
@@ -221,7 +214,6 @@ export class CodeCommentsViewlet extends Viewlet {
 		this.title = localize('comment', "Code Comments");
 		this.actions = [];
 		this.updateTitleArea();
-		this.renderDisposables = dispose(this.renderDisposables);
 		clearNode(this.list);
 		$(this.list).div({ class: 'threads' }, div => {
 			div.div({ class: 'empty' }, div => {
@@ -239,7 +231,6 @@ export class CodeCommentsViewlet extends Viewlet {
 		this.title = localize('recentComments', "Recent conversations: {0}", basename(modelUri.fsPath));
 		this.actions = [];
 		this.updateTitleArea();
-		this.renderDisposables = dispose(this.renderDisposables);
 
 		const fileComments = this.codeCommentsService.getFileComments(modelUri);
 		clearNode(this.list);
