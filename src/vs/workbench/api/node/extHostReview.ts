@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 'use strict';
 
-import URI from 'vs/base/common/uri';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { once, Emitter } from 'vs/base/common/event';
 import { debounce } from 'vs/base/common/decorators';
@@ -29,7 +28,7 @@ class MainThreadSCMShapeShim implements MainThreadSCMShape {
 	}
 
 	$updateSourceControl(handle: number, features: SCMProviderFeatures): void {
-		this.proxy.$updateReviewControl(handle, features);
+		throw new Error('$updateSourceControl not implemented');
 	}
 
 	$unregisterSourceControl(handle: number): void {
@@ -57,7 +56,7 @@ class MainThreadSCMShapeShim implements MainThreadSCMShape {
 	}
 
 	$setInputBoxValue(reviewControlHandle: number, value: string): void {
-		throw new Error('not implemented');
+		throw new Error('$setInputBoxValue not implemented');
 	}
 
 	dispose(): void {
@@ -100,18 +99,6 @@ class ExtHostReviewControl implements vscode.ReviewControl {
 
 		const internal = (statusBarCommands || []).map(c => this._commands.converter.toInternal(c));
 		this._proxy.$updateReviewControl(this.handle, { reviewCommands: internal });
-	}
-
-	private _remoteResources: vscode.Uri[] | undefined = undefined;
-
-	get remoteResources(): vscode.Uri[] | undefined {
-		return this._remoteResources;
-	}
-
-	set remoteResources(resources: vscode.Uri[] | undefined) {
-		this._remoteResources = resources;
-
-		this._proxy.$updateReviewControl(this.handle, { remoteResources: resources as URI[] });
 	}
 
 	private handle: number = ExtHostReviewControl._handlePool++;

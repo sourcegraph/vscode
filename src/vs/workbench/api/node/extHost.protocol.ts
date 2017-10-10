@@ -356,7 +356,6 @@ export interface SCMProviderFeatures {
 
 export interface ReviewProviderFeatures {
 	reviewCommands?: modes.Command[];
-	remoteResources?: URI[];
 }
 
 export interface SCMGroupFeatures {

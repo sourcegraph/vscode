@@ -112,7 +112,6 @@ class MainThreadReviewProvider implements IReviewProvider {
 	}
 
 	get reviewCommands(): Command[] | undefined { return this.features.reviewCommands; }
-	get remoteResources(): URI[] | undefined { return this.features.remoteResources; }
 
 	private _onDidChange = new Emitter<void>();
 	get onDidChange(): Event<void> { return this._onDidChange.event; }
