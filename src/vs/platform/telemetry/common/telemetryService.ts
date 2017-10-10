@@ -136,13 +136,6 @@ export class TelemetryService implements ITelemetryService {
 				return undefined;
 			});
 
-			// TODO(Dan) determine if we should remove this section before launch, we
-			// will replace with sourcegraph accounts
-			if (this._authService && this._authService.currentUser) {
-				// TODO(dan): is this what you want?
-				// data.native.current_user_id = this._authService.currentUser.id
-			}
-
 			this._appender.log(eventName, data);
 
 		}, err => {

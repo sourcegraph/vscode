@@ -45,7 +45,12 @@ export interface IUser {
 	/**
 	 * id is the Sourcegraph unique ID for a user.
 	 */
-	readonly id: string;
+	readonly id: number;
+
+	/**
+	 * auth0Id is the Auth0 unique ID for a user
+	 */
+	readonly auth0Id: string;
 
 	/**
 	 * avatarUrl is the URL to the user's profile avatar.

@@ -90,6 +90,8 @@ export class AuthService extends Disposable implements IAuthService {
 					root {
 						currentUser {
 							id
+							sourcegraphID
+							username
 							avatarURL
 							email
 							orgMemberships {
@@ -168,14 +170,18 @@ export class AuthService extends Disposable implements IAuthService {
 }
 
 class User extends Disposable implements IUser {
-	public readonly id: string;
+	public readonly id: number;
+	public readonly auth0Id: string;
+	public readonly username: string;
 	public readonly email: string;
 	public readonly avatarUrl: string | undefined;
 	public readonly orgMemberships: OrgMember[];
 
 	constructor(user: GQL.IUser, @ITelemetryService private telemetryService: ITelemetryService) {
 		super();
-		this.id = user.id;
+		this.id = user.sourcegraphID;
+		this.auth0Id = user.id;
+		this.username = user.username;
 		this.email = user.email;
 		this.avatarUrl = user.avatarURL;
 		this.orgMemberships = user.orgMemberships.map(m => new OrgMember(m));
@@ -198,7 +204,9 @@ class User extends Disposable implements IUser {
 		return {
 			auth: {
 				user: {
-					id: this.id,
+					sourcegraph_id: this.id,
+					auth0_id: this.auth0Id,
+					username: this.username,
 					email: this.email,
 					orgMemberships: this.orgMemberships,
 				},
