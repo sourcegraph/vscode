@@ -10,78 +10,53 @@ const localize = nls.loadMessageBundle();
 
 export const GITLAB_SCHEME = 'gitlab';
 
-// Gets Gitlab information associated for the current user. Uses a cache to prevent multiple
-// requests. Based on the github viewer.
+/**
+ * Gets Gitlab information associated for the current user. Uses a cache to prevent multiple
+ * requests. Based on the github viewer.
+ */
 export class Gitlab {
 	private token: string;
 	private host: string;
 	private userid: number | undefined;
 
 	private repoRequest: Thenable<vscode.CatalogFolder[]> | null;
+
+	private userInfoRequest: Promise<UserInformation | null> | null;
 	private usernameRequest: Thenable<string | null> | null;
-	private userIdRequest: Thenable<number | null>;
 
 	constructor() {
 		// Pre-emptively fetch user related information
-		setTimeout(async () => {
-			try {
-				await this.repositories();
-			}
-			catch (error) {
-				console.error(error);
-			};
+		setTimeout(() => {
+			this.repositories();
 		}, 2000);
 	}
 
-	// Returns the username of the currently logged in user. It is best-effort, so if the
-	// network request fails or there is no logged in user null is returned.
-	public username(): Thenable<string | null> {
+	/**
+	 * Returns the user information of the currently logged in user. It is best-effort, so if the
+	 * network request fails or there is no logged in user null is returned.
+	 */
+	public async user(): Promise<UserInformation | null> {
 		if (!this.validState()) {
 			return Promise.resolve(null);
 		}
 
-		if (this.usernameRequest !== null) {
-			return this.usernameRequest;
+		if (this.userInfoRequest) {
+			return this.userInfoRequest;
 		}
 
-		const request = this.doGitlabRequest(this.host, this.token, '/user')
+		try {
+			const userInformation = this.doGitlabRequest(this.host, this.token, '/user');
 
-			.then<string | null>((data: any) => {
-				return data.username;
-			}, (reason) => {
-				// try again, but don't fail other requests if this fails
-				console.error(reason);
-				this.usernameRequest = null;
-				return null;
-			});
+			this.userInfoRequest = userInformation;
 
-		this.usernameRequest = request;
-		return request;
-	}
+			return userInformation;
+		} catch (error) {
+			console.log(error);
+			this.userInfoRequest = null;
 
-	// Returns the userid of the currently logged in user. It is best-effort, so if the
-	// network request fails or there is no logged in user null is returned.
-	public userId(): Thenable<number | null> {
-		if (!this.validState()) {
 			return Promise.resolve(null);
 		}
 
-		if (this.userIdRequest !== null) {
-			return this.userIdRequest;
-		}
-
-		const request = this.doGitlabRequest(this.host, this.token, '/user')
-			.then<number | null>((data: any) => {
-				return parseInt(data.id, 10);
-			}, (reason) => {
-				// try again, but don't fail other requests if this fails
-				console.error(reason);
-				this.usernameRequest = null;
-				return null;
-			});
-
-		this.userIdRequest = request;
-		return request;
 	}
 
 	/**
@@ -99,6 +74,10 @@ export class Gitlab {
 	}
 
 	public search(query: string): Thenable<vscode.CatalogFolder[]> {
+		if (!this.validState()) {
+			return Promise.resolve([]);
+		}
+
 		const encodedQuery = encodeURIComponent(query);
 		const url = `/users/${this.userid}/projects?search=${encodedQuery}&order_by=last_activity_at`;
 
@@ -106,10 +85,12 @@ export class Gitlab {
 			.then((data: any[]) => data.map(this.toCatalogFolder));
 	}
 
-	// Retrieve Gitlab Repositories for the current user.
-	// 
-	// Like the github this one is best-effort, so rejections should never happen. Uses
-	// internal cache for efficiency.
+	/**
+	 * Retrieve Gitlab Repositories for the current user.
+	 *  
+	 * Like the github one this one is best-effort, so rejections should never happen. Uses
+	 * internal cache for efficiency.
+	 */
 	public repositories(): Thenable<vscode.CatalogFolder[]> {
 		if (!this.validState()) {
 			return Promise.resolve([]);
@@ -123,11 +104,15 @@ export class Gitlab {
 
 		const request = this.doGitlabRequest(this.host, this.token, url)
 			.then<vscode.CatalogFolder[]>((data: any[]) => {
-				return data.map(repo => this.toCatalogFolder(repo));
-			},
-			(reason) => {
+				const repositories = data.map(repo => this.toCatalogFolder(repo));
+
+				this.repoRequest = Promise.resolve(repositories);
+
+				return repositories;
+			})
+			.catch((reason) => {
 				console.error(reason);
-				this.usernameRequest = null;
+				this.repoRequest = null;
 				return null;
 			});
 
@@ -135,7 +120,7 @@ export class Gitlab {
 	}
 
 	/**
-	 * Returns a clone for git repository. 
+	 * Returns a URI that can be used to clone the git repository. 
 	 * 
 	 * Note: this will include "git+" in the scheme.
 	 * 
@@ -149,14 +134,22 @@ export class Gitlab {
 		if (protocol === 'ssh') {
 			user = 'git';
 		} else {
-			user = await this.username();
+			const userinfo = await this.user();
+
+			if (!userinfo) {
+				user = null;
+			} else {
+				user = userinfo.username;
+			}
 		}
 		const userAuthority = user ? `${user}@` : '';
 
 		return vscode.Uri.parse(`git+${protocol}://${userAuthority}gitlab.com/${data.owner}/${data.name}.git`);
 	}
 
-	// Returns true if you can do a request or use a cached request.
+	/**
+	 * Returns true if you can do a request or use a cached request.
+	 */
 	private validState(): boolean {
 		const token = vscode.workspace.getConfiguration('gitlab').get<string>('token');
 		const host = vscode.workspace.getConfiguration('gitlab').get<string>('host');
@@ -192,10 +185,7 @@ export class Gitlab {
 		return true;
 	}
 
-	private doGitlabRequest<T>(host: string, token: string, endpoint: string): Thenable<T> {
-		if (host.includes('http') === false) {
-			host = 'http://'.concat(host);
-		}
+	private doGitlabRequest(host: string, token: string, endpoint: string): Promise<any> {
 
 		return fetch(`${host}/api/v4${endpoint}`, {
 			method: 'GET',
@@ -214,12 +204,14 @@ export class Gitlab {
 	}
 
 	private toCatalogFolder(repository: any): vscode.CatalogFolder {
+		let authority = vscode.Uri.parse(this.host).authority;
+
 		return {
-			resource: vscode.Uri.parse('').with({ scheme: GITLAB_SCHEME, authority: this.host, path: `/repository/${repository.path_with_namespace}` }),
+			resource: vscode.Uri.parse('').with({ scheme: GITLAB_SCHEME, authority: authority, path: `/repository/${repository.path_with_namespace}` }),
 			displayPath: repository.path_with_namespace,
 			displayName: repository.name,
 			genericIconClass: this.iconForRepo(repository),
-			cloneUrl: vscode.Uri.parse('').with({ scheme: 'https', authority: this.host, path: `/${repository.path_with_namespace}.git` }),
+			cloneUrl: vscode.Uri.parse('').with({ scheme: 'https', authority: authority, path: `/${repository.path_with_namespace}.git` }),
 			isPrivate: repository.visibility === 'private',
 			starsCount: repository.star_count,
 			forksCount: repository.forks_count,
@@ -236,12 +228,27 @@ export class Gitlab {
 		return 'repo';
 	}
 
-	private resourceToNameAndOwner(resource: vscode.Uri): { owner: string, name: string } {
-		const parts = resource.path.replace(/^\/repository\//, '').split('/');
+	/**
+	 * Get the owner and name of from resource path. Resource path is in the form:
+	 * 
+	 * gitlab://www.gitlab.com/repository/owner/name 
+	 * 
+	 * Above example will return owner / name. This form is used as resource in a VS code catalog folder.
+	 * 
+	 * @param resourcePath resouce of CatalogFolder
+	 */
+	private resourceToNameAndOwner(resourcePath: vscode.Uri): { owner: string, name: string } {
+		const parts = resourcePath.path.replace(/^\/repository\//, '').split('/');
 		return { owner: parts[0], name: parts[1] };
 	}
 
 	private createError(error: string): Thenable<string> {
-		return Promise.reject(localize('apiError', "Error from GitLab: {0}", error));
+		return Promise.reject(new Error(localize('apiError', "Error from GitLab: {0}", error)));
 	}
+}
+
+export interface UserInformation {
+	id: number;
+	name: string;
+	username: string;
 }
