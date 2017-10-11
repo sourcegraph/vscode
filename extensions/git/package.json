@@ -285,6 +285,11 @@
         "command": "git.stashPopLatest",
         "title": "%command.stashPopLatest%",
         "category": "Git"
+      },
+      {
+        "command": "git.shareDiff",
+        "title": "%command.shareDiff%",
+        "category": "Git"
       }
     ],
     "menus": {
@@ -464,6 +469,10 @@
         {
           "command": "git.stashPopLatest",
           "when": "config.git.enabled && gitOpenRepositoryCount != 0"
+        },
+        {
+          "command": "git.shareDiff",
+          "when": "config.git.enabled && gitOpenRepositoryCount != 0"
         }
       ],
       "scm/title": [
@@ -590,6 +599,11 @@
         {
           "command": "git.showOutput",
           "group": "7_repository",
+          "when": "config.git.enabled && scmProvider == git"
+        },
+        {
+          "command": "git.shareDiff",
+          "group": "review",
           "when": "config.git.enabled && scmProvider == git"
         }
       ],
@@ -845,13 +859,16 @@
   },
   "dependencies": {
     "byline": "^5.0.0",
+    "copy-paste": "^1.3.0",
     "iconv-lite": "0.4.15",
     "rimraf": "^2.6.1",
     "vscode-extension-telemetry": "0.0.8",
     "vscode-nls": "2.0.2"
   },
   "devDependencies": {
+    "@types/copy-paste": "^1.1.30",
     "@types/mocha": "2.2.43",
+    "@types/node": "7.0.43",
     "mocha": "^3.2.0"
   }
 }

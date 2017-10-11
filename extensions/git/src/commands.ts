@@ -18,6 +18,8 @@ import * as os from 'os';
 import TelemetryReporter from 'vscode-extension-telemetry';
 import * as nls from 'vscode-nls';
 import { createTempWorktree } from './repository_helpers';
+import { URLSearchParams } from 'url';
+import { copy } from 'copy-paste';
 
 const localize = nls.loadMessageBundle();
 
@@ -1511,6 +1513,65 @@ export class CommandCenter {
 		}
 
 		await repository.popStash();
+	}
+
+	/**
+	 * Generates a shareable link to the compare provider between the current branch and a selectable base branch.
+	 * The user is prompted to pick the base branch and the link if copied to the clipboard.
+	 *
+	 * Example: https://about.sourcegraph.com/open/#open?repo=https%3A%2F%2Fgithub.com%2Fsourcegraph%2Fdocs-private&revision=foo&baseRevision=bar&vcs=git
+	 */
+	@command('git.shareDiff', { repository: true })
+	async shareDiff(repository: Repository): Promise<void> {
+
+		if (!repository.HEAD || !repository.HEAD.name) {
+			throw new Error(localize('no HEAD', "Repository does not have HEAD"));
+		}
+		if (repository.remotes.length === 0) {
+			throw new Error(localize('no remote', "Repository does not have a remote"));
+		}
+
+		const openParams = new URLSearchParams();
+
+		const baseBranchPicks: string[] = [];
+		for (const ref of repository.refs) {
+			if (ref.type !== RefType.Head || !ref.name) {
+				continue;
+			}
+			// Make master the first item in the list so it's auto-selected
+			if (ref.name === 'master') {
+				baseBranchPicks.unshift(ref.name);
+				continue;
+			}
+			baseBranchPicks.push(ref.name);
+		}
+
+		const [repoStdout, baseBranch] = await Promise.all([
+			// Try to use the current branch's remote URL
+			repository.executeCommand(['ls-remote', '--get-url']),
+			// Ask for the base branch
+			window.showQuickPick(baseBranchPicks, { placeHolder: localize('choose base branch', "Choose a base branch") })
+		]);
+
+		if (!baseBranch) {
+			return;
+		}
+
+		const repoUrl = repoStdout.trim();
+		if (repoUrl) {
+			openParams.set('repo', repoUrl);
+		} else {
+			// Fallback to the first remote
+			openParams.set('repo', repository.remotes[0].url);
+		}
+
+		openParams.set('revision', repository.HEAD.name);
+		openParams.set('baseRevision', baseBranch);
+		openParams.set('vcs', 'git');
+		const url = 'https://about.sourcegraph.com/open#open?' + openParams;
+		// Copy to clipboard
+		await new Promise((resolve, reject) => copy(url, err => err ? reject(err) : resolve()));
+		window.showInformationMessage(localize('copied link', "Copied link to clipboard!"));
 	}
 
 	private createCommand(id: string, key: string, method: Function, options: CommandOptions): (...args: any[]) => any {
