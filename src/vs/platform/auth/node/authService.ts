@@ -275,7 +275,7 @@ export function urlToSignIn(configService: IConfigurationService): URI {
 
 	return URI.parse(config.remote.endpoint).with({
 		path: '/settings/editor-auth',
-		query: 'utm_source=editor'
+		query: 'utm_source=editor&referrer=editor'
 	});
 }
 
