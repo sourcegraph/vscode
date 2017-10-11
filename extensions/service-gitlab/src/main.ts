@@ -61,7 +61,7 @@ function setFolderCatalogProvider(host: string) {
 				const match = gitURL.match(/gitlab.com[\/:]([^/]+)\/([^/]+)/);
 
 				if (match) {
-					return nameAndOwnerToResource(match[1], match[2]);
+					return gitlab.nameAndOwnerToResource(match[1], match[2]);
 				}
 				return null;
 			});
@@ -205,8 +205,4 @@ function showErrorImmediately<T>(error: string, viewer: Gitlab): T | Thenable<T>
 function resourceToNameAndOwner(resource: vscode.Uri): { owner: string, name: string } {
 	const parts = resource.path.replace(/^\/repository\//, '').split('/');
 	return { owner: parts[0], name: parts[1] };
-}
-
-function nameAndOwnerToResource(owner: string, name: string): vscode.Uri {
-	return vscode.Uri.parse(`gitlab://gitlab.com/repository/${owner}/${name}`);
 }

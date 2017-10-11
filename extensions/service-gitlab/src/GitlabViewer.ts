@@ -22,7 +22,6 @@ export class Gitlab {
 	private repoRequest: Thenable<vscode.CatalogFolder[]> | null;
 
 	private userInfoRequest: Promise<UserInformation | null> | null;
-	private usernameRequest: Thenable<string | null> | null;
 
 	constructor() {
 		// Pre-emptively fetch user related information
@@ -37,6 +36,7 @@ export class Gitlab {
 	 */
 	public async user(): Promise<UserInformation | null> {
 		if (!this.validState()) {
+			this.clearCache();
 			return Promise.resolve(null);
 		}
 
@@ -93,10 +93,11 @@ export class Gitlab {
 	 */
 	public repositories(): Thenable<vscode.CatalogFolder[]> {
 		if (!this.validState()) {
+			this.clearCache();
 			return Promise.resolve([]);
 		}
 
-		if (this.repoRequest !== null) {
+		if (this.repoRequest) {
 			return this.repoRequest;
 		}
 
@@ -143,12 +144,20 @@ export class Gitlab {
 			}
 		}
 		const userAuthority = user ? `${user}@` : '';
+		let authority = vscode.Uri.parse(this.host).authority;
 
-		return vscode.Uri.parse(`git+${protocol}://${userAuthority}gitlab.com/${data.owner}/${data.name}.git`);
+		return vscode.Uri.parse(`git+${protocol}://${userAuthority}${authority}/${data.owner}/${data.name}.git`);
+	}
+
+	public nameAndOwnerToResource(owner: string, name: string): vscode.Uri {
+		let authority = vscode.Uri.parse(this.host).authority;
+
+		return vscode.Uri.parse(`gitlab://${authority}/repository/${owner}/${name}`);
 	}
 
 	/**
-	 * Returns true if you can do a request or use a cached request.
+	 * Returns true if you can do a request or use a cached request. This will return false when information
+	 * is missing or when information from the config does not match the information in this instance.
 	 */
 	private validState(): boolean {
 		const token = vscode.workspace.getConfiguration('gitlab').get<string>('token');
@@ -163,19 +172,16 @@ export class Gitlab {
 			return false;
 		}
 
-		if (token !== this.token) {
-			this.repoRequest = null;
-			this.usernameRequest = null;
+		if (this.token && token !== this.token) {
+			return false;
 		}
 
-		if (host !== this.host) {
-			this.repoRequest = null;
-			this.usernameRequest = null;
+		if (this.host && host !== this.host) {
+			return false;
 		}
 
-		if (userid !== this.userid) {
-			this.repoRequest = null;
-			this.usernameRequest = null;
+		if (this.userid && userid !== this.userid) {
+			return false;
 		}
 
 		this.token = token;
@@ -183,6 +189,11 @@ export class Gitlab {
 		this.userid = userid;
 
 		return true;
+	}
+
+	private clearCache() {
+		this.repoRequest = null;
+		this.userInfoRequest = null;
 	}
 
 	private doGitlabRequest(host: string, token: string, endpoint: string): Promise<any> {
