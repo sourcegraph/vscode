@@ -65,15 +65,22 @@ export class Gitlab {
 	 * @param name name of the repository
 	 * @param owner owner of the repository
 	 */
-	public repository(owner: string, name: string): Thenable<vscode.CatalogFolder> {
+	public async repository(owner: string, name: string): Promise<vscode.CatalogFolder> {
 		const encodedName = encodeURIComponent(`${owner}/${name}`);
 		const url = `/projects/${encodedName}`;
 
-		return this.doGitlabRequest(this.host, this.token, url)
-			.then(this.toCatalogFolder);
+		const repo = await this.doGitlabRequest(this.host, this.token, url);
+
+		return this.toCatalogFolder(repo);
 	}
 
-	public search(query: string): Thenable<vscode.CatalogFolder[]> {
+	/**
+	 * Search the GitLab projects of the user using the given string. Like the other functions this
+	 * is best-effort. When an error ocurres a empty array is returned. 
+	 * 
+	 * @param query 
+	 */
+	public async search(query: string): Promise<vscode.CatalogFolder[]> {
 		if (!this.validState()) {
 			return Promise.resolve([]);
 		}
@@ -81,8 +88,16 @@ export class Gitlab {
 		const encodedQuery = encodeURIComponent(query);
 		const url = `/users/${this.userid}/projects?search=${encodedQuery}&order_by=last_activity_at`;
 
-		return this.doGitlabRequest(this.host, this.token, url)
-			.then((data: any[]) => data.map(this.toCatalogFolder));
+		try {
+			const searchResult = await this.doGitlabRequest(this.host, this.token, url);
+
+			return searchResult.map(this.toCatalogFolder);
+		}
+		catch (error) {
+			console.log(error);
+
+			return Promise.resolve([]);
+		}
 	}
 
 	/**
@@ -91,7 +106,7 @@ export class Gitlab {
 	 * Like the github one this one is best-effort, so rejections should never happen. Uses
 	 * internal cache for efficiency.
 	 */
-	public repositories(): Thenable<vscode.CatalogFolder[]> {
+	public async repositories(): Promise<vscode.CatalogFolder[]> {
 		if (!this.validState()) {
 			this.clearCache();
 			return Promise.resolve([]);
@@ -103,21 +118,20 @@ export class Gitlab {
 
 		const url = `/users/${this.userid}/projects`;
 
-		const request = this.doGitlabRequest(this.host, this.token, url)
-			.then<vscode.CatalogFolder[]>((data: any[]) => {
-				const repositories = data.map(repo => this.toCatalogFolder(repo));
+		try {
+			const data = await this.doGitlabRequest(this.host, this.token, url);
 
-				this.repoRequest = Promise.resolve(repositories);
+			const repositories = data.map((repo: any) => this.toCatalogFolder(repo));
 
-				return repositories;
-			})
-			.catch((reason) => {
-				console.error(reason);
-				this.repoRequest = null;
-				return null;
-			});
+			this.repoRequest = Promise.resolve(repositories);
 
-		return request;
+			return repositories;
+
+		} catch (error) {
+			console.error(error);
+			this.repoRequest = null;
+			return Promise.resolve([]);
+		}
 	}
 
 	/**
@@ -144,7 +158,8 @@ export class Gitlab {
 			}
 		}
 
-		// User can be undefinied in some cases
+		// User can be undefinied in some cases, the url will also work without username.
+		//
 		// This can happen when the username request to GitLab fails and the request is not cached. The 
 		// two main reasons why the request can fail are network issues (gitlab down) or an 
 		// authentication failure. Authentication is unlikely here since the only way to reach this 
@@ -203,22 +218,23 @@ export class Gitlab {
 		this.userInfoRequest = null;
 	}
 
-	private doGitlabRequest(host: string, token: string, endpoint: string): Promise<any> {
-
-		return fetch(`${host}/api/v4${endpoint}`, {
+	private async doGitlabRequest(host: string, token: string, endpoint: string): Promise<any> {
+		const response = await fetch(`${host}/api/v4${endpoint}`, {
 			method: 'GET',
 			headers: { 'PRIVATE-TOKEN': token }
-		})
-			.then(response => {
-				if (response.status < 200 || response.status > 299) {
-					return response.json().then(
-						(err: { error: { message: string } }) => this.createError(err && err.error ? err.error.message : response.statusText),
-						err => this.createError(err),
-					);
-				}
+		});
 
-				return response.json();
-			});
+		if (response.status < 200 || response.status > 299) {
+			const err: { error: { message: string } } = await response.json();
+
+			if (err && err.error) {
+				return this.createError(err.error.message);
+			}
+
+			return this.createError(response.statusText);
+		}
+
+		return response.json();
 	}
 
 	private toCatalogFolder(repository: any): vscode.CatalogFolder {

@@ -186,25 +186,26 @@ function checkGitlabToken(): boolean {
  * of only when they close the quickopen (which probably isn't showing any results because of
  * the error).
  */
-function showErrorImmediately<T>(error: string, viewer: Gitlab): T | Thenable<T> {
-	return vscode.commands.executeCommand('workbench.action.closeQuickOpen').then(() => vscode.commands.executeCommand('workbench.action.closeMessages').then(() => {
-		const resetTokenItem: vscode.MessageItem = { title: localize('resetToken', "Reset Token") };
-		const cancelItem: vscode.MessageItem = { title: localize('cancel', "Cancel"), isCloseAffordance: true };
-		vscode.window.showErrorMessage(error, resetTokenItem, cancelItem)
-			.then(async (value) => {
-				if (value === resetTokenItem) {
-					const hasToken = vscode.workspace.getConfiguration('gitlab').get<string>('token');
-					if (hasToken) {
-						await vscode.workspace.getConfiguration('gitlab').update('token', undefined, vscode.ConfigurationTarget.Global);
-					}
-					if (checkGitlabToken()) {
-						showCreateGitlabTokenWalkthrough(viewer); // will walk the user through recreating the token
-					}
-				}
-			});
+async function showErrorImmediately<T>(error: string, viewer: Gitlab): Promise<T> {
+	await vscode.commands.executeCommand('workbench.action.closeQuickOpen');
+	await vscode.commands.executeCommand('workbench.action.closeMessages');
 
-		return Promise.reject(error);
-	}));
+	const resetTokenItem: vscode.MessageItem = { title: localize('resetToken', "Reset Token") };
+	const cancelItem: vscode.MessageItem = { title: localize('cancel', "Cancel"), isCloseAffordance: true };
+
+	const value = await vscode.window.showErrorMessage(error, resetTokenItem, cancelItem);
+
+	if (value === resetTokenItem) {
+		const hasToken = vscode.workspace.getConfiguration('gitlab').get<string>('token');
+		if (hasToken) {
+			await vscode.workspace.getConfiguration('gitlab').update('token', undefined, vscode.ConfigurationTarget.Global);
+		}
+		if (checkGitlabToken()) {
+			showCreateGitlabTokenWalkthrough(viewer); // will walk the user through recreating the token
+		}
+	}
+
+	return Promise.reject(error);
 }
 
 function resourceToNameAndOwner(resource: vscode.Uri): { owner: string, name: string } {
