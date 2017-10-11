@@ -8,7 +8,7 @@ import { localize } from 'vs/nls';
 import URI from 'vs/base/common/uri';
 import { Disposable, IDisposable, dispose } from 'vs/base/common/lifecycle';
 import Event, { Emitter } from 'vs/base/common/event';
-import { IAuthService, IOrg, IUser, IOrgMember } from 'vs/platform/auth/common/auth';
+import { IAuthService, IUser, IOrgMember } from 'vs/platform/auth/common/auth';
 import { IRemoteService, IRemoteConfiguration, requestGraphQL } from 'vs/platform/remote/node/remote';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
@@ -95,7 +95,7 @@ export class AuthService extends Disposable implements IAuthService {
 				this.globalState.saveMemento();
 				this.didChangeCurrentUser.fire();
 			}));
-			this.memento[AuthService.CURRENT_USER_KEY] = user.toGQL();
+			this.memento[AuthService.CURRENT_USER_KEY] = user;
 		} else {
 			this.memento[AuthService.CURRENT_USER_KEY] = undefined;
 		}
@@ -157,7 +157,24 @@ export class AuthService extends Disposable implements IAuthService {
 					}
 				}`, {})
 				.then(response => {
-					this.setCurrentUser(new User(response.currentUser, this.telemetryService));
+					const user = response.currentUser;
+					const orgMemberships = user.orgMemberships.map(membership => ({
+						id: membership.id,
+						email: membership.email,
+						username: membership.username,
+						displayName: membership.displayName,
+						avatarUrl: membership.avatarURL,
+						org: membership.org,
+					}));
+					this.setCurrentUser(new User({
+						id: user.sourcegraphID,
+						auth0Id: user.id,
+						username: user.username,
+						email: user.email,
+						avatarUrl: user.avatarURL,
+						orgMemberships,
+						currentOrgMember: orgMemberships[0],
+					}, this.telemetryService));
 					this.telemetryService.publicLog('CurrentUserSignedIn', this._currentUser.getTelemetryData());
 				});
 		});
@@ -192,48 +209,41 @@ export class AuthService extends Disposable implements IAuthService {
 	}
 }
 
-class User extends Disposable implements IUser {
+interface UserMemento {
+	readonly id: number;
+	readonly auth0Id: string;
+	readonly username: string;
+	readonly email: string;
+	readonly avatarUrl: string | undefined;
+	readonly orgMemberships: IOrgMember[];
+	readonly currentOrgMember: IOrgMember;
+}
+
+class User extends Disposable implements IUser, UserMemento {
+
 	public readonly id: number;
 	public readonly auth0Id: string;
 	public readonly username: string;
 	public readonly email: string;
 	public readonly avatarUrl: string | undefined;
-	public readonly orgMemberships: OrgMember[];
+	public readonly orgMemberships: IOrgMember[];
 
-	constructor(user: GQL.IUser, @ITelemetryService private telemetryService: ITelemetryService) {
+	constructor(user: UserMemento, @ITelemetryService private telemetryService: ITelemetryService) {
 		super();
-		this.id = user.sourcegraphID;
-		this.auth0Id = user.id;
+		this.id = user.id;
+		this.auth0Id = user.auth0Id;
 		this.username = user.username;
 		this.email = user.email;
-		this.avatarUrl = user.avatarURL;
-		this.orgMemberships = user.orgMemberships.map(m => new OrgMember(m));
-		this._currentOrgMember = this.orgMemberships[0];
+		this.avatarUrl = user.avatarUrl;
+		this.orgMemberships = user.orgMemberships;
+		this._currentOrgMember = user.currentOrgMember;
 	}
 
-	public toGQL(): GQL.IUser {
-		return {
-			__typename: 'User',
-			sourcegraphID: this.id,
-			id: this.auth0Id,
-			username: this.username,
-			email: this.email,
-			avatarURL: this.avatarUrl,
-			orgMemberships: this.orgMemberships.map(m => m.toGQL()),
-			hasSourcegraphUser: null,
-			displayName: null,
-			createdAt: null,
-			updatedAt: null,
-			tags: [],
-			orgs: [],
-		};
-	}
-
-	private _currentOrgMember: OrgMember | undefined;
+	private _currentOrgMember: IOrgMember | undefined;
 	private didChangeCurrentOrgMember = this._register(new Emitter<void>());
 	public onDidChangeCurrentOrgMember = this.didChangeCurrentOrgMember.event;
-	public get currentOrgMember(): OrgMember | undefined { return this._currentOrgMember; }
-	public set currentOrgMember(orgMember: OrgMember) {
+	public get currentOrgMember(): IOrgMember { return this._currentOrgMember; }
+	public set currentOrgMember(orgMember: IOrgMember) {
 		if (this._currentOrgMember !== orgMember) {
 			this._currentOrgMember = orgMember;
 			this.didChangeCurrentOrgMember.fire();
@@ -253,64 +263,6 @@ class User extends Disposable implements IUser {
 				},
 				currentOrgMember: this.currentOrgMember,
 			}
-		};
-	}
-}
-
-class OrgMember implements IOrgMember {
-	public readonly id: number;
-	public readonly email: string;
-	public readonly username: string;
-	public readonly displayName: string;
-	public readonly avatarUrl: string;
-	public readonly org: Org;
-
-	constructor(member: GQL.IOrgMember) {
-		this.id = member.id;
-		this.email = member.email;
-		this.username = member.username;
-		this.displayName = member.displayName;
-		this.avatarUrl = member.avatarURL;
-		this.org = new Org(member.org);
-	}
-
-	public toGQL(): GQL.IOrgMember {
-		return {
-			__typename: 'OrgMember',
-			id: this.id,
-			email: this.email,
-			username: this.username,
-			displayName: this.displayName,
-			avatarURL: this.avatarUrl,
-			org: this.org.toGQL(),
-			user: null,
-			userID: null,
-			createdAt: null,
-			updatedAt: null,
-		};
-	}
-}
-
-class Org implements IOrg {
-	public readonly id: number;
-	public readonly name: string;
-
-	constructor(org: GQL.IOrg) {
-		this.id = org.id;
-		this.name = org.name;
-	}
-
-	public toGQL(): GQL.IOrg {
-		return {
-			__typename: 'Org',
-			id: this.id,
-			name: this.name,
-			displayName: null,
-			members: [],
-			repos: [],
-			repo: null,
-			threads: [],
-			tags: [],
 		};
 	}
 }
