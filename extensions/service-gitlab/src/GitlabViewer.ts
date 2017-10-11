@@ -143,6 +143,13 @@ export class Gitlab {
 				user = userinfo.username;
 			}
 		}
+
+		// User can be undefinied in some cases
+		// This can happen when the username request to GitLab fails and the request is not cached. The 
+		// two main reasons why the request can fail are network issues (gitlab down) or an 
+		// authentication failure. Authentication is unlikely here since the only way to reach this 
+		// to actually retrieve a list of repositories for this user (authentication needed)
+
 		const userAuthority = user ? `${user}@` : '';
 		let authority = vscode.Uri.parse(this.host).authority;
 

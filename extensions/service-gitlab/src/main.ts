@@ -116,6 +116,11 @@ async function showCreateGitlabTokenWalkthrough(viewer: Gitlab, skipInfoMessage?
 		if (!host) {
 			host = 'https://www.gitlab.com';
 		}
+
+		if (!host.includes('http')) {
+			showErrorImmediately(localize('noScheme', "Host must include the scheme (http or https)."), viewer);
+			return false;
+		}
 	} else if (!value || value === cancelItem) {
 		return false;
 	}
