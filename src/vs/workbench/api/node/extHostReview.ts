@@ -24,7 +24,7 @@ class MainThreadSCMShapeShim implements MainThreadSCMShape {
 	}
 
 	$registerSourceControl(handle: number, id: string, label: string, rootUri: string | undefined): void {
-		this.proxy.$registerReviewControl(handle, id, label);
+		this.proxy.$registerReviewControl(handle, id, label, rootUri);
 	}
 
 	$updateSourceControl(handle: number, features: SCMProviderFeatures): void {
@@ -77,6 +77,10 @@ class ExtHostReviewControl implements vscode.ReviewControl {
 		return this._label;
 	}
 
+	get rootUri(): vscode.Uri {
+		return this._rootUri;
+	}
+
 	private _active = false;
 	private didChangeActive = new Emitter<void>();
 	public readonly onDidChangeActive = this.didChangeActive.event;
@@ -108,8 +112,9 @@ class ExtHostReviewControl implements vscode.ReviewControl {
 		private _commands: ExtHostCommands,
 		private _id: string,
 		private _label: string,
+		private _rootUri: vscode.Uri,
 	) {
-		this._proxy.$registerReviewControl(this.handle, _id, _label);
+		this._proxy.$registerReviewControl(this.handle, _id, _label, _rootUri.toString());
 	}
 
 	private updatedResourceGroups = new Set<ExtHostSourceControlResourceGroup>();
@@ -167,8 +172,6 @@ class ExtHostReviewControl implements vscode.ReviewControl {
 	}
 }
 
-type SourceControlRoot = { handle: number, rootUri: vscode.Uri };
-
 export class ExtHostReview {
 
 	private static _handlePool: number = 0;
@@ -222,9 +225,9 @@ export class ExtHostReview {
 		});
 	}
 
-	createReviewControl(extension: IExtensionDescription, id: string, label: string): vscode.ReviewControl {
+	createReviewControl(extension: IExtensionDescription, id: string, label: string, rootUri: vscode.Uri): vscode.ReviewControl {
 		const handle = ExtHostReview._handlePool++;
-		const reviewControl = new ExtHostReviewControl(this._proxy, this._commands, id, label);
+		const reviewControl = new ExtHostReviewControl(this._proxy, this._commands, id, label, rootUri);
 		this.reviewControls.set(handle, reviewControl);
 
 		const reviewControls = this.reviewControlsByExtension.get(extension.id) || [];

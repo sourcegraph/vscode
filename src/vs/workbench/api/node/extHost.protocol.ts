@@ -405,7 +405,7 @@ export interface MainThreadSCMShape extends IDisposable {
 }
 
 export interface MainThreadReviewShape extends IDisposable {
-	$registerReviewControl(handle: number, id: string, label: string): void;
+	$registerReviewControl(handle: number, id: string, label: string, rootUri: string): void;
 	$updateReviewControl(handle: number, features: ReviewProviderFeatures): void;
 	$unregisterReviewControl(handle: number): void;
 

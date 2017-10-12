@@ -5,7 +5,7 @@
 'use strict';
 
 import { localize } from 'vs/nls';
-import { ICodeCommentsService, IFileComments, IThreadComments, IComment, ICommentAuthor, IDraftThreadComments } from 'vs/editor/common/services/codeCommentsService';
+import { ICodeCommentsService, IBranchComments, IFileComments, IThreadComments, IComment, ICommentAuthor, IDraftThreadComments } from 'vs/editor/common/services/codeCommentsService';
 import { Range } from 'vs/editor/common/core/range';
 import Event, { Emitter, any } from 'vs/base/common/event';
 import { VSDiff as Diff } from 'vs/workbench/services/codeComments/common/vsdiff';
@@ -120,6 +120,75 @@ export class CodeCommentsService implements ICodeCommentsService {
 			this.models.set(file, model);
 		}
 		return model;
+	}
+
+	public getBranchComments(repo: URI, branch: string): BranchComments {
+		return this.instantiationService.createInstance(BranchComments, repo, branch);
+	}
+}
+
+export class BranchComments extends Disposable implements IBranchComments {
+
+	private _threads: ThreadComments[] = [];
+	private didChangeThreads = this.disposable(new Emitter<void>());
+	public readonly onDidChangeThreads = this.didChangeThreads.event;
+	public get threads(): ThreadComments[] {
+		return this._threads;
+	}
+
+	private git: Git;
+
+	constructor(
+		private repo: URI,
+		private branch: string,
+		@ISCMService scmService: ISCMService,
+		@IInstantiationService private instantiationService: IInstantiationService,
+		@IRemoteService private remoteService: IRemoteService,
+		@IAuthService private authService: IAuthService,
+	) {
+		super();
+		this.git = new Git(repo, scmService);
+	}
+
+	private refreshDelayer = new ThrottledDelayer<void>(100);
+	public refresh(): TPromise<void> {
+		return this.refreshDelayer.trigger(() => this.refreshNow());
+	}
+
+	private refreshNow(): TPromise<void> {
+		return this.git.getRemoteRepo()
+			.then(repo => {
+				if (!this.authService.currentUser || !this.authService.currentUser.currentOrgMember) {
+					return TPromise.as(undefined);
+				}
+				return requestGraphQL<{ org: { repo: { threads: GQL.IThread[] } } }>(this.remoteService, `query ThreadsForBranch (
+					$file: String!,
+				) {
+					root {
+						org(id: $orgId) {
+							repo(remoteURI: $remoteURI) {
+								threads(branch: $branch) {
+									${threadGraphql}
+								}
+							}
+						}
+					}
+				}`, {
+						orgId: this.authService.currentUser.currentOrgMember.org.id,
+						branch: this.branch,
+						remoteURI: repo,
+					});
+			})
+			.then(response => {
+				const threads = (response && response.org.repo && response.org.repo.threads) || [];
+
+				// Although we are updating this._threads here, we don't fire
+				// threadsDidChange until the display ranges have updated.
+				this._threads = this.instantiationService.invokeFunction(updatedThreads, this.git, this._threads, threads);
+				// TODO(nick): figure out display ranges
+				this.didChangeThreads.fire();
+				// return this.updateDisplayRanges();
+			});
 	}
 }
 
@@ -257,27 +326,9 @@ export class FileComments extends Disposable implements IFileComments {
 			})
 			.then(response => {
 				const threads = (response && response.org.repo && response.org.repo.threads) || [];
-				const oldThreads = this._threads.reduce((threads, thread) => {
-					threads.set(thread.id, thread);
-					return threads;
-				}, new Map<number, ThreadComments>());
-
 				// Although we are updating this._threads here, we don't fire
 				// threadsDidChange until the display ranges have updated.
-				this._threads = threads
-					.map(thread => {
-						const oldThread = oldThreads.get(thread.id);
-						if (oldThread) {
-							// Reuse the existing thread so we save client state like draft replies and event listeners.
-							oldThread.comments = thread.comments.map(c => new Comment(c));
-							return oldThread;
-						}
-						return this.instantiationService.createInstance(ThreadComments, thread, this.git);
-					})
-					.sort((left: ThreadComments, right: ThreadComments) => {
-						// Most recent comment timestamp descending.
-						return right.mostRecentComment.createdAt.getTime() - left.mostRecentComment.createdAt.getTime();
-					});
+				this._threads = this.instantiationService.invokeFunction(updatedThreads, this.git, this._threads, threads);
 				return this.updateDisplayRanges();
 			});
 
@@ -379,6 +430,34 @@ export class FileComments extends Disposable implements IFileComments {
 				this.didChangeThreads.fire();
 			});
 	}
+}
+
+/**
+ * Returns an array of threads that corresponds to newThreads.
+ * If a thread already exists in oldThreads, then that thread is reused
+ * and updated so that listener relationships are maintained.
+ */
+function updatedThreads(accessor: ServicesAccessor, git: Git, oldThreads: ThreadComments[], newThreads: GQL.IThread[]): ThreadComments[] {
+	const instantiationService = accessor.get(IInstantiationService);
+	const oldThreadsById = oldThreads.reduce((threads, thread) => {
+		threads.set(thread.id, thread);
+		return threads;
+	}, new Map<number, ThreadComments>());
+
+	return newThreads
+		.map(thread => {
+			const oldThread = oldThreadsById.get(thread.id);
+			if (oldThread) {
+				// Reuse the existing thread so we save client state like draft replies and event listeners.
+				oldThread.comments = thread.comments.map(c => new Comment(c));
+				return oldThread;
+			}
+			return instantiationService.createInstance(ThreadComments, thread, git);
+		})
+		.sort((left: ThreadComments, right: ThreadComments) => {
+			// Most recent comment timestamp descending.
+			return right.mostRecentComment.createdAt.getTime() - left.mostRecentComment.createdAt.getTime();
+		});
 }
 
 /**

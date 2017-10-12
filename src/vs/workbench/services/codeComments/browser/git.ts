@@ -128,7 +128,7 @@ export class Git {
 			return TPromise.wrapError(new Error(`no scm provider in context ${this.fileUri.toString()}`));
 		}
 		if (repository.provider.contextValue !== 'git') {
-			return TPromise.wrapError(new Error(`only git is supported; got ${repository.provider.contextValue}`));
+			return TPromise.wrapError(new Error(`only git is supported; got ${repository.provider.contextValue} for ${this.fileUri.toString()}`));
 		}
 		return repository.provider.executeCommand(params);
 	}

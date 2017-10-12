@@ -24,6 +24,21 @@ export interface ICodeCommentsService {
 	 * Returns a model for the comments on a file.
 	 */
 	getFileComments(file: URI): IFileComments;
+
+	/**
+	 * Returns a model for the comments on a branch.
+	 */
+	getBranchComments(repo: URI, branch: string): IBranchComments;
+}
+
+/**
+ * Model for the comments on a branch.
+ */
+export interface IBranchComments extends IEventDisposable {
+	readonly threads: IThreadComments[];
+	readonly onDidChangeThreads: Event<void>;
+
+	refresh(): TPromise<void>;
 }
 
 /**

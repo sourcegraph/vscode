@@ -100,6 +100,7 @@ class MainThreadReviewProvider implements IReviewProvider {
 
 	get handle(): number { return this._handle; }
 	get label(): string { return this._label; }
+	get rootUri(): URI { return this._rootUri; }
 	get contextValue(): string { return this._contextValue; }
 
 	private _active = false;
@@ -121,6 +122,7 @@ class MainThreadReviewProvider implements IReviewProvider {
 		private _handle: number,
 		private _contextValue: string,
 		private _label: string,
+		private _rootUri: URI,
 		@IReviewService reviewService: IReviewService,
 		@ICommandService private commandService: ICommandService
 	) { }
@@ -254,8 +256,8 @@ export class MainThreadReview implements MainThreadReviewShape {
 		this._disposables = dispose(this._disposables);
 	}
 
-	$registerReviewControl(handle: number, id: string, label: string): void {
-		const provider = new MainThreadReviewProvider(this._proxy, handle, id, label, this.reviewService, this.commandService);
+	$registerReviewControl(handle: number, id: string, label: string, rootUri: string): void {
+		const provider = new MainThreadReviewProvider(this._proxy, handle, id, label, URI.parse(rootUri), this.reviewService, this.commandService);
 		const reviewItem = this.reviewService.registerReviewProvider(provider);
 		this._reviewItems[handle] = reviewItem;
 	}

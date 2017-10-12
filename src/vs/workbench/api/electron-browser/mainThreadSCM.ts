@@ -5,6 +5,7 @@
 
 'use strict';
 
+import { localize } from 'vs/nls';
 import { TPromise } from 'vs/base/common/winjs.base';
 import URI from 'vs/base/common/uri';
 import Event, { Emitter } from 'vs/base/common/event';
@@ -16,6 +17,9 @@ import { ICommandService } from 'vs/platform/commands/common/commands';
 import { ExtHostContext, MainThreadSCMShape, ExtHostSCMShape, SCMProviderFeatures, SCMRawResourceSplices, SCMGroupFeatures, MainContext, IExtHostContext } from '../node/extHost.protocol';
 import { Command } from 'vs/editor/common/modes';
 import { extHostNamedCustomer } from 'vs/workbench/api/electron-browser/extHostCustomers';
+import { ICodeCommentsService, IBranchComments } from 'vs/editor/common/services/codeCommentsService';
+import { rtrim } from 'vs/base/common/strings';
+import * as path from 'path';
 
 class MainThreadSCMResourceCollection implements ISCMResourceCollection {
 
@@ -87,6 +91,10 @@ class MainThreadSCMProvider implements ISCMProvider {
 
 	private _groups: MainThreadSCMResourceGroup[] = [];
 	private _groupsByHandle: { [handle: number]: MainThreadSCMResourceGroup; } = Object.create(null);
+
+	protected get groups(): MainThreadSCMResourceGroup[] {
+		return this._groups;
+	}
 
 	get resources(): ISCMResourceGroup[] {
 		return this._groups
@@ -251,6 +259,118 @@ class MainThreadSCMProvider implements ISCMProvider {
 	}
 }
 
+/**
+ * This magic constant serves three purposes:
+ *   1. Prevent the comparison source control from actually being associated with any files.
+ *   2. Allow the main thread to strip this suffix to find out the "real" directory that this
+ *      compare control is associated with (this is necessary to inject comments as a group).
+ *   3. Achieve not terrible formatting for the name in the source control list.
+ *
+ * The same constant is also defined and used in the Git extension.
+ */
+const MAGIC_COMPARISON_ROOT_SUFFIX = '  ';
+
+/**
+ * This SCM provider injects comment threads as a group
+ * for comparison SCM providers.
+ */
+class CommentsSCMProvider extends MainThreadSCMProvider {
+
+	private commentsGroup: MainThreadSCMResourceGroup | undefined;
+	private trimmedRootUri: URI;
+	private branch: string | undefined;
+
+	constructor(
+		proxy: ExtHostSCMShape,
+		_handle: number,
+		_contextValue: string,
+		_label: string,
+		_rootUri: URI | undefined,
+		@ISCMService scmService: ISCMService,
+		@ICommandService commandService: ICommandService,
+		@ICodeCommentsService private commentsService: ICodeCommentsService,
+	) {
+		super(proxy, _handle, _contextValue, _label, _rootUri, scmService, commandService);
+		if (_contextValue === 'gitcomparison') {
+			this.trimmedRootUri = this.rootUri.with({ path: rtrim(this.rootUri.path, MAGIC_COMPARISON_ROOT_SUFFIX) });
+			this.commentsGroup = new MainThreadSCMResourceGroup(
+				this.handle,
+				-999, // something that will never be used by a real extension
+				this,
+				{ hideWhenEmpty: true },
+				localize('discussions', "Discussions"),
+				'discussions',
+			);
+			this.groups.push(this.commentsGroup);
+		}
+	}
+
+	$updateSourceControl(features: SCMProviderFeatures): void {
+		super.$updateSourceControl(features);
+		if (!this.commentsGroup) {
+			return;
+		}
+		const branch = this.revision && this.revision.specifier;
+		if (this.branch !== branch) {
+			this.branch = branch;
+			this.onDidChangeBranch();
+		}
+	}
+
+	$registerGroup(handle: number, id: string, label: string): void {
+		super.$registerGroup(handle, id, label);
+		if (!this.commentsGroup) {
+			return;
+		}
+		// Make sure comments group is always last.
+		const idx = this.groups.indexOf(this.commentsGroup);
+		this.groups.splice(idx, 1);
+		this.groups.push(this.commentsGroup);
+	}
+
+	private branchComments: IBranchComments;
+
+	private onDidChangeBranch(): void {
+		this.branchComments = dispose(this.branchComments);
+		if (!this.branch) {
+			return;
+		}
+		this.branchComments = this.commentsService.getBranchComments(this.trimmedRootUri, this.branch);
+		this.branchComments.refresh();
+		this.branchComments.onDidChangeThreads(this.onDidChangeThreads, this);
+		this.onDidChangeThreads();
+	}
+
+	private onDidChangeThreads(): void {
+		const basePath = path.basename(this.trimmedRootUri.toString());
+		const resources: ISCMResource[] = this.branchComments.threads.map(thread => {
+			const file = path.join(basePath, thread.file);
+			return {
+				resourceGroup: this.commentsGroup,
+				sourceUri: URI.parse(`comment://${file}/${thread.title}`),
+				decorations: {
+					strikeThrough: thread.archived,
+					faded: false,
+				},
+				open: (): TPromise<void> => {
+					// TODO(nick): open thread in diff view
+					return TPromise.as(undefined);
+				}
+			};
+		});
+		const collection = this.commentsGroup.resourceCollection;
+		collection.splice(0, collection.resources.length, resources);
+
+		// This is just to get our superclass to fire the appropriate event.
+		this.$spliceGroupResourceStates([]);
+	}
+
+	public dispose(): void {
+		this.branchComments = dispose(this.branchComments);
+		super.dispose();
+	}
+}
+
 @extHostNamedCustomer(MainContext.MainThreadSCM)
 export class MainThreadSCM implements MainThreadSCMShape {
 
@@ -263,6 +383,7 @@ export class MainThreadSCM implements MainThreadSCMShape {
 		extHostContext: IExtHostContext,
 		@IInstantiationService private instantiationService: IInstantiationService,
 		@ISCMService private scmService: ISCMService,
+		@ICodeCommentsService private commentsService: ICodeCommentsService,
 		@ICommandService private commandService: ICommandService
 	) {
 		this._proxy = extHostContext.get(ExtHostContext.ExtHostSCM);
@@ -281,7 +402,7 @@ export class MainThreadSCM implements MainThreadSCMShape {
 	}
 
 	$registerSourceControl(handle: number, id: string, label: string, rootUri: string | undefined): void {
-		const provider = new MainThreadSCMProvider(this._proxy, handle, id, label, rootUri && URI.parse(rootUri), this.scmService, this.commandService);
+		const provider = new CommentsSCMProvider(this._proxy, handle, id, label, rootUri && URI.parse(rootUri), this.scmService, this.commandService, this.commentsService);
 		const repository = this.scmService.registerSCMProvider(provider);
 		this._repositories[handle] = repository;
 

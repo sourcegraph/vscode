@@ -65,6 +65,7 @@ export interface IReviewProvider extends IDisposable {
 	readonly resources: IReviewResourceGroup[];
 	readonly onDidChangeResources: Event<void>;
 
+	readonly rootUri: URI;
 	readonly reviewCommands?: Command[];
 	readonly onDidChange: Event<void>;
 

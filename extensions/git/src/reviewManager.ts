@@ -5,7 +5,7 @@
 
 'use strict';
 
-import { Disposable, review, ReviewControl, SourceControlResourceGroup } from 'vscode';
+import { Uri, Disposable, review, ReviewControl, SourceControlResourceGroup } from 'vscode';
 import { Repository } from './repository';
 import { dispose } from './util';
 import { RefType } from './git';
@@ -92,7 +92,7 @@ class Review implements Disposable {
 	private changesGroup: SourceControlResourceGroup;
 
 	constructor(private repository: Repository, private ref: ReviewRef) {
-		this.reviewControl = this.register(review.createReviewControl(ref.id, ref.name));
+		this.reviewControl = this.register(review.createReviewControl(ref.id, ref.name, Uri.file(repository.root)));
 		this.changesGroup = this.register(this.reviewControl.createResourceGroup('changes', localize('changes', "Changes")));
 		this.reviewControl.onDidChangeActive(this.onDidChangeActive, this, this.disposables);
 	}

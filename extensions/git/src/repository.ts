@@ -623,6 +623,10 @@ export class Repository implements Disposable {
 		return await this.repository.getCommit(ref);
 	}
 
+	async getHEAD(): Promise<Ref> {
+		return await this.repository.getHEAD();
+	}
+
 	async getBranch(branch: string): Promise<Branch> {
 		return await this.repository.getBranch(branch);
 	}

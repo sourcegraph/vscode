@@ -5,10 +5,11 @@
 
 'use strict';
 
-import { Uri, scm, SourceControlResourceGroup, SourceControlResourceState, Disposable, window, workspace } from 'vscode';
+import { Uri, scm, SourceControlResourceGroup, SourceControlResourceState, Disposable, window, workspace, SourceControl } from 'vscode';
 import { dispose } from './util';
 import { throttle, sequentialize } from './decorators';
 import { Repository, Resource, GitResourceGroup, ResourceGroupType, Status } from './repository';
+import { Branch } from './git';
 import * as path from 'path';
 import * as nls from 'vscode-nls';
 
@@ -42,6 +43,17 @@ export class ComparisonArgs {
 	get rightLabel(): string { return this.right || localize('workingTree', "Working Tree"); }
 }
 
+/**
+ * This magic constant serves three purposes:
+ *   1. Prevent the comparison source control from actually being associated with any files.
+ *   2. Allow the main thread to strip this suffix to find out the "real" directory that this
+ *      compare control is associated with (this is necessary to inject comments as a group).
+ *   3. Achieve not terrible formatting for the name in the source control list.
+ *
+ * The same constant is also defined and used in the main thread.
+ */
+const MAGIC_COMPARISON_ROOT_SUFFIX = '  ';
+
 export class Comparison implements Disposable {
 
 	private _changesGroup: SourceControlResourceGroup;
@@ -49,6 +61,7 @@ export class Comparison implements Disposable {
 
 	private didWarnAboutLimit: boolean;
 	private disposables: Disposable[] = [];
+	private sourceControl: SourceControl;
 
 	// TODO(nick): figure this out intelligently?
 	private baseBranch = 'master';
@@ -56,14 +69,15 @@ export class Comparison implements Disposable {
 	constructor(
 		public readonly repository: Repository,
 	) {
-		const sourceControl = scm.createSourceControl('gitcomparison', `${path.basename(repository.root)} compare to ${this.baseBranch}`);
-		this.disposables.push(sourceControl);
+		const magicRoot = Uri.file(path.join(repository.root, MAGIC_COMPARISON_ROOT_SUFFIX));
+		this.sourceControl = scm.createSourceControl('gitcomparison', `${path.basename(repository.root)} compare to ${this.baseBranch}`, magicRoot);
+		this.disposables.push(this.sourceControl);
 
-		this._changesGroup = sourceControl.createResourceGroup('changes', localize('changes', "Changes"));
+		this._changesGroup = this.sourceControl.createResourceGroup('changes', localize('changes', "Changes"));
 		this.disposables.push(this._changesGroup);
 
 		// Suppress count to avoid double-counting changes.
-		sourceControl.count = 0;
+		this.sourceControl.count = 0;
 
 		this.disposables.push(repository.onDidChangeStatus(() => this.throttledUpdate()));
 	}
@@ -90,6 +104,19 @@ export class Comparison implements Disposable {
 		if (!mergeBase) {
 			throw new Error(`unable to determine merge-base for '${this.baseBranch}'`);
 		}
+
+		let head: Branch | undefined;
+		try {
+			head = await this.repository.getHEAD();
+			if (head.name) {
+				head = await this.repository.getBranch(head.name);
+			}
+		} catch (err) {
+			// noop
+		}
+
+		this.sourceControl.revision = head ? { rawSpecifier: 'HEAD', specifier: head.name, id: head.commit } : undefined;
+
 		const args = new ComparisonArgs(mergeBase);
 		const { resources, didHitLimit } = await getResourceStatesForComparison(this.repository, args, this.didWarnAboutLimit);
 		this.didWarnAboutLimit = didHitLimit;

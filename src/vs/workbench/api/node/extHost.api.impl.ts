@@ -493,8 +493,8 @@ export function createApiFactory(
 
 		// namespace: review
 		const review: typeof vscode.review = {
-			createReviewControl(id: string, label: string) {
-				return extHostReview.createReviewControl(extension, id, label);
+			createReviewControl(id: string, label: string, rootUri: vscode.Uri) {
+				return extHostReview.createReviewControl(extension, id, label, rootUri);
 			},
 		};
 

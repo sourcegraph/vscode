@@ -5846,8 +5846,9 @@ declare module 'vscode' {
 		 * Creates a new [review control](#ReviewControl) instance.
 		 * @param id An `id` for the review control.
 		 * @param label A human-readable string for the review control.
+		 * @param rootUri A Uri of the root of the review control. Eg: `Uri.parse(workspaceRoot)`.
 		 */
-		export function createReviewControl(id: string, label: string): ReviewControl;
+		export function createReviewControl(id: string, label: string, rootUri: Uri): ReviewControl;
 	}
 
 	/**
