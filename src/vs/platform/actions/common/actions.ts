@@ -57,6 +57,7 @@ export class MenuId {
 	static readonly Review = new MenuId();
 	static readonly ReviewResourceGroupContext = new MenuId();
 	static readonly ReviewResourceContext = new MenuId();
+	static readonly SCMChangeContext = new MenuId();
 	static readonly CommandPalette = new MenuId();
 	static readonly ViewTitle = new MenuId();
 	static readonly ViewItemContext = new MenuId();

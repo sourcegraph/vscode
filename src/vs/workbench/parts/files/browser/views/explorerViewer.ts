@@ -116,14 +116,8 @@ export class FileDataSource implements IDataSource {
 
 				return stat.children;
 			}, (e: any) => {
-				stat.exists = false;
 				stat.hasChildren = false;
-				if (!stat.isRoot) {
-					this.messageService.show(Severity.Error, e);
-				} else {
-					// We render the roots that do not exist differently, nned to do a refresh
-					tree.refresh(stat, false);
-				}
+				this.messageService.show(Severity.Error, e);
 
 				return []; // we could not resolve any children because of an error
 			});
@@ -303,7 +297,8 @@ export class FileRenderer implements IRenderer {
 		@IMessageService private messageService: IMessageService,
 		@ISCMService private scmService: ISCMService,
 		@ICommandService private commandService: ICommandService,
-		@IThemeService private themeService: IThemeService
+		@IThemeService private themeService: IThemeService,
+		@IConfigurationService private configurationService: IConfigurationService
 	) {
 		this.state = state;
 	}
@@ -352,13 +347,18 @@ export class FileRenderer implements IRenderer {
 
 		// File Label
 		if (!editableData) {
-			templateData.label.element.style.display = 'block';
+			templateData.label.element.style.display = 'flex';
 			const extraClasses = ['explorer-item'];
-			if (!stat.exists && stat.isRoot) {
+			if (stat.nonexistentRoot) {
 				extraClasses.push('nonexistent-root');
 			}
-			templateData.label.setFile(stat.resource, { hidePath: true, fileKind: stat.isRoot ? FileKind.ROOT_FOLDER : stat.isDirectory ? FileKind.FOLDER : FileKind.FILE, extraClasses });
-
+			templateData.label.setFile(stat.resource, {
+				hidePath: true,
+				title: stat.nonexistentRoot ? nls.localize('canNotResolve', "Can not resolve folder {0}", stat.resource.toString()) : undefined,
+				fileKind: stat.isRoot ? FileKind.ROOT_FOLDER : stat.isDirectory ? FileKind.FOLDER : FileKind.FILE,
+				extraClasses,
+				fileDecorations: this.configurationService.getConfiguration<IFilesConfiguration>().explorer.decorations
+			});
 			if (stat.isDirectory) {
 				templateData.actions.getContainer().getHTMLElement().style.display = '';
 				this.renderRootActions(templateData, stat);
@@ -1026,10 +1026,6 @@ export class FileDragAndDrop extends SimpleFileResourceDragAndDrop {
 			// Handle folders by adding to workspace if we are in workspace context
 			const folders = result.filter(result => result.stat.isDirectory).map(result => result.stat.resource);
 			if (folders.length > 0) {
-				if (this.environmentService.appQuality === 'stable') {
-					return void 0; // TODO@Ben multi root
-				}
-
 				if (this.contextService.getWorkbenchState() === WorkbenchState.WORKSPACE) {
 					return this.workspaceEditingService.addFolders(folders);
 				}

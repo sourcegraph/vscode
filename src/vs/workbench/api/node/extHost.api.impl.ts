@@ -82,8 +82,6 @@ export function createApiFactory(
 	extensionService: ExtHostExtensionService
 ): IExtensionApiFactory {
 
-	const mainThreadTelemetry = threadService.get(MainContext.MainThreadTelemetry);
-
 	// Addressable instances
 	const extHostHeapService = threadService.set(ExtHostContext.ExtHostHeapService, new ExtHostHeapService());
 	const extHostDocumentsAndEditors = threadService.set(ExtHostContext.ExtHostDocumentsAndEditors, new ExtHostDocumentsAndEditors(threadService));
@@ -141,29 +139,6 @@ export function createApiFactory(
 				console.warn(`Extension '${extension.id}' uses PROPOSED API which is subject to change and removal without notice.`);
 			}
 		}
-
-		const apiUsage = new class {
-			private _seen = new Set<string>();
-			publicLog(apiName: string) {
-				if (this._seen.has(apiName)) {
-					return undefined;
-				}
-				this._seen.add(apiName);
-				/* __GDPR__
-					"apiUsage" : {
-						"name" : { "classification": "SystemMetaData", "purpose": "FeatureInsight" },
-						"extension": { "classification": "SystemMetaData", "purpose": "FeatureInsight" },
-						"${include}": [
-							"${MainThreadData}"
-						]
-					}
-				*/
-				return mainThreadTelemetry.$publicLog('apiUsage', {
-					name: apiName,
-					extension: extension.id
-				});
-			}
-		};
 
 		// namespace: commands
 		const commands: typeof vscode.commands = {
@@ -348,9 +323,9 @@ export function createApiFactory(
 			get state() {
 				return extHostWindow.state;
 			},
-			onDidChangeWindowState: proposedApiFunction(extension, (listener, thisArg?, disposables?) => {
+			onDidChangeWindowState(listener, thisArg?, disposables?) {
 				return extHostWindow.onDidChangeWindowState(listener, thisArg, disposables);
-			}),
+			},
 			showInformationMessage(message, first, ...rest) {
 				return extHostMessageService.showMessage(extension, Severity.Info, message, first, rest);
 			},
@@ -363,9 +338,9 @@ export function createApiFactory(
 			showQuickPick(items: any, options: vscode.QuickPickOptions, token?: vscode.CancellationToken) {
 				return extHostQuickOpen.showQuickPick(items, options, token);
 			},
-			showWorkspaceFolderPick: proposedApiFunction(extension, (options: vscode.WorkspaceFolderPickOptions) => {
+			showWorkspaceFolderPick(options: vscode.WorkspaceFolderPickOptions) {
 				return extHostQuickOpen.showWorkspaceFolderPick(options);
-			}),
+			},
 			showInputBox(options?: vscode.InputBoxOptions, token?: vscode.CancellationToken) {
 				return extHostQuickOpen.showInput(options, token);
 			},
@@ -409,22 +384,18 @@ export function createApiFactory(
 		// namespace: workspace
 		const workspace: typeof vscode.workspace = {
 			get rootPath() {
-				apiUsage.publicLog('workspace#rootPath');
 				return extHostWorkspace.getPath();
 			},
 			set rootPath(value) {
 				throw errors.readonly();
 			},
 			getWorkspaceFolder(resource) {
-				apiUsage.publicLog('workspace#getWorkspaceFolder');
 				return extHostWorkspace.getWorkspaceFolder(resource);
 			},
 			get workspaceFolders() {
-				apiUsage.publicLog('workspace#workspaceFolders');
 				return extHostWorkspace.getWorkspaceFolders();
 			},
 			onDidChangeWorkspaceFolders: function (listener, thisArgs?, disposables?) {
-				apiUsage.publicLog('workspace#onDidChangeWorkspaceFolders');
 				return extHostWorkspace.onDidChangeWorkspace(listener, thisArgs, disposables);
 			},
 			asRelativePath: (pathOrUri, includeWorkspace) => {
@@ -455,7 +426,7 @@ export function createApiFactory(
 				if (typeof uriOrFileNameOrOptions === 'string') {
 					uriPromise = TPromise.as(URI.file(uriOrFileNameOrOptions));
 				} else if (uriOrFileNameOrOptions instanceof URI) {
-					uriPromise = TPromise.as(<URI>uriOrFileNameOrOptions);
+					uriPromise = TPromise.as(uriOrFileNameOrOptions);
 				} else if (!options || typeof options === 'object') {
 					uriPromise = extHostDocuments.createDocumentData(options);
 				} else {
@@ -488,7 +459,7 @@ export function createApiFactory(
 				return extHostConfiguration.onDidChangeConfiguration(listener, thisArgs, disposables);
 			},
 			getConfiguration: (section?: string, resource?: vscode.Uri): vscode.WorkspaceConfiguration => {
-				return extHostConfiguration.getConfiguration(section, <URI>resource);
+				return extHostConfiguration.getConfiguration(section, resource);
 			},
 			registerTextDocumentContentProvider(scheme: string, provider: vscode.TextDocumentContentProvider) {
 				return extHostDocumentContentProviders.registerTextDocumentContentProvider(scheme, provider);
@@ -513,22 +484,6 @@ export function createApiFactory(
 				return extHostSCM.getLastInputBox(extension);
 			},
 			createSourceControl(id: string, label: string, rootUri?: vscode.Uri) {
-				/* __GDPR__
-					"registerSCMProvider" : {
-						"extensionId" : { "classification": "SystemMetaData", "purpose": "FeatureInsight" },
-						"providerId": { "classification": "PublicNonPersonalData", "purpose": "FeatureInsight" },
-						"providerLabel": { "classification": "PublicPersonalData", "purpose": "FeatureInsight" },
-						"${include}": [
-							"${MainThreadData}"
-						]
-					}
-				*/
-				mainThreadTelemetry.$publicLog('registerSCMProvider', {
-					extensionId: extension.id,
-					providerId: id,
-					providerLabel: label,
-				});
-
 				return extHostSCM.createSourceControl(extension, id, label, rootUri);
 			},
 			getSourceControlForResource(resource: vscode.Uri) {
@@ -539,22 +494,6 @@ export function createApiFactory(
 		// namespace: review
 		const review: typeof vscode.review = {
 			createReviewControl(id: string, label: string) {
-				/* __GDPR__
-					"registerReviewProvider" : {
-						"extensionId" : { "classification": "SystemMetaData", "purpose": "FeatureInsight" },
-						"providerId": { "classification": "PublicNonPersonalData", "purpose": "FeatureInsight" },
-						"providerLabel": { "classification": "PublicPersonalData", "purpose": "FeatureInsight" },
-						"${include}": [
-							"${MainThreadData}"
-						]
-					}
-				*/
-				mainThreadTelemetry.$publicLog('registerReviewProvider', {
-					extensionId: extension.id,
-					providerId: id,
-					providerLabel: label,
-				});
-
 				return extHostReview.createReviewControl(extension, id, label);
 			},
 		};

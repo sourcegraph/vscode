@@ -431,8 +431,6 @@ export class CodeMenu {
 		this.setOpenRecentMenu(openRecentMenu);
 		const openRecent = new MenuItem({ label: this.mnemonicLabel(nls.localize({ key: 'miOpenRecent', comment: ['&& denotes a mnemonic'] }, "Open &&Recent")), submenu: openRecentMenu, enabled: openRecentMenu.items.length > 0 });
 
-		const isMultiRootEnabled = (product.quality !== 'stable'); // TODO@Ben multi root
-
 		const saveWorkspaceAs = this.createMenuItem(nls.localize({ key: 'miSaveWorkspaceAs', comment: ['&& denotes a mnemonic'] }, "&&Save Workspace As..."), 'workbench.action.saveWorkspaceAs');
 		this.exportWorkspace = this.createMenuItem(nls.localize({ key: 'miExportWorkspace', comment: ['&& denotes a mnemonic'] }, "&&Export Workspace..."), 'workbench.action.exportWorkspace');
 		const addFolder = this.createMenuItem(nls.localize({ key: 'miAddFolderToWorkspace', comment: ['&& denotes a mnemonic'] }, "&&Add Folder to Workspace..."), 'workbench.action.addRootFolder');
@@ -466,12 +464,12 @@ export class CodeMenu {
 			isMacintosh ? open : null,
 			!isMacintosh ? openFile : null,
 			!isMacintosh ? openFolder : null,
-			isMultiRootEnabled ? openWorkspace : null,
+			openWorkspace,
 			openRecent,
-			isMultiRootEnabled ? __separator__() : null,
-			isMultiRootEnabled ? addFolder : null,
-			isMultiRootEnabled ? saveWorkspaceAs : null,
-			isMultiRootEnabled ? this.exportWorkspace : null,
+			__separator__(),
+			addFolder,
+			saveWorkspaceAs,
+			this.exportWorkspace,
 			__separator__(),
 			saveFile,
 			saveFileAs,

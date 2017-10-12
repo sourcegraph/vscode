@@ -13,6 +13,7 @@ import { IDisposable } from 'vs/base/common/lifecycle';
 import { Command } from 'vs/editor/common/modes';
 import { ICommandService } from 'vs/platform/commands/common/commands';
 import { localize } from 'vs/nls';
+import { ColorIdentifier } from 'vs/platform/theme/common/colorRegistry';
 
 export interface IBaselineResourceProvider {
 	getBaselineResource(resource: URI): TPromise<URI>;
@@ -26,6 +27,7 @@ export interface ISCMResourceDecorations {
 	tooltip?: string;
 	strikeThrough?: boolean;
 	faded?: boolean;
+	color?: ColorIdentifier;
 }
 
 export interface ISCMResourceSplice {
@@ -171,27 +173,4 @@ export interface ISCMService {
 	 * creation/registration.
 	 */
 	getRepositoryForResource(resource: URI): ISCMRepository | undefined;
-}
-
-/**
- * Sets the revision of the specified SCM provider (using its setRevisionCommand). If no
- * revision is provided, the SCM provider will present the user with a quickopen to select
- * a revision.
- */
-export function setSCMProviderRevision(
-	commandService: ICommandService,
-	provider: ISCMProvider,
-	revision?: ISCMRevision,
-): TPromise<void> {
-	if (!provider.setRevisionCommand) {
-		return TPromise.wrapError(new Error(localize('noSetRevisionCommandForFolderSCMProvider', "The SCM provider does not support changing the revision.")));
-	}
-
-	const id = provider.setRevisionCommand.id;
-	let args = provider.setRevisionCommand.arguments || [];
-	if (revision) {
-		args = args.concat(revision);
-	}
-
-	return commandService.executeCommand(id, ...args);
 }

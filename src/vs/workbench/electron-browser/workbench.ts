@@ -106,6 +106,8 @@ import { IWorkspaceEditingService } from 'vs/workbench/services/workspace/common
 import { WorkspaceEditingService } from 'vs/workbench/services/workspace/node/workspaceEditingService';
 import { IWorkspaceSharingService } from 'vs/workbench/services/workspace/common/workspaceSharing';
 import { WorkspaceSharingService } from 'vs/workbench/services/workspace/node/workspaceSharingService';
+import { FileDecorationsService } from 'vs/workbench/services/decorations/browser/decorationsService';
+import { IResourceDecorationsService } from 'vs/workbench/services/decorations/browser/decorations';
 import URI from 'vs/base/common/uri';
 // tslint:disable-next-line:import-patterns
 import { ModalPart } from 'vs/workbench/parts/modal/modalPart';
@@ -643,6 +645,9 @@ export class Workbench implements IPartService {
 
 		// Text File Service
 		serviceCollection.set(ITextFileService, new SyncDescriptor(TextFileService));
+
+		// File Decorations
+		serviceCollection.set(IResourceDecorationsService, new SyncDescriptor(FileDecorationsService));
 
 		// SCM Service
 		serviceCollection.set(ISCMService, new SyncDescriptor(SCMService));

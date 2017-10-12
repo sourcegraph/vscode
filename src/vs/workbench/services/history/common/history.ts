@@ -32,11 +32,6 @@ export interface IHistoryService {
 	reopenLastClosedEditor(): void;
 
 	/**
-	 * Add an entry to the navigation stack of the history.
-	 */
-	add(input: IEditorInput, selection?: ITextEditorSelection): void;
-
-	/**
 	 * Go forward or back in history.
 	 *
 	 * @param offset positive number for forward, negative number for back

@@ -43,7 +43,6 @@ export class BaseThreadCommentsWidget extends PeekViewWidget {
 	}
 
 	protected _fillBody(containerElement: HTMLElement): void {
-		super._fillBody(containerElement);
 		this.setCssClass('thread-comments-zone-widget');
 
 		// Set tabindex so it can handle focus.
