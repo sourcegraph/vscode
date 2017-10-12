@@ -35,7 +35,7 @@ import { LocalExtensionType, IExtensionManagementService } from 'vs/platform/ext
 import { InstallVSIXAction } from 'vs/workbench/parts/extensions/electron-browser/extensionsActions';
 import { ExtensionsInput } from 'vs/workbench/parts/extensions/common/extensionsInput';
 import { ExtensionsListView, InstalledExtensionsView, RecommendedExtensionsView } from './extensionsViews';
-import { OpenGlobalSettingsAction } from 'vs/workbench/parts/preferences/browser/preferencesActions';
+import { OpenUserSettingsAction } from 'vs/workbench/parts/preferences/browser/preferencesActions';
 import { IProgressService } from 'vs/platform/progress/common/progress';
 import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { IEditorGroupService } from 'vs/workbench/services/group/common/groupService';
@@ -380,7 +380,7 @@ export class ExtensionsViewlet extends PersistentViewsViewlet implements IExtens
 		if (/ECONNREFUSED/.test(message)) {
 			const error = createError(localize('suggestProxyError', "Marketplace returned 'ECONNREFUSED'. Please check the 'http.proxy' setting."), {
 				actions: [
-					this.instantiationService.createInstance(OpenGlobalSettingsAction, OpenGlobalSettingsAction.ID, OpenGlobalSettingsAction.LABEL),
+					this.instantiationService.createInstance(OpenUserSettingsAction, OpenUserSettingsAction.ID, OpenUserSettingsAction.LABEL),
 					CloseAction
 				]
 			});

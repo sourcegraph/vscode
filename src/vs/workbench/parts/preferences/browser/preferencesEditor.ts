@@ -237,6 +237,9 @@ export class PreferencesEditor extends BaseEditor {
 	}
 
 	private getSettingsConfigurationTarget(resource: URI): ConfigurationTarget {
+		if (this.preferencesService.organizationSettingsResource.toString() === resource.toString()) {
+			return ConfigurationTarget.ORGANIZATION;
+		}
 		if (this.preferencesService.userSettingsResource.toString() === resource.toString()) {
 			return ConfigurationTarget.USER;
 		}
@@ -254,6 +257,9 @@ export class PreferencesEditor extends BaseEditor {
 	}
 
 	private getSettingsConfigurationTargetUri(resource: URI): URI {
+		if (this.preferencesService.organizationSettingsResource.toString() === resource.toString()) {
+			return resource;
+		}
 		if (this.preferencesService.userSettingsResource.toString() === resource.toString()) {
 			return resource;
 		}
@@ -901,6 +907,8 @@ class SettingsEditorContribution extends AbstractSettingsEditorContribution impl
 				.then(([defaultSettingsModel, settingsModel]) => {
 					if (settingsModel instanceof SettingsEditorModel && this.editor.getModel()) {
 						switch (settingsModel.configurationTarget) {
+							case ConfigurationTarget.ORGANIZATION:
+								return this.instantiationService.createInstance(UserSettingsRenderer, this.editor, settingsModel, defaultSettingsModel);
 							case ConfigurationTarget.USER:
 								return this.instantiationService.createInstance(UserSettingsRenderer, this.editor, settingsModel, defaultSettingsModel);
 							case ConfigurationTarget.WORKSPACE:
@@ -925,6 +933,10 @@ class SettingsEditorContribution extends AbstractSettingsEditorContribution impl
 		const model = this.editor.getModel();
 		if (!model) {
 			return false;
+		}
+
+		if (this.preferencesService.organizationSettingsResource && this.preferencesService.organizationSettingsResource.toString() === model.uri.toString()) {
+			return true;
 		}
 
 		if (this.preferencesService.userSettingsResource && this.preferencesService.userSettingsResource.toString() === model.uri.toString()) {

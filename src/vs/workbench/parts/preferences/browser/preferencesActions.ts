@@ -16,10 +16,10 @@ import { IWorkspaceContextService, WorkbenchState, IWorkspaceFolder } from 'vs/p
 import { ICommandService } from 'vs/platform/commands/common/commands';
 import { PICK_WORKSPACE_FOLDER_COMMAND } from 'vs/workbench/browser/actions/workspaceActions';
 
-export class OpenGlobalSettingsAction extends Action {
+export class OpenUserSettingsAction extends Action {
 
-	public static ID = 'workbench.action.openGlobalSettings';
-	public static LABEL = nls.localize('openGlobalSettings', "Open User Settings");
+	public static ID = 'workbench.action.openUserSettings';
+	public static LABEL = nls.localize('openUserSettings', "Open User Settings");
 
 	constructor(
 		id: string,
@@ -30,9 +30,27 @@ export class OpenGlobalSettingsAction extends Action {
 	}
 
 	public run(event?: any): TPromise<any> {
-		return this.preferencesService.openGlobalSettings();
+		return this.preferencesService.openUserSettings();
 	}
 }
+
+export class OpenOrganizationSettingsAction extends Action {
+	public static ID = 'workbench.action.openOrganizationSettings';
+	public static LABEL = nls.localize('openOrganizationSettings', "Open Organization Settings");
+
+	constructor(
+		id: string,
+		label: string,
+		@IPreferencesService private preferencesService: IPreferencesService
+	) {
+		super(id, label);
+	}
+
+	public run(event?: any): TPromise<any> {
+		return this.preferencesService.openOrganizationSettings();
+	}
+}
+
 
 export class OpenGlobalKeybindingsAction extends Action {
 

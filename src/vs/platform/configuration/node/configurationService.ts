@@ -20,6 +20,7 @@ export class ConfigurationService<T> extends Disposable implements IConfiguratio
 	_serviceBrand: any;
 
 	private _configuration: Configuration<T>;
+	private organizationConfigModelWatcher: ConfigWatcher<ConfigurationModel<T>>;
 	private userConfigModelWatcher: ConfigWatcher<ConfigurationModel<T>>;
 
 	private _onDidUpdateConfiguration: Emitter<IConfigurationServiceEvent> = this._register(new Emitter<IConfigurationServiceEvent>());
@@ -29,6 +30,15 @@ export class ConfigurationService<T> extends Disposable implements IConfiguratio
 		@IEnvironmentService environmentService: IEnvironmentService
 	) {
 		super();
+
+		this.organizationConfigModelWatcher = new ConfigWatcher(environmentService.appOrganizationSettingsPath, {
+			changeBufferDelay: 300, onError: error => onUnexpectedError(error), defaultConfig: new CustomConfigurationModel<T>(null, environmentService.appOrganizationSettingsPath), parse: (content: string, parseErrors: any[]) => {
+				const organizationConfigModel = new CustomConfigurationModel<T>(content, environmentService.appOrganizationSettingsPath);
+				parseErrors = [...organizationConfigModel.errors];
+				return organizationConfigModel;
+			}
+		});
+		this._register(this.organizationConfigModelWatcher);
 
 		this.userConfigModelWatcher = new ConfigWatcher(environmentService.appSettingsPath, {
 			changeBufferDelay: 300, onError: error => onUnexpectedError(error), defaultConfig: new CustomConfigurationModel<T>(null, environmentService.appSettingsPath), parse: (content: string, parseErrors: any[]) => {
@@ -40,6 +50,7 @@ export class ConfigurationService<T> extends Disposable implements IConfiguratio
 		this._register(this.userConfigModelWatcher);
 
 		// Listeners
+		this._register(this.organizationConfigModelWatcher.onDidUpdateConfiguration(() => this.onConfigurationChange(ConfigurationSource.Organization)));
 		this._register(this.userConfigModelWatcher.onDidUpdateConfiguration(() => this.onConfigurationChange(ConfigurationSource.User)));
 		this._register(Registry.as<IConfigurationRegistry>(Extensions.Configuration).onDidRegisterConfiguration(() => this.onConfigurationChange(ConfigurationSource.Default)));
 	}
@@ -53,17 +64,34 @@ export class ConfigurationService<T> extends Disposable implements IConfiguratio
 
 		const cache = this.configuration();
 
+		let sourceConfig: any;
+		switch (source) {
+			case ConfigurationSource.Default:
+				sourceConfig = cache.defaults.contents;
+				break;
+			case ConfigurationSource.User:
+				sourceConfig = cache.user.contents;
+				break;
+			case ConfigurationSource.Organization:
+				sourceConfig = cache.organization.contents;
+				break;
+			default:
+				throw new Error(`Unhandled Configuration Source: ${ConfigurationSource[source]}`);
+		}
+
 		this._onDidUpdateConfiguration.fire({
 			source,
-			sourceConfig: source === ConfigurationSource.Default ? cache.defaults.contents : cache.user.contents
+			sourceConfig
 		});
 	}
 
 	public reloadConfiguration<C>(section?: string): TPromise<C> {
 		return new TPromise<C>(c => {
-			this.userConfigModelWatcher.reload(() => {
-				this.reset(); // reset our caches
-				c(this.getConfiguration<C>(section));
+			this.organizationConfigModelWatcher.reload(() => {
+				this.userConfigModelWatcher.reload(() => {
+					this.reset(); // reset our caches
+					c(this.getConfiguration<C>(section));
+				});
 			});
 		});
 	}
@@ -94,7 +122,8 @@ export class ConfigurationService<T> extends Disposable implements IConfiguratio
 
 	private consolidateConfigurations(): Configuration<T> {
 		const defaults = new DefaultConfigurationModel<T>();
+		const organization = this.organizationConfigModelWatcher.getConfig();
 		const user = this.userConfigModelWatcher.getConfig();
-		return new Configuration(defaults, user);
+		return new Configuration(defaults, organization, user);
 	}
 }

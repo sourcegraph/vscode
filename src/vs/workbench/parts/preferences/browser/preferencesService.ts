@@ -108,6 +108,10 @@ export class PreferencesService extends Disposable implements IPreferencesServic
 	readonly defaultKeybindingsResource = URI.from({ scheme: network.Schemas.vscode, authority: 'defaultsettings', path: '/keybindings.json' });
 	private readonly workspaceConfigSettingsResource = URI.from({ scheme: network.Schemas.vscode, authority: 'settings', path: '/workspaceSettings.json' });
 
+	get organizationSettingsResource(): URI {
+		return this.getEditableSettingsURI(ConfigurationTarget.ORGANIZATION);
+	}
+
 	get userSettingsResource(): URI {
 		return this.getEditableSettingsURI(ConfigurationTarget.USER);
 	}
@@ -170,6 +174,10 @@ export class PreferencesService extends Disposable implements IPreferencesServic
 			return promise;
 		}
 
+		if (this.getEditableSettingsURI(ConfigurationTarget.ORGANIZATION).toString() === uri.toString()) {
+			return this.createEditableSettingsEditorModel(ConfigurationTarget.ORGANIZATION, uri);
+		}
+
 		if (this.getEditableSettingsURI(ConfigurationTarget.USER).toString() === uri.toString()) {
 			return this.createEditableSettingsEditorModel(ConfigurationTarget.USER, uri);
 		}
@@ -186,7 +194,11 @@ export class PreferencesService extends Disposable implements IPreferencesServic
 		return TPromise.wrap<IPreferencesEditorModel<any>>(null);
 	}
 
-	openGlobalSettings(): TPromise<IEditor> {
+	openOrganizationSettings(): TPromise<IEditor> {
+		return this.doOpenSettings(ConfigurationTarget.ORGANIZATION, this.organizationSettingsResource);
+	}
+
+	openUserSettings(): TPromise<IEditor> {
 		return this.doOpenSettings(ConfigurationTarget.USER, this.userSettingsResource);
 	}
 
@@ -248,7 +260,7 @@ export class PreferencesService extends Disposable implements IPreferencesServic
 	}
 
 	configureSettingsForLanguage(language: string): void {
-		this.openGlobalSettings()
+		this.openUserSettings()
 			.then(editor => {
 				const codeEditor = getCodeEditor(editor);
 				this.getPosition(language, codeEditor)
@@ -318,6 +330,8 @@ export class PreferencesService extends Disposable implements IPreferencesServic
 
 	private getEditableSettingsURI(configurationTarget: ConfigurationTarget, resource?: URI): URI {
 		switch (configurationTarget) {
+			case ConfigurationTarget.ORGANIZATION:
+				return URI.file(this.environmentService.appOrganizationSettingsPath);
 			case ConfigurationTarget.USER:
 				return URI.file(this.environmentService.appSettingsPath);
 			case ConfigurationTarget.WORKSPACE:

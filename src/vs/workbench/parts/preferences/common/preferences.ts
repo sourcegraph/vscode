@@ -69,6 +69,7 @@ export interface IPreferencesService {
 
 	defaultSettingsResource: URI;
 	defaultResourceSettingsResource: URI;
+	organizationSettingsResource: URI;
 	userSettingsResource: URI;
 	workspaceSettingsResource: URI;
 	getFolderSettingsResource(resource: URI): URI;
@@ -76,7 +77,8 @@ export interface IPreferencesService {
 	resolveContent(uri: URI): TPromise<string>;
 	createPreferencesEditorModel<T>(uri: URI): TPromise<IPreferencesEditorModel<T>>;
 
-	openGlobalSettings(): TPromise<IEditor>;
+	openOrganizationSettings(): TPromise<IEditor>;
+	openUserSettings(): TPromise<IEditor>;
 	openWorkspaceSettings(): TPromise<IEditor>;
 	openFolderSettings(folder: URI): TPromise<IEditor>;
 	switchSettings(target: ConfigurationTarget, resource: URI): TPromise<void>;
@@ -102,6 +104,8 @@ export interface IKeybindingsEditor extends IEditor {
 
 export function getSettingsTargetName(target: ConfigurationTarget, resource: URI, workspaceContextService: IWorkspaceContextService): string {
 	switch (target) {
+		case ConfigurationTarget.ORGANIZATION:
+			return localize('organizationSettingsTarget', "Organization Settings");
 		case ConfigurationTarget.USER:
 			return localize('userSettingsTarget', "User Settings");
 		case ConfigurationTarget.WORKSPACE:

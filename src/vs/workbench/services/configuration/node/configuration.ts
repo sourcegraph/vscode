@@ -41,6 +41,7 @@ import product from 'vs/platform/node/product';
 import pkg from 'vs/platform/node/package';
 
 const defaultSettingsSchemaId = 'vscode://schemas/settings/default';
+const organizationSettingsSchemaID = 'vscode://schemas/settings/organization';
 const userSettingsSchemaId = 'vscode://schemas/settings/user';
 const workspaceSettingsSchemaId = 'vscode://schemas/settings/workspace';
 const folderSettingsSchemaId = 'vscode://schemas/settings/folder';
@@ -90,8 +91,8 @@ const configurationEntrySchema: IJSONSchema = {
 								enum: ['window', 'resource'],
 								default: 'window',
 								enumDescriptions: [
-									nls.localize('scope.window.description', "Window specific configuration, which can be configured in the User or Workspace settings."),
-									nls.localize('scope.resource.description', "Resource specific configuration, which can be configured in the User, Workspace or Folder settings.")
+									nls.localize('scope.window.description', "Window specific configuration, which can be configured in the Organization, User or Workspace settings."),
+									nls.localize('scope.resource.description', "Resource specific configuration, which can be configured in the Organization, User, Workspace or Folder settings.")
 								],
 								description: nls.localize('scope.description', "Scope in which the configuration is applicable. Available scopes are `window` and `resource`.")
 							}
@@ -505,6 +506,7 @@ export class WorkspaceService extends Disposable implements IWorkspaceConfigurat
 		if (this.workspace) {
 
 			contributionRegistry.registerSchema(defaultSettingsSchemaId, settingsSchema);
+			contributionRegistry.registerSchema(organizationSettingsSchemaID, settingsSchema);
 			contributionRegistry.registerSchema(userSettingsSchemaId, settingsSchema);
 
 			if (WorkbenchState.WORKSPACE === this.getWorkbenchState()) {
@@ -597,6 +599,7 @@ export class WorkspaceService extends Disposable implements IWorkspaceConfigurat
 
 	private triggerConfigurationChange(): void {
 		if (this.getWorkbenchState() === WorkbenchState.EMPTY || this.workspace.folders.length === 0) {
+			this._onDidUpdateConfiguration.fire({ source: ConfigurationSource.Organization, sourceConfig: this._configuration.organization.contents });
 			this._onDidUpdateConfiguration.fire({ source: ConfigurationSource.User, sourceConfig: this._configuration.user.contents });
 		} else {
 			this._onDidUpdateConfiguration.fire({ source: ConfigurationSource.Workspace, sourceConfig: this.workspace.folders.length ? this._configuration.getFolderConfigurationModel(this.workspace.folders[0].uri).contents : void 0 }); // TODO@Sandeep debt?
@@ -855,7 +858,7 @@ function resolveStat(resource: URI): TPromise<IStat> {
 export class Configuration<T> extends BaseConfiguration<T> {
 
 	constructor(private _baseConfiguration: BaseConfiguration<T>, workspaceConfiguration: ConfigurationModel<T>, protected folders: StrictResourceMap<FolderConfigurationModel<T>>, workspace: Workspace) {
-		super(_baseConfiguration.defaults, _baseConfiguration.user, workspaceConfiguration, folders, workspace);
+		super(_baseConfiguration.defaults, _baseConfiguration.organization, _baseConfiguration.user, workspaceConfiguration, folders, workspace);
 	}
 
 	updateBaseConfiguration(baseConfiguration: BaseConfiguration<T>): boolean {
@@ -863,6 +866,7 @@ export class Configuration<T> extends BaseConfiguration<T> {
 
 		this._baseConfiguration = baseConfiguration;
 		this._defaults = this._baseConfiguration.defaults;
+		this._organization = this._baseConfiguration.organization;
 		this._user = this._baseConfiguration.user;
 		this.merge();
 

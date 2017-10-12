@@ -444,7 +444,7 @@ export class SimpleConfigurationService implements IConfigurationService {
 	private _configuration: Configuration<any>;
 
 	constructor() {
-		this._configuration = new Configuration(new DefaultConfigurationModel(), new ConfigurationModel());
+		this._configuration = new Configuration(new DefaultConfigurationModel(), new ConfigurationModel(), new ConfigurationModel());
 	}
 
 	private configuration(): Configuration<any> {
