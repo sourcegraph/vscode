@@ -52,19 +52,20 @@ function setFolderCatalogProvider(host: string) {
 
 			return gitlab.repository(owner.owner, owner.name);
 		},
-		resolveLocalFolderResource(path: string): Thenable<vscode.Uri | null> {
-			return new Promise<string>((resolve, reject) => {
+		async resolveLocalFolderResource(path: string): Promise<vscode.Uri | null> {
+			let gitURL = await new Promise<string>((resolve, reject) => {
 				cp.exec('git ls-remote --get-url', { cwd: path }, (error, stdout, stderr) => resolve(stdout || ''));
-			}).then(gitURL => {
-				gitURL = decodeURIComponent(gitURL.trim()).replace(/\.git$/, '');
-				// TODO: Look if it needs adjusting for custom gitlab hosts
-				const match = gitURL.match(/gitlab.com[\/:]([^/]+)\/([^/]+)/);
-
-				if (match) {
-					return gitlab.nameAndOwnerToResource(match[1], match[2]);
-				}
-				return null;
 			});
+
+			gitURL = decodeURIComponent(gitURL.trim()).replace(/\.git$/, '');
+			// TODO: Look if it needs adjusting for custom gitlab hosts
+			const match = gitURL.match(/gitlab.com[\/:]([^/]+)\/([^/]+)/);
+
+			if (match) {
+				return gitlab.nameAndOwnerToResource(match[1], match[2]);
+			}
+
+			return null;
 		},
 		async search(query: string): Promise<vscode.CatalogFolder[]> {
 			const token = checkGitlabToken();
@@ -161,10 +162,6 @@ async function showCreateGitlabTokenWalkthrough(viewer: Gitlab, skipInfoMessage?
 			showErrorImmediately(localize('noUser', "Unable to retrieve user from GitLab."), viewer);
 			return false;
 		}
-
-		const userid = userinfo.id;
-
-		await vscode.workspace.getConfiguration('gitlab').update('userid', userid, vscode.ConfigurationTarget.Global);
 
 		// As last we need to set the catalog provider.
 		setFolderCatalogProvider(host);

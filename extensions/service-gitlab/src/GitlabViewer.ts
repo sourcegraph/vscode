@@ -17,15 +17,15 @@ export const GITLAB_SCHEME = 'gitlab';
 export class Gitlab {
 	private token: string;
 	private host: string;
-	private userid: number | undefined;
 
 	private repoRequest: Thenable<vscode.CatalogFolder[]> | null;
-
 	private userInfoRequest: Promise<UserInformation | null> | null;
 
 	constructor() {
 		// Pre-emptively fetch user related information
-		setTimeout(() => {
+		setTimeout(async () => {
+			await this.setAndValidateState();
+
 			this.repositories();
 		}, 2000);
 	}
@@ -35,7 +35,7 @@ export class Gitlab {
 	 * network request fails or there is no logged in user null is returned.
 	 */
 	public async user(): Promise<UserInformation | null> {
-		if (!this.validState()) {
+		if (!this.setAndValidateState()) {
 			this.clearCache();
 			return Promise.resolve(null);
 		}
@@ -81,12 +81,19 @@ export class Gitlab {
 	 * @param query 
 	 */
 	public async search(query: string): Promise<vscode.CatalogFolder[]> {
-		if (!this.validState()) {
+		const validState = await this.setAndValidateState();
+		if (!validState) {
+			return Promise.resolve([]);
+		}
+
+		const user = await this.user();
+
+		if (!user) {
 			return Promise.resolve([]);
 		}
 
 		const encodedQuery = encodeURIComponent(query);
-		const url = `/users/${this.userid}/projects?search=${encodedQuery}&order_by=last_activity_at`;
+		const url = `/users/${user.id}/projects?search=${encodedQuery}&order_by=last_activity_at`;
 
 		try {
 			const searchResult = await this.doGitlabRequest(this.host, this.token, url);
@@ -107,7 +114,8 @@ export class Gitlab {
 	 * internal cache for efficiency.
 	 */
 	public async repositories(): Promise<vscode.CatalogFolder[]> {
-		if (!this.validState()) {
+		const validState = await this.setAndValidateState();
+		if (!validState) {
 			this.clearCache();
 			return Promise.resolve([]);
 		}
@@ -116,7 +124,13 @@ export class Gitlab {
 			return this.repoRequest;
 		}
 
-		const url = `/users/${this.userid}/projects`;
+		const user = await this.user();
+
+		if (!user) {
+			return Promise.resolve([]);
+		}
+
+		const url = `/users/${user.id}/projects`;
 
 		try {
 			const data = await this.doGitlabRequest(this.host, this.token, url);
@@ -178,13 +192,12 @@ export class Gitlab {
 	}
 
 	/**
-	 * Returns true if you can do a request or use a cached request. This will return false when information
-	 * is missing or when information from the config does not match the information in this instance.
+	 * This function will set and validate the state of this instance. If a valid state cannot be set 
+	 * it will return false. It will check the token and the hostname.
 	 */
-	private validState(): boolean {
+	private async setAndValidateState(): Promise<boolean> {
 		const token = vscode.workspace.getConfiguration('gitlab').get<string>('token');
 		const host = vscode.workspace.getConfiguration('gitlab').get<string>('host');
-		const userid = vscode.workspace.getConfiguration('gitlab').get<number>('userid');
 
 		if (!token) {
 			return false;
@@ -194,6 +207,8 @@ export class Gitlab {
 			return false;
 		}
 
+		// These checks are here to prevent from using invalid tokens. This can happen when user
+		// changes the configuration file after the initial initialization; 
 		if (this.token && token !== this.token) {
 			return false;
 		}
@@ -202,13 +217,8 @@ export class Gitlab {
 			return false;
 		}
 
-		if (this.userid && userid !== this.userid) {
-			return false;
-		}
-
 		this.token = token;
 		this.host = host;
-		this.userid = userid;
 
 		return true;
 	}
