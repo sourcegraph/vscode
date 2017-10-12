@@ -11,8 +11,6 @@ import { createDecorator } from 'vs/platform/instantiation/common/instantiation'
 import Event from 'vs/base/common/event';
 import { IDisposable } from 'vs/base/common/lifecycle';
 import { Command } from 'vs/editor/common/modes';
-import { ICommandService } from 'vs/platform/commands/common/commands';
-import { localize } from 'vs/nls';
 import { ColorIdentifier } from 'vs/platform/theme/common/colorRegistry';
 
 export interface IBaselineResourceProvider {
