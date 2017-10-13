@@ -1586,8 +1586,11 @@ export class CommandCenter {
 		const [repoStdout, baseBranch] = await Promise.all([
 			// Try to use the current branch's remote URL
 			repository.executeCommand(['ls-remote', '--get-url']),
+			// Currently we don't consider the baseRevision parameter, compare providers always use master
+			// TODO once we handle different base branches let the user pick it
+			'master'
 			// Ask for the base branch
-			window.showQuickPick(baseBranchPicks, { placeHolder: localize('choose base branch', "Choose a base branch") })
+			// window.showQuickPick(baseBranchPicks, { placeHolder: localize('choose base branch', "Choose a base branch") })
 		]);
 
 		if (!baseBranch) {
