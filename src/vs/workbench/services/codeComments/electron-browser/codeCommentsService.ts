@@ -711,6 +711,7 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 	private submitData: TPromise<{
 		remoteURI: string,
 		file: string,
+		branch: string,
 		revision: string,
 		startLine: number,
 		endLine: number,
@@ -743,6 +744,7 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 		const remoteURI = git.getRemoteRepo();
 		const file = instantiationService.invokeFunction(getPathRelativeToRepo, model.uri);
 		const revision = git.getLastPushedRevision();
+		const branch = git.getBranch();
 		const codeSnippet = TPromise.join<any>([
 			remoteURI,
 			file,
@@ -767,14 +769,15 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 				return { range, rangeLength };
 			});
 
-		this.submitData = this.join([remoteURI, file, revision, codeSnippet])
-			.then(([remoteURI, file, revision, codeSnippet]) => {
+		this.submitData = this.join([remoteURI, file, revision, codeSnippet, branch])
+			.then(([remoteURI, file, revision, codeSnippet, branch]) => {
 				if (!codeSnippet) {
 					throw new Error(localize('emptyCommentRange', "Can not comment on code that has not been pushed."));
 				}
 				return {
 					remoteURI,
 					file,
+					branch,
 					revision,
 					startLine: codeSnippet.range.startLineNumber,
 					endLine: codeSnippet.range.endLineNumber,
@@ -792,8 +795,8 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 			});
 	}
 
-	private join<T1, T2, T3, T4>(promises: [PromiseLike<T1>, PromiseLike<T2>, PromiseLike<T3>, PromiseLike<T4>]): TPromise<[T1, T2, T3, T4]> {
-		return TPromise.join<any>(promises) as TPromise<[T1, T2, T3, T4]>;
+	private join<T1, T2, T3, T4, T5>(promises: [PromiseLike<T1>, PromiseLike<T2>, PromiseLike<T3>, PromiseLike<T4>, PromiseLike<T5>]): TPromise<[T1, T2, T3, T4, T5]> {
+		return TPromise.join<any>(promises) as TPromise<[T1, T2, T3, T4, T5]>;
 	}
 
 	private submittingPromise: TPromise<IThreadComments> | undefined;
@@ -821,6 +824,7 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 						orgID: $orgId,
 						remoteURI: $remoteURI,
 						file: $file,
+						branch: $branch,
 						revision: $revision,
 						startLine: $startLine,
 						endLine: $endLine,

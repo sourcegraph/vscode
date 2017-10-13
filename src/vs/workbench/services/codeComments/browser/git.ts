@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 'use strict';
 
-import { ISCMService } from 'vs/workbench/services/scm/common/scm';
+import { ISCMService, ISCMProvider } from 'vs/workbench/services/scm/common/scm';
 import URI from 'vs/base/common/uri';
 import { TPromise } from 'vs/base/common/winjs.base';
 
@@ -115,11 +115,15 @@ export class Git {
 			});
 	}
 
+	public getBranch(): TPromise<string> {
+		return this.getSCMProvider().then(provider => provider.revision && provider.revision.specifier);
+	}
+
 	private spawnPromiseTrim(params: Array<string>): TPromise<string> {
 		return this.spawnPromise(params).then(result => result.trim());
 	}
 
-	private spawnPromise(params: Array<string>): TPromise<string> {
+	private getSCMProvider(): TPromise<ISCMProvider> {
 		const repository = this.scmService.getRepositoryForResource(this.fileUri);
 		if (!repository) {
 			return TPromise.wrapError(new Error(`no repository in context ${this.fileUri.toString()}`));
@@ -130,6 +134,10 @@ export class Git {
 		if (repository.provider.contextValue !== 'git') {
 			return TPromise.wrapError(new Error(`only git is supported; got ${repository.provider.contextValue} for ${this.fileUri.toString()}`));
 		}
-		return repository.provider.executeCommand(params);
+		return TPromise.as(repository.provider);
+	}
+
+	private spawnPromise(params: Array<string>): TPromise<string> {
+		return this.getSCMProvider().then(provider => provider.executeCommand(params));
 	}
 }
