@@ -351,6 +351,7 @@ class CommentsSCMProvider extends MainThreadSCMProvider {
 				decorations: {
 					strikeThrough: thread.archived,
 					faded: false,
+					tooltip: '',
 				},
 				open: (): TPromise<void> => {
 					// TODO(nick): open thread in diff view
