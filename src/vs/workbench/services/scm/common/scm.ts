@@ -129,6 +129,9 @@ export interface ISCMProvider extends IDisposable {
 	getOriginalResource(uri: URI): TPromise<URI>;
 
 	/**
+	 * WARNING: TRY TO AVOID USING THIS METHOD.
+	 * USING IT MEANS WE ARE BREAKING THE SCM ABSTRACTION.
+	 *
 	 * Executes a raw SCM command.
 	 *
 	 * For example:
