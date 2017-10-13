@@ -95,7 +95,7 @@ export class AuthService extends Disposable implements IAuthService {
 				this.globalState.saveMemento();
 				this.didChangeCurrentUser.fire();
 			}));
-			this.memento[AuthService.CURRENT_USER_KEY] = user;
+			this.memento[AuthService.CURRENT_USER_KEY] = user.toMemento();
 		} else {
 			this.memento[AuthService.CURRENT_USER_KEY] = undefined;
 		}
@@ -249,6 +249,18 @@ class User extends Disposable implements IUser, UserMemento {
 			this.didChangeCurrentOrgMember.fire();
 			this.telemetryService.publicLog('CurrentOrgMemberChanged', this.getTelemetryData());
 		}
+	}
+
+	public toMemento(): UserMemento {
+		return {
+			id: this.id,
+			auth0Id: this.auth0Id,
+			username: this.username,
+			email: this.email,
+			avatarUrl: this.avatarUrl,
+			orgMemberships: this.orgMemberships,
+			currentOrgMember: this.currentOrgMember,
+		};
 	}
 
 	public getTelemetryData(): any {
