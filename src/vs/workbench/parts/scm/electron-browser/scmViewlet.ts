@@ -244,6 +244,19 @@ class MainPanel extends ViewletPanel {
 		this.list.setSelection([...selection.slice(0, index), ...selection.slice(index + 1)]);
 	}
 
+	/**
+	 * Selects and reveals a given repository
+	 */
+	select(repository: ISCMRepository): void {
+		const index = this.viewModel.repositories.indexOf(repository);
+		if (index === -1) {
+			return;
+		}
+		this.list.reveal(index);
+		this.list.setFocus([]);
+		this.list.setSelection([index]);
+	}
+
 	getSelection(): ISCMRepository[] {
 		return this.list.getSelectedElements();
 	}
@@ -976,6 +989,17 @@ export class SCMViewlet extends PanelViewlet implements IViewModel {
 		}
 
 		this.mainPanel.hide(repository);
+	}
+
+	/**
+	 * Selects and reveals a given repository in the main panel so it's shown as the only repository panel
+	 */
+	select(repository: ISCMRepository): void {
+		if (!this.mainPanel) {
+			return;
+		}
+
+		this.mainPanel.select(repository);
 	}
 
 	dispose(): void {

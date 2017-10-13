@@ -38,16 +38,29 @@ import { VIEWLET_ID as EXPLORER_VIEWLET_ID } from 'vs/workbench/parts/files/comm
 import { parseGitURL } from 'vs/workbench/services/workspace/node/workspaceSharingService';
 import { IConfigurationEditingService, ConfigurationTarget } from 'vs/workbench/services/configuration/common/configurationEditing';
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
+// tslint:disable-next-line:import-patterns
+import { VIEWLET_ID as SCM_VIEWLET_ID } from 'vs/workbench/parts/scm/common/scm';
+import { first } from 'vs/base/common/arrays';
+import { MAGIC_COMPARISON_ROOT_SUFFIX } from 'vs/workbench/api/electron-browser/mainThreadSCM';
+// tslint:disable-next-line:import-patterns
+import { SCMViewlet } from 'vs/workbench/parts/scm/electron-browser/scmViewlet';
 
-type HandledURI = {
+interface HandledURI {
 	repo?: string;
 	vcs?: 'git';
 	revision?: string;
+
+	/**
+	 * A branch name, commit ID, ...) to compare.
+	 * If set, link will go to a compare provider from `revision` to this `baseRevision`
+	 */
+	baseRevision?: string;
+
 	path?: string;
 	selection?: string | string[];
 	thread?: string;
 	cookie?: string;
-};
+}
 
 export class NavService extends Disposable implements INavService {
 
@@ -154,68 +167,80 @@ export class NavService extends Disposable implements INavService {
 
 		const root = await addFolderPromise;
 
-		// TODO(sqs): handle revision, need to avoid clobbering git state if != current revision
-		if (!query.path) {
-			return;
-		}
+		// If path is set, open editor
+		if (query.path) {
 
-		// TODO(sqs): wait for IPartService.joinCreation?
-		const input: IResourceInput = {
-			resource: URI.file(paths.join(root.fsPath, query.path)),
-			options: {
-				pinned: true,
-				revealIfVisible: true,
-				revealIfOpened: true,
-				revealInCenterIfOutsideViewport: true,
-			},
-		};
+			// TODO(sqs): wait for IPartService.joinCreation?
+			const input: IResourceInput = {
+				resource: URI.file(paths.join(root.fsPath, query.path)),
+				options: {
+					pinned: true,
+					revealIfVisible: true,
+					revealIfOpened: true,
+					revealInCenterIfOutsideViewport: true,
+				},
+			};
 
-		let selections: ISelection[] = [];
-		if (query.selection) {
-			let selectionStrings: string[];
-			if (types.isArray(query.selection)) {
-				selectionStrings = query.selection;
-			} else {
-				selectionStrings = query.selection.split(',');
+			let selections: ISelection[] = [];
+			if (query.selection) {
+				let selectionStrings: string[];
+				if (types.isArray(query.selection)) {
+					selectionStrings = query.selection;
+				} else {
+					selectionStrings = query.selection.split(',');
+				}
+
+				const ranges = selectionStrings.filter(s => !!s).map(parseSelection);
+				if (ranges.length) {
+					// Immediately open the first selection (after openEditor resolves, we'll
+					// set the other selections if there's more than 1).
+					input.options.selection = {
+						startLineNumber: ranges[0].startLineNumber,
+						startColumn: ranges[0].startColumn,
+						endLineNumber: ranges[0].endLineNumber,
+						endColumn: ranges[0].endColumn,
+					};
+				}
+
+				selections = ranges.map(sel => ({
+					selectionStartLineNumber: sel.startLineNumber,
+					selectionStartColumn: sel.startColumn,
+					positionLineNumber: sel.endLineNumber,
+					positionColumn: sel.endColumn,
+				} as ISelection));
 			}
 
-			const ranges = selectionStrings.filter(s => !!s).map(parseSelection);
-			if (ranges.length) {
-				// Immediately open the first selection (after openEditor resolves, we'll
-				// set the other selections if there's more than 1).
-				input.options.selection = {
-					startLineNumber: ranges[0].startLineNumber,
-					startColumn: ranges[0].startColumn,
-					endLineNumber: ranges[0].endLineNumber,
-					endColumn: ranges[0].endColumn,
-				};
+			const editor = await this.editorService.openEditor(input);
+			const control = getCodeEditor(editor);
+			if (!control) {
+				return;
 			}
 
-			selections = ranges.map(sel => ({
-				selectionStartLineNumber: sel.startLineNumber,
-				selectionStartColumn: sel.startColumn,
-				positionLineNumber: sel.endLineNumber,
-				positionColumn: sel.endColumn,
-			} as ISelection));
+			if (selections.length > 1) {
+				control.setSelections(selections);
+			}
+
+			const threadId = parseInt(query.thread, 10);
+			if (threadId) {
+				const codeCommentsContribution = control.getContribution(CODE_COMMENTS_CONTRIBUTION_ID);
+				codeCommentsContribution.restoreViewState({ openThreadIds: [threadId], revealThreadId: threadId });
+			}
 		}
 
-		const editor = await this.editorService.openEditor(input);
-		const control = getCodeEditor(editor);
-		if (!control) {
-			return;
+		if (query.revision && query.baseRevision) {
+			// if baseRevision is provided, open compare provider with diff between the too
+			// the compare provider is guaranteed to be available after the call to addFoldersAsWorkspaceRootFolders
+			const scmViewlet = await this.viewletService.openViewlet(SCM_VIEWLET_ID) as SCMViewlet;
+			const compareRootUriStr = root.with({ path: root.path + '/' + MAGIC_COMPARISON_ROOT_SUFFIX }).toString();
+			const comparisonProvider = first(this.scmService.repositories, repo => repo.provider.rootUri.toString() === compareRootUriStr);
+			if (!comparisonProvider) {
+				throw new Error(`Expected comparison provider ${compareRootUriStr} to exist`);
+			}
+			scmViewlet.select(comparisonProvider);
+		} else {
+			// otherwise open explorer
+			await this.viewletService.openViewlet(EXPLORER_VIEWLET_ID);
 		}
-
-		if (selections.length > 1) {
-			control.setSelections(selections);
-		}
-
-		const threadId = parseInt(query.thread, 10);
-		if (threadId) {
-			const codeCommentsContribution = control.getContribution(CODE_COMMENTS_CONTRIBUTION_ID);
-			codeCommentsContribution.restoreViewState({ openThreadIds: [threadId], revealThreadId: threadId });
-		}
-
-		this.viewletService.openViewlet(EXPLORER_VIEWLET_ID);
 	}
 
 	public getLocation(): URI {

@@ -268,7 +268,7 @@ class MainThreadSCMProvider implements ISCMProvider {
  *
  * The same constant is also defined and used in the Git extension.
  */
-const MAGIC_COMPARISON_ROOT_SUFFIX = '  ';
+export const MAGIC_COMPARISON_ROOT_SUFFIX = '  ';
 
 /**
  * This SCM provider injects comment threads as a group
