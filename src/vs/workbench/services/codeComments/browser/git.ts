@@ -14,7 +14,7 @@ import { TPromise } from 'vs/base/common/winjs.base';
 export class Git {
 
 	constructor(
-		private fileUri: URI,
+		public readonly resource: URI,
 		@ISCMService private scmService: ISCMService,
 	) {
 	}
@@ -89,7 +89,7 @@ export class Git {
 		if (options && options.reverse) {
 			args.push('-R');
 		}
-		args.push(fromRev, this.fileUri.fsPath);
+		args.push(fromRev, this.resource.fsPath);
 		return this.spawnPromiseTrim(args);
 	}
 
@@ -124,15 +124,15 @@ export class Git {
 	}
 
 	private getSCMProvider(): TPromise<ISCMProvider> {
-		const repository = this.scmService.getRepositoryForResource(this.fileUri);
+		const repository = this.scmService.getRepositoryForResource(this.resource);
 		if (!repository) {
-			return TPromise.wrapError(new Error(`no repository in context ${this.fileUri.toString()}`));
+			return TPromise.wrapError(new Error(`no repository in context ${this.resource.toString()}`));
 		}
 		if (!repository.provider) {
-			return TPromise.wrapError(new Error(`no scm provider in context ${this.fileUri.toString()}`));
+			return TPromise.wrapError(new Error(`no scm provider in context ${this.resource.toString()}`));
 		}
 		if (repository.provider.contextValue !== 'git') {
-			return TPromise.wrapError(new Error(`only git is supported; got ${repository.provider.contextValue} for ${this.fileUri.toString()}`));
+			return TPromise.wrapError(new Error(`only git is supported; got ${repository.provider.contextValue} for ${this.resource.toString()}`));
 		}
 		return TPromise.as(repository.provider);
 	}

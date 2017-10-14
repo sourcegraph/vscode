@@ -426,7 +426,7 @@ export class CodeCommentsController extends Disposable implements IEditorContrib
 	 * renders a highlight of the range for the currently selected thread (if there is one).
 	 */
 	private renderDecorationsNow(model: IModel): void {
-		if (model.isDisposed()) {
+		if (model.isDisposed() || !this.fileComments) {
 			return;
 		}
 		const threads = this.fileComments.threads.filter(t => {

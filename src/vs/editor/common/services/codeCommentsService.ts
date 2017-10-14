@@ -154,6 +154,11 @@ export interface IThreadComments extends IEventDisposable {
 	readonly file: string;
 
 	/**
+	 * The name of the branch that the thread was created on.
+	 */
+	readonly branch: string;
+
+	/**
 	 * An absolute revision that the comment is attached to.
 	 * (e.g. SHA-1 for Git).
 	 */

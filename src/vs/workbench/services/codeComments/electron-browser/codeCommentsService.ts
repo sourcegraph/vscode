@@ -78,6 +78,7 @@ const threadGraphql = `
 id
 title
 file
+branch
 revision
 startLine
 endLine
@@ -102,6 +103,7 @@ export class CodeCommentsService implements ICodeCommentsService {
 		@IEnvironmentService environmentService: IEnvironmentService,
 		@IInstantiationService private instantiationService: IInstantiationService,
 		@IOutputService private outputService: IOutputService,
+		@ISCMService private scmService: ISCMService,
 	) {
 		this.diffWorkerProvider = new DiffWorkerClient(environmentService.debugDiff);
 	}
@@ -116,14 +118,19 @@ export class CodeCommentsService implements ICodeCommentsService {
 		// like draft threads and draft replies so they could be restored.
 		let model = this.models.get(file);
 		if (!model) {
-			model = this.instantiationService.createInstance(FileComments, this.diffWorkerProvider, file);
+			model = this.instantiationService.createInstance(FileComments, this, this.diffWorkerProvider, file);
 			this.models.set(file, model);
 		}
 		return model;
 	}
 
-	public getBranchComments(repo: URI, branch: string): BranchComments {
-		return this.instantiationService.createInstance(BranchComments, repo, branch);
+	private branchComments = new ReferenceCountingMap<string, BranchComments>();
+
+	public getBranchComments(resource: URI, branch: string): BranchComments {
+		const repo = this.scmService.getRepositoryForResource(resource);
+		const id = `${repo.provider.id}@${branch}`;
+		const git = new Git(resource, this.scmService);
+		return this.branchComments.getOrCreate(id, () => this.instantiationService.createInstance(BranchComments, git, branch));
 	}
 }
 
@@ -136,18 +143,14 @@ export class BranchComments extends Disposable implements IBranchComments {
 		return this._threads;
 	}
 
-	private git: Git;
-
 	constructor(
-		private repo: URI,
+		private git: Git,
 		private branch: string,
-		@ISCMService scmService: ISCMService,
 		@IInstantiationService private instantiationService: IInstantiationService,
 		@IRemoteService private remoteService: IRemoteService,
 		@IAuthService private authService: IAuthService,
 	) {
 		super();
-		this.git = new Git(repo, scmService);
 	}
 
 	private refreshDelayer = new ThrottledDelayer<void>(100);
@@ -190,6 +193,11 @@ export class BranchComments extends Disposable implements IBranchComments {
 				// return this.updateDisplayRanges();
 			});
 	}
+
+	public unshiftThread(threadComment: ThreadComments): void {
+		this._threads.unshift(threadComment);
+		this.didChangeThreads.fire();
+	}
 }
 
 /**
@@ -223,6 +231,7 @@ export class FileComments extends Disposable implements IFileComments {
 	private scmRepository: ISCMRepository;
 
 	constructor(
+		private commentsService: CodeCommentsService,
 		private diffWorker: DiffWorkerClient,
 		uri: URI,
 		@ISCMService scmService: ISCMService,
@@ -267,7 +276,7 @@ export class FileComments extends Disposable implements IFileComments {
 	 * See documentation on IFileComments.
 	 */
 	public createDraftThread(editor: ICommonCodeEditor): DraftThreadComments {
-		const draft = this.instantiationService.createInstance(DraftThreadComments, editor, this.git);
+		const draft = this.instantiationService.createInstance(DraftThreadComments, this.commentsService, this.git, editor);
 		draft.onDidSubmit(thread => {
 			draft.dispose();
 			// Although we are updating this._threads here, we don't fire
@@ -512,6 +521,7 @@ export class ThreadComments extends Disposable implements IThreadComments {
 	public readonly id: number;
 	public readonly title: string;
 	public readonly file: string;
+	public readonly branch: string;
 	public readonly revision: string;
 	public readonly range: Range;
 	public readonly createdAt: Date;
@@ -588,6 +598,7 @@ export class ThreadComments extends Disposable implements IThreadComments {
 		this.id = thread.id;
 		this.title = thread.title;
 		this.file = thread.file;
+		this.branch = thread.branch;
 		this.revision = thread.revision;
 		this.range = new Range(thread.startLine, thread.startCharacter, thread.endLine, thread.endCharacter);
 		this.createdAt = new Date(thread.createdAt);
@@ -721,8 +732,9 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 	}>;
 
 	constructor(
-		editor: ICommonCodeEditor,
+		private commentsService: CodeCommentsService,
 		private git: Git,
+		editor: ICommonCodeEditor,
 		@IMessageService messageService: IMessageService,
 		@IInstantiationService private instantiationService: IInstantiationService,
 		@IRemoteService private remoteService: IRemoteService,
@@ -844,6 +856,9 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 			.then(response => {
 				const thread = this.instantiationService.createInstance(ThreadComments, response.createThread, this.git);
 				this.didSubmit.fire(thread);
+				const branchComments = this.commentsService.getBranchComments(this.git.resource, thread.branch);
+				branchComments.unshiftThread(thread);
+				branchComments.dispose();
 				return thread;
 			});
 		this.submittingPromise = promise;
@@ -932,4 +947,41 @@ function endsWithSlash(s: string): string {
 function resolveContent(accessor: ServicesAccessor, git: Git, documentId: DocumentId, revision: string): TPromise<{ revision: string, content: string }> {
 	// TODO(nick): better way to resolve content that leverages local workspaces.
 	return git.getContentsAtRevision(documentId.file, revision).then(content => ({ revision, content }));
+}
+
+/**
+ * A map that keeps a reference count for each object.
+ * The reference count is incremented on every call to getOrCreate.
+ * Calling dispose on the value returned by getOrCreate will decrement the reference count of that value.
+ * When the reference count reaches 0, the value is disposed and removed from the map.
+ */
+export class ReferenceCountingMap<K, V extends Disposable> {
+
+	private referenceCounts = new Map<K, number>();
+	private values = new Map<K, V>();
+
+	public getOrCreate(key: K, create: () => V): V {
+		let value = this.values.get(key);
+		if (value) {
+			const refCount = this.referenceCounts.get(key) || 0;
+			this.referenceCounts.set(key, refCount + 1);
+			return value;
+		}
+
+		value = create();
+		const originalDispose = value.dispose.bind(value);
+		value.dispose = () => {
+			const refCount = this.referenceCounts.get(key) || 0;
+			if (refCount <= 1) {
+				originalDispose();
+				this.values.delete(key);
+				this.referenceCounts.delete(key);
+			} else {
+				this.referenceCounts.set(key, refCount - 1);
+			}
+		};
+		this.referenceCounts.set(key, 1);
+		this.values.set(key, value);
+		return value;
+	}
 }
