@@ -17,9 +17,11 @@ import { ICommandService } from 'vs/platform/commands/common/commands';
 import { ExtHostContext, MainThreadSCMShape, ExtHostSCMShape, SCMProviderFeatures, SCMRawResourceSplices, SCMGroupFeatures, MainContext, IExtHostContext } from '../node/extHost.protocol';
 import { Command } from 'vs/editor/common/modes';
 import { extHostNamedCustomer } from 'vs/workbench/api/electron-browser/extHostCustomers';
-import { ICodeCommentsService, IBranchComments } from 'vs/editor/common/services/codeCommentsService';
+import { EDITOR_CONTRIBUTION_ID as CODE_COMMENTS_CONTRIBUTION_ID, ICodeCommentsService, IBranchComments } from 'vs/editor/common/services/codeCommentsService';
 import { rtrim } from 'vs/base/common/strings';
-import * as path from 'path';
+import { IEditorService } from 'vs/platform/editor/common/editor';
+import { getCodeEditor, ICodeEditorService } from 'vs/editor/common/services/codeEditorService';
+import { ICommonCodeEditor } from 'vs/editor/common/editorCommon';
 
 class MainThreadSCMResourceCollection implements ISCMResourceCollection {
 
@@ -289,6 +291,8 @@ class CommentsSCMProvider extends MainThreadSCMProvider {
 		@ISCMService scmService: ISCMService,
 		@ICommandService commandService: ICommandService,
 		@ICodeCommentsService private commentsService: ICodeCommentsService,
+		@IEditorService private editorService: IEditorService,
+		@ICodeEditorService private codeEditorService: ICodeEditorService,
 	) {
 		super(proxy, _handle, _contextValue, _label, _rootUri, scmService, commandService);
 		if (_contextValue === 'gitcomparison') {
@@ -342,20 +346,20 @@ class CommentsSCMProvider extends MainThreadSCMProvider {
 	}
 
 	private onDidChangeThreads(): void {
-		const basePath = path.basename(this.trimmedRootUri.toString());
 		const resources: ISCMResource[] = this.branchComments.threads.map(thread => {
-			const file = path.join(basePath, thread.file);
 			return {
 				resourceGroup: this.commentsGroup,
-				sourceUri: URI.parse(`comment://${file}/${thread.title}`),
+				sourceUri: URI.parse(`comment://${thread.file}/${thread.title}`),
 				decorations: {
 					strikeThrough: thread.archived,
 					faded: false,
 					tooltip: '',
 				},
-				open: (): TPromise<void> => {
-					// TODO(nick): open thread in diff view
-					return TPromise.as(undefined);
+				open: async (): TPromise<void> => {
+					const resource = this.trimmedRootUri.with({ path: this.trimmedRootUri.path + thread.file });
+					const editor = await this.openEditor(resource);
+					const codeCommentsContribution = editor.getContribution(CODE_COMMENTS_CONTRIBUTION_ID);
+					codeCommentsContribution.restoreViewState({ openThreadIds: [thread.id], revealThreadId: thread.id });
 				}
 			};
 		});
@@ -363,7 +367,36 @@ class CommentsSCMProvider extends MainThreadSCMProvider {
 		collection.splice(0, collection.resources.length, resources);
 
 		// This is just to get our superclass to fire the appropriate event.
-		this.$spliceGroupResourceStates([]);
+		super.$spliceGroupResourceStates([]);
+	}
+
+	private async openEditor(resource: URI): TPromise<ICommonCodeEditor> {
+		const resourceString = resource.toString();
+		// First try to find and open the relevant diff editor.
+		for (const group of this.groups) {
+			if (group === this.commentsGroup) {
+				// No point in searching through our comments group.
+				continue;
+			}
+			for (const scmResource of group.resourceCollection.resources) {
+				if (scmResource.sourceUri.toString() === resourceString) {
+					await scmResource.open();
+					// Unfortunately the diff editor doesn't yet have focus and the open command
+					// doesn't return anything useful. We have to loop over all diff editors to
+					// find the one we just opened.
+					const diffEditors = this.codeEditorService.listDiffEditors();
+					for (const diffEditor of diffEditors) {
+						if (resourceString === diffEditor.getModifiedEditor().getModel().uri.toString()) {
+							return diffEditor.getModifiedEditor();
+						}
+					}
+				}
+			}
+		}
+		// This is a thread on a file that doesn't currently have a diff.
+		// Just open a normal editor for it.
+		const editor = await this.editorService.openEditor({ resource });
+		return getCodeEditor(editor);
 	}
 
 	public dispose(): void {
@@ -384,7 +417,6 @@ export class MainThreadSCM implements MainThreadSCMShape {
 		extHostContext: IExtHostContext,
 		@IInstantiationService private instantiationService: IInstantiationService,
 		@ISCMService private scmService: ISCMService,
-		@ICodeCommentsService private commentsService: ICodeCommentsService,
 		@ICommandService private commandService: ICommandService
 	) {
 		this._proxy = extHostContext.get(ExtHostContext.ExtHostSCM);
@@ -403,7 +435,7 @@ export class MainThreadSCM implements MainThreadSCMShape {
 	}
 
 	$registerSourceControl(handle: number, id: string, label: string, rootUri: string | undefined): void {
-		const provider = new CommentsSCMProvider(this._proxy, handle, id, label, rootUri && URI.parse(rootUri), this.scmService, this.commandService, this.commentsService);
+		const provider = this.instantiationService.createInstance(CommentsSCMProvider, this._proxy, handle, id, label, rootUri && URI.parse(rootUri));
 		const repository = this.scmService.registerSCMProvider(provider);
 		this._repositories[handle] = repository;
 

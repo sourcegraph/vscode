@@ -471,24 +471,37 @@ export class CodeCommentsController extends Disposable implements IEditorContrib
 			// No model (e.g. untitled file).
 			return;
 		}
+		const shown = this.showThreads(state);
 		this.fileComments.refreshThreads().then(() => {
-			const openThreadIds = (state && state.openThreadIds) || [];
-			for (const threadId of openThreadIds) {
-				const thread = this.fileComments.getThread(threadId);
-				if (thread) {
-					const reveal = thread.id === state.revealThreadId;
-					this.showThreadWidget(thread, reveal);
-				}
-			}
-
-			const openDraftThreadIds = (state && state.openDraftThreadIds) || [];
-			for (const threadId of openDraftThreadIds) {
-				const thread = this.fileComments.getDraftThread(threadId);
-				if (thread) {
-					this.showDraftThreadWidget(thread, false);
-				}
+			if (!shown) {
+				// If we weren't able to show the threads synchronously because
+				// they weren't loaded, try again now that they are loaded.
+				this.showThreads(state);
 			}
 		});
+	}
+
+	private showThreads(state: ViewState): boolean {
+		let shown = false;
+		const openThreadIds = (state && state.openThreadIds) || [];
+		for (const threadId of openThreadIds) {
+			const thread = this.fileComments.getThread(threadId);
+			if (thread) {
+				const reveal = thread.id === state.revealThreadId;
+				this.showThreadWidget(thread, reveal);
+				shown = true;
+			}
+		}
+
+		const openDraftThreadIds = (state && state.openDraftThreadIds) || [];
+		for (const threadId of openDraftThreadIds) {
+			const thread = this.fileComments.getDraftThread(threadId);
+			if (thread) {
+				this.showDraftThreadWidget(thread, false);
+				shown = true;
+			}
+		}
+		return shown;
 	}
 }
 
