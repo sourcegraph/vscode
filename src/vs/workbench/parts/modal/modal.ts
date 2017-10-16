@@ -16,7 +16,6 @@ import { SIDE_BAR_BACKGROUND, SIDE_BAR_FOREGROUND, PANEL_BORDER } from 'vs/workb
 import { IDisposable } from 'vs/base/common/lifecycle';
 
 export enum ModalIdentifiers {
-	ONBOARDING,
 	SIGNIN
 };
 

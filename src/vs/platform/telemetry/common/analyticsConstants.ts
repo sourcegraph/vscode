@@ -244,7 +244,6 @@ export enum EventFeature {
 	EditorSuggestions = 'Editor.Suggestions',
 	ExtensionsAuthorship = 'Extensions.Authorship',
 	InviteModal = 'InviteModal',
-	OnboardingModal = 'OnboardingModal',
 	PromptInstallModal = 'PromptInstallModal',
 	Reminder = 'Reminder',
 	SignInModal = 'SignInModal',
@@ -495,11 +494,6 @@ export const SOURCEGRAPH_EVENT_MAP: { [eventName: string]: EventMapEntry } = {
 	'OpenAtCursor': { eventCategory: EventCategory.External, eventAction: EventAction.Redirect, topLevelOnly: true },
 	'OpenWorkspace': { eventCategory: EventCategory.External, eventAction: EventAction.Redirect, topLevelOnly: true },
 	'OpenFile': { eventCategory: EventCategory.External, eventAction: EventAction.Redirect, topLevelOnly: true },
-
-	// Modals
-	'OnboardingModalInitiated': { eventCategory: EventCategory.Onboarding, eventAction: EventAction.Initiate, eventFeature: EventFeature.OnboardingModal },
-	'OnboardingModalSlideViewed': { eventCategory: EventCategory.Onboarding, eventAction: EventAction.Click, eventFeature: EventFeature.OnboardingModal },
-	'OnboardingModalCompleted': { eventCategory: EventCategory.Onboarding, eventAction: EventAction.Close, eventFeature: EventFeature.OnboardingModal },
 
 	'MessageRendered': { eventCategory: EventCategory.Editor, eventAction: EventAction.Error },
 
