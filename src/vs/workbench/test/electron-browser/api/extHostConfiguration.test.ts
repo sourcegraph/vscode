@@ -33,7 +33,6 @@ suite('ExtHostConfiguration', function () {
 		}
 		return new ExtHostConfiguration(shape, new ExtHostWorkspace(new TestThreadService(), null), {
 			defaults: new ConfigurationModel(contents),
-			organization: new ConfigurationModel(contents),
 			user: new ConfigurationModel(contents),
 			workspace: new ConfigurationModel(),
 			folders: Object.create(null)
@@ -97,7 +96,6 @@ suite('ExtHostConfiguration', function () {
 						'wordWrap': 'off'
 					}
 				}, ['editor.wordWrap']),
-				organization: new ConfigurationModel({}, []),
 				user: new ConfigurationModel({
 					'editor': {
 						'wordWrap': 'on'
@@ -143,7 +141,6 @@ suite('ExtHostConfiguration', function () {
 						'wordWrap': 'off'
 					}
 				}, ['editor.wordWrap']),
-				organization: new ConfigurationModel({}, []),
 				user: new ConfigurationModel({
 					'editor': {
 						'wordWrap': 'on'
@@ -217,7 +214,6 @@ suite('ExtHostConfiguration', function () {
 						'lineNumbers': 'on'
 					}
 				}, ['editor.wordWrap']),
-				organization: new ConfigurationModel({}, []),
 				user: new ConfigurationModel({
 					'editor': {
 						'wordWrap': 'on'

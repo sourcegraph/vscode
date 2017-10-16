@@ -49,13 +49,11 @@ import { IWindowConfiguration } from 'vs/platform/windows/common/windows';
 
 class SettingsTestEnvironmentService extends EnvironmentService {
 
-	constructor(args: ParsedArgs, _execPath: string, private customUserSettingsHome, private customOrganizationSettingsHome) {
+	constructor(args: ParsedArgs, _execPath: string, private customAppSettingsHome) {
 		super(args, _execPath);
 	}
 
-	get appSettingsPath(): string { return this.customUserSettingsHome; }
-
-	get appOrganizationSettingsPath(): string { return this.customOrganizationSettingsHome; }
+	get appSettingsPath(): string { return this.customAppSettingsHome; }
 }
 
 suite('ConfigurationEditingService', () => {
@@ -64,8 +62,7 @@ suite('ConfigurationEditingService', () => {
 	let testObject: ConfigurationEditingService;
 	let parentDir;
 	let workspaceDir;
-	let userSettingsPath;
-	let orgSettingsPath;
+	let globalSettingsFile;
 	let workspaceSettingsDir;
 	let choiceService;
 
@@ -101,8 +98,7 @@ suite('ConfigurationEditingService', () => {
 			const id = uuid.generateUuid();
 			parentDir = path.join(os.tmpdir(), 'vsctests', id);
 			workspaceDir = path.join(parentDir, 'workspaceconfig', id);
-			userSettingsPath = path.join(workspaceDir, 'config.json');
-			orgSettingsPath = path.join(workspaceDir, 'orgConfig.json');
+			globalSettingsFile = path.join(workspaceDir, 'config.json');
 			workspaceSettingsDir = path.join(workspaceDir, '.vscode');
 			extfs.mkdirp(workspaceSettingsDir, 493, (error) => {
 				if (error) {
@@ -119,7 +115,7 @@ suite('ConfigurationEditingService', () => {
 		clearServices();
 
 		instantiationService = new TestInstantiationService();
-		const environmentService = new SettingsTestEnvironmentService(parseArgs(process.argv), process.execPath, userSettingsPath, orgSettingsPath);
+		const environmentService = new SettingsTestEnvironmentService(parseArgs(process.argv), process.execPath, globalSettingsFile);
 		instantiationService.stub(IEnvironmentService, environmentService);
 		const workspacesService = instantiationService.stub(IWorkspacesService, {});
 		const workspaceService = new WorkspaceService(environmentService, workspacesService);
@@ -187,12 +183,6 @@ suite('ConfigurationEditingService', () => {
 			(error: ConfigurationEditingError) => assert.equal(error.code, ConfigurationEditingErrorCode.ERROR_INVALID_USER_TARGET));
 	});
 
-	test('errors cases - invalid target - org', () => {
-		return testObject.writeConfiguration(ConfigurationTarget.ORGANIZATION, { key: 'tasks.something', value: 'value' })
-			.then(() => assert.fail('Should fail with ERROR_INVALID_TARGET'),
-			(error: ConfigurationEditingError) => assert.equal(error.code, ConfigurationEditingErrorCode.ERROR_INVALID_ORGANIZATION_TARGET));
-	});
-
 	test('errors cases - no workspace', () => {
 		return setUpServices(true)
 			.then(() => testObject.writeConfiguration(ConfigurationTarget.WORKSPACE, { key: 'configurationEditing.service.testSetting', value: 'value' }))
@@ -201,15 +191,8 @@ suite('ConfigurationEditingService', () => {
 	});
 
 	test('errors cases - invalid configuration', () => {
-		fs.writeFileSync(userSettingsPath, ',,,,,,,,,,,,,,');
+		fs.writeFileSync(globalSettingsFile, ',,,,,,,,,,,,,,');
 		return testObject.writeConfiguration(ConfigurationTarget.USER, { key: 'configurationEditing.service.testSetting', value: 'value' })
-			.then(() => assert.fail('Should fail with ERROR_INVALID_CONFIGURATION'),
-			(error: ConfigurationEditingError) => assert.equal(error.code, ConfigurationEditingErrorCode.ERROR_INVALID_CONFIGURATION));
-	});
-
-	test('errors cases - invalid configuration - org', () => {
-		fs.writeFileSync(orgSettingsPath, ',,,,,,,,,,,,,,');
-		return testObject.writeConfiguration(ConfigurationTarget.ORGANIZATION, { key: 'configurationEditing.service.testSetting', value: 'value' })
 			.then(() => assert.fail('Should fail with ERROR_INVALID_CONFIGURATION'),
 			(error: ConfigurationEditingError) => assert.equal(error.code, ConfigurationEditingErrorCode.ERROR_INVALID_CONFIGURATION));
 	});
@@ -217,13 +200,6 @@ suite('ConfigurationEditingService', () => {
 	test('errors cases - dirty', () => {
 		instantiationService.stub(ITextFileService, 'isDirty', true);
 		return testObject.writeConfiguration(ConfigurationTarget.USER, { key: 'configurationEditing.service.testSetting', value: 'value' })
-			.then(() => assert.fail('Should fail with ERROR_CONFIGURATION_FILE_DIRTY error.'),
-			(error: ConfigurationEditingError) => assert.equal(error.code, ConfigurationEditingErrorCode.ERROR_CONFIGURATION_FILE_DIRTY));
-	});
-
-	test('errors cases - dirty - org', () => {
-		instantiationService.stub(ITextFileService, 'isDirty', true);
-		return testObject.writeConfiguration(ConfigurationTarget.ORGANIZATION, { key: 'configurationEditing.service.testSetting', value: 'value' })
 			.then(() => assert.fail('Should fail with ERROR_CONFIGURATION_FILE_DIRTY error.'),
 			(error: ConfigurationEditingError) => assert.equal(error.code, ConfigurationEditingErrorCode.ERROR_CONFIGURATION_FILE_DIRTY));
 	});
@@ -246,32 +222,10 @@ suite('ConfigurationEditingService', () => {
 			});
 	});
 
-	test('do not notify error - org', () => {
-		instantiationService.stub(ITextFileService, 'isDirty', true);
-		const target = sinon.stub();
-		instantiationService.stubPromise(IChoiceService, 'choose', target);
-		return testObject.writeConfiguration(ConfigurationTarget.ORGANIZATION, { key: 'configurationEditing.service.testSetting', value: 'value' }, { donotNotifyError: true })
-			.then(() => assert.fail('Should fail with ERROR_CONFIGURATION_FILE_DIRTY error.'),
-			(error: ConfigurationEditingError) => {
-				assert.equal(false, target.calledOnce);
-				assert.equal(error.code, ConfigurationEditingErrorCode.ERROR_CONFIGURATION_FILE_DIRTY);
-			});
-	});
-
 	test('write one setting - empty file', () => {
 		return testObject.writeConfiguration(ConfigurationTarget.USER, { key: 'configurationEditing.service.testSetting', value: 'value' })
 			.then(() => {
-				const contents = fs.readFileSync(userSettingsPath).toString('utf8');
-				const parsed = json.parse(contents);
-				assert.equal(parsed['configurationEditing.service.testSetting'], 'value');
-				assert.equal(instantiationService.get(IConfigurationService).lookup('configurationEditing.service.testSetting').value, 'value');
-			});
-	});
-
-	test('write one setting - empty file - org', () => {
-		return testObject.writeConfiguration(ConfigurationTarget.ORGANIZATION, { key: 'configurationEditing.service.testSetting', value: 'value' })
-			.then(() => {
-				const contents = fs.readFileSync(orgSettingsPath).toString('utf8');
+				const contents = fs.readFileSync(globalSettingsFile).toString('utf8');
 				const parsed = json.parse(contents);
 				assert.equal(parsed['configurationEditing.service.testSetting'], 'value');
 				assert.equal(instantiationService.get(IConfigurationService).lookup('configurationEditing.service.testSetting').value, 'value');
@@ -279,25 +233,10 @@ suite('ConfigurationEditingService', () => {
 	});
 
 	test('write one setting - existing file', () => {
-		fs.writeFileSync(userSettingsPath, '{ "my.super.setting": "my.super.value" }');
+		fs.writeFileSync(globalSettingsFile, '{ "my.super.setting": "my.super.value" }');
 		return testObject.writeConfiguration(ConfigurationTarget.USER, { key: 'configurationEditing.service.testSetting', value: 'value' })
 			.then(() => {
-				const contents = fs.readFileSync(userSettingsPath).toString('utf8');
-				const parsed = json.parse(contents);
-				assert.equal(parsed['configurationEditing.service.testSetting'], 'value');
-				assert.equal(parsed['my.super.setting'], 'my.super.value');
-
-				const configurationService = instantiationService.get(IConfigurationService);
-				assert.equal(configurationService.lookup('configurationEditing.service.testSetting').value, 'value');
-				assert.equal(configurationService.lookup('my.super.setting').value, 'my.super.value');
-			});
-	});
-
-	test('write one setting - existing file - org', () => {
-		fs.writeFileSync(orgSettingsPath, '{ "my.super.setting": "my.super.value" }');
-		return testObject.writeConfiguration(ConfigurationTarget.ORGANIZATION, { key: 'configurationEditing.service.testSetting', value: 'value' })
-			.then(() => {
-				const contents = fs.readFileSync(orgSettingsPath).toString('utf8');
+				const contents = fs.readFileSync(globalSettingsFile).toString('utf8');
 				const parsed = json.parse(contents);
 				assert.equal(parsed['configurationEditing.service.testSetting'], 'value');
 				assert.equal(parsed['my.super.setting'], 'my.super.value');

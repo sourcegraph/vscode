@@ -305,8 +305,7 @@ class CommandAction extends Action {
 export class UpdateContribution implements IGlobalActivity {
 
 	private static readonly showCommandsId = 'workbench.action.showCommands';
-	private static readonly openOrganizationSettingsID = 'workbench.action.openOrganizationSettings';
-	private static readonly openUserSettingsId = 'workbench.action.openUserSettings';
+	private static readonly openSettingsId = 'workbench.action.openGlobalSettings';
 	private static readonly openKeybindingsId = 'workbench.action.openGlobalKeybindings';
 	private static readonly selectColorThemeId = 'workbench.action.selectTheme';
 	private static readonly selectIconThemeId = 'workbench.action.selectIconTheme';
@@ -427,10 +426,8 @@ export class UpdateContribution implements IGlobalActivity {
 		return [
 			new CommandAction(UpdateContribution.showCommandsId, nls.localize('commandPalette', "Command Palette..."), this.commandService),
 			new Separator(),
-			new CommandAction(UpdateContribution.openUserSettingsId, nls.localize('userSettings', "User Settings"), this.commandService),
+			new CommandAction(UpdateContribution.openSettingsId, nls.localize('settings', "Settings"), this.commandService),
 			new CommandAction(UpdateContribution.openKeybindingsId, nls.localize('keyboardShortcuts', "Keyboard Shortcuts"), this.commandService),
-			new Separator(),
-			new CommandAction(UpdateContribution.openOrganizationSettingsID, nls.localize('organizationSettings', "Organization Settings"), this.commandService),
 			new Separator(),
 			new CommandAction(UpdateContribution.selectColorThemeId, nls.localize('selectTheme.label', "Color Theme"), this.commandService),
 			new CommandAction(UpdateContribution.selectIconThemeId, nls.localize('themes.selectIconTheme.label', "File Icon Theme"), this.commandService),

@@ -127,7 +127,7 @@ class WordWrapMigrationController extends Disposable implements IEditorContribut
 			true,
 			() => {
 				if (userSettings) {
-					this.preferencesService.openUserSettings();
+					this.preferencesService.openGlobalSettings();
 				} else {
 					this.preferencesService.openWorkspaceSettings();
 				}

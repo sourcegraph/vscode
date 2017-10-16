@@ -67,7 +67,7 @@ export class SearchProfilePickerWidget extends Widget {
 	public set selected(selected: string) {
 		if (selected === SearchProfilePickerWidget.EDIT_TEXT) {
 			selected = this._selected;
-			this.preferencesService.openUserSettings().done(editor => {
+			this.preferencesService.openGlobalSettings().done(editor => {
 				if (editor instanceof PreferencesEditor) {
 					editor.focusSearch('search.profiles');
 				}

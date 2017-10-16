@@ -60,7 +60,7 @@ function registerKeybindingsCompletions(): vscode.Disposable {
 }
 
 function registerSettingsCompletions(): vscode.Disposable {
-	return vscode.languages.registerCompletionItemProvider([{ language: 'json', pattern: '**/settings.json' }, { language: 'json', pattern: '**/cachedOrganizationSettings.json' }], {
+	return vscode.languages.registerCompletionItemProvider({ language: 'json', pattern: '**/settings.json' }, {
 		provideCompletionItems(document, position, token) {
 			return new SettingsDocument(document).provideCompletionItems(position, token);
 		}

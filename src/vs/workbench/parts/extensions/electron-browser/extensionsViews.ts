@@ -31,7 +31,7 @@ import { IExtensionService } from 'vs/platform/extensions/common/extensions';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { attachListStyler, attachBadgeStyler } from 'vs/platform/theme/common/styler';
 import { ViewsViewletPanel, IViewletViewOptions, IViewOptions } from 'vs/workbench/browser/parts/views/viewsViewlet';
-import { OpenUserSettingsAction } from 'vs/workbench/parts/preferences/browser/preferencesActions';
+import { OpenGlobalSettingsAction } from 'vs/workbench/parts/preferences/browser/preferencesActions';
 import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { IEditorGroupService } from 'vs/workbench/services/group/common/groupService';
 import { IModeService } from 'vs/editor/common/services/modeService';
@@ -433,7 +433,7 @@ export class ExtensionsListView extends ViewsViewletPanel {
 		if (/ECONNREFUSED/.test(message)) {
 			const error = createError(localize('suggestProxyError', "Marketplace returned 'ECONNREFUSED'. Please check the 'http.proxy' setting."), {
 				actions: [
-					this.instantiationService.createInstance(OpenUserSettingsAction, OpenUserSettingsAction.ID, OpenUserSettingsAction.LABEL),
+					this.instantiationService.createInstance(OpenGlobalSettingsAction, OpenGlobalSettingsAction.ID, OpenGlobalSettingsAction.LABEL),
 					CloseAction
 				]
 			});

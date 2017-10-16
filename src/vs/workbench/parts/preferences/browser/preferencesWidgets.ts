@@ -332,16 +332,6 @@ export class SettingsTargetsWidget extends Widget {
 
 	private getSettingsTargetsActions(): IAction[] {
 		const actions: IAction[] = [];
-
-		const organizationSettingsResource = this.preferencesService.organizationSettingsResource;
-		actions.push(<IAction>{
-			id: 'organizationSettingsTarget',
-			label: getSettingsTargetName(ConfigurationTarget.ORGANIZATION, organizationSettingsResource, this.workspaceContextService),
-			checked: this._uri.toString() === organizationSettingsResource.toString(),
-			enabled: true,
-			run: () => this.onTargetClicked(organizationSettingsResource)
-		});
-
 		const userSettingsResource = this.preferencesService.userSettingsResource;
 		actions.push(<IAction>{
 			id: 'userSettingsTarget',

@@ -187,10 +187,8 @@ export class ConfigurationEditingService implements IConfigurationEditingService
 
 	private openSettings(operation: IConfigurationEditOperation): void {
 		switch (operation.target) {
-			case ConfigurationTarget.ORGANIZATION:
-				this.commandService.executeCommand('workbench.action.openOrganizationSettings');
 			case ConfigurationTarget.USER:
-				this.commandService.executeCommand('workbench.action.openUserSettings');
+				this.commandService.executeCommand('workbench.action.openGlobalSettings');
 				break;
 			case ConfigurationTarget.WORKSPACE:
 				this.commandService.executeCommand('workbench.action.openWorkspaceSettings');
@@ -223,7 +221,6 @@ export class ConfigurationEditingService implements IConfigurationEditingService
 			case ConfigurationEditingErrorCode.ERROR_UNKNOWN_KEY: return nls.localize('errorUnknownKey', "Unable to write to {0} because {1} is not a registered configuration.", this.stringifyTarget(target), operation.key);
 			case ConfigurationEditingErrorCode.ERROR_INVALID_FOLDER_CONFIGURATION: return nls.localize('errorInvalidFolderConfiguration', "Unable to write to Folder Settings because {0} does not support the folder resource scope.", operation.key);
 			case ConfigurationEditingErrorCode.ERROR_INVALID_USER_TARGET: return nls.localize('errorInvalidUserTarget', "Unable to write to User Settings because {0} does not support for global scope.", operation.key);
-			case ConfigurationEditingErrorCode.ERROR_INVALID_ORGANIZATION_TARGET: return nls.localize('errorInvalidOrgTarget', "Unable to write to Organization Settings because {0} does not support for global scope.", operation.key);
 			case ConfigurationEditingErrorCode.ERROR_INVALID_FOLDER_TARGET: return nls.localize('errorInvalidFolderTarget', "Unable to write to Folder Settings because no resource is provided.");
 			case ConfigurationEditingErrorCode.ERROR_NO_WORKSPACE_OPENED: return nls.localize('errorNoWorkspaceOpened', "Unable to write to {0} because no workspace is opened. Please open a workspace first and try again.", this.stringifyTarget(target));
 
@@ -236,8 +233,6 @@ export class ConfigurationEditingService implements IConfigurationEditingService
 					return nls.localize('errorInvalidLaunchConfiguration', "Unable to write into launch file. Please open **Launch** file to correct errors/warnings in it and try again.");
 				}
 				switch (target) {
-					case ConfigurationTarget.ORGANIZATION:
-						return nls.localize('errorInvalidConfigurationOrganization', "Unable to write into organization settings. Please open **Organization Settings** file to correct errors/warnings in it and try again.");
 					case ConfigurationTarget.USER:
 						return nls.localize('errorInvalidConfiguration', "Unable to write into user settings. Please open **User Settings** file to correct errors/warnings in it and try again.");
 					case ConfigurationTarget.WORKSPACE:
@@ -256,8 +251,6 @@ export class ConfigurationEditingService implements IConfigurationEditingService
 					return nls.localize('errorLaunchConfigurationFileDirty', "Unable to write into launch file because the file is dirty. Please save the **Launch Configuration** file and try again.");
 				}
 				switch (target) {
-					case ConfigurationTarget.ORGANIZATION:
-						return nls.localize('errorConfigurationFileDirtyOrganization', "Unable to write into organization settings because the file is dirty. Please save the **Organization Settings** file and try again.");
 					case ConfigurationTarget.USER:
 						return nls.localize('errorConfigurationFileDirty', "Unable to write into user settings because the file is dirty. Please save the **User Settings** file and try again.");
 					case ConfigurationTarget.WORKSPACE:
@@ -273,8 +266,6 @@ export class ConfigurationEditingService implements IConfigurationEditingService
 
 	private stringifyTarget(target: ConfigurationTarget): string {
 		switch (target) {
-			case ConfigurationTarget.ORGANIZATION:
-				return nls.localize('organizationTarget', "Organization Settings");
 			case ConfigurationTarget.USER:
 				return nls.localize('userTarget', "User Settings");
 			case ConfigurationTarget.WORKSPACE:
@@ -331,13 +322,9 @@ export class ConfigurationEditingService implements IConfigurationEditingService
 			}
 		}
 
-		// Target cannot be user or organization if is standalone
-		if (operation.workspaceStandAloneConfigurationKey) {
-			if (target === ConfigurationTarget.USER) {
-				return this.wrapError(ConfigurationEditingErrorCode.ERROR_INVALID_USER_TARGET, target, operation);
-			} else if (target === ConfigurationTarget.ORGANIZATION) {
-				return this.wrapError(ConfigurationEditingErrorCode.ERROR_INVALID_ORGANIZATION_TARGET, target, operation);
-			}
+		// Target cannot be user if is standalone
+		if (operation.workspaceStandAloneConfigurationKey && target === ConfigurationTarget.USER) {
+			return this.wrapError(ConfigurationEditingErrorCode.ERROR_INVALID_USER_TARGET, target, operation);
 		}
 
 		// Target cannot be workspace or folder if no workspace opened
@@ -402,9 +389,7 @@ export class ConfigurationEditingService implements IConfigurationEditingService
 
 		let key = config.key;
 		let jsonPath = overrides.overrideIdentifier ? [keyFromOverrideIdentifier(overrides.overrideIdentifier), key] : [key];
-		if (target === ConfigurationTarget.ORGANIZATION) {
-			return { key, jsonPath, value: config.value, resource: URI.file(this.environmentService.appOrganizationSettingsPath), target };
-		} else if (target === ConfigurationTarget.USER) {
+		if (target === ConfigurationTarget.USER) {
 			return { key, jsonPath, value: config.value, resource: URI.file(this.environmentService.appSettingsPath), target };
 		}
 
@@ -416,9 +401,7 @@ export class ConfigurationEditingService implements IConfigurationEditingService
 	}
 
 	private getConfigurationFileResource(target: ConfigurationTarget, relativePath: string, resource: URI): URI {
-		if (target === ConfigurationTarget.ORGANIZATION) {
-			return URI.file(this.environmentService.appOrganizationSettingsPath);
-		} else if (target === ConfigurationTarget.USER) {
+		if (target === ConfigurationTarget.USER) {
 			return URI.file(this.environmentService.appSettingsPath);
 		}
 

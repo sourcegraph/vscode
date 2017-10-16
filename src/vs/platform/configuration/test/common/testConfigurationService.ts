@@ -33,7 +33,7 @@ export class TestConfigurationService extends EventEmitter implements IConfigura
 	}
 
 	public getConfigurationData(): IConfigurationData<any> {
-		return new Configuration(new ConfigurationModel(), new ConfigurationModel(this.configuration), new ConfigurationModel(this.configuration)).toData();
+		return new Configuration(new ConfigurationModel(), new ConfigurationModel(this.configuration)).toData();
 	}
 
 	public setUserConfiguration(key: any, value: any, root?: URI): Thenable<void> {
@@ -58,7 +58,6 @@ export class TestConfigurationService extends EventEmitter implements IConfigura
 		return {
 			value: getConfigurationValue<C>(config, key),
 			default: getConfigurationValue<C>(config, key),
-			organization: getConfigurationValue<C>(config, key),
 			user: getConfigurationValue<C>(config, key),
 			workspace: null,
 			folder: null
@@ -68,7 +67,6 @@ export class TestConfigurationService extends EventEmitter implements IConfigura
 	public keys(): IConfigurationKeys {
 		return {
 			default: getConfigurationKeys(),
-			organization: Object.keys(this.configuration),
 			user: Object.keys(this.configuration),
 			workspace: [],
 			folder: []

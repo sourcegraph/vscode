@@ -16,7 +16,7 @@ import { KeyMod, KeyChord, KeyCode } from 'vs/base/common/keyCodes';
 import { SyncDescriptor } from 'vs/platform/instantiation/common/descriptors';
 import { DefaultPreferencesEditorInput, PreferencesEditor, PreferencesEditorInput } from 'vs/workbench/parts/preferences/browser/preferencesEditor';
 import { KeybindingsEditor, KeybindingsEditorInput } from 'vs/workbench/parts/preferences/browser/keybindingsEditor';
-import { OpenOrganizationSettingsAction, OpenUserSettingsAction, OpenGlobalKeybindingsAction, OpenGlobalKeybindingsFileAction, OpenWorkspaceSettingsAction, OpenFolderSettingsAction, ConfigureLanguageBasedSettingsAction, OPEN_FOLDER_SETTINGS_COMMAND } from 'vs/workbench/parts/preferences/browser/preferencesActions';
+import { OpenGlobalSettingsAction, OpenGlobalKeybindingsAction, OpenGlobalKeybindingsFileAction, OpenWorkspaceSettingsAction, OpenFolderSettingsAction, ConfigureLanguageBasedSettingsAction, OPEN_FOLDER_SETTINGS_COMMAND } from 'vs/workbench/parts/preferences/browser/preferencesActions';
 import {
 	IPreferencesService, IKeybindingsEditor, CONTEXT_KEYBINDING_FOCUS, CONTEXT_KEYBINDINGS_EDITOR, CONTEXT_KEYBINDINGS_SEARCH_FOCUS, KEYBINDINGS_EDITOR_COMMAND_DEFINE, KEYBINDINGS_EDITOR_COMMAND_REMOVE, KEYBINDINGS_EDITOR_COMMAND_SEARCH,
 	KEYBINDINGS_EDITOR_COMMAND_COPY, KEYBINDINGS_EDITOR_COMMAND_RESET, KEYBINDINGS_EDITOR_COMMAND_SHOW_CONFLICTS, KEYBINDINGS_EDITOR_COMMAND_FOCUS_KEYBINDINGS, KEYBINDINGS_EDITOR_COMMAND_CLEAR_SEARCH_RESULTS
@@ -162,8 +162,7 @@ Registry.as<IEditorInputFactoryRegistry>(EditorInputExtensions.EditorInputFactor
 // Contribute Global Actions
 const category = nls.localize('preferences', "Preferences");
 const registry = Registry.as<IWorkbenchActionRegistry>(Extensions.WorkbenchActions);
-registry.registerWorkbenchAction(new SyncActionDescriptor(OpenUserSettingsAction, OpenUserSettingsAction.ID, OpenUserSettingsAction.LABEL, { primary: KeyMod.CtrlCmd | KeyCode.US_COMMA }), 'Preferences: Open User Settings', category);
-registry.registerWorkbenchAction(new SyncActionDescriptor(OpenOrganizationSettingsAction, OpenOrganizationSettingsAction.ID, OpenOrganizationSettingsAction.LABEL), 'Preferences: Open Organization Settings', category);
+registry.registerWorkbenchAction(new SyncActionDescriptor(OpenGlobalSettingsAction, OpenGlobalSettingsAction.ID, OpenGlobalSettingsAction.LABEL, { primary: KeyMod.CtrlCmd | KeyCode.US_COMMA }), 'Preferences: Open User Settings', category);
 registry.registerWorkbenchAction(new SyncActionDescriptor(OpenWorkspaceSettingsAction, OpenWorkspaceSettingsAction.ID, OpenWorkspaceSettingsAction.LABEL), 'Preferences: Open Workspace Settings', category);
 registry.registerWorkbenchAction(new SyncActionDescriptor(OpenFolderSettingsAction, OpenFolderSettingsAction.ID, OpenFolderSettingsAction.LABEL), 'Preferences: Open Folder Settings', category);
 registry.registerWorkbenchAction(new SyncActionDescriptor(OpenGlobalKeybindingsAction, OpenGlobalKeybindingsAction.ID, OpenGlobalKeybindingsAction.LABEL, { primary: KeyChord(KeyMod.CtrlCmd | KeyCode.KEY_K, KeyMod.CtrlCmd | KeyCode.KEY_S) }), 'Preferences: Open Keyboard Shortcuts', category);

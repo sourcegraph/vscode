@@ -21,71 +21,35 @@ import { IConfigurationRegistry, Extensions as ConfigurationExtensions } from 'v
 
 class SettingsTestEnvironmentService extends EnvironmentService {
 
-	constructor(args: ParsedArgs, _execPath: string, private customUserSettingsHome, private customOrganizationSettingsHome) {
+	constructor(args: ParsedArgs, _execPath: string, private customAppSettingsHome) {
 		super(args, _execPath);
 	}
 
-	get appSettingsPath(): string { return this.customUserSettingsHome; }
-
-	get appOrganizationSettingsPath(): string { return this.customOrganizationSettingsHome; }
+	get appSettingsPath(): string { return this.customAppSettingsHome; }
 }
 
 suite('ConfigurationService - Node', () => {
 
-	function testFiles(callback: (userPath: string, orgPath: string, cleanUp: (callback: () => void) => void) => void): void {
+	function testFile(callback: (path: string, cleanUp: (callback: () => void) => void) => void): void {
 		const id = uuid.generateUuid();
 		const parentDir = path.join(os.tmpdir(), 'vsctests', id);
 		const newDir = path.join(parentDir, 'config', id);
-		const userSettingsPath = path.join(newDir, 'config.json');
-		const orgSettingsPath = path.join(newDir, 'orgConfig.json');
+		const testFile = path.join(newDir, 'config.json');
 
 		extfs.mkdirp(newDir, 493, (error) => {
-			callback(userSettingsPath, orgSettingsPath, (callback) => extfs.del(parentDir, os.tmpdir(), () => { }, callback));
+			callback(testFile, (callback) => extfs.del(parentDir, os.tmpdir(), () => { }, callback));
 		});
 	}
 
-	test('simple - user settings', (done: () => void) => {
-		testFiles((userSettingsPath, orgSettingsPath, cleanUp) => {
-			fs.writeFileSync(userSettingsPath, '{ "foo": "bar" }');
+	test('simple', (done: () => void) => {
+		testFile((testFile, cleanUp) => {
+			fs.writeFileSync(testFile, '{ "foo": "bar" }');
 
-			const service = new ConfigurationService(new SettingsTestEnvironmentService(parseArgs(process.argv), process.execPath, userSettingsPath, orgSettingsPath));
-
-			const config = service.getConfiguration<{ foo: string }>();
-			assert.ok(config);
-			assert.equal(config.foo, 'bar');
-
-			service.dispose();
-
-			cleanUp(done);
-		});
-	});
-
-	test('simple - org settings', (done: () => void) => {
-		testFiles((userSettingsPath, orgSettingsPath, cleanUp) => {
-			fs.writeFileSync(orgSettingsPath, '{ "foo": "bar" }');
-
-			const service = new ConfigurationService(new SettingsTestEnvironmentService(parseArgs(process.argv), process.execPath, userSettingsPath, orgSettingsPath));
+			const service = new ConfigurationService(new SettingsTestEnvironmentService(parseArgs(process.argv), process.execPath, testFile));
 
 			const config = service.getConfiguration<{ foo: string }>();
 			assert.ok(config);
 			assert.equal(config.foo, 'bar');
-
-			service.dispose();
-
-			cleanUp(done);
-		});
-	});
-
-	test('user settings overrides org settings', (done: () => void) => {
-		testFiles((userSettingsPath, orgSettingsPath, cleanUp) => {
-			fs.writeFileSync(orgSettingsPath, '{ "foo": "old" }');
-			fs.writeFileSync(userSettingsPath, '{ "foo": "new" }');
-
-			const service = new ConfigurationService(new SettingsTestEnvironmentService(parseArgs(process.argv), process.execPath, userSettingsPath, orgSettingsPath));
-
-			const config = service.getConfiguration<{ foo: string }>();
-			assert.ok(config);
-			assert.equal(config.foo, 'new');
 
 			service.dispose();
 
@@ -94,10 +58,10 @@ suite('ConfigurationService - Node', () => {
 	});
 
 	test('config gets flattened', (done: () => void) => {
-		testFiles((userSettingsPath, orgSettingsPath, cleanUp) => {
-			fs.writeFileSync(userSettingsPath, '{ "testworkbench.editor.tabs": true }');
+		testFile((testFile, cleanUp) => {
+			fs.writeFileSync(testFile, '{ "testworkbench.editor.tabs": true }');
 
-			const service = new ConfigurationService(new SettingsTestEnvironmentService(parseArgs(process.argv), process.execPath, userSettingsPath, orgSettingsPath));
+			const service = new ConfigurationService(new SettingsTestEnvironmentService(parseArgs(process.argv), process.execPath, testFile));
 
 			const config = service.getConfiguration<{ testworkbench: { editor: { tabs: boolean } } }>();
 			assert.ok(config);
@@ -112,10 +76,10 @@ suite('ConfigurationService - Node', () => {
 	});
 
 	test('error case does not explode', (done: () => void) => {
-		testFiles((userSettingsPath, orgSettingsPath, cleanUp) => {
-			fs.writeFileSync(userSettingsPath, ',,,,');
+		testFile((testFile, cleanUp) => {
+			fs.writeFileSync(testFile, ',,,,');
 
-			const service = new ConfigurationService(new SettingsTestEnvironmentService(parseArgs(process.argv), process.execPath, userSettingsPath, orgSettingsPath));
+			const service = new ConfigurationService(new SettingsTestEnvironmentService(parseArgs(process.argv), process.execPath, testFile));
 
 			const config = service.getConfiguration<{ foo: string }>();
 			assert.ok(config);
@@ -130,10 +94,9 @@ suite('ConfigurationService - Node', () => {
 		const id = uuid.generateUuid();
 		const parentDir = path.join(os.tmpdir(), 'vsctests', id);
 		const newDir = path.join(parentDir, 'config', id);
-		const userSettingsPath = path.join(newDir, 'config.json');
-		const orgSettingsPath = path.join(newDir, 'orgConfig.json');
+		const testFile = path.join(newDir, 'config.json');
 
-		const service = new ConfigurationService(new SettingsTestEnvironmentService(parseArgs(process.argv), process.execPath, userSettingsPath, orgSettingsPath));
+		const service = new ConfigurationService(new SettingsTestEnvironmentService(parseArgs(process.argv), process.execPath, testFile));
 
 		const config = service.getConfiguration<{ foo: string }>();
 		assert.ok(config);
@@ -142,30 +105,26 @@ suite('ConfigurationService - Node', () => {
 	});
 
 	test('reloadConfiguration', (done: () => void) => {
-		testFiles((userSettingsPath, orgSettingsPath, cleanUp) => {
-			fs.writeFileSync(userSettingsPath, '{ "foo": "bar" }');
+		testFile((testFile, cleanUp) => {
+			fs.writeFileSync(testFile, '{ "foo": "bar" }');
 
-			const service = new ConfigurationService(new SettingsTestEnvironmentService(parseArgs(process.argv), process.execPath, userSettingsPath, orgSettingsPath));
+			const service = new ConfigurationService(new SettingsTestEnvironmentService(parseArgs(process.argv), process.execPath, testFile));
 
-			let config = service.getConfiguration<{ foo: string, eggs: string }>();
+			let config = service.getConfiguration<{ foo: string }>();
 			assert.ok(config);
 			assert.equal(config.foo, 'bar');
-			assert.equal(config.eggs, void 0);
 
-			fs.writeFileSync(userSettingsPath, '{ "foo": "changed" }');
-			fs.writeFileSync(orgSettingsPath, ' { "eggs": "ham" }');
+			fs.writeFileSync(testFile, '{ "foo": "changed" }');
 
 			// still outdated
-			config = service.getConfiguration<{ foo: string, eggs: string }>();
+			config = service.getConfiguration<{ foo: string }>();
 			assert.ok(config);
 			assert.equal(config.foo, 'bar');
-			assert.equal(config.eggs, void 0);
 
 			// force a reload to get latest
-			service.reloadConfiguration<{ foo: string, eggs: string }>().then(config => {
+			service.reloadConfiguration<{ foo: string }>().then(config => {
 				assert.ok(config);
 				assert.equal(config.foo, 'changed');
-				assert.equal(config.eggs, 'ham');
 
 				service.dispose();
 
@@ -195,23 +154,23 @@ suite('ConfigurationService - Node', () => {
 			}
 		});
 
-		let serviceWithoutFile = new ConfigurationService(new SettingsTestEnvironmentService(parseArgs(process.argv), process.execPath, '__fakeUserSettings', '__fakeOrgSettings'));
+		let serviceWithoutFile = new ConfigurationService(new SettingsTestEnvironmentService(parseArgs(process.argv), process.execPath, '__testFile'));
 		let setting = serviceWithoutFile.getConfiguration<ITestSetting>();
 
 		assert.ok(setting);
 		assert.equal(setting.configuration.service.testSetting, 'isSet');
 
-		testFiles((userSettingsPath, orgSettingsPath, cleanUp) => {
-			fs.writeFileSync(userSettingsPath, '{ "testworkbench.editor.tabs": true }');
+		testFile((testFile, cleanUp) => {
+			fs.writeFileSync(testFile, '{ "testworkbench.editor.tabs": true }');
 
-			const service = new ConfigurationService(new SettingsTestEnvironmentService(parseArgs(process.argv), process.execPath, userSettingsPath, orgSettingsPath));
+			const service = new ConfigurationService(new SettingsTestEnvironmentService(parseArgs(process.argv), process.execPath, testFile));
 
 			let setting = service.getConfiguration<ITestSetting>();
 
 			assert.ok(setting);
 			assert.equal(setting.configuration.service.testSetting, 'isSet');
 
-			fs.writeFileSync(userSettingsPath, '{ "configuration.service.testSetting": "isChanged" }');
+			fs.writeFileSync(testFile, '{ "configuration.service.testSetting": "isChanged" }');
 
 			service.reloadConfiguration().then(() => {
 				let setting = service.getConfiguration<ITestSetting>();
@@ -240,27 +199,24 @@ suite('ConfigurationService - Node', () => {
 			}
 		});
 
-		testFiles((userSettingsPath, orgSettingsPath, cleanUp) => {
-			const service = new ConfigurationService(new SettingsTestEnvironmentService(parseArgs(process.argv), process.execPath, userSettingsPath, orgSettingsPath));
+		testFile((testFile, cleanUp) => {
+			const service = new ConfigurationService(new SettingsTestEnvironmentService(parseArgs(process.argv), process.execPath, testFile));
 
 			let res = service.lookup('something.missing');
 			assert.strictEqual(res.value, void 0);
 			assert.strictEqual(res.default, void 0);
-			assert.strictEqual(res.organization, void 0);
 			assert.strictEqual(res.user, void 0);
 
 			res = service.lookup('lookup.service.testSetting');
 			assert.strictEqual(res.default, 'isSet');
 			assert.strictEqual(res.value, 'isSet');
-			assert.strictEqual(res.organization, void 0);
 			assert.strictEqual(res.user, void 0);
 
-			fs.writeFileSync(userSettingsPath, '{ "lookup.service.testSetting": "bar" }');
-			fs.writeFileSync(orgSettingsPath, '{ "lookup.service.testSetting": "baz" }');
+			fs.writeFileSync(testFile, '{ "lookup.service.testSetting": "bar" }');
+
 			return service.reloadConfiguration().then(() => {
 				res = service.lookup('lookup.service.testSetting');
 				assert.strictEqual(res.default, 'isSet');
-				assert.strictEqual(res.organization, 'baz');
 				assert.strictEqual(res.user, 'bar');
 				assert.strictEqual(res.value, 'bar');
 
@@ -283,22 +239,20 @@ suite('ConfigurationService - Node', () => {
 			}
 		});
 
-		testFiles((userSettingsPath, orgSettingsPath, cleanUp) => {
-			const service = new ConfigurationService(new SettingsTestEnvironmentService(parseArgs(process.argv), process.execPath, userSettingsPath, orgSettingsPath));
+		testFile((testFile, cleanUp) => {
+			const service = new ConfigurationService(new SettingsTestEnvironmentService(parseArgs(process.argv), process.execPath, testFile));
 
 			let res = service.lookup('lookup.service.testNullSetting');
 			assert.strictEqual(res.default, null);
 			assert.strictEqual(res.value, null);
-			assert.strictEqual(res.organization, void 0);
 			assert.strictEqual(res.user, void 0);
 
-			fs.writeFileSync(userSettingsPath, '{ "lookup.service.testNullSetting": null }');
+			fs.writeFileSync(testFile, '{ "lookup.service.testNullSetting": null }');
 
 			return service.reloadConfiguration().then(() => {
 				res = service.lookup('lookup.service.testNullSetting');
 				assert.strictEqual(res.default, null);
 				assert.strictEqual(res.value, null);
-				assert.strictEqual(res.organization, void 0);
 				assert.strictEqual(res.user, null);
 
 				service.dispose();

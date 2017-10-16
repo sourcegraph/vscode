@@ -28,11 +28,6 @@ export enum ConfigurationEditingErrorCode {
 	ERROR_INVALID_USER_TARGET,
 
 	/**
-	 * Error when trying to write to organization target but not supported for provided key.
-	 */
-	ERROR_INVALID_ORGANIZATION_TARGET,
-
-	/**
 	 * Error when trying to write a configuration key to folder target
 	 */
 	ERROR_INVALID_FOLDER_TARGET,
@@ -65,11 +60,6 @@ export enum ConfigurationTarget {
 	 * Targets the user configuration file for writing.
 	 */
 	USER,
-
-	/**
-	 * Targets the organization configuration file for writing.
-	 */
-	ORGANIZATION,
 
 	/**
 	 * Targets the workspace configuration file for writing. This only works if a workspace is opened.

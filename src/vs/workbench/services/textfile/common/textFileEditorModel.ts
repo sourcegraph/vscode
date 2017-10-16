@@ -707,12 +707,7 @@ export class TextFileEditorModel extends BaseTextEditorModel implements ITextFil
 					/* __GDPR__
 						"settingsWritten" : {}
 					*/
-					if (this.resource.fsPath === this.environmentService.appOrganizationSettingsPath) {
-						this.telemetryService.publicLog('organizationSettingsWritten');
-					} else {
-						this.telemetryService.publicLog('settingsWritten'); // Do not log write to user settings.json and .vscode folder as a filePUT event as it ruins our JSON usage data
-					}
-
+					this.telemetryService.publicLog('settingsWritten'); // Do not log write to user settings.json and .vscode folder as a filePUT event as it ruins our JSON usage data
 				} else {
 					/* __GDPR__
 						"filePUT" : {
@@ -762,8 +757,7 @@ export class TextFileEditorModel extends BaseTextEditorModel implements ITextFil
 	private isSettingsFile(): boolean {
 
 		// Check for global settings file
-		// TODO@ggilmore: Figure out if we need to differentiate between user settings and organization settings here
-		if (this.resource.fsPath === this.environmentService.appSettingsPath || this.resource.fsPath === this.environmentService.appOrganizationSettingsPath) {
+		if (this.resource.fsPath === this.environmentService.appSettingsPath) {
 			return true;
 		}
 

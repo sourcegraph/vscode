@@ -1158,7 +1158,7 @@ export class SearchViewlet extends Viewlet {
 					}).on(dom.EventType.CLICK, (e: MouseEvent) => {
 						dom.EventHelper.stop(e, false);
 
-						let editorPromise = this.contextService.getWorkbenchState() !== WorkbenchState.EMPTY ? this.preferencesService.openWorkspaceSettings() : this.preferencesService.openUserSettings();
+						let editorPromise = this.contextService.getWorkbenchState() !== WorkbenchState.EMPTY ? this.preferencesService.openWorkspaceSettings() : this.preferencesService.openGlobalSettings();
 						editorPromise.done(editor => {
 							if (editor instanceof PreferencesEditor) {
 								editor.focusSearch('.exclude');

@@ -97,7 +97,7 @@ console.log(`This is the manufacturer [${cars[i]}])`);
     }
 ```
 
->**Tip:** Additional formatters are available in the [extension gallery](command:workbench.extensions.action.showPopularExtensions).  Formatting support can also be configured via [settings](command:workbench.action.openUserSettings) e.g. enabling `editor.formatOnSave`.
+>**Tip:** Additional formatters are available in the [extension gallery](command:workbench.extensions.action.showPopularExtensions).  Formatting support can also be configured via [settings](command:workbench.action.openGlobalSettings) e.g. enabling `editor.formatOnSave`.
 
 
 ### Code Folding

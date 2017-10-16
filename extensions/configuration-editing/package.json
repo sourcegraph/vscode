@@ -40,10 +40,6 @@
         "url": "vscode://schemas/settings/user"
       },
       {
-        "fileMatch": "%APP_SETTINGS_HOME%/cachedOrganizationSettings.json",
-        "url": "vscode://schemas/settings/organization"
-      },
-      {
         "fileMatch": "%APP_WORKSPACES_HOME%/*/workspace.json",
         "url": "vscode://schemas/workspaceConfig"
       },
