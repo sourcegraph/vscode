@@ -58,8 +58,10 @@ export interface IReviewResourceGroup {
  * Examples: a branches provider, a GitHub PR provider
  */
 export interface IReviewProvider extends IDisposable {
-	readonly label: string;
 	readonly id: string;
+	readonly label: string;
+	readonly description: string;
+	readonly icon: string;
 	readonly contextValue: string;
 
 	readonly resources: IReviewResourceGroup[];
@@ -67,6 +69,13 @@ export interface IReviewProvider extends IDisposable {
 
 	readonly rootUri: URI;
 	readonly reviewCommands?: Command[];
+
+	/** The potential reviewee */
+	readonly author?: string;
+
+	/** A timestamp in ms of the most recent activity on the review item */
+	readonly date?: number;
+
 	readonly onDidChange: Event<void>;
 
 	active: boolean;

@@ -53,10 +53,39 @@ export enum RefType {
 
 export interface Ref {
 	type: RefType;
+
+	/**
+	 * The full name of the reference.
+	 * (e.g. "refs/remotes/origin/mybranch")
+	 */
 	fullName?: string;
+
+	/**
+	 * This display name of the branch.
+	 * (e.g. "foo" or "origin/bar")
+	 */
 	name?: string;
+
+	/**
+	 * The 40-byte commit SHA1
+	 */
 	commit?: string;
+
+	/**
+	 * The origin of the branch.
+	 * (e.g. "origin", "upstream")
+	 */
 	remote?: string;
+
+	/**
+	 * The time when this reference was commited
+	 */
+	committerDate?: Date;
+
+	/**
+	 * The name of who committed this reference
+	 */
+	committerName?: string;
 }
 
 export interface Branch extends Ref {
@@ -227,7 +256,7 @@ export interface IGitErrorData {
 	gitCommand?: string;
 }
 
-export class GitError {
+export class GitError extends Error {
 
 	error?: Error;
 	message: string;
@@ -238,6 +267,7 @@ export class GitError {
 	gitCommand?: string;
 
 	constructor(data: IGitErrorData) {
+		super(data.message || 'Git error');
 		if (data.error) {
 			this.error = data.error;
 			this.message = data.error.message;
@@ -245,7 +275,6 @@ export class GitError {
 			this.error = void 0;
 		}
 
-		this.message = this.message || data.message || 'Git error';
 		this.stdout = data.stdout;
 		this.stderr = data.stderr;
 		this.exitCode = data.exitCode;
@@ -1131,20 +1160,30 @@ export class Repository {
 	}
 
 	async getRefs(): Promise<Ref[]> {
-		const result = await this.run(['for-each-ref', '--format', '%(refname) %(objectname)']);
+		// %09 is a tab character
+		const result = await this.run(['for-each-ref', '--format', '%(refname)%09%(objectname)%09%(committername)%09%(committerdate:unix)']);
 
-		const fn = (line): Ref | null => {
-			let match: RegExpExecArray | null;
-
-			if (match = /^refs\/heads\/([^ ]+) ([0-9a-f]{40})$/.exec(line)) {
-				return { fullName: `refs/heads/${match[1]}`, name: match[1], commit: match[2], type: RefType.Head };
-			} else if (match = /^refs\/remotes\/([^/]+)\/([^ ]+) ([0-9a-f]{40})$/.exec(line)) {
-				return { fullName: `refs/remotes/${match[1]}/${match[2]}`, name: `${match[1]}/${match[2]}`, commit: match[3], type: RefType.RemoteHead, remote: match[1] };
-			} else if (match = /^refs\/tags\/([^ ]+) ([0-9a-f]{40})$/.exec(line)) {
-				return { fullName: `refs/tags/${match[1]}`, name: match[1], commit: match[2], type: RefType.Tag };
+		const fn = (line: string): Ref | null => {
+			const [fullName, commit, committerName, committerDateTs]: (string | undefined)[] = line.trim().split('\t');
+			if (!fullName) {
+				return null;
 			}
-
-			return null;
+			const [, refTypeStr, ...remoteName] = fullName.split('/');
+			let type: RefType;
+			let remote: string | undefined;
+			switch (refTypeStr) {
+				case 'heads': type = RefType.Head; break;
+				case 'tags': type = RefType.Tag; break;
+				case 'remotes': {
+					type = RefType.RemoteHead;
+					remote = remoteName[0];
+					break;
+				}
+				default: return null;
+			}
+			const name: string | undefined = remoteName.join('/') || undefined;
+			const committerDate = committerDateTs && new Date(~~committerDateTs * 1000) || undefined;
+			return { fullName, name, commit, type, remote, committerName, committerDate };
 		};
 
 		return result.stdout.trim().split('\n')

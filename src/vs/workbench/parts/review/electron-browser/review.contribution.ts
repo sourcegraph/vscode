@@ -6,95 +6,55 @@
 'use strict';
 
 import { localize } from 'vs/nls';
-// import { TPromise } from 'vs/base/common/winjs.base';
-// import { Action } from 'vs/base/common/actions';
 import { Registry } from 'vs/platform/registry/common/platform';
-// import { IWorkbenchContributionsRegistry, Extensions as WorkbenchExtensions } from 'vs/workbench/common/contributions';
-// import { DirtyDiffDecorator } from './dirtydiffDecorator';
-import { ViewletRegistry, Extensions as ViewletExtensions, ViewletDescriptor, ToggleViewletAction } from 'vs/workbench/browser/viewlet';
-import { VIEWLET_ID } from 'vs/workbench/parts/review/common/review';
-import { IWorkbenchActionRegistry, Extensions as WorkbenchActionExtensions } from 'vs/workbench/common/actions';
-import { KeyMod, KeyCode } from 'vs/base/common/keyCodes';
-import { SyncActionDescriptor } from 'vs/platform/actions/common/actions';
-import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
-import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
-// import { ISCMService } from 'vs/workbench/services/scm/common/scm';
-// import { StatusUpdater, StatusBarController } from './scmActivity';
-import { ReviewViewlet } from 'vs/workbench/parts/review/electron-browser/reviewViewlet';
+// import { ViewletRegistry, Extensions as ViewletExtensions, ViewletDescriptor, ToggleViewletAction } from 'vs/workbench/browser/viewlet';
+// import { VIEWLET_ID } from 'vs/workbench/parts/review/common/review';
+// import { IWorkbenchActionRegistry, Extensions as WorkbenchActionExtensions } from 'vs/workbench/common/actions';
+// import { KeyMod, KeyCode } from 'vs/base/common/keyCodes';
+// import { SyncActionDescriptor } from 'vs/platform/actions/common/actions';
+// import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
+// import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
+// import { ReviewViewlet } from 'vs/workbench/parts/review/electron-browser/reviewViewlet';
+import { IQuickOpenRegistry, Extensions as QuickOpenExtensions, QuickOpenHandlerDescriptor } from 'vs/workbench/browser/quickopen';
+import { ReviewQuickOpenHandler } from 'vs/workbench/parts/review/electron-browser/reviewQuickOpenHandler';
 
-class OpenReviewViewletAction extends ToggleViewletAction {
-
-	static ID = VIEWLET_ID;
-	static LABEL = localize('toggleReviewViewlet', "Show Review");
-
-	constructor(id: string, label: string, @IViewletService viewletService: IViewletService, @IWorkbenchEditorService editorService: IWorkbenchEditorService) {
-		super(id, label, VIEWLET_ID, viewletService, editorService);
-	}
-}
-
-// Registry.as<IWorkbenchContributionsRegistry>(WorkbenchExtensions.Workbench)
-// 	.registerWorkbenchContribution(DirtyDiffDecorator);
-
-const viewletDescriptor = new ViewletDescriptor(
-	ReviewViewlet,
-	VIEWLET_ID,
-	localize('review', "Review"),
-	'review',
-	37
+// Register Quick Open
+(<IQuickOpenRegistry>Registry.as(QuickOpenExtensions.Quickopen)).registerQuickOpenHandler(
+	new QuickOpenHandlerDescriptor(
+		ReviewQuickOpenHandler,
+		ReviewQuickOpenHandler.ID,
+		ReviewQuickOpenHandler.PREFIX,
+		'reviewItemsPicker',
+		localize('reviewItems', "Review Code")
+	)
 );
 
-Registry.as<ViewletRegistry>(ViewletExtensions.Viewlets)
-	.registerViewlet(viewletDescriptor);
-
-// Registry.as(WorkbenchExtensions.Workbench)
-// 	.registerWorkbenchContribution(StatusUpdater);
-
-// Registry.as(WorkbenchExtensions.Workbench)
-// 	.registerWorkbenchContribution(StatusBarController);
+// Register viewlet
+// Registry.as<ViewletRegistry>(ViewletExtensions.Viewlets).registerViewlet(new ViewletDescriptor(
+// 	ReviewViewlet,
+// 	VIEWLET_ID,
+// 	localize('review', "Review"),
+// 	'review',
+// 	37
+// ));
 
 // Register Action to Open Viewlet
-Registry.as<IWorkbenchActionRegistry>(WorkbenchActionExtensions.WorkbenchActions).registerWorkbenchAction(
-	new SyncActionDescriptor(OpenReviewViewletAction, VIEWLET_ID, localize('toggleReviewViewlet', "Show Review"), {
-		primary: null,
-		win: { primary: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KEY_G },
-		linux: { primary: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KEY_G },
-		mac: { primary: KeyMod.WinCtrl | KeyMod.Shift | KeyCode.KEY_G }
-	}),
-	'View: Show Review',
-	localize('view', "View")
-);
+// class OpenReviewViewletAction extends ToggleViewletAction {
 
-// export class ShowAllRepositoriesAction extends Action {
+// 	static ID = VIEWLET_ID;
+// 	static LABEL = localize('toggleReviewViewlet', "Show Review");
 
-// 	public static ID = 'scm.showAllRepositories';
-// 	public static LABEL = localize('scm.showAllRepositories', "Show All SCM Repositories");
-
-// 	constructor(
-// 		id: string,
-// 		label: string,
-// 		@ISCMService private scmService: ISCMService,
-// 	) {
-// 		super(id, label);
-// 	}
-
-// 	public run(): TPromise<any> {
-// 		console.group('SCM repositories');
-// 		const data: any = [];
-// 		this.scmService.repositories.forEach(({ provider }) => {
-// 			data.push({
-// 				// id: provider.id,
-// 				// label: provider.label,
-// 				root: provider.rootUri ? provider.rootUri.toString() : '',
-// 				'rev.rawSpecifier': provider.revision ? provider.revision.rawSpecifier : '',
-// 				// 'rev.specifier': provider.revision ? provider.revision.specifier : '',
-// 				'rev.id': provider.revision ? provider.revision.id : '',
-// 			});
-// 		});
-// 		console.table(data);
-// 		console.groupEnd();
-// 		return TPromise.as(true);
+// 	constructor(id: string, label: string, @IViewletService viewletService: IViewletService, @IWorkbenchEditorService editorService: IWorkbenchEditorService) {
+// 		super(id, label, VIEWLET_ID, viewletService, editorService);
 // 	}
 // }
-
-// Registry.as<IWorkbenchActionRegistry>(WorkbenchActionExtensions.WorkbenchActions)
-// 	.registerWorkbenchAction(new SyncActionDescriptor(ShowAllRepositoriesAction, ShowAllRepositoriesAction.ID, ShowAllRepositoriesAction.LABEL), 'Developer: Show All SCM Repositories', 'SCM');
+// Registry.as<IWorkbenchActionRegistry>(WorkbenchActionExtensions.WorkbenchActions).registerWorkbenchAction(
+// 	new SyncActionDescriptor(OpenReviewViewletAction, VIEWLET_ID, localize('toggleReviewViewlet', "Show Review"), {
+// 		primary: null,
+// 		win: { primary: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KEY_G },
+// 		linux: { primary: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KEY_G },
+// 		mac: { primary: KeyMod.WinCtrl | KeyMod.Shift | KeyCode.KEY_G }
+// 	}),
+// 	'View: Show Review',
+// 	localize('view', "View")
+// );

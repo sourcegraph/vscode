@@ -5845,10 +5845,12 @@ declare module 'vscode' {
 		/**
 		 * Creates a new [review control](#ReviewControl) instance.
 		 * @param id An `id` for the review control.
-		 * @param label A human-readable string for the review control.
+		 * @param label A human-readable label for the review control.
+		 * @param description Secondary information about the review control.
+		 * @param icon One or more optional CSS icon classes for the review control
 		 * @param rootUri A Uri of the root of the review control. Eg: `Uri.parse(workspaceRoot)`.
 		 */
-		export function createReviewControl(id: string, label: string, rootUri: Uri): ReviewControl;
+		export function createReviewControl(id: string, label: string, description: string, icon: string, rootUri: Uri): ReviewControl;
 	}
 
 	/**
@@ -5867,9 +5869,20 @@ declare module 'vscode' {
 		readonly label: string;
 
 		/**
+		 * The human-readable description of this source control.
+		 */
+		readonly description: string;
+
+		/**
+		 * One or more CSS class names to specify the icon for this review control.
+		 * This should indicate the kind of review control and is immutable.
+		 */
+		readonly icon: string;
+
+		/**
 		 * Actions that can be taken to on a review.
 		 */
-		reviewCommands?: Command[];
+		reviewCommands?: ReadonlyArray<Command>;
 
 		/**
 		 * True if the review is active in the UI.
@@ -5881,6 +5894,18 @@ declare module 'vscode' {
 		 * An [event](#Event) which fires when the review control becomes active.
 		 */
 		onDidChangeActive: Event<void>;
+
+		/**
+		 * The timestamp in ms of the last change on this review control.
+		 * This can be asynchronously resolved information and may change.
+		 */
+		date?: number;
+
+		/**
+		 * The name of the potential reviewee for this review control.
+		 * This can be asynchronously resolved information and may change.
+		 */
+		author?: string;
 
 		/**
 		 * Create a new [resource group](#SourceControlResourceGroup).
