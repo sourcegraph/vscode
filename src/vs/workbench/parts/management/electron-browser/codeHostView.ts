@@ -19,7 +19,7 @@ import { IContextMenuService } from 'vs/platform/contextview/browser/contextView
 import { ICommandService } from 'vs/platform/commands/common/commands';
 import { IExtensionService } from 'vs/platform/extensions/common/extensions';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
-import { IConfigurationService, IConfigurationServiceEvent } from 'vs/platform/configuration/common/configuration';
+import { IConfigurationService, IConfigurationChangeEvent } from 'vs/platform/configuration/common/configuration';
 
 /**
  * CodeHostView is a collapasble viewlet rendered when the ManagementViewlet is triggered.
@@ -114,7 +114,7 @@ export class CodeHostView extends ViewsViewletPanel {
 		button.label = hasToken ? nls.localize('updateBitbucketAccessToken', "Update Bitbucket app password") : nls.localize('addBitbucketAccessToken', "Set Bitbucket app password");
 	}
 
-	private async updateButtonLabelsForConfigEvent(e: IConfigurationServiceEvent): TPromise<void> {
+	private async updateButtonLabelsForConfigEvent(e: IConfigurationChangeEvent): TPromise<void> {
 		const { bitbucket, github } = e.sourceConfig;
 		const bitbucketAppPassword = bitbucket && bitbucket.cloud && bitbucket.cloud.appPassword && bitbucket.cloud.username;
 		this.setGitHubButtonLabel(this.gitHubAccessTokenButton, github && github.token);

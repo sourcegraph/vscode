@@ -6,7 +6,7 @@
 
 import * as path from 'path';
 
-import { workspace, languages, ExtensionContext, extensions, Uri, TextDocument, ColorInformation, Color, ColorPresentation } from 'vscode';
+import { workspace, languages, ExtensionContext, extensions, Uri, TextDocument, ColorInformation, Color, ColorPresentation, ProviderResult } from 'vscode';
 import { LanguageClient, LanguageClientOptions, RequestType, ServerOptions, TransportKind, NotificationType, DidChangeConfigurationNotification } from 'vscode-languageclient';
 import TelemetryReporter from 'vscode-extension-telemetry';
 import { ConfigurationFeature } from 'vscode-languageclient/lib/configuration.proposed';
@@ -133,7 +133,7 @@ export function activate(context: ExtensionContext) {
 
 		// register color provider
 		toDispose.push(languages.registerColorProvider(documentSelector, {
-			provideDocumentColors(document: TextDocument): Thenable<ColorInformation[]> {
+			provideDocumentColors(document: TextDocument): ProviderResult<ColorInformation[]> {
 				let params: DocumentColorParams = {
 					textDocument: client.code2ProtocolConverter.asTextDocumentIdentifier(document)
 				};
@@ -145,10 +145,10 @@ export function activate(context: ExtensionContext) {
 					});
 				});
 			},
-			provideColorPresentations(document: TextDocument, colorInfo: ColorInformation): Thenable<ColorPresentation[]> {
+			provideColorPresentations(color: Color, context): Thenable<ColorPresentation[]> {
 				let params: ColorPresentationParams = {
-					textDocument: client.code2ProtocolConverter.asTextDocumentIdentifier(document),
-					colorInfo: { range: client.code2ProtocolConverter.asRange(colorInfo.range), color: colorInfo.color }
+					textDocument: client.code2ProtocolConverter.asTextDocumentIdentifier(context.document),
+					colorInfo: { range: client.code2ProtocolConverter.asRange(context.range), color }
 				};
 				return client.sendRequest(ColorPresentationRequest.type, params).then(presentations => {
 					return presentations.map(p => {

@@ -4,7 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import nls = require('vs/nls');
-import { ActivityActionItem, ViewletActionItem, ViewletActivityAction } from 'vs/workbench/browser/parts/activitybar/activitybarActions';
+import { ViewletActivityAction, GlobalActivityActionItem } from 'vs/workbench/browser/parts/activitybar/activitybarActions';
+import { ActivityActionItem } from 'vs/workbench/browser/parts/compositebar/compositeBarActions';
 import { IActivity, IGlobalActivity } from 'vs/workbench/common/activity';
 import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
 import { IActivityBarService } from 'vs/workbench/services/activity/common/activityBarService';
@@ -12,7 +13,6 @@ import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { IViewletService, } from 'vs/workbench/services/viewlet/browser/viewlet';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
-import { GlobalViewletDescriptor, ViewletDescriptor } from 'vs/workbench/browser/viewlet';
 import DOM = require('vs/base/browser/dom');
 import { IAction } from 'vs/base/common/actions';
 import { TPromise } from 'vs/base/common/winjs.base';
@@ -42,13 +42,13 @@ export class GlobalViewletActionItem extends ActivityActionItem {
 		});
 		this.viewletService.onDidViewletOpen((e) => {
 			const active = this.viewletService.getActiveViewlet();
-			if (this.viewlet.id === active.getId()) {
+			if (this.activity.id === active.getId()) {
 				this.action.checked = true;
 			}
 		});
 
-		if (this.action.descriptor instanceof GlobalViewletDescriptor && this.action.descriptor.globalActivity) {
-			this.globalActivity = this.instantiationService.createInstance(this.action.descriptor.globalActivity);
+		if (this.action instanceof GlobalActivityActionItem) {
+			this.globalActivity = this.action.activity as IGlobalActivity;
 		}
 
 	}
@@ -62,25 +62,21 @@ export class GlobalViewletActionItem extends ActivityActionItem {
 		if (!this.viewletActivity) {
 			let activityName: string;
 
-			const keybinding = this.getKeybindingLabel(this.viewlet.id);
+			const keybinding = this.getKeybindingLabel(this.action.activity.id);
 			if (keybinding) {
-				activityName = nls.localize('titleKeybinding', "{0} ({1})", this.viewlet.name, keybinding);
+				activityName = nls.localize('titleKeybinding', "{0} ({1})", this.action.activity.name, keybinding);
 			} else {
-				activityName = this.viewlet.name;
+				activityName = this.action.activity.name;
 			}
 
 			this.viewletActivity = {
-				id: this.viewlet.id,
+				id: this.action.activity.id,
 				cssClass: this.cssClass,
 				name: activityName
 			};
 		}
 
 		return this.viewletActivity;
-	}
-
-	private get viewlet(): ViewletDescriptor {
-		return this.action.descriptor;
 	}
 
 	public render(container: HTMLElement): void {
@@ -99,7 +95,7 @@ export class GlobalViewletActionItem extends ActivityActionItem {
 			const actions: IAction[] = this.globalActivity.getActions();
 			this.contextMenuService.showContextMenu({
 				getAnchor: () => container,
-				getActionsContext: () => this.viewlet,
+				getActionsContext: () => this.activity.id,
 				getActions: () => TPromise.as(actions)
 			});
 		}
@@ -136,7 +132,6 @@ export class GlobalViewletActionItem extends ActivityActionItem {
 
 	public dispose(): void {
 		super.dispose();
-		ViewletActionItem.clearDraggedViewlet();
 
 		this.$label.destroy();
 	}
