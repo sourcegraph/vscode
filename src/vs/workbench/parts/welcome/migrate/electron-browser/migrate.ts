@@ -56,7 +56,7 @@ export class VSCodeMigrateAction extends Action {
 			return;
 		}
 
-		const confirmed = this.messageService.confirm({
+		const confirmed = await this.messageService.confirm({
 			message: localize('migrateConfirm', "This action will overwrite existing extensions and user settings. Are you sure you want to migrate?"),
 		});
 		if (!confirmed) {
