@@ -5,7 +5,7 @@
 'use strict';
 
 import { localize } from 'vs/nls';
-import { ICodeCommentsService, IBranchComments, IFileComments, IThreadComments, IComment, ICommentAuthor, IDraftThreadComments, IOrgComments, IRepoComments } from 'vs/editor/common/services/codeCommentsService';
+import { IThreads, ICodeCommentsService, Filter, IFileComments, IThreadComments, IComment, IDraftThreadComments, IOrgComments, IRepoComments } from 'vs/editor/common/services/codeCommentsService';
 import { Range } from 'vs/editor/common/core/range';
 import Event, { Emitter, any } from 'vs/base/common/event';
 import { VSDiff as Diff } from 'vs/workbench/services/codeComments/common/vsdiff';
@@ -37,6 +37,7 @@ import { IOutputService } from 'vs/workbench/parts/output/common/output';
 // TODO(nick): fix this
 // tslint:disable-next-line:import-patterns
 import { CommentsChannelId } from 'vs/workbench/parts/codeComments/common/constants';
+import * as objects from 'vs/base/common/objects';
 
 export { Event }
 
@@ -87,8 +88,15 @@ startCharacter
 endCharacter
 createdAt
 archivedAt
+repo {
+	remoteUri
+}
 ${commentsGraphql}`;
 
+const threadConnectionGraphql = `
+nodes {
+${threadGraphql}
+}`;
 
 export class CodeCommentsService implements ICodeCommentsService {
 	public _serviceBrand: any;
@@ -127,20 +135,57 @@ export class CodeCommentsService implements ICodeCommentsService {
 		return model;
 	}
 
+	public getThreads(filter: Filter): Threads {
+		return this.instantiationService.createInstance(Threads, this, filter);
+	}
+
+	/**
+	 * @deprecated TODO(kingy): use Threads instead
+	 */
 	public getOrgComments(): IOrgComments {
-		return this.instantiationService.createInstance(OrgComments);
+		return this.instantiationService.createInstance(OrgComments, this);
 	}
 
-	private branchComments = new ReferenceCountingMap<string, BranchComments>();
+	public readonly didCreateThread = new Emitter<IThreadCommentsMemento>();
+	public readonly onDidCreateThread = this.didCreateThread.event;
 
-	public getBranchComments(resource: URI, branch: string): BranchComments {
-		const repo = this.scmService.getRepositoryForResource(resource);
-		const id = `${repo.provider.id}@${branch}`;
-		const git = new Git(resource, this.scmService);
-		return this.branchComments.getOrCreate(id, () => this.instantiationService.createInstance(BranchComments, git, branch));
-	}
+	public readonly didUpdateThread = new Emitter<IThreadCommentsMemento>();
+	public readonly onDidUpdateThread = this.didUpdateThread.event;
+
+	public readonly didFetchThreads = new Emitter<IFetchThreadsEvent>();
+	public readonly onDidFetchThreads = this.didFetchThreads.event;
 }
 
+/**
+ * The parameters used to fetch a set of threads from the server.
+ */
+export interface IThreadQueryParams {
+	readonly orgId: number;
+	readonly repo: string | undefined;
+	readonly branch: string | undefined;
+	readonly file: string | undefined;
+}
+
+/**
+ * An event that is fired when threads are fetched from the server.
+ */
+export interface IFetchThreadsEvent {
+
+	/**
+	 * The query that was used to fetch the threads.
+	 */
+	readonly query: IThreadQueryParams;
+
+	/**
+	 * The threads returned by the server that matched the query.
+	 */
+	readonly threads: ReadonlyArray<IThreadCommentsMemento>;
+}
+
+
+/**
+ * @deprecated TODO(kingy): use Threads instead
+ */
 export class OrgComments extends Disposable implements IOrgComments {
 	private _repoComments: IRepoComments[] = [];
 	private didChangeRepoComments = this.disposable(new Emitter<void>());
@@ -151,6 +196,7 @@ export class OrgComments extends Disposable implements IOrgComments {
 	}
 
 	constructor(
+		private commentsService: CodeCommentsService,
 		@IInstantiationService private instantiationService: IInstantiationService,
 		@IRemoteService private remoteService: IRemoteService,
 		@IAuthService private authService: IAuthService,
@@ -188,7 +234,7 @@ export class OrgComments extends Disposable implements IOrgComments {
 
 		this._repoComments = response.org.repos.map(repo => {
 			const threads = repo.threads.map(thread => {
-				return this.instantiationService.createInstance(ThreadComments, thread, undefined);
+				return this.instantiationService.createInstance(ThreadComments, this.commentsService, undefined, gqlThreadToMemento(thread));
 			}).sort((left: ThreadComments, right: ThreadComments) => {
 				// Most recent comment timestamp descending.
 				return right.mostRecentComment.createdAt.getTime() - left.mostRecentComment.createdAt.getTime();
@@ -204,7 +250,7 @@ export class OrgComments extends Disposable implements IOrgComments {
 	}
 }
 
-export class BranchComments extends Disposable implements IBranchComments {
+export class Threads extends Disposable implements IThreads {
 
 	private _threads: ThreadComments[] = [];
 	private didChangeThreads = this.disposable(new Emitter<void>());
@@ -213,14 +259,20 @@ export class BranchComments extends Disposable implements IBranchComments {
 		return this._threads;
 	}
 
+	private git: Git;
 	constructor(
-		private git: Git,
-		private branch: string,
+		private commentService: CodeCommentsService,
+		private filter: Filter,
 		@IInstantiationService private instantiationService: IInstantiationService,
 		@IRemoteService private remoteService: IRemoteService,
 		@IAuthService private authService: IAuthService,
+		@ISCMService private scmService: ISCMService,
+		@IOutputService private outputService: IOutputService,
 	) {
 		super();
+		this.git = new Git(this.filter.resource, scmService);
+		commentService.onDidFetchThreads(this.onDidFetchThreads, this, this.disposables);
+		commentService.onDidCreateThread(this.onDidCreateThread, this, this.disposables);
 	}
 
 	private refreshDelayer = new ThrottledDelayer<void>(100);
@@ -228,46 +280,158 @@ export class BranchComments extends Disposable implements IBranchComments {
 		return this.refreshDelayer.trigger(() => this.refreshNow());
 	}
 
-	private refreshNow(): TPromise<void> {
-		return this.git.getRemoteRepo()
-			.then(repo => {
-				if (!this.authService.currentUser || !this.authService.currentUser.currentOrgMember) {
-					return TPromise.as(undefined);
-				}
-				return requestGraphQL<{ org: { repo: { threads: GQL.IThread[] } } }>(this.remoteService, `query ThreadsForBranch (
-					$file: String!,
-				) {
-					root {
-						org(id: $orgId) {
-							repo(remoteURI: $remoteURI) {
-								threads(branch: $branch) {
-									${threadGraphql}
-								}
-							}
-						}
+	private query: IThreadQueryParams;
+	private async refreshNow(): TPromise<void> {
+		const repoFile = await this.getRepoFile();
+		if (!repoFile) {
+			return;
+		}
+		const { repo, file } = repoFile;
+		if (!this.authService.currentUser || !this.authService.currentUser.currentOrgMember) {
+			return;
+		}
+		this.query = {
+			orgId: this.authService.currentUser.currentOrgMember.org.id,
+			repo,
+			branch: this.filter.branch,
+			file,
+		};
+		const response = await requestGraphQL<{ org: { threads2: { nodes: GQL.IThread[] } } }>(this.remoteService, `query Threads (
+			$file: String!,
+		) {
+			root {
+				org(id: $orgId) {
+					threads2(repoRemoteURI: $remoteURI, branch: $branch, file: $file) {
+						${threadConnectionGraphql}
 					}
-				}`, {
-						orgId: this.authService.currentUser.currentOrgMember.org.id,
-						branch: this.branch,
-						remoteURI: repo,
-					});
-			})
-			.then(response => {
-				const threads = (response && response.org.repo && response.org.repo.threads) || [];
+				}
+			}
+		}`, this.query);
+		const threads = response.org.threads2.nodes.map(thread => {
+			const memento = gqlThreadToMemento(thread);
+			this.commentService.didUpdateThread.fire(memento);
+			return memento;
+		});
 
-				// Although we are updating this._threads here, we don't fire
-				// threadsDidChange until the display ranges have updated.
-				this._threads = this.instantiationService.invokeFunction(updatedThreads, this.git, this._threads, threads);
-				// TODO(nick): figure out display ranges
-				this.didChangeThreads.fire();
-				// return this.updateDisplayRanges();
-			});
+		this.commentService.didFetchThreads.fire({ query: this.query, threads });
 	}
 
-	public unshiftThread(threadComment: ThreadComments): void {
-		this._threads.unshift(threadComment);
+	private async getRepoFile(): Promise<{ repo?: string, file?: string }> {
+		if (!this.filter.resource) {
+			return {};
+		}
+		try {
+			const [repo, file] = await Promise.all([
+				this.git.getRemoteRepo(),
+				this.instantiationService.invokeFunction(getPathRelativeToRepo, this.filter.resource),
+			]);
+			return { repo, file };
+		} catch (err) {
+			// These errors happen a lot on startup because the source control providers
+			// arent registered yet. It isn't a problem on startup because we just retry later
+			// when the source control providers change.
+			const error = Array.isArray(err) ? err[0] : err;
+			this.outputService.getChannel(CommentsChannelId).append(error.message);
+			return undefined;
+		}
+	}
+
+	private onDidFetchThreads(event: IFetchThreadsEvent): void {
+		if (!objects.equals(event.query, this.query)) {
+			return;
+		}
+
+		// Index our current threads by id.
+		const threadsById = this.threads.reduce((threads, thread) => {
+			threads.set(thread.id, thread);
+			return threads;
+		}, new Map<number, ThreadComments>());
+
+		this._threads = event.threads
+			.map(thread => {
+				const currentThread = threadsById.get(thread.id);
+				if (currentThread) {
+					// Delete from map so we don't dispose this thread later.
+					threadsById.delete(thread.id);
+					return currentThread;
+				} else {
+					return this.instantiationService.createInstance(ThreadComments, this.commentService, this.git, thread);
+				}
+			})
+			.sort((left: ThreadComments, right: ThreadComments) => {
+				// Most recent comment timestamp descending.
+				return right.mostRecentComment.createdAt.getTime() - left.mostRecentComment.createdAt.getTime();
+			});
+
+		// Dipose everything that is now unused by our collection.
+		threadsById.forEach(t => t.dispose());
+
 		this.didChangeThreads.fire();
 	}
+
+	private onDidCreateThread(threadMemento: IThreadCommentsMemento): void {
+		if (!this.matchesFilter(threadMemento)) {
+			return;
+		}
+		const thread = this.instantiationService.createInstance(ThreadComments, this.commentService, this.git, threadMemento);
+		this._threads.unshift(thread);
+	}
+
+	private matchesFilter(thread: IThreadCommentsMemento): boolean {
+		if (!this.query) {
+			// We are not initialized yet.
+			return false;
+		}
+		if (!this.matchesFilterValue(this.query.repo, thread.repo)) {
+			return false;
+		}
+		if (!this.matchesFilterValue(this.query.branch, thread.branch)) {
+			return false;
+		}
+		if (!this.matchesFilterValue(this.query.file, thread.file)) {
+			return false;
+		}
+		// if (!this.matchesFilterValue(this.filter.archived, thread.archived)) {
+		// 	return false;
+		// }
+		return true;
+	}
+
+	private matchesFilterValue<V>(expected: V | undefined, actual: V | undefined): boolean {
+		return typeof expected === 'undefined' || expected === actual;
+	}
+}
+
+function gqlCommentToMemento(comment: GQL.IComment): IComment {
+	return {
+		id: comment.id,
+		contents: comment.contents,
+		createdAt: new Date(comment.createdAt),
+		updatedAt: new Date(comment.createdAt),
+		author: {
+			email: comment.author.email,
+			displayName: comment.author.displayName,
+			avatarUrl: comment.author.avatarURL,
+		}
+	};
+}
+
+function gqlThreadToMemento(thread: GQL.IThread): IThreadCommentsMemento {
+	const comments = thread.comments.map(gqlCommentToMemento);
+	return {
+		id: thread.id,
+		title: thread.title,
+		file: thread.file,
+		branch: thread.branch,
+		revision: thread.revision,
+		range: new Range(thread.startLine, thread.startCharacter, thread.endLine, thread.endCharacter),
+		createdAt: new Date(thread.createdAt),
+		archived: !!thread.archivedAt,
+		comments,
+		repo: thread.repo.remoteUri,
+		displayRange: false,
+		draftReply: undefined,
+	};
 }
 
 /**
@@ -277,11 +441,10 @@ export class FileComments extends Disposable implements IFileComments {
 
 	private modelWatcher: ModelWatcher;
 
-	private _threads: ThreadComments[] = [];
 	private didChangeThreads = this.disposable(new Emitter<void>());
 	public readonly onDidChangeThreads = this.didChangeThreads.event;
 	public get threads(): ThreadComments[] {
-		return this._threads;
+		return this.collection.threads;
 	}
 	public getThread(id: number): IThreadComments | undefined {
 		return first(this.threads, thread => thread.id === id);
@@ -299,11 +462,12 @@ export class FileComments extends Disposable implements IFileComments {
 
 	private git: Git;
 	private scmRepository: ISCMRepository;
+	private collection: Threads;
 
 	constructor(
 		private commentsService: CodeCommentsService,
 		private diffWorker: DiffWorkerClient,
-		uri: URI,
+		resource: URI,
 		@ISCMService scmService: ISCMService,
 		@IModelService private modelService: IModelService,
 		@IInstantiationService private instantiationService: IInstantiationService,
@@ -312,9 +476,11 @@ export class FileComments extends Disposable implements IFileComments {
 		@IOutputService private outputService: IOutputService,
 	) {
 		super();
-		this.git = instantiationService.createInstance(Git, uri);
+		this.git = instantiationService.createInstance(Git, resource);
+		this.collection = this.disposable(commentsService.getThreads({ resource }));
+		this.collection.onDidChangeThreads(this.updateDisplayRanges, this, this.disposables);
 
-		this.modelWatcher = this.disposable(instantiationService.createInstance(ModelWatcher, uri));
+		this.modelWatcher = this.disposable(instantiationService.createInstance(ModelWatcher, resource));
 		this.disposable(this.modelWatcher.onDidChangeContent(() => {
 			this.updateDisplayRanges();
 		}));
@@ -337,7 +503,6 @@ export class FileComments extends Disposable implements IFileComments {
 	}
 
 	public dispose() {
-		this._threads = dispose(this._threads);
 		this._draftThreads = dispose(this._draftThreads);
 		super.dispose();
 	}
@@ -349,9 +514,6 @@ export class FileComments extends Disposable implements IFileComments {
 		const draft = this.instantiationService.createInstance(DraftThreadComments, this.commentsService, this.git, editor);
 		draft.onDidSubmit(thread => {
 			draft.dispose();
-			// Although we are updating this._threads here, we don't fire
-			// threadsDidChange until the display ranges have updated.
-			this._threads.unshift(thread);
 			this.updateDisplayRanges();
 		});
 		draft.onWillDispose(() => {
@@ -380,36 +542,8 @@ export class FileComments extends Disposable implements IFileComments {
 	}
 
 	private refreshThreadsNow(): TPromise<void> {
-		this.refreshingThreads = this.getDocumentId()
-			.then(documentId => {
-				if (!documentId || !this.authService.currentUser || !this.authService.currentUser.currentOrgMember) {
-					return TPromise.wrap(undefined);
-				}
-				return requestGraphQL<{ org: { repo: { threads: GQL.IThread[] } } }>(this.remoteService, `query ThreadsForFile (
-						$file: String!,
-					) {
-						root {
-							org(id: $orgId) {
-								repo(remoteURI: $remoteURI) {
-									threads(file: $file) {
-										${threadGraphql}
-									}
-								}
-							}
-						}
-					}`, {
-						orgId: this.authService.currentUser.currentOrgMember.org.id,
-						file: documentId.file,
-						remoteURI: documentId.repo,
-					});
-			})
-			.then(response => {
-				const threads = (response && response.org.repo && response.org.repo.threads) || [];
-				// Although we are updating this._threads here, we don't fire
-				// threadsDidChange until the display ranges have updated.
-				this._threads = this.instantiationService.invokeFunction(updatedThreads, this.git, this._threads, threads);
-				return this.updateDisplayRanges();
-			});
+		this.refreshingThreads = this.collection.refresh()
+			.then(response => this.updateDisplayRanges());
 
 		this.didStartRefreshing.fire();
 		return this.refreshingThreads;
@@ -512,34 +646,6 @@ export class FileComments extends Disposable implements IFileComments {
 }
 
 /**
- * Returns an array of threads that corresponds to newThreads.
- * If a thread already exists in oldThreads, then that thread is reused
- * and updated so that listener relationships are maintained.
- */
-function updatedThreads(accessor: ServicesAccessor, git: Git, oldThreads: ThreadComments[], newThreads: GQL.IThread[]): ThreadComments[] {
-	const instantiationService = accessor.get(IInstantiationService);
-	const oldThreadsById = oldThreads.reduce((threads, thread) => {
-		threads.set(thread.id, thread);
-		return threads;
-	}, new Map<number, ThreadComments>());
-
-	return newThreads
-		.map(thread => {
-			const oldThread = oldThreadsById.get(thread.id);
-			if (oldThread) {
-				// Reuse the existing thread so we save client state like draft replies and event listeners.
-				oldThread.comments = thread.comments.map(c => new Comment(c));
-				return oldThread;
-			}
-			return instantiationService.createInstance(ThreadComments, thread, git);
-		})
-		.sort((left: ThreadComments, right: ThreadComments) => {
-			// Most recent comment timestamp descending.
-			return right.mostRecentComment.createdAt.getTime() - left.mostRecentComment.createdAt.getTime();
-		});
-}
-
-/**
  * Watches a URI for changes.
  */
 class ModelWatcher extends Disposable {
@@ -587,6 +693,34 @@ class ModelWatcher extends Disposable {
 	}
 }
 
+/**
+ * This is a serilizable form of IThreadComments that is used in event notifications.
+ */
+export interface IThreadCommentsMemento {
+	readonly id: number;
+	readonly title: string;
+	readonly file: string;
+	readonly branch: string;
+	readonly revision: string;
+	readonly range: Range;
+	readonly createdAt: Date;
+
+	readonly archived: boolean;
+	readonly comments: ReadonlyArray<IComment>;
+	readonly draftReply: string | undefined;
+	readonly pendingOperation?: boolean;
+
+	/**
+	 * A display range is either:
+	 * - A range if the thread is attached
+	 * - undefined if the range is not attached
+	 * - false if this memento does not know the state of the display range
+	 */
+	readonly displayRange: Range | undefined | false;
+
+	readonly repo: string;
+}
+
 export class ThreadComments extends Disposable implements IThreadComments {
 	public readonly id: number;
 	public readonly title: string;
@@ -595,6 +729,7 @@ export class ThreadComments extends Disposable implements IThreadComments {
 	public readonly revision: string;
 	public readonly range: Range;
 	public readonly createdAt: Date;
+	public readonly repo: string;
 
 	private _pendingOperation = false;
 	private didChangePendingOperation = this.disposable(new Emitter<void>());
@@ -604,6 +739,7 @@ export class ThreadComments extends Disposable implements IThreadComments {
 		if (this._pendingOperation !== pendingOperation) {
 			this._pendingOperation = pendingOperation;
 			this.didChangePendingOperation.fire();
+			this.fireDidUpdateThreadEvent();
 		}
 	}
 
@@ -615,16 +751,18 @@ export class ThreadComments extends Disposable implements IThreadComments {
 		if (this._archived !== archived) {
 			this._archived = archived;
 			this.didChangeArchived.fire();
+			this.fireDidUpdateThreadEvent();
 		}
 	}
 
-	private _comments: Comment[];
+	private _comments: ReadonlyArray<IComment>;
 	private didChangeComments = this.disposable(new Emitter<void>());
 	public readonly onDidChangeComments = this.didChangeComments.event;
-	public get comments(): Comment[] { return this._comments; }
-	public set comments(comments: Comment[]) {
+	public get comments(): ReadonlyArray<IComment> { return this._comments; }
+	public set comments(comments: ReadonlyArray<IComment>) {
 		this._comments = comments;
 		this.didChangeComments.fire();
+		this.fireDidUpdateThreadEvent();
 	}
 
 	private _draftReply = '';
@@ -635,6 +773,7 @@ export class ThreadComments extends Disposable implements IThreadComments {
 		if (this._draftReply !== draftReply) {
 			this._draftReply = draftReply;
 			this.didChangeDraftReply.fire();
+			this.fireDidUpdateThreadEvent();
 		}
 	}
 
@@ -646,34 +785,58 @@ export class ThreadComments extends Disposable implements IThreadComments {
 		if (this._displayRange !== displayRange) {
 			this._displayRange = displayRange;
 			this.didChangeDisplayRange.fire();
+			this.fireDidUpdateThreadEvent();
 		}
 	}
 
-	public get mostRecentComment(): Comment {
+	public get mostRecentComment(): IComment {
 		return this.comments[this.comments.length - 1];
 	}
 
 	constructor(
-		thread: GQL.IThread,
+		private commentsService: CodeCommentsService,
 		private git: Git,
+		thread: IThreadCommentsMemento,
 		@IRemoteService private remoteService: IRemoteService,
 		@IInstantiationService private instantiationService: IInstantiationService,
 		@IAuthService private authService: IAuthService,
 	) {
 		super();
-		const comments = thread.comments.map(comment => new Comment(comment));
-		if (!comments.length) {
-			throw new Error(`expected thread ${thread.id} to have at least one comment`);
-		}
 		this.id = thread.id;
 		this.title = thread.title;
 		this.file = thread.file;
 		this.branch = thread.branch;
 		this.revision = thread.revision;
-		this.range = new Range(thread.startLine, thread.startCharacter, thread.endLine, thread.endCharacter);
-		this.createdAt = new Date(thread.createdAt);
-		this.archived = !!thread.archivedAt;
-		this._comments = comments;
+		this.range = thread.range;
+		this.createdAt = thread.createdAt;
+		this.archived = thread.archived;
+		this._comments = thread.comments;
+		this.repo = thread.repo;
+		commentsService.onDidUpdateThread(this.onDidUpdateThread, this, this.disposables);
+	}
+
+	private fireDidUpdateThreadEvents = true;
+	private onDidUpdateThread(thread: IThreadCommentsMemento): void {
+		if (this.id !== thread.id) {
+			return;
+		}
+		this.fireDidUpdateThreadEvents = false;
+		this.archived = thread.archived;
+		this.comments = thread.comments;
+		this.pendingOperation = thread.pendingOperation;
+		if (thread.displayRange !== false) {
+			this.displayRange = thread.displayRange;
+		}
+		if (typeof thread.draftReply !== 'undefined') {
+			this.draftReply = thread.draftReply;
+		}
+		this.fireDidUpdateThreadEvents = true;
+	}
+
+	private fireDidUpdateThreadEvent(): void {
+		if (this.fireDidUpdateThreadEvents) {
+			this.commentsService.didUpdateThread.fire(this);
+		}
 	}
 
 	public setArchived(archived: boolean): TPromise<void> {
@@ -713,7 +876,7 @@ export class ThreadComments extends Disposable implements IThreadComments {
 				})
 				.then(response => {
 					this.draftReply = '';
-					this.comments = response.addCommentToThread.comments.map(c => new Comment(c));
+					this.comments = response.addCommentToThread.comments.map(gqlCommentToMemento);
 				});
 		});
 	}
@@ -924,11 +1087,10 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 					});
 			})
 			.then(response => {
-				const thread = this.instantiationService.createInstance(ThreadComments, response.createThread, this.git);
+				const threadMemento = gqlThreadToMemento(response.createThread);
+				const thread = this.instantiationService.createInstance(ThreadComments, this.commentsService, this.git, threadMemento);
+				this.commentsService.didCreateThread.fire(threadMemento);
 				this.didSubmit.fire(thread);
-				const branchComments = this.commentsService.getBranchComments(this.git.resource, thread.branch);
-				branchComments.unshiftThread(thread);
-				branchComments.dispose();
 				return thread;
 			});
 		this.submittingPromise = promise;
@@ -972,26 +1134,6 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 	}
 }
 
-export class Comment implements IComment {
-	public readonly id: number;
-	public readonly contents: string;
-	public readonly createdAt: Date;
-	public readonly updatedAt: Date;
-	public readonly author: ICommentAuthor;
-
-	constructor(comment: GQL.IComment) {
-		this.id = comment.id;
-		this.contents = comment.contents;
-		this.createdAt = new Date(comment.createdAt);
-		this.updatedAt = new Date(comment.updatedAt);
-		this.author = {
-			email: comment.author.email,
-			displayName: comment.author.displayName,
-			avatarUrl: comment.author.avatarURL,
-		};
-	}
-}
-
 // TODO(nick): this doesn't need to return a promise
 function getPathRelativeToRepo(accessor: ServicesAccessor, file: URI): TPromise<string> {
 	const repository = accessor.get(ISCMService).getRepositoryForResource(file);
@@ -1018,41 +1160,4 @@ function endsWithSlash(s: string): string {
 function resolveContent(accessor: ServicesAccessor, git: Git, documentId: DocumentId, revision: string): TPromise<{ revision: string, content: string }> {
 	// TODO(nick): better way to resolve content that leverages local workspaces.
 	return git.getContentsAtRevision(documentId.file, revision).then(content => ({ revision, content }));
-}
-
-/**
- * A map that keeps a reference count for each object.
- * The reference count is incremented on every call to getOrCreate.
- * Calling dispose on the value returned by getOrCreate will decrement the reference count of that value.
- * When the reference count reaches 0, the value is disposed and removed from the map.
- */
-export class ReferenceCountingMap<K, V extends Disposable> {
-
-	private referenceCounts = new Map<K, number>();
-	private values = new Map<K, V>();
-
-	public getOrCreate(key: K, create: () => V): V {
-		let value = this.values.get(key);
-		if (value) {
-			const refCount = this.referenceCounts.get(key) || 0;
-			this.referenceCounts.set(key, refCount + 1);
-			return value;
-		}
-
-		value = create();
-		const originalDispose = value.dispose.bind(value);
-		value.dispose = () => {
-			const refCount = this.referenceCounts.get(key) || 0;
-			if (refCount <= 1) {
-				originalDispose();
-				this.values.delete(key);
-				this.referenceCounts.delete(key);
-			} else {
-				this.referenceCounts.set(key, refCount - 1);
-			}
-		};
-		this.referenceCounts.set(key, 1);
-		this.values.set(key, value);
-		return value;
-	}
 }

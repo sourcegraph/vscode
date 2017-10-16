@@ -17,7 +17,7 @@ import { ICommandService } from 'vs/platform/commands/common/commands';
 import { ExtHostContext, MainThreadSCMShape, ExtHostSCMShape, SCMProviderFeatures, SCMRawResourceSplices, SCMGroupFeatures, MainContext, IExtHostContext } from '../node/extHost.protocol';
 import { Command } from 'vs/editor/common/modes';
 import { extHostNamedCustomer } from 'vs/workbench/api/electron-browser/extHostCustomers';
-import { EDITOR_CONTRIBUTION_ID as CODE_COMMENTS_CONTRIBUTION_ID, ICodeCommentsService, IBranchComments } from 'vs/editor/common/services/codeCommentsService';
+import { EDITOR_CONTRIBUTION_ID as CODE_COMMENTS_CONTRIBUTION_ID, ICodeCommentsService, IThreads } from 'vs/editor/common/services/codeCommentsService';
 import { rtrim } from 'vs/base/common/strings';
 import { IEditorService } from 'vs/platform/editor/common/editor';
 import { getCodeEditor, ICodeEditorService } from 'vs/editor/common/services/codeEditorService';
@@ -332,14 +332,14 @@ class CommentsSCMProvider extends MainThreadSCMProvider {
 		this.groups.push(this.commentsGroup);
 	}
 
-	private branchComments: IBranchComments;
+	private branchComments: IThreads;
 
 	private onDidChangeBranch(): void {
 		this.branchComments = dispose(this.branchComments);
 		if (!this.branch) {
 			return;
 		}
-		this.branchComments = this.commentsService.getBranchComments(this.trimmedRootUri, this.branch);
+		this.branchComments = this.commentsService.getThreads({ resource: this.trimmedRootUri, branch: this.branch });
 		this.branchComments.refresh();
 		this.branchComments.onDidChangeThreads(this.onDidChangeThreads, this);
 		this.onDidChangeThreads();
