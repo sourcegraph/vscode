@@ -1,0 +1,16 @@
+<svg width="8" height="8" viewBox="0 0 8 8" version="1.1"
+	xmlns="http://www.w3.org/2000/svg"
+	xmlns:xlink="http://www.w3.org/1999/xlink">
+	<title>comment</title>
+	<desc>Created using Figma</desc>
+	<g id="Canvas" transform="translate(-33154 -9994)">
+		<g id="comment">
+			<g id="Vector">
+				<use xlink:href="#path0_fill" transform="translate(33154.7 9994.67)" fill="#A2B0CD"/>
+			</g>
+		</g>
+	</g>
+	<defs>
+		<path id="path0_fill" d="M 2.33333 6.66667C 2.13333 6.66667 2 6.53333 2 6.33333L 2 5.33333L 0.666667 5.33333C 0.3 5.33333 0 5.03333 0 4.66667L 0 0.666667C 0 0.3 0.3 0 0.666667 0L 6 0C 6.36667 0 6.66667 0.3 6.66667 0.666667L 6.66667 4.66667C 6.66667 5.03333 6.36667 5.33333 6 5.33333L 3.96667 5.33333L 2.73333 6.56667C 2.66667 6.63333 2.6 6.66667 2.5 6.66667L 2.33333 6.66667Z"/>
+	</defs>
+</svg>

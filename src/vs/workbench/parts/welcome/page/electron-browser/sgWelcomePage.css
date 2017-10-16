@@ -4,21 +4,28 @@
  *--------------------------------------------------------------------------------------------*/
 
 .monaco-workbench > .part.editor > .content .welcomePageContainer {
-	align-items: center;
 	display: flex;
-	justify-content: center;
-	min-width: 800px;
 	min-height: 100%;
+	min-width: 800px;
+	justify-content: center;
+	align-items: center;
 }
 
 .monaco-workbench > .part.editor > .content .welcomePage {
 	display: flex;
 	flex-direction: column;
-	justify-content: space-between;
 	font-size: 14px;
 	margin: 2em;
-	width: 90%;
+	width: 100%;
 	max-width: 1200px;
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .header {
+	display: flex;
+	flex-flow: row;
+	text-align: center;
+	justify-content: center;
+	flex-wrap: wrap;
 }
 
 .monaco-workbench > .part.editor > .content .welcomePage .row {
@@ -41,6 +48,7 @@
 	margin-left: 1em;
 }
 .monaco-workbench > .part.editor > .content .welcomePage .detail.button-label {
+	text-align: left;
 	display: inline-block;
 	margin-left: 0.5em;
 }
@@ -137,6 +145,7 @@
 }
 
 .monaco-workbench > .part.editor > .content .welcomePage .section {
+	padding: 1em;
 	margin-bottom: 2em;
 }
 .monaco-workbench > .part.editor > .content .welcomePage .section button {
@@ -145,6 +154,114 @@
 .monaco-workbench > .part.editor > .content .welcomePage .section ul {
 	list-style: none;
 	padding: 0;
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .container {
+	background: #1D2535;
+	max-width: 100%;
+	min-height: 312px;
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .space-around {
+	justify-content: space-around;
+	display: flex;
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .action {
+	min-width: calc(50% - 1em);
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .action-header {
+	color: #A2B0CD;
+	font-weight: 600;
+	font-size: 12px;
+	line-height: 16px;
+	padding: 0.5em 0em 1.0em 0em;
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .search-input {
+	display: inline-flex;
+	vertical-align: middle;
+	font-size: 12px;
+	line-height: 32px;
+	width: calc(100% - 17px);
+	border-style: solid;
+	padding-left: 1em;
+	color: #A2B0CD;
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .comment-search-input {
+	display: inline-flex;
+	vertical-align: middle;
+	font-size: 12px;
+	line-height: 32px;
+	width: calc(100% - 1.25em);
+	border-style: solid;
+	padding-left: 1em;
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .repo-name-label {
+	display: inline-flex;
+	vertical-align: middle;
+	padding-left: 0.25em;
+	font-size: 12px;
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .column-container {
+	display: inline-flex;
+	vertical-align: middle;
+	font-size: 12px;
+	line-height: 16px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: pre;
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .padding-left {
+	padding-left: 0.25em;
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .padding-right {
+	padding-left: 0.25em;
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .overflow-ellipsis {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: pre;
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .repo-row {
+	display: flex;
+	justify-content: space-between;
+	cursor: pointer;
+	padding: 0.25em 1em 0.25em 1em;
+	height: 28px;
+	align-items: center;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: pre;
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .repo-row:hover {
+	background: rgba(200, 235, 255, .072)
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .action-subheader {
+	color: #A2B0CD;
+	font-size: 12px;
+	padding-bottom: 1em;
+	line-height: 16px;
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .repo-name {
+	padding-top: 0.5em;
+	padding-bottom: 0.5em;
+	font-size: 12px;
+	line-height: 14px;
+	display: flex;
+	justify-content: space-between;
+	cursor: pointer;
 }
 
 .monaco-workbench > .part.editor > .content .welcomePage .splash {
@@ -158,7 +275,7 @@
 	padding-right: 1em;
 }
 .monaco-workbench > .part.editor > .content .welcomePage .splash.last {
-	padding-left: 1em;
+	padding-left: 2em;
 }
 .monaco-workbench > .part.editor > .content .welcomePage .splash ul {
 	margin: 0;
@@ -181,14 +298,15 @@
 	padding-left: 1em;
 }
 
-.monaco-workbench > .part.editor > .content .welcomePage .start {
-	min-width: calc(50% - 0.5em);
-}
-
 .monaco-workbench > .part.editor > .content .welcomePage .start ul {
 	list-style: none;
 	padding: 0;
 }
+
+.monaco-workbench > .part.editor > .content .welcomePage .no-margin {
+	margin: 0em;
+}
+
 .monaco-workbench > .part.editor > .content .welcomePage .start li {
 	margin-right: 0.5em;
 	flex: none;
@@ -209,6 +327,85 @@
 	margin-bottom: 2em;
 }
 
+.monaco-workbench > .part.editor > .content .welcomePage .container .padding-around {
+	padding: 1em;
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .container .padding-vertical {
+	padding: 0.5em 0em 0.5em 0em;
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .container .signup {
+	background-color: #1C7CD6;
+	color: white;
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .container .dashed {
+	border-style: dashed;
+	border-color: #2B3750;
+	background-color: #1D2535;
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .container .solid {
+	border: 1px solid #2B3750;
+	background-color: #1D2535;
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .container .sign-in-container {
+	max-width: 600px;
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .container .tip {
+	padding: 1em;
+	border: none;
+	align-items: center;
+	width: 100%;
+	background: #2B3750;
+	border: 1px solid #2B3750;
+	background-color: #1D2535;
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .container button {
+	padding: 1em;
+	border: none;
+	align-items: center;
+	width: 100%;
+	background: #2B3750;
+}
+
+
+.monaco-workbench > .part.editor > .content .welcomePage .container .avatar-img {
+	width: 16px;
+	height: 16px;
+	border-radius: 8px;
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .container .avatar-container {
+	padding-right: 4px;
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .container .avatar-img {
+	vertical-align: middle;
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .container .bubble-container {
+	height: 16px;
+	min-width: 26px;
+	border-radius: 16px;
+	display: flex;
+	align-items: center;
+	vertical-align: middle;
+	justify-content: center;
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .container .comment-count-label {
+	display: inline-flex;
+	vertical-align: middle;
+	color: #A2B0CD;
+	line-height: 16px;
+	font-size: 12px;
+	padding-right: 4px;
+}
 
 /* Icons */
 .monaco-workbench > .part.editor > .content .welcomePage .btn-icon {
@@ -231,6 +428,61 @@
 	-webkit-mask: url(../../Friends.svg) center no-repeat;
 	background-color: #93A9C8;
 }
+
+.monaco-workbench > .part.editor > .content .welcomePage .expand-icon {
+	-webkit-mask: url(../../Expanded.svg) center no-repeat;
+	background-color: #93A9C8;
+	display: inline-flex;
+	vertical-align: middle;
+	height: 1.5em;
+	width: 1.5em;
+	margin-left: 0.5em;
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .collapse-icon {
+	-webkit-mask: url(../../Collapse.svg) center no-repeat;
+	background-color: #93A9C8;
+	display: inline-flex;
+	vertical-align: middle;
+	height: 1.5em;
+	width: 1.5em;
+	margin-left: 0.5em;
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .thread {
+	display: inline-flex;
+	vertical-align: middle;
+	height: 16px;
+	width: 16px;
+	line-height: 16px;
+	padding-left: 4px;
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .bubble-icon {
+	-webkit-mask: url(../../Bubble.svg) center no-repeat;
+	background-color: #A2B0CD;
+	display: inline-flex;
+	vertical-align: middle;
+	height: 8px;
+	width: 8px;
+	line-height: 16px;
+	padding-left: 4px;
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .added-repo-icon {
+	-webkit-mask: url(../../Repo.svg) center no-repeat;
+	background-color: #93A9C8;
+	height: 1.5em;
+	width: 1.5em;
+	display: inline-flex;
+	vertical-align: middle;
+}
+.monaco-workbench > .part.editor > .content .welcomePage .loader-icon {
+	-webkit-mask: url(../../Loader.svg) center no-repeat;
+	background-color: #93A9C8;
+	height: 20em;
+	vertical-align: middle;
+}
 .monaco-workbench > .part.editor > .content .welcomePage .folder-icon {
 	-webkit-mask: url(../../Folder.svg) center no-repeat;
 	background-color: #93A9C8;
@@ -239,12 +491,29 @@
 	display: inline-block;
 	align-self: center;
 }
+.monaco-workbench > .part.editor > .content .welcomePage .signup-icon {
+	-webkit-mask: url(../../../../../../../node_modules/@sourcegraph/icons/svg/SignIn.svg) center no-repeat;
+	background-color: white;
+	height: 1.5em;
+	width: 1.5em;
+	display: inline-block;
+	align-self: center;
+}
+.monaco-workbench > .part.editor > .content .welcomePage .help-icon {
+	-webkit-mask: url(../../Help.svg) center no-repeat;
+	background-color: #A2B0CD;
+	height: 1.5em;
+	width: 1.5em;
+	display: inline-block;
+	align-self: flex-start;
+}
 .monaco-workbench > .part.editor > .content .welcomePage .head-logo {
 	background: url(../../logo.svg) center no-repeat;
 	display: inline-block;
 	height: 32px;
 	width: 228px;
 	flex-shrink: 0;
+	margin: 1.5em 1.5em 1.5em 0em;
 }
 .monaco-workbench > .part.editor > .content .welcomePage .list-icon {
 	-webkit-mask: url(../../List.svg) center no-repeat;
@@ -258,6 +527,7 @@
 	display: inline-block;
 	align-self: flex-end;
 }
+
 .monaco-workbench > .part.editor > .content .welcomePage .commands li.mac-only,
 .monaco-workbench > .part.editor > .content .welcomePage  .commands li.windows-only,
 .monaco-workbench > .part.editor > .content .welcomePage  .commands li.linux-only {
@@ -282,9 +552,12 @@
 	display: list-item;
 }
 
-@media (max-width: 1280px) {
+@media (max-width: 1200px) {
 	.monaco-workbench > .part.editor > .content .welcomePageContainer {
-		min-width: 0;
+		min-width: 0px;
+	}
+	.monaco-workbench > .part.editor > .content .welcomePage .header {
+		width: 100%;
 	}
 	.monaco-workbench > .part.editor > .content .welcomePage .row {
 		flex-direction: column;
@@ -311,5 +584,15 @@
 	}
 	.monaco-workbench > .part.editor > .content .welcomePage .footer li {
 		margin-right: 0;
+	}
+
+	.monaco-workbench > .part.editor > .content .welcomePage .container {
+		max-width: 100%;
+	}
+}
+
+@media (max-width: 1400px) {
+	.monaco-workbench > .part.editor > .content .welcomePage .no-shrink {
+		display: none;
 	}
 }

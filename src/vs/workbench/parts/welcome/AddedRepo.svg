@@ -1,0 +1,16 @@
+<svg width="16" height="16" viewBox="0 0 16 16" version="1.1"
+	xmlns="http://www.w3.org/2000/svg"
+	xmlns:xlink="http://www.w3.org/1999/xlink">
+	<title>book</title>
+	<desc>Created using Figma</desc>
+	<g id="Canvas" transform="translate(-30788 -7928)">
+		<g id="book">
+			<g id="Vector">
+				<use xlink:href="#path0_fill" transform="translate(30790.7 7929.33)" fill="#A2B0CD"/>
+			</g>
+		</g>
+	</g>
+	<defs>
+		<path id="path0_fill" d="M 9.33333 13.3333C 10.0667 13.3333 10.6667 12.7333 10.6667 12L 10.6667 1.33333C 10.6667 0.6 10.0667 0 9.33333 0L 5.33333 0L 5.33333 4.66667L 3.66667 3.66667L 2 4.66667L 2 0L 1.33333 0C 0.6 0 0 0.6 0 1.33333L 0 12C 0 12.7333 0.6 13.3333 1.33333 13.3333L 9.33333 13.3333Z"/>
+	</defs>
+</svg>

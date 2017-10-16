@@ -21,6 +21,7 @@ import { ThrottledDelayer } from 'vs/base/common/async';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { IStorageService } from 'vs/platform/storage/common/storage';
 import { Memento } from 'vs/workbench/common/memento';
+import * as objects from 'vs/base/common/objects';
 
 export { Event }
 
@@ -82,8 +83,16 @@ export class AuthService extends Disposable implements IAuthService {
 		return this._currentUser;
 	}
 
+	private equalUsers(a: User, b: User): boolean {
+		if (!a && b || a && !b) {
+			return false;
+		}
+
+		return a === b || objects.equals(a.toMemento(), b.toMemento());
+	}
+
 	private setCurrentUser(user: User | undefined) {
-		if (user === this._currentUser) {
+		if (this.equalUsers(user, this._currentUser)) {
 			return;
 		}
 		dispose(this._currentUser);

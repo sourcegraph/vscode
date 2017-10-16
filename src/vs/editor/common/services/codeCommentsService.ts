@@ -29,6 +29,11 @@ export interface ICodeCommentsService {
 	 * Returns a model for the comments on a branch.
 	 */
 	getBranchComments(repo: URI, branch: string): IBranchComments;
+
+	/**
+	* Returns a model for the comments on org repos
+	*/
+	getOrgComments(): IOrgComments;
 }
 
 /**
@@ -37,6 +42,16 @@ export interface ICodeCommentsService {
 export interface IBranchComments extends IEventDisposable {
 	readonly threads: IThreadComments[];
 	readonly onDidChangeThreads: Event<void>;
+
+	refresh(): TPromise<void>;
+}
+
+/**
+ * Model for the organization comments
+ */
+export interface IOrgComments extends IEventDisposable {
+	readonly repoComments: IRepoComments[];
+	readonly onDidChangeRepoComments: Event<void>;
 
 	refresh(): TPromise<void>;
 }
@@ -238,7 +253,7 @@ export interface ICommentAuthor {
 	readonly email: string;
 	// readonly username: string;
 	readonly displayName: string;
-	// readonly avatarUrl: string | undefined;
+	readonly avatarUrl: string | undefined;
 }
 
 export interface IEventDisposable extends IDisposable {
@@ -247,4 +262,9 @@ export interface IEventDisposable extends IDisposable {
 	 * Event that is fired on dispose.
 	 */
 	readonly onWillDispose: Event<void>;
+}
+
+export interface IRepoComments {
+	remoteUri: string;
+	threads: IThreadComments[];
 }

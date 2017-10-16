@@ -13,114 +13,58 @@ export function used() {
 export default () => `
 <div class="welcomePageContainer">
 	<div class="welcomePage">
-		<div>
-			<div class="title">
-				<div class="head-logo"></div>
-			</div>
-			<div class="row">
-				<div class="splash first">
-					<div class="section start commands">
-						<ul>
-							<li>
-								<button data-href="command:workbench.action.addRootFolder">
-									<div class="folder-icon"></div>
-									<span class="detail button-label">${escape(localize('welcomePage.openFolder', "Add folder to workspace..."))}</span>
-								</button>
-							</li>
-							<li>
-								<button data-href="command:workbench.action.openRepo">
-									<div class="repo-icon"></div>
-									<span class="detail button-label">${escape(localize('welcomePage.cloneGitRepository', "Open remote repository..."))}
-								</button>
-							</li>
-						</ul>
-					</div>
-					<div class="section public-workspaces">
-						<h2>Public workspaces</h2>
-						<p class="detail">Try Sourcegraph on these popular open-source projects</p>
-						<ul class="public-workspace-list">
-						</ul>
-					</div>
-				</div>
-				<div class="splash last">
-					<div class="section workspaces commands">
-						<h2>Team workspaces</h2>
-						<ul>
-							<li>
-								<button class="sg-inactive">
-									<div class="icon-container">
-										<div class="btn-icon friends-icon"></div>
-									</div>
-									<div class="button-label">
-										<h3 class="caption">${escape(localize('welcomePage.SignedOut', "Signed out"))}</h3>
-										<span class="detail">${escape(localize('welcomePage.SignInWorkspaces', "Sign in to Sourcegraph to see all of your team's shared workspaces"))}</span>
-									</div>
-								</button>
-							</li>
-						</ul>
-					</div>
-					<div class="section comments commands">
-						<h2>Recent team comments</h2>
-						<ul>
-							<li>
-								<button class="sg-inactive">
-									<div class="icon-container">
-										<div class="btn-icon friends-icon"></div>
-									</div>
-									<div class="button-label">
-										<h3 class="caption">${escape(localize('welcomePage.SignedOut', "Signed out"))}</h3>
-										<span class="detail">${escape(localize('welcomePage.SignInComments', "Sign in to Sourcegraph to see your team's recent comments"))}</span>
-									</div>
-								</button>
-							</li>
-						</ul>
-					</div>
-				</div>
-			</div>
-		</div>
-		<div class="row footer">
-			<div><p class="showOnStartup"><input type="checkbox" id="showOnStartup"> <label class="caption" for="showOnStartup">${escape(localize('welcomePage.showOnStartup', "Show welcome page on startup"))}</label></p></div>
-			<div class="commands customize">
-				<ul>
-					<li class="showInteractivePlayground">
-						<button data-href="command:sg.modal.showOnboardingModal">
-							<h3 class="caption">${escape(localize('welcomePage.interactivePlayground', "Learn how to use Sourcegraph"))}</h3>
-							<span class="detail">${escape(localize('welcomePage.interactivePlaygroundDescription', "Try essential editor features out in a short walkthrough"))}</span>
+		<div class="header">
+			<div class="head-logo"></div>
+			<div class="section start commands">
+				<ul class="no-margin">
+					<li>
+						<button data-href="command:workbench.action.addRootFolder">
+							<div class="folder-icon"></div>
+							<span class="detail button-label">${escape(localize('welcomePage.openFolder', "Add folder to workspace..."))}</span>
 						</button>
 					</li>
-					<li class="showLanguageExtensions">
-						<button role="group" data-href="command:workbench.extensions.action.showLanguageExtensions">
-							<h3 class="caption">${escape(localize('welcomePage.installExtensionPacks', "Tools and languages"))}</h3>
-							<span class="detail">${escape(localize('welcomePage.installExtensionPacksDescription', "Install support for {0} and {1}"))
-		.replace('{0}', `<span class="extensionPackList"></span>`)
-		.replace('{1}', `<a href="command:workbench.extensions.action.showLanguageExtensions">${escape(localize('welcomePage.moreExtensions', "more"))}</a>`)}
-							</span>
-						</button>
-					</li>
-					<li class="showRecommendedKeymapExtensions">
-						<button role="group" data-href="command:workbench.extensions.action.showRecommendedKeymapExtensions">
-							<h3 class="caption">${escape(localize('welcomePage.installKeymapDescription', "Install keyboard shortcuts"))}</h3>
-							<span class="detail">${escape(localize('welcomePage.installKeymapExtension', "Install the keyboard shortcuts of {0} and {1}"))
-		.replace('{0}', `<span class="keymapList"></span>`)
-		.replace('{1}', `<a href="command:workbench.extensions.action.showRecommendedKeymapExtensions">${escape(localize('welcomePage.others', "others"))}</a>`)}
-							</span>
-						</button>
-					</li>
-					<li class="selectTheme">
-						<button data-href="command:workbench.action.selectTheme">
-							<h3 class="caption">${escape(localize('welcomePage.colorTheme', "Color theme"))}</h3>
-							<span class="detail">${escape(localize('welcomePage.colorThemeDescription', "Make the editor and your code look the way you love"))}</span>
-						</button>
-					</li>
-					<li class="showInteractivePlayground">
-						<button data-href="https://about.sourcegraph.com/integrations/browser">
-							<h3 class="caption">${escape(localize('welcomePage.getBrowserExtension', "Get Sourcegraph on GitHub"))}</h3>
-							<span class="detail">${escape(localize('welcomePage.getBrowserExtensionDescription', "Browse GitHub with code intelligence and code search"))}</span>
+					<li>
+						<button data-href="command:workbench.action.openRepo">
+							<div class="repo-icon"></div>
+							<span class="detail button-label">${escape(localize('welcomePage.cloneGitRepository', "Open remote repository..."))}
 						</button>
 					</li>
 				</ul>
 			</div>
 		</div>
+		<div class="space-around row">
+			<div class="section action">
+				<div class="container">
+					<div class="code-comments-container">
+						<div class="padding-around">
+							<div class="action-header">CODE DISCUSSIONS</div>
+							<input class="comment-search-input" id="comment-input-element" placeholder="Search and filter..."/>
+						</div>
+						<div id="comment-loader" class="loader-icon"></div>
+						<ul id="comment-list" class="comment-list-container no-margin">
+						</ul>
+					</div>
+					<div class="sign-in-container">
+						<div class="padding-around">
+							<div class="action-header">Connect your profile</div>
+							<div class="action-subheader">Sign in or sign up to Sourcegraph and create or join a team to share configs with other developers: lists of active repositories, connections to code hosts, team-wide taks/scripts, and auto-installed extensions.</div>
+							<div class="padding-vertical">
+								<button class="signup" data-href="command:remote.auth.signInAction">
+									<div class="signup-icon"></div>
+									<span class="detail signup button-label">${escape(localize('welcomePage.signInOrSignUp', "Sign in or sign up to Sourcegraph..."))}</span>
+								</button>
+							</div>
+							<div class="padding-vertical"/>
+							<div class="padding-vertical">
+								<button class="solid" data-href="command:remote.auth.signInAction">
+									<div class="help-icon"></div>
+									<span class="detail button-label">${escape(localize('welcomePage.signinHelp', "Existing users who signed in via GitHub: please sign up for a Sourcegraph account."))}</span>
+								</button>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
 	</div>
 </div>
 `;

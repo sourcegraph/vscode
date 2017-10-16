@@ -5,7 +5,7 @@
 'use strict';
 
 import { localize } from 'vs/nls';
-import { ICodeCommentsService, IBranchComments, IFileComments, IThreadComments, IComment, ICommentAuthor, IDraftThreadComments } from 'vs/editor/common/services/codeCommentsService';
+import { ICodeCommentsService, IBranchComments, IFileComments, IThreadComments, IComment, ICommentAuthor, IDraftThreadComments, IOrgComments, IRepoComments } from 'vs/editor/common/services/codeCommentsService';
 import { Range } from 'vs/editor/common/core/range';
 import Event, { Emitter, any } from 'vs/base/common/event';
 import { VSDiff as Diff } from 'vs/workbench/services/codeComments/common/vsdiff';
@@ -68,6 +68,7 @@ comments {
 	author {
 		displayName
 		email
+		avatarURL
 	}
 }`;
 
@@ -103,7 +104,9 @@ export class CodeCommentsService implements ICodeCommentsService {
 		@IEnvironmentService environmentService: IEnvironmentService,
 		@IInstantiationService private instantiationService: IInstantiationService,
 		@IOutputService private outputService: IOutputService,
-		@ISCMService private scmService: ISCMService,
+		@IAuthService private authService: IAuthService,
+		@IRemoteService private remoteService: IRemoteService,
+		@ISCMService private scmService: ISCMService
 	) {
 		this.diffWorkerProvider = new DiffWorkerClient(environmentService.debugDiff);
 	}
@@ -124,6 +127,10 @@ export class CodeCommentsService implements ICodeCommentsService {
 		return model;
 	}
 
+	public getOrgComments(): IOrgComments {
+		return this.instantiationService.createInstance(OrgComments);
+	}
+
 	private branchComments = new ReferenceCountingMap<string, BranchComments>();
 
 	public getBranchComments(resource: URI, branch: string): BranchComments {
@@ -131,6 +138,69 @@ export class CodeCommentsService implements ICodeCommentsService {
 		const id = `${repo.provider.id}@${branch}`;
 		const git = new Git(resource, this.scmService);
 		return this.branchComments.getOrCreate(id, () => this.instantiationService.createInstance(BranchComments, git, branch));
+	}
+}
+
+export class OrgComments extends Disposable implements IOrgComments {
+	private _repoComments: IRepoComments[] = [];
+	private didChangeRepoComments = this.disposable(new Emitter<void>());
+	public readonly onDidChangeRepoComments = this.didChangeRepoComments.event;
+
+	public get repoComments(): IRepoComments[] {
+		return this._repoComments;
+	}
+
+	constructor(
+		@IInstantiationService private instantiationService: IInstantiationService,
+		@IRemoteService private remoteService: IRemoteService,
+		@IAuthService private authService: IAuthService,
+	) {
+		super();
+	}
+
+	private refreshDelayer = new ThrottledDelayer<void>(100);
+	public refresh(): TPromise<void> {
+		return this.refreshDelayer.trigger(() => this.refreshNow());
+	}
+
+	private async refreshNow(): TPromise<void> {
+		if (!this.authService.currentUser || !this.authService.currentUser.currentOrgMember) {
+			return TPromise.as(undefined);
+		}
+		const response = await requestGraphQL<{ org: { repos: { remoteUri: string, threads: GQL.IThread[] }[] } }>(this.remoteService, `query ThreadsForOrgs (
+			) {
+				root {
+					org(id: $orgId) {
+						repos {
+							remoteUri
+							threads {
+								${threadGraphql}
+							}
+						}
+					}
+				}
+			}`, {
+				orgId: this.authService.currentUser.currentOrgMember.org.id,
+			});
+		if (!response) {
+			return TPromise.as(undefined);
+		}
+
+		this._repoComments = response.org.repos.map(repo => {
+			const threads = repo.threads.map(thread => {
+				return this.instantiationService.createInstance(ThreadComments, thread, undefined);
+			}).sort((left: ThreadComments, right: ThreadComments) => {
+				// Most recent comment timestamp descending.
+				return right.mostRecentComment.createdAt.getTime() - left.mostRecentComment.createdAt.getTime();
+			});
+
+			return {
+				remoteUri: repo.remoteUri,
+				threads: threads,
+			};
+		});
+
+		this.didChangeRepoComments.fire();
 	}
 }
 
@@ -917,6 +987,7 @@ export class Comment implements IComment {
 		this.author = {
 			email: comment.author.email,
 			displayName: comment.author.displayName,
+			avatarUrl: comment.author.avatarURL,
 		};
 	}
 }

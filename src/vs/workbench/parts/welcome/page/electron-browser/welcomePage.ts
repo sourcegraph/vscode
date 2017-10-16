@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 'use strict';
 
+import 'vs/css!vs/base/browser/ui/octiconLabel/octicons/octicons';
 import 'vs/css!./sgWelcomePage';
 import URI from 'vs/base/common/uri';
 import * as arrays from 'vs/base/common/arrays';
@@ -19,7 +20,7 @@ import { TPromise } from 'vs/base/common/winjs.base';
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
 import { IWorkspaceEditingService } from 'vs/workbench/services/workspace/common/workspaceEditing';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
-import { IConfigurationEditingService, ConfigurationTarget } from 'vs/workbench/services/configuration/common/configurationEditing';
+import { IConfigurationEditingService } from 'vs/workbench/services/configuration/common/configurationEditing';
 import { localize } from 'vs/nls';
 import { Action } from 'vs/base/common/actions';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
@@ -34,12 +35,19 @@ import { used } from 'vs/workbench/parts/welcome/page/electron-browser/sg_welcom
 import { ILifecycleService, StartupKind } from 'vs/platform/lifecycle/common/lifecycle';
 import { IDisposable, dispose } from 'vs/base/common/lifecycle';
 import { IThemeService, registerThemingParticipant } from 'vs/platform/theme/common/themeService';
-import { registerColor, focusBorder, textLinkForeground, textLinkActiveForeground, foreground, descriptionForeground, contrastBorder, activeContrastBorder, welcomeButtonBackground } from 'vs/platform/theme/common/colorRegistry';
+import { registerColor, focusBorder, textLinkForeground, textLinkActiveForeground, foreground, descriptionForeground, contrastBorder, activeContrastBorder, welcomeButtonBackground, inputBackground, inputBorder, inputForeground } from 'vs/platform/theme/common/colorRegistry';
 import { getExtraColor } from 'vs/workbench/parts/welcome/walkThrough/node/walkThroughUtils';
 import { IExtensionsWorkbenchService } from 'vs/workbench/parts/extensions/common/extensions';
 import { IStorageService } from 'vs/platform/storage/common/storage';
 import { IEditorInputFactory, EditorInput } from 'vs/workbench/common/editor';
 import { IFoldersWorkbenchService } from 'vs/workbench/services/folders/common/folders';
+import { $ } from 'vs/base/browser/builder';
+import { ISCMService } from 'vs/workbench/services/scm/common/scm';
+import { IAuthService } from 'vs/platform/auth/common/auth';
+import { ICodeCommentsService, IThreadComments, IOrgComments } from 'vs/editor/common/services/codeCommentsService';
+import { INavService } from 'vs/workbench/services/nav/common/nav';
+import { IContextViewService } from 'vs/platform/contextview/browser/contextView';
+import { SIDE_BAR_BACKGROUND, SIDE_BAR_BORDER, SIDE_BAR_SECTION_HEADER_BACKGROUND, SIDE_BAR_TITLE_FOREGROUND } from 'vs/workbench/common/theme';
 
 used();
 
@@ -239,6 +247,7 @@ class WelcomePage {
 	private disposables: IDisposable[] = [];
 
 	readonly editorInput: WalkThroughInput;
+	private orgComments: IOrgComments;
 
 	constructor(
 		@IWorkbenchEditorService private editorService: IWorkbenchEditorService,
@@ -260,7 +269,12 @@ class WelcomePage {
 		@IThemeService private themeService: IThemeService,
 		@IExperimentService private experimentService: IExperimentService,
 		@IFoldersWorkbenchService private foldersWorkbenchService: IFoldersWorkbenchService,
-		@ITelemetryService private telemetryService: ITelemetryService
+		@ITelemetryService private telemetryService: ITelemetryService,
+		@ISCMService private scmService: ISCMService,
+		@IAuthService private authService: IAuthService,
+		@ICodeCommentsService private codeCommentsService: ICodeCommentsService,
+		@INavService private navService: INavService,
+		@IContextViewService private contextViewService: IContextViewService
 	) {
 		this.disposables.push(lifecycleService.onShutdown(() => this.dispose()));
 
@@ -283,9 +297,190 @@ class WelcomePage {
 		return this.editorService.openEditor(this.editorInput, { pinned: true }, Position.ONE);
 	}
 
+	private async resolveOrganizationCommentsContainer(container: HTMLElement): Promise<void> {
+		const currentUser = this.authService.currentUser;
+		const signUpContainer = container.querySelector('.sign-in-container') as HTMLElement;
+		const codeCommentsContainer = container.querySelector('.code-comments-container') as HTMLElement;
+		if (!signUpContainer || !codeCommentsContainer) {
+			throw new Error('Could not query sign up container or code comments container');
+		}
+		if (!currentUser) {
+			$(codeCommentsContainer).hide();
+			$(signUpContainer).show();
+			return;
+		}
+		$(codeCommentsContainer).show();
+		$(signUpContainer).hide();
+		const spinner = document.getElementById('comment-loader');
+		$(spinner).show();
+		if (this.orgComments.repoComments.length) {
+			$(spinner).hide();
+		}
+
+		const threadContainer = document.querySelector('.comment-list-container') as HTMLElement;
+		if (!threadContainer) {
+			return;
+		}
+		const commentFilterInput = document.getElementById('comment-input-element') as HTMLInputElement;
+		if (!threadContainer) {
+			return;
+		}
+		commentFilterInput.addEventListener('input', () => {
+			this.filterCommentsList();
+		});
+		this.renderCodeComments(threadContainer);
+	}
+
+	private filterCommentsList(): void {
+		const input = document.getElementById('comment-input-element') as HTMLInputElement;
+		const filter = input.value.toUpperCase();
+		const ul = document.getElementById('comment-list') as HTMLElement;
+		const li = ul.getElementsByTagName('li');
+
+		// Loop through all list items, and hide those who don't match the search query
+		for (let i = 0; i < li.length; i++) {
+			if (li[i].innerHTML.toUpperCase().indexOf(filter) > -1) {
+				li[i].style.display = '';
+			} else {
+				li[i].style.display = 'none';
+			}
+		}
+	}
+
+	private renderCodeComments(container: HTMLElement): void {
+		let commentList = document.getElementById('comment-list') as HTMLElement;
+		$(commentList).clearChildren();
+
+		this.orgComments.repoComments.forEach(repoComment => {
+			if (!repoComment.threads || !repoComment.threads.length) {
+				return;
+			}
+			const subContainer = document.createElement('li');
+			const subheader = document.createElement('div');
+			subheader.className = 'repo-name padding-left';
+
+			const repoNameContainer = document.createElement('div');
+			repoNameContainer.className = 'column-container';
+
+			const toggle = document.createElement('div');
+			toggle.className = 'expand-icon';
+			const repoCommentList = document.createElement('ul');
+			subheader.addEventListener('click', () => {
+				if ($(repoCommentList).isHidden()) {
+					toggle.className = 'expand-icon';
+					$(repoCommentList).show();
+				} else {
+					toggle.className = 'collapse-icon';
+					$(repoCommentList).hide();
+				}
+			});
+			repoNameContainer.appendChild(toggle);
+
+			const img = document.createElement('div');
+			img.className = 'added-repo-icon';
+			repoNameContainer.appendChild(img);
+
+			const nameLabel = document.createElement('div');
+			nameLabel.innerText = repoComment.remoteUri;
+			nameLabel.className = 'repo-name-label';
+			repoNameContainer.appendChild(nameLabel);
+
+			subheader.appendChild(repoNameContainer);
+
+			subContainer.appendChild(subheader);
+			commentList.appendChild(subContainer);
+
+			const threads = repoComment.threads as IThreadComments[];
+			if (threads.length) {
+				subContainer.appendChild(repoCommentList);
+				threads.forEach(thread => {
+					const threadDiv = document.createElement('li');
+					threadDiv.className = 'repo-row';
+					threadDiv.addEventListener('click', () => {
+						const remoteUri = repoComment.remoteUri;
+						const query = `?utm_source=welcome_page_feed#open?path=${thread.file}&repo=https://${remoteUri}&revision=${thread.revision}&thread=${thread.id}&vcs=git`;
+						const url = `https://about.sourcegraph.com/open/${query}`;
+						this.navService.handle(URI.parse(url));
+					});
+					repoCommentList.appendChild(threadDiv);
+
+					const leftDiv = document.createElement('div');
+					leftDiv.className = 'column-container padding-right';
+					threadDiv.appendChild(leftDiv);
+
+					const authorAvatar = document.createElement('div');
+					authorAvatar.className = 'avatar-container';
+					const img = document.createElement('img');
+					const author = thread.comments[0].author;
+					if (author) {
+						img.src = author.avatarUrl;
+					}
+					img.className = 'avatar-img';
+					authorAvatar.appendChild(img);
+					leftDiv.appendChild(authorAvatar);
+
+					const branchName = document.createElement('div');
+					branchName.className = 'overflow-ellipsis padding-right';
+					branchName.innerText = thread.title.substr(0, Math.min(75, thread.title.length));
+					leftDiv.appendChild(branchName);
+
+					const rightDiv = document.createElement('div');
+					rightDiv.className = 'column-container';
+					threadDiv.appendChild(rightDiv);
+
+					const threadCount = document.createElement('div');
+					threadCount.className = 'column-container';
+
+					const bubbleContainer = document.createElement('div');
+					bubbleContainer.className = 'bubble-container';
+					threadCount.appendChild(bubbleContainer);
+
+					const bubble = document.createElement('div');
+					bubble.className = 'bubble-icon';
+					bubbleContainer.appendChild(bubble);
+
+					const commentCount = document.createElement('div');
+					commentCount.className = 'comment-count-label';
+					commentCount.innerText = String(thread.comments.length);
+					bubbleContainer.appendChild(commentCount);
+
+					rightDiv.appendChild(threadCount);
+
+					const threadStatus = document.createElement('div');
+					threadStatus.className = thread.archived ? 'octicon thread octicon-issue-closed' : 'octicon thread octicon-issue-opened';
+					rightDiv.appendChild(threadStatus);
+				});
+				// Ensure the editor size is updated when content is added to the dom.
+				window.dispatchEvent(new Event('resize'));
+			}
+		});
+	}
+
 	private onReady(container: HTMLElement, installedExtensions: TPromise<IExtensionStatus[]>): void {
-		const enabled = isWelcomePageEnabled(this.configurationService);
-		const showOnStartup = <HTMLInputElement>container.querySelector('#showOnStartup');
+		if (!this.orgComments) {
+			this.orgComments = this.codeCommentsService.getOrgComments();
+			this.disposables.push(this.orgComments);
+			this.orgComments.refresh();
+			this.orgComments.onDidChangeRepoComments(() => this.resolveOrganizationCommentsContainer(container), this);
+		}
+		this.resolveOrganizationCommentsContainer(container);
+
+		this.scmService.onDidAddRepository(() => {
+			this.resolveOrganizationCommentsContainer(container);
+		});
+		this.scmService.onDidRemoveRepository((e) => {
+			this.resolveOrganizationCommentsContainer(container);
+		});
+
+		this.scmService.onDidChangeRepository(() => {
+			this.resolveOrganizationCommentsContainer(container);
+		});
+
+		this.resolveOrganizationCommentsContainer(container);
+		this.authService.onDidChangeCurrentUser((e) => {
+			this.resolveOrganizationCommentsContainer(container);
+		});
+
 		const inactiveButtons = container.querySelectorAll('.sg-inactive');
 
 		// TMP: Remove team section from welcome page until fully supported.
@@ -299,13 +494,6 @@ class WelcomePage {
 				this.messageService.show(Severity.Warning, localize('welcomePage.featureInactive', 'This feature has not been implemented yet.'));
 			});
 		}
-
-		if (enabled) {
-			showOnStartup.setAttribute('checked', 'checked');
-		}
-		showOnStartup.addEventListener('click', e => {
-			this.configurationEditingService.writeConfiguration(ConfigurationTarget.USER, { key: configurationKey, value: showOnStartup.checked ? 'welcomePage' : 'newUntitledFile' });
-		});
 
 		this.addExtensionList(container, '.extensionPackList', extensionPacks, extensionPackStrings);
 		this.addExtensionList(container, '.keymapList', keymapExtensions, keymapStrings);
@@ -596,9 +784,32 @@ const buttonBackground = registerColor('welcomePage.buttonBackground', { dark: n
 const buttonHoverBackground = registerColor('welcomePage.buttonHoverBackground', { dark: null, light: null, hc: null }, localize('welcomePage.buttonHoverBackground', 'Hover background color for the buttons on the Welcome page.'));
 
 registerThemingParticipant((theme, collector) => {
+	const backgroundColor = theme.getColor(SIDE_BAR_BACKGROUND);
+	if (backgroundColor) {
+		collector.addRule(`.monaco-workbench > .part.editor > .content .welcomePage .container { background-color: ${backgroundColor}; }`);
+	}
+
+	const sideBarHeaderColor = theme.getColor(SIDE_BAR_SECTION_HEADER_BACKGROUND);
+	if (sideBarHeaderColor) {
+		collector.addRule(`.monaco-workbench > .part.editor > .content .welcomePage .repo-name { background-color: ${sideBarHeaderColor}; }`);
+		collector.addRule(`.monaco-workbench > .part.editor > .content .welcomePage .bubble-container { background-color: ${sideBarHeaderColor}; }`);
+	}
+	const sideBarHeaderForegroundColor = theme.getColor(SIDE_BAR_TITLE_FOREGROUND);
+	if (sideBarHeaderForegroundColor) {
+		collector.addRule(`.monaco-workbench > .part.editor > .content .welcomePage .repo-name { color: ${sideBarHeaderForegroundColor}; }`);
+		collector.addRule(`.monaco-workbench > .part.editor > .content .welcomePage .bubble-container { color: ${sideBarHeaderForegroundColor}; }`);
+	}
+
+	const containerBorder = theme.getColor(SIDE_BAR_BORDER);
+	if (containerBorder) {
+		collector.addRule(`.monaco-workbench > .part.editor > .content .welcomePage .container { border-color: ${containerBorder}; }`);
+	}
+
 	const foregroundColor = theme.getColor(foreground);
 	if (foregroundColor) {
 		collector.addRule(`.monaco-workbench > .part.editor > .content .welcomePage .caption { color: ${foregroundColor}; }`);
+		collector.addRule(`.monaco-workbench > .part.editor > .content .welcomePage .action-header { color: ${foregroundColor}; }`);
+		collector.addRule(`.monaco-workbench > .part.editor > .content .welcomePage .action-subheader { color: ${foregroundColor}; }`);
 	}
 	const descriptionColor = theme.getColor(descriptionForeground);
 	if (descriptionColor) {
@@ -633,9 +844,26 @@ registerThemingParticipant((theme, collector) => {
 	const border = theme.getColor(contrastBorder);
 	if (border) {
 		collector.addRule(`.monaco-workbench > .part.editor > .content .welcomePage .commands li button { border-color: ${border}; }`);
+		collector.addRule(`.monaco-workbench > .part.editor > .content .welcomePage .container { border-color: ${border}; border-width: 1px; border-style: solid; }`);
 	}
 	const activeBorder = theme.getColor(activeContrastBorder);
 	if (activeBorder) {
+		collector.addRule(`.monaco-workbench > .part.editor > .content .welcomePage .commands ul:hover { outline-color: ${activeBorder}; }`);
 		collector.addRule(`.monaco-workbench > .part.editor > .content .welcomePage .commands li button:hover { outline-color: ${activeBorder}; }`);
+		collector.addRule(`.monaco-workbench > .part.editor > .content .welcomePage .repo-row:hover { outline-color: ${activeBorder}; border-width: 1px; border-style: dashed; }`);
 	}
+
+	const inputColor = theme.getColor(inputBackground);
+	if (inputColor) {
+		collector.addRule(`.monaco-workbench > .part.editor > .content .welcomePage input { background-color: ${inputColor}; }`);
+	}
+	const inputBorderColor = theme.getColor(inputBorder);
+	if (inputBorderColor) {
+		collector.addRule(`.monaco-workbench > .part.editor > .content .welcomePage input { border-color: ${inputBorderColor}; }`);
+	}
+	const inputForegroundColor = theme.getColor(inputForeground);
+	if (inputForegroundColor) {
+		collector.addRule(`.monaco-workbench > .part.editor > .content .welcomePage input { color: ${inputForegroundColor}; }`);
+	}
+
 });
