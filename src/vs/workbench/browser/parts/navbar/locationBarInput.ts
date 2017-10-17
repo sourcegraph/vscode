@@ -65,7 +65,6 @@ export class LocationBarInput extends Widget {
 	}
 
 	private registerListeners(): void {
-		this.onmousedown(this.inputBox.inputElement, () => this.onMouseDown());
 		this.onfocus(this.inputBox.inputElement, () => this.onFocus());
 		this.onblur(this.inputBox.inputElement, () => this.onBlur());
 		this.onkeydown(this.inputBox.inputElement, (e: IKeyboardEvent) => {
@@ -75,10 +74,6 @@ export class LocationBarInput extends Widget {
 				this.editorGroupService.focusGroup(this.editorGroupService.getStacksModel().activeGroup);
 			}
 		});
-	}
-
-	private onMouseDown(): void {
-		this.inputBox.inputElement.setSelectionRange(0, 0);
 	}
 
 	private onFocus(): void {
