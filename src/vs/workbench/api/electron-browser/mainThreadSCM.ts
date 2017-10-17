@@ -349,7 +349,7 @@ class CommentsSCMProvider extends MainThreadSCMProvider {
 		const resources: ISCMResource[] = this.branchComments.threads.map(thread => {
 			return {
 				resourceGroup: this.commentsGroup,
-				sourceUri: URI.parse(`comment://${thread.file}/${thread.title}`),
+				sourceUri: URI.parse(`comment://${thread.file}/${encodeURIComponent(thread.title)}`),
 				decorations: {
 					strikeThrough: thread.archived,
 					faded: false,

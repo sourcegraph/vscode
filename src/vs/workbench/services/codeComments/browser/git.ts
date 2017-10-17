@@ -55,7 +55,7 @@ export class Git {
 	private getRemoteTrackingBranches(): TPromise<Set<string>> {
 		return this.spawnPromiseTrim(['show-ref']).then(refs => {
 			return refs.split('\n').reduce((remoteRefs, line) => {
-				const [sha, ref] = line.split(' ', 3);
+				const [sha, ref] = line.split(' ', 2);
 				if (ref && ref.indexOf('refs/remotes/') === 0) {
 					remoteRefs.add(sha);
 				}

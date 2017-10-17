@@ -100,11 +100,6 @@ export class Comparison implements Disposable {
 	}
 
 	private async updateModelState(): Promise<void> {
-		const [mergeBase] = await this.repository.getMergeBase([this.baseBranch, 'HEAD']);
-		if (!mergeBase) {
-			throw new Error(`unable to determine merge-base for '${this.baseBranch}'`);
-		}
-
 		let head: Branch | undefined;
 		try {
 			head = await this.repository.getHEAD();
@@ -115,12 +110,34 @@ export class Comparison implements Disposable {
 			// noop
 		}
 
+		const baseBranch = this.getBaseBranch(head);
+		const [mergeBase] = await this.repository.getMergeBase([baseBranch, 'HEAD']);
+		if (!mergeBase) {
+			throw new Error(`unable to determine merge-base for '${baseBranch}'`);
+		}
+
 		this.sourceControl.revision = head ? { rawSpecifier: 'HEAD', specifier: head.name, id: head.commit } : undefined;
 
 		const args = new ComparisonArgs(mergeBase);
 		const { resources, didHitLimit } = await getResourceStatesForComparison(this.repository, args, this.didWarnAboutLimit);
 		this.didWarnAboutLimit = didHitLimit;
 		this.changesGroup.resourceStates = resources;
+	}
+
+	/**
+	 * Returns the base branch to use for computing the merge base.
+	 * It tries to detect the remote version of the base branch and use that
+	 * because a local checkout can be behind which would include unwanted
+	 * changes in the diff.
+	 */
+	private getBaseBranch(head: Branch | undefined): string {
+		if (head && head.upstream) {
+			const [remote] = head.upstream.split('/', 1);
+			if (remote) {
+				return `${remote}/${this.baseBranch}`;
+			}
+		}
+		return this.baseBranch;
 	}
 
 	dispose(): void {
