@@ -323,7 +323,7 @@ export class Threads extends Disposable implements IThreads {
 		try {
 			const [repo, file] = await Promise.all([
 				this.git.getRemoteRepo(),
-				this.instantiationService.invokeFunction(getPathRelativeToRepo, this.filter.resource),
+				this.instantiationService.invokeFunction(getPathRelativeToResource, this.filter.resource),
 			]);
 			return { repo, file };
 		} catch (err) {
@@ -375,6 +375,7 @@ export class Threads extends Disposable implements IThreads {
 		}
 		const thread = this.instantiationService.createInstance(ThreadComments, this.commentService, this.git, threadMemento);
 		this._threads.unshift(thread);
+		this.didChangeThreads.fire();
 	}
 
 	private matchesFilter(thread: IThreadCommentsMemento): boolean {
@@ -561,7 +562,7 @@ export class FileComments extends Disposable implements IFileComments {
 			return TPromise.as(void 0);
 		}
 		return TPromise.join([
-			this.instantiationService.invokeFunction(getPathRelativeToRepo, this.modelWatcher.uri),
+			this.instantiationService.invokeFunction(getPathRelativeToResource, this.modelWatcher.uri),
 			this.git.getRemoteRepo(),
 		])
 			.then(([relativeFile, repo]) => {
@@ -987,7 +988,7 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 		}));
 
 		const remoteURI = git.getRemoteRepo();
-		const file = instantiationService.invokeFunction(getPathRelativeToRepo, model.uri);
+		const file = instantiationService.invokeFunction(getPathRelativeToResource, model.uri);
 		const revision = git.getLastPushedRevision();
 		const branch = git.getBranch();
 		const codeSnippet = TPromise.join<any>([
@@ -1135,19 +1136,19 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 }
 
 // TODO(nick): this doesn't need to return a promise
-function getPathRelativeToRepo(accessor: ServicesAccessor, file: URI): TPromise<string> {
-	const repository = accessor.get(ISCMService).getRepositoryForResource(file);
+function getPathRelativeToResource(accessor: ServicesAccessor, resource: URI): TPromise<string | undefined> {
+	const repository = accessor.get(ISCMService).getRepositoryForResource(resource);
 	if (!repository) {
-		return TPromise.wrapError(new Error(`no repository in context ${file.toString()}`));
+		return TPromise.wrapError(new Error(`no repository in context ${resource.toString()}`));
 	}
 	if (!repository.provider.rootUri) {
-		return TPromise.wrapError(new Error(`provider for context ${file.toString()} has no root folder`));
+		return TPromise.wrapError(new Error(`provider for context ${resource.toString()} has no root folder`));
 	}
 	const root = endsWithSlash(repository.provider.rootUri.path);
-	if (!startsWith(file.path, root)) {
-		return TPromise.wrapError(new Error(`file ${file.path} not in root ${root}`));
+	if (!startsWith(resource.path, root)) {
+		return TPromise.wrapError(new Error(`file ${resource.path} not in root ${root}`));
 	}
-	return TPromise.wrap(file.path.substr(root.length));
+	return TPromise.wrap(resource.path.substr(root.length) || undefined);
 }
 
 function endsWithSlash(s: string): string {
