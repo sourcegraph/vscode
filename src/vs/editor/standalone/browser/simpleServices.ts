@@ -451,7 +451,7 @@ export class SimpleConfigurationService implements IConfigurationService {
 	private _configuration: Configuration;
 
 	constructor() {
-		this._configuration = new Configuration(new DefaultConfigurationModel(), new ConfigurationModel());
+		this._configuration = new Configuration(new DefaultConfigurationModel(), new ConfigurationModel(), new ConfigurationModel());
 	}
 
 	private configuration(): Configuration {
@@ -478,6 +478,7 @@ export class SimpleConfigurationService implements IConfigurationService {
 
 	public inspect<C>(key: string, options?: IConfigurationOverrides): {
 		default: C,
+		organization: C,
 		user: C,
 		workspace: C,
 		workspaceFolder: C

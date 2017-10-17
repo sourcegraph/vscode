@@ -64,6 +64,9 @@ export class EnvironmentService implements IEnvironmentService {
 	get appSettingsPath(): string { return path.join(this.appSettingsHome, 'settings.json'); }
 
 	@memoize
+	get appOrganizationSettingsPath(): string { return path.join(this.appSettingsHome, 'cachedOrganizationSettings.json'); }
+
+	@memoize
 	get appKeybindingsPath(): string { return path.join(this.appSettingsHome, 'keybindings.json'); }
 
 	@memoize

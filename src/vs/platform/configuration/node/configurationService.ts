@@ -23,6 +23,7 @@ export class ConfigurationService extends Disposable implements IConfigurationSe
 
 	private _configuration: Configuration;
 	private userConfigModelWatcher: ConfigWatcher<ConfigurationModel>;
+	private organizationConfigModelWatcher: ConfigWatcher<ConfigurationModel>;
 
 	private _onDidUpdateConfiguration: Emitter<IConfigurationChangeEvent> = this._register(new Emitter<IConfigurationChangeEvent>());
 	readonly onDidUpdateConfiguration: Event<IConfigurationChangeEvent> = this._onDidUpdateConfiguration.event;
@@ -31,6 +32,15 @@ export class ConfigurationService extends Disposable implements IConfigurationSe
 		@IEnvironmentService environmentService: IEnvironmentService
 	) {
 		super();
+
+		this.organizationConfigModelWatcher = new ConfigWatcher(environmentService.appOrganizationSettingsPath, {
+			changeBufferDelay: 300, onError: error => onUnexpectedError(error), defaultConfig: new CustomConfigurationModel(null, environmentService.appOrganizationSettingsPath), parse: (content: string, parseErrors: any[]) => {
+				const organizationConfigModel = new CustomConfigurationModel(content, environmentService.appOrganizationSettingsPath);
+				parseErrors = [...organizationConfigModel.errors];
+				return organizationConfigModel;
+			}
+		});
+		this._register(this.organizationConfigModelWatcher);
 
 		this.userConfigModelWatcher = new ConfigWatcher(environmentService.appSettingsPath, {
 			changeBufferDelay: 300, onError: error => onUnexpectedError(error), defaultConfig: new CustomConfigurationModel(null, environmentService.appSettingsPath), parse: (content: string, parseErrors: any[]) => {
@@ -44,6 +54,8 @@ export class ConfigurationService extends Disposable implements IConfigurationSe
 		this.reset();
 
 		// Listeners
+
+		this._register(this.organizationConfigModelWatcher.onDidUpdateConfiguration(() => this.onDidUpdateConfigModel()));
 		this._register(this.userConfigModelWatcher.onDidUpdateConfiguration(() => this.onDidUpdateConfigModel()));
 		this._register(Registry.as<IConfigurationRegistry>(Extensions.Configuration).onDidRegisterConfiguration(configurationProperties => this.onDidRegisterConfiguration(configurationProperties)));
 	}
@@ -80,6 +92,7 @@ export class ConfigurationService extends Disposable implements IConfigurationSe
 
 	inspect<T>(key: string): {
 		default: T,
+		organization: T,
 		user: T,
 		workspace: T,
 		workspaceFolder: T
@@ -90,6 +103,7 @@ export class ConfigurationService extends Disposable implements IConfigurationSe
 
 	keys(): {
 		default: string[];
+		organization: string[];
 		user: string[];
 		workspace: string[];
 		workspaceFolder: string[];
@@ -99,19 +113,31 @@ export class ConfigurationService extends Disposable implements IConfigurationSe
 
 	reloadConfiguration(folder?: IWorkspaceFolder): TPromise<void> {
 		return folder ? TPromise.as(null) :
-			new TPromise((c, e) => this.userConfigModelWatcher.reload(() => c(this.onDidUpdateConfigModel())));
+			new TPromise((c, e) => this.organizationConfigModelWatcher.reload(() =>
+				this.userConfigModelWatcher.reload(() =>
+					c(this.onDidUpdateConfigModel()))));
 	}
 
 	private onDidUpdateConfigModel(): void {
+		let changedKeysOrg = [];
+		const orgDiff = compare(this._configuration.organization, this.organizationConfigModelWatcher.getConfig());
+		changedKeysOrg = [...orgDiff.added, ...orgDiff.updated, ...orgDiff.removed];
+
 		let changedKeys = [];
 		const { added, updated, removed } = compare(this._configuration.user, this.userConfigModelWatcher.getConfig());
 		changedKeys = [...added, ...updated, ...removed];
-		if (changedKeys.length) {
+
+		if (changedKeysOrg || changedKeys) {
 			const oldConfiguartion = this._configuration;
 			this.reset();
-			changedKeys = changedKeys.filter(key => !equals(oldConfiguartion.getValue(key), this._configuration.getValue(key)));
+
+			changedKeys = changedKeys.filter(key => !equals(oldConfiguartion.lookup(key).user, this._configuration.lookup(key).user));
 			if (changedKeys.length) {
 				this.trigger(changedKeys, ConfigurationTarget.USER);
+			}
+			changedKeysOrg = changedKeysOrg.filter(key => !equals(oldConfiguartion.lookup(key).organization, this._configuration.lookup(key).organization));
+			if (changedKeysOrg.length) {
+				this.trigger(changedKeysOrg, ConfigurationTarget.ORGANIZATION);
 			}
 		}
 	}
@@ -123,8 +149,9 @@ export class ConfigurationService extends Disposable implements IConfigurationSe
 
 	private reset(): void {
 		const defaults = new DefaultConfigurationModel();
+		const organization = this.organizationConfigModelWatcher.getConfig();
 		const user = this.userConfigModelWatcher.getConfig();
-		this._configuration = new Configuration(defaults, user);
+		this._configuration = new Configuration(defaults, organization, user);
 	}
 
 	private trigger(keys: string[], source: ConfigurationTarget): void {
@@ -135,6 +162,8 @@ export class ConfigurationService extends Disposable implements IConfigurationSe
 		switch (target) {
 			case ConfigurationTarget.DEFAULT:
 				return this._configuration.defaults.contents;
+			case ConfigurationTarget.ORGANIZATION:
+				return this._configuration.organization;
 			case ConfigurationTarget.USER:
 				return this._configuration.user.contents;
 		}

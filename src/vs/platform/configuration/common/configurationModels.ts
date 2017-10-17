@@ -270,6 +270,7 @@ export class Configuration {
 	protected _foldersConsolidatedConfigurations: StrictResourceMap<ConfigurationModel>;
 
 	constructor(protected _defaults: ConfigurationModel,
+		protected _organization: ConfigurationModel,
 		protected _user: ConfigurationModel,
 		protected _workspaceConfiguration: ConfigurationModel = new ConfigurationModel(),
 		protected folders: StrictResourceMap<ConfigurationModel> = new StrictResourceMap<ConfigurationModel>(),
@@ -283,6 +284,10 @@ export class Configuration {
 		return this._defaults;
 	}
 
+	get organization(): ConfigurationModel {
+		return this._organization;
+	}
+
 	get user(): ConfigurationModel {
 		return this._user;
 	}
@@ -292,7 +297,7 @@ export class Configuration {
 	}
 
 	protected merge(): void {
-		this._globalConfiguration = this._defaults.merge(this._user);
+		this._globalConfiguration = this._defaults.merge(this._organization).merge(this._user);
 		this.updateWorkspaceConsolidateConfiguration();
 		this._foldersConsolidatedConfigurations = new StrictResourceMap<ConfigurationModel>();
 		for (const folder of this.folders.keys()) {
@@ -344,6 +349,7 @@ export class Configuration {
 	lookup<C>(key: string, overrides: IConfigurationOverrides = {}): {
 		default: C,
 		user: C,
+		organization: C,
 		workspace: C,
 		workspaceFolder: C
 		memory?: C
@@ -354,6 +360,7 @@ export class Configuration {
 		const memoryConfigurationModel = overrides.resource ? this._memoryConfigurationByResource.get(overrides.resource) || this._memoryConfiguration : this._memoryConfiguration;
 		return objects.clone({
 			default: getConfigurationValue<C>(overrides.overrideIdentifier ? this._defaults.override(overrides.overrideIdentifier).contents : this._defaults.contents, key),
+			organization: getConfigurationValue<C>(overrides.overrideIdentifier ? this._organization.override(overrides.overrideIdentifier).contents : this._organization.contents, key),
 			user: getConfigurationValue<C>(overrides.overrideIdentifier ? this._user.override(overrides.overrideIdentifier).contents : this._user.contents, key),
 			workspace: this._workspace ? getConfigurationValue<C>(overrides.overrideIdentifier ? this._workspaceConfiguration.override(overrides.overrideIdentifier).contents : this._workspaceConfiguration.contents, key) : void 0, //Check on workspace exists or not because _workspaceConfiguration is never null
 			workspaceFolder: folderConfigurationModel ? getConfigurationValue<C>(overrides.overrideIdentifier ? folderConfigurationModel.override(overrides.overrideIdentifier).contents : folderConfigurationModel.contents, key) : void 0,
@@ -364,6 +371,7 @@ export class Configuration {
 
 	keys(): {
 		default: string[];
+		organization: string[];
 		user: string[];
 		workspace: string[];
 		workspaceFolder: string[];
@@ -371,6 +379,7 @@ export class Configuration {
 		const folderConfigurationModel = this.getFolderConfigurationModelForResource();
 		return objects.clone({
 			default: this._defaults.keys,
+			organization: this._organization.keys,
 			user: this._user.keys,
 			workspace: this._workspaceConfiguration.keys,
 			workspaceFolder: folderConfigurationModel ? folderConfigurationModel.keys : []
@@ -421,6 +430,11 @@ export class Configuration {
 				overrides: this._defaults.overrides,
 				keys: this._defaults.keys
 			},
+			organization: {
+				contents: this._organization.contents,
+				overrides: this._organization.overrides,
+				keys: this._organization.keys,
+			},
 			user: {
 				contents: this._user.contents,
 				overrides: this._user.overrides,
@@ -441,13 +455,14 @@ export class Configuration {
 
 	public static parse(data: IConfigurationData, workspace: Workspace): Configuration {
 		const defaultConfiguration = Configuration.parseConfigurationModel(data.defaults);
+		const organizationConfiguration = Configuration.parseConfigurationModel(data.organization);
 		const userConfiguration = Configuration.parseConfigurationModel(data.user);
 		const workspaceConfiguration = Configuration.parseConfigurationModel(data.workspace);
 		const folders: StrictResourceMap<ConfigurationModel> = Object.keys(data.folders).reduce((result, key) => {
 			result.set(URI.parse(key), Configuration.parseConfigurationModel(data.folders[key]));
 			return result;
 		}, new StrictResourceMap<ConfigurationModel>());
-		return new Configuration(defaultConfiguration, userConfiguration, workspaceConfiguration, folders, new ConfigurationModel(), new StrictResourceMap<ConfigurationModel>(), workspace);
+		return new Configuration(defaultConfiguration, organizationConfiguration, userConfiguration, workspaceConfiguration, folders, new ConfigurationModel(), new StrictResourceMap<ConfigurationModel>(), workspace);
 	}
 
 	private static parseConfigurationModel(model: IConfiguraionModel): ConfigurationModel {

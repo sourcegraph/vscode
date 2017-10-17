@@ -58,8 +58,8 @@ export class PreferencesContribution implements IWorkbenchContribution {
 	private onEditorOpening(event: IEditorOpeningEvent): void {
 		const resource = event.input.getResource();
 		if (
-			!resource || resource.scheme !== 'file' ||									// require a file path opening
-			!endsWith(resource.fsPath, 'settings.json') ||								// file must end in settings.json
+			!resource || resource.scheme !== 'file' ||								// require a file path opening
+			!endsWith(resource.fsPath.toLowerCase(), 'settings.json') ||			// file must end in settings.json
 			!this.configurationService.getValue(DEFAULT_SETTINGS_EDITOR_SETTING)	// user has not disabled default settings editor
 		) {
 			return;
@@ -68,6 +68,11 @@ export class PreferencesContribution implements IWorkbenchContribution {
 		// Global User Settings File
 		if (resource.fsPath === this.environmentService.appSettingsPath) {
 			return event.prevent(() => this.preferencesService.openGlobalSettings(event.options, event.position));
+		}
+
+		// Global Organization Settings File
+		if (resource.fsPath === this.environmentService.appOrganizationSettingsPath) {
+			return event.prevent(() => this.preferencesService.openOrganizationSettings(event.options, event.position));
 		}
 
 		// Single Folder Workspace Settings File

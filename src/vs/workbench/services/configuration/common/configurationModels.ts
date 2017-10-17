@@ -187,13 +187,14 @@ export class Configuration extends BaseConfiguration {
 
 	constructor(
 		defaults: ConfigurationModel,
+		organization: ConfigurationModel,
 		user: ConfigurationModel,
 		workspaceConfiguration: ConfigurationModel,
 		protected folders: StrictResourceMap<FolderConfigurationModel>,
 		memoryConfiguration: ConfigurationModel,
 		memoryConfigurationByResource: StrictResourceMap<ConfigurationModel>,
 		workspace: Workspace) {
-		super(defaults, user, workspaceConfiguration, folders, memoryConfiguration, memoryConfigurationByResource, workspace);
+		super(defaults, organization, user, workspaceConfiguration, folders, memoryConfiguration, memoryConfigurationByResource, workspace);
 	}
 
 	updateDefaultConfiguration(defaults: ConfigurationModel): void {
@@ -201,11 +202,25 @@ export class Configuration extends BaseConfiguration {
 		this.merge();
 	}
 
+	updateOrganizationConfiguration(organization: ConfigurationModel): ConfigurationChangeEvent {
+		const { added, updated, removed } = compare(this._organization, organization);
+		let changedKeys = [...added, ...updated, ...removed];
+		if (changedKeys.length) {
+			const oldConfiguartion = new Configuration(this._defaults, this._organization, this._user, this._workspaceConfiguration, this.folders, this._memoryConfiguration, this._memoryConfigurationByResource, this._workspace);
+
+			this._organization = organization;
+			this.merge();
+
+			changedKeys = changedKeys.filter(key => !equals(oldConfiguartion.getValue(key), this.getValue(key)));
+		}
+		return new ConfigurationChangeEvent().change(changedKeys);
+	}
+
 	updateUserConfiguration(user: ConfigurationModel): ConfigurationChangeEvent {
 		const { added, updated, removed } = compare(this._user, user);
 		let changedKeys = [...added, ...updated, ...removed];
 		if (changedKeys.length) {
-			const oldConfiguartion = new Configuration(this._defaults, this._user, this._workspaceConfiguration, this.folders, this._memoryConfiguration, this._memoryConfigurationByResource, this._workspace);
+			const oldConfiguartion = new Configuration(this._defaults, this._organization, this._user, this._workspaceConfiguration, this.folders, this._memoryConfiguration, this._memoryConfigurationByResource, this._workspace);
 
 			this._user = user;
 			this.merge();
@@ -219,7 +234,7 @@ export class Configuration extends BaseConfiguration {
 		const { added, updated, removed } = compare(this._workspaceConfiguration, workspaceConfiguration);
 		let changedKeys = [...added, ...updated, ...removed];
 		if (changedKeys.length) {
-			const oldConfiguartion = new Configuration(this._defaults, this._user, this._workspaceConfiguration, this.folders, this._memoryConfiguration, this._memoryConfigurationByResource, this._workspace);
+			const oldConfiguartion = new Configuration(this._defaults, this._organization, this._user, this._workspaceConfiguration, this.folders, this._memoryConfiguration, this._memoryConfigurationByResource, this._workspace);
 
 			this._workspaceConfiguration = workspaceConfiguration;
 			this.merge();
@@ -236,7 +251,7 @@ export class Configuration extends BaseConfiguration {
 			const { added, updated, removed } = compare(currentFolderConfiguration, configuration);
 			let changedKeys = [...added, ...updated, ...removed];
 			if (changedKeys.length) {
-				const oldConfiguartion = new Configuration(this._defaults, this._user, this._workspaceConfiguration, this.folders, this._memoryConfiguration, this._memoryConfigurationByResource, this._workspace);
+				const oldConfiguartion = new Configuration(this._defaults, this._organization, this._user, this._workspaceConfiguration, this.folders, this._memoryConfiguration, this._memoryConfigurationByResource, this._workspace);
 
 				this.folders.set(resource, configuration);
 				this.mergeFolder(resource);

@@ -21,6 +21,7 @@ export interface IWorkspaceConfigurationService extends IConfigurationService {
 
 export const defaultSettingsSchemaId = 'vscode://schemas/settings/default';
 export const userSettingsSchemaId = 'vscode://schemas/settings/user';
+export const organizationSettingsSchemaId = 'vscode://schemas/settings/organization';
 export const workspaceSettingsSchemaId = 'vscode://schemas/settings/workspace';
 export const folderSettingsSchemaId = 'vscode://schemas/settings/folder';
 

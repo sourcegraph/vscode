@@ -26,7 +26,7 @@ import { IEnvironmentService } from 'vs/platform/environment/common/environment'
 import { CustomConfigurationModel, ConfigurationModel, ConfigurationChangeEvent, AllKeysConfigurationChangeEvent } from 'vs/platform/configuration/common/configurationModels';
 import { IConfigurationChangeEvent, ConfigurationTarget, IConfigurationOverrides, keyFromOverrideIdentifier, isConfigurationOverrides, IConfigurationData } from 'vs/platform/configuration/common/configuration';
 import { WorkspaceConfigurationModel, ScopedConfigurationModel, FolderConfigurationModel, FolderSettingsModel, Configuration, WorkspaceConfigurationChangeEvent } from 'vs/workbench/services/configuration/common/configurationModels';
-import { IWorkspaceConfigurationService, WORKSPACE_CONFIG_FOLDER_DEFAULT_NAME, WORKSPACE_STANDALONE_CONFIGURATIONS, WORKSPACE_CONFIG_DEFAULT_PATH, TASKS_CONFIGURATION_KEY, LAUNCH_CONFIGURATION_KEY, defaultSettingsSchemaId, userSettingsSchemaId, workspaceSettingsSchemaId, folderSettingsSchemaId } from 'vs/workbench/services/configuration/common/configuration';
+import { IWorkspaceConfigurationService, WORKSPACE_CONFIG_FOLDER_DEFAULT_NAME, WORKSPACE_STANDALONE_CONFIGURATIONS, WORKSPACE_CONFIG_DEFAULT_PATH, TASKS_CONFIGURATION_KEY, LAUNCH_CONFIGURATION_KEY, defaultSettingsSchemaId, organizationSettingsSchemaId, userSettingsSchemaId, workspaceSettingsSchemaId, folderSettingsSchemaId } from 'vs/workbench/services/configuration/common/configuration';
 import { ConfigurationService as GlobalConfigurationService } from 'vs/platform/configuration/node/configurationService';
 import { Registry } from 'vs/platform/registry/common/platform';
 import { IConfigurationNode, IConfigurationRegistry, Extensions, ConfigurationScope, settingsSchema, resourceSettingsSchema } from 'vs/platform/configuration/common/configurationRegistry';
@@ -167,6 +167,7 @@ export class WorkspaceService extends Disposable implements IWorkspaceConfigurat
 
 	inspect<T>(key: string, overrides?: IConfigurationOverrides): {
 		default: T,
+		organization: T,
 		user: T,
 		workspace: T,
 		workspaceFolder: T,
@@ -178,6 +179,7 @@ export class WorkspaceService extends Disposable implements IWorkspaceConfigurat
 
 	keys(): {
 		default: string[];
+		organization: string[];
 		user: string[];
 		workspace: string[];
 		workspaceFolder: string[];
@@ -324,11 +326,11 @@ export class WorkspaceService extends Disposable implements IWorkspaceConfigurat
 				const folderConfigurationModels = new StrictResourceMap<FolderConfigurationModel>();
 				folderConfigurations.forEach((folderConfiguration, index) => folderConfigurationModels.set(folders[index].uri, folderConfiguration));
 
-				this._configuration = new Configuration(this.baseConfigurationService.configuration.defaults, this.baseConfigurationService.configuration.user, workspaceConfiguration, folderConfigurationModels, new ConfigurationModel(), new StrictResourceMap<ConfigurationModel>(), this.getWorkbenchState() !== WorkbenchState.EMPTY ? this.workspace : null); //TODO: Sandy Avoid passing null
+				this._configuration = new Configuration(this.baseConfigurationService.configuration.defaults, this.baseConfigurationService.configuration.organization, this.baseConfigurationService.configuration.user, workspaceConfiguration, folderConfigurationModels, new ConfigurationModel(), new StrictResourceMap<ConfigurationModel>(), this.getWorkbenchState() !== WorkbenchState.EMPTY ? this.workspace : null); //TODO: Sandy Avoid passing null
 				// TODO Sandy: compare with old values??
 
 				const keys = this._configuration.keys();
-				this._onDidUpdateConfiguration.fire(new AllKeysConfigurationChangeEvent([...keys.default, ...keys.user, ...keys.workspace, ...keys.workspaceFolder], ConfigurationTarget.WORKSPACE, this.getTargetConfiguration(ConfigurationTarget.WORKSPACE)));
+				this._onDidUpdateConfiguration.fire(new AllKeysConfigurationChangeEvent([...keys.default, ...keys.organization, ...keys.user, ...keys.workspace, ...keys.workspaceFolder], ConfigurationTarget.WORKSPACE, this.getTargetConfiguration(ConfigurationTarget.WORKSPACE)));
 			});
 	}
 
@@ -347,6 +349,7 @@ export class WorkspaceService extends Disposable implements IWorkspaceConfigurat
 		if (this.workspace) {
 			const jsonRegistry = Registry.as<IJSONContributionRegistry>(JSONExtensions.JSONContribution);
 			jsonRegistry.registerSchema(defaultSettingsSchemaId, settingsSchema);
+			jsonRegistry.registerSchema(organizationSettingsSchemaId, settingsSchema);
 			jsonRegistry.registerSchema(userSettingsSchemaId, settingsSchema);
 
 			if (WorkbenchState.WORKSPACE === this.getWorkbenchState()) {
@@ -365,7 +368,11 @@ export class WorkspaceService extends Disposable implements IWorkspaceConfigurat
 				this.workspace.folders.forEach(folder => this._configuration.getFolderConfigurationModel(folder.uri).update());
 				this._configuration.updateDefaultConfiguration(this.baseConfigurationService.configuration.defaults);
 				this.triggerConfigurationChange(new ConfigurationChangeEvent().change(e.affectedKeys), e.source);
-			} else {
+			} else if (e.source === ConfigurationTarget.ORGANIZATION) {
+				let keys = this._configuration.updateOrganizationConfiguration(this.baseConfigurationService.configuration.organization);
+				this.triggerConfigurationChange(keys, e.source);
+			}
+			else {
 				let keys = this._configuration.updateUserConfiguration(this.baseConfigurationService.configuration.user);
 				this.triggerConfigurationChange(keys, e.source);
 			}
@@ -476,6 +483,7 @@ export class WorkspaceService extends Disposable implements IWorkspaceConfigurat
 		return this.configurationEditingService.writeConfiguration(target, { key, value }, { scopes: overrides, donotNotifyError })
 			.then(() => {
 				switch (target) {
+					case ConfigurationTarget.ORGANIZATION:
 					case ConfigurationTarget.USER:
 						return this.reloadUserConfiguration();
 					case ConfigurationTarget.WORKSPACE:
@@ -514,7 +522,11 @@ export class WorkspaceService extends Disposable implements IWorkspaceConfigurat
 			return ConfigurationTarget.WORKSPACE;
 		}
 
-		return ConfigurationTarget.USER;
+		if (inspect.user !== void 0) {
+			return ConfigurationTarget.USER;
+		}
+
+		return ConfigurationTarget.ORGANIZATION;
 	}
 
 	private triggerConfigurationChange(configurationEvent: ConfigurationChangeEvent, target: ConfigurationTarget): void {
@@ -528,6 +540,8 @@ export class WorkspaceService extends Disposable implements IWorkspaceConfigurat
 		switch (target) {
 			case ConfigurationTarget.DEFAULT:
 				return this._configuration.defaults.contents;
+			case ConfigurationTarget.ORGANIZATION:
+				return this._configuration.organization.contents;
 			case ConfigurationTarget.USER:
 				return this._configuration.user.contents;
 			case ConfigurationTarget.WORKSPACE:

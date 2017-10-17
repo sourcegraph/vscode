@@ -58,6 +58,7 @@ export class TestConfigurationService extends EventEmitter implements IConfigura
 
 	public inspect<T>(key: string, overrides?: IConfigurationOverrides): {
 		default: T,
+		organization: T
 		user: T,
 		workspace: T,
 		workspaceFolder: T
@@ -68,6 +69,7 @@ export class TestConfigurationService extends EventEmitter implements IConfigura
 		return {
 			value: getConfigurationValue<T>(config, key),
 			default: getConfigurationValue<T>(config, key),
+			organization: getConfigurationValue<T>(config, key),
 			user: getConfigurationValue<T>(config, key),
 			workspace: null,
 			workspaceFolder: null
@@ -77,6 +79,7 @@ export class TestConfigurationService extends EventEmitter implements IConfigura
 	public keys() {
 		return {
 			default: getConfigurationKeys(),
+			organization: Object.keys(this.configuration),
 			user: Object.keys(this.configuration),
 			workspace: [],
 			workspaceFolder: []

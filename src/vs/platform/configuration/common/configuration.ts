@@ -32,7 +32,8 @@ export enum ConfigurationTarget {
 	WORKSPACE,
 	WORKSPACE_FOLDER,
 	DEFAULT,
-	MEMORY
+	MEMORY,
+	ORGANIZATION
 }
 
 export interface IConfigurationChangeEvent {
@@ -69,6 +70,7 @@ export interface IConfigurationService {
 
 	inspect<T>(key: string): {
 		default: T,
+		organization: T
 		user: T,
 		workspace: T,
 		workspaceFolder: T,
@@ -78,6 +80,7 @@ export interface IConfigurationService {
 
 	keys(): {
 		default: string[];
+		organization: string[];
 		user: string[];
 		workspace: string[];
 		workspaceFolder: string[];
@@ -98,6 +101,7 @@ export interface IOverrides {
 
 export interface IConfigurationData {
 	defaults: IConfiguraionModel;
+	organization: IConfiguraionModel;
 	user: IConfiguraionModel;
 	workspace: IConfiguraionModel;
 	folders: { [folder: string]: IConfiguraionModel };

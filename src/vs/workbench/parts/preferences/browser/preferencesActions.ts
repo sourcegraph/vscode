@@ -34,6 +34,24 @@ export class OpenGlobalSettingsAction extends Action {
 	}
 }
 
+export class OpenOrganizationSettingsAction extends Action {
+	public static ID = 'workbench.action.openOrganizationSettings';
+	public static LABEL = nls.localize('openOrganizationSettings', "Open Organization Settings");
+
+	constructor(
+		id: string,
+		label: string,
+		@IPreferencesService private preferencesService: IPreferencesService
+	) {
+		super(id, label);
+	}
+
+	public run(event?: any): TPromise<any> {
+		return this.preferencesService.openOrganizationSettings();
+	}
+}
+
+
 export class OpenGlobalKeybindingsAction extends Action {
 
 	public static ID = 'workbench.action.openGlobalKeybindings';
