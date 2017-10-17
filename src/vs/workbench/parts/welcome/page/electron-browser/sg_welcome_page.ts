@@ -47,7 +47,7 @@ export default () => `
 					<div class="sign-in-container">
 						<div class="padding-around">
 							<div class="action-header">Connect your profile</div>
-							<div class="action-subheader">Sign in or sign up to Sourcegraph and create or join a team to share configs with other developers: lists of active repositories, connections to code hosts, team-wide taks/scripts, and auto-installed extensions.</div>
+							<div class="action-subheader">Sign in or sign up to Sourcegraph and create or join an organization to share configs with other developers: lists of active repositories, connections to code hosts, organization-wide tasks/scripts, and auto-installed extensions.</div>
 							<div class="padding-vertical">
 								<button class="signup" data-href="command:remote.auth.signInAction">
 									<div class="signup-icon"></div>
