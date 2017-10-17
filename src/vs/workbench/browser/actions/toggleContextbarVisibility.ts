@@ -10,7 +10,7 @@ import { Registry } from 'vs/platform/registry/common/platform';
 import { Action } from 'vs/base/common/actions';
 import { SyncActionDescriptor } from 'vs/platform/actions/common/actions';
 import { IWorkbenchActionRegistry, Extensions } from 'vs/workbench/common/actions';
-import { IConfigurationEditingService, ConfigurationTarget } from 'vs/workbench/services/configuration/common/configurationEditing';
+import { IConfigurationService, ConfigurationTarget } from 'vs/platform/configuration/common/configuration';
 import { IPartService, Parts } from 'vs/workbench/services/part/common/partService';
 
 export abstract class ContextbarVisibilityAction extends Action {
@@ -24,7 +24,7 @@ export abstract class ContextbarVisibilityAction extends Action {
 		id: string,
 		label: string,
 		@IPartService private partService: IPartService,
-		@IConfigurationEditingService private configurationEditingService: IConfigurationEditingService
+		@IConfigurationService private configurationService: IConfigurationService,
 	) {
 		super(id, label);
 
@@ -36,7 +36,7 @@ export abstract class ContextbarVisibilityAction extends Action {
 	}
 
 	protected setVisibility(newVisibilityValue: boolean): TPromise<void> {
-		return this.configurationEditingService.writeConfiguration(ConfigurationTarget.USER, { key: ContextbarVisibilityAction.contextbarVisibleKey, value: newVisibilityValue });
+		return this.configurationService.updateValue(ContextbarVisibilityAction.contextbarVisibleKey, newVisibilityValue, ConfigurationTarget.USER);
 	}
 
 	public abstract run(): TPromise<any>;

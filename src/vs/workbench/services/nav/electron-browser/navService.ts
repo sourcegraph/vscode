@@ -17,6 +17,7 @@ import Event, { Emitter } from 'vs/base/common/event';
 import { INavService } from 'vs/workbench/services/nav/common/nav';
 import { IEditorInput, IResourceInput } from 'vs/platform/editor/common/editor';
 import { IWorkbenchEditorService, IResourceInputType } from 'vs/workbench/services/editor/common/editorService';
+import { IConfigurationService, ConfigurationTarget } from 'vs/platform/configuration/common/configuration';
 import { IEditorGroupService } from 'vs/workbench/services/group/common/groupService';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IResourceResolverService } from 'vs/platform/resourceResolver/common/resourceResolver';
@@ -36,7 +37,6 @@ import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
 // tslint:disable-next-line:import-patterns
 import { VIEWLET_ID as EXPLORER_VIEWLET_ID } from 'vs/workbench/parts/files/common/files';
 import { parseGitURL } from 'vs/workbench/services/workspace/node/workspaceSharingService';
-import { IConfigurationEditingService, ConfigurationTarget } from 'vs/workbench/services/configuration/common/configurationEditing';
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
 // tslint:disable-next-line:import-patterns
 import { VIEWLET_ID as SCM_VIEWLET_ID } from 'vs/workbench/parts/scm/common/scm';
@@ -82,8 +82,8 @@ export class NavService extends Disposable implements INavService {
 		@IExtensionService private extensionService: IExtensionService,
 		@IResourceResolverService private resourceResolverService: IResourceResolverService,
 		@IFoldersWorkbenchService private foldersWorkbenchService: IFoldersWorkbenchService,
-		@IConfigurationEditingService private configurationEditingService: IConfigurationEditingService,
-		@IWorkspaceContextService private workspaceContextService: IWorkspaceContextService
+		@IWorkspaceContextService private workspaceContextService: IWorkspaceContextService,
+		@IConfigurationService private configurationService: IConfigurationService,
 	) {
 		super();
 
@@ -126,10 +126,7 @@ export class NavService extends Disposable implements INavService {
 
 		// If an auth cookie has been passed back update it.
 		if (query.cookie) {
-			this.configurationEditingService.writeConfiguration(ConfigurationTarget.USER, {
-				key: 'remote.cookie',
-				value: query.cookie,
-			});
+			this.configurationService.updateValue('remote.cookie', query.cookie, ConfigurationTarget.USER);
 		}
 
 		if (!query.repo || !query.vcs) {

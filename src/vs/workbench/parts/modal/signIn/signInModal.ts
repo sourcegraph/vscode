@@ -15,9 +15,8 @@ import { ModalPart } from 'vs/workbench/parts/modal/modalPart';
 import { IAuthService } from 'vs/platform/auth/common/auth';
 import { urlToSignIn } from 'vs/platform/auth/node/authService';
 import { ICommandService } from 'vs/platform/commands/common/commands';
-import { IConfigurationEditingService, ConfigurationTarget } from 'vs/workbench/services/configuration/common/configurationEditing';
 import { IRemoteConfiguration } from 'vs/platform/remote/node/remote';
-import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
+import { IConfigurationService, ConfigurationTarget } from 'vs/platform/configuration/common/configuration';
 
 /**
  * SignInModal is the modal rendered when a user attempts to authenticate
@@ -29,7 +28,6 @@ export class SignInModal extends Modal {
 		parent: ModalPart,
 		@ITelemetryService protected telemetryService: ITelemetryService,
 		@IAuthService protected authService: IAuthService,
-		@IConfigurationEditingService protected configEditingService: IConfigurationEditingService,
 		@IConfigurationService protected configurationService: IConfigurationService,
 		@ICommandService protected commandService: ICommandService
 	) {
@@ -55,10 +53,7 @@ export class SignInModal extends Modal {
 		}).on('submit', e => {
 			e.preventDefault();
 
-			this.configEditingService.writeConfiguration(ConfigurationTarget.USER, {
-				key: 'remote.cookie',
-				value: $sessionInput.value
-			});
+			this.configurationService.updateValue('remote.cookie', $sessionInput.value, ConfigurationTarget.USER);
 
 			this.parent.popModal();
 		})

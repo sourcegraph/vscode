@@ -10,9 +10,8 @@ import { Disposable, IDisposable, dispose } from 'vs/base/common/lifecycle';
 import Event, { Emitter } from 'vs/base/common/event';
 import { IAuthService, IUser, IOrgMember } from 'vs/platform/auth/common/auth';
 import { IRemoteService, IRemoteConfiguration, requestGraphQL } from 'vs/platform/remote/node/remote';
-import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
+import { IConfigurationService, ConfigurationTarget } from 'vs/platform/configuration/common/configuration';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
-import { IConfigurationEditingService, ConfigurationTarget } from 'vs/workbench/services/configuration/common/configurationEditing';
 import { ICommandService } from 'vs/platform/commands/common/commands';
 import { IMessageService, Severity } from 'vs/platform/message/common/message';
 import { ModalIdentifiers } from 'vs/workbench/parts/modal/modal';
@@ -54,7 +53,6 @@ export class AuthService extends Disposable implements IAuthService {
 		@ITelemetryService private telemetryService: ITelemetryService,
 		@IRemoteService private remoteService: IRemoteService,
 		@IConfigurationService private configurationService: IConfigurationService,
-		@IConfigurationEditingService private configurationEditingService: IConfigurationEditingService,
 		@ICommandService private commandService: ICommandService,
 		@IMessageService private messageService: IMessageService,
 		@IWindowsService private windowsService: IWindowsService,
@@ -211,10 +209,7 @@ export class AuthService extends Disposable implements IAuthService {
 	public signOut(): void {
 		// Delete cookie value from user settings. This will trigger the
 		// onDidUpdateConfiguration handler, which clears local memory and fires notifications.
-		this.configurationEditingService.writeConfiguration(ConfigurationTarget.USER, {
-			key: 'remote.cookie',
-			value: ''
-		});
+		this.configurationService.updateValue('remote.cookie', '', ConfigurationTarget.USER);
 	}
 }
 

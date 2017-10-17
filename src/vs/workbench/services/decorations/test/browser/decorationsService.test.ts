@@ -36,7 +36,7 @@ suite('DecorationsService', function () {
 				return new Promise<IDecorationData>(resolve => {
 					setTimeout(() => resolve({
 						color: 'someBlue',
-						tooltip: 'T'
+						title: 'T'
 					}));
 				});
 			}
@@ -51,7 +51,7 @@ suite('DecorationsService', function () {
 			assert.equal(e.affectsResource(uri), true);
 
 			// sync result
-			assert.deepEqual(service.getDecoration(uri, false).tooltip, 'T');
+			assert.deepEqual(service.getDecoration(uri, false).title, 'T');
 			assert.equal(callCounter, 1);
 		});
 	});
@@ -66,12 +66,12 @@ suite('DecorationsService', function () {
 			readonly onDidChange: Event<URI[]> = Event.None;
 			provideDecorations(uri: URI) {
 				callCounter += 1;
-				return { color: 'someBlue', tooltip: 'Z' };
+				return { color: 'someBlue', title: 'Z' };
 			}
 		});
 
 		// trigger -> sync
-		assert.deepEqual(service.getDecoration(uri, false).tooltip, 'Z');
+		assert.deepEqual(service.getDecoration(uri, false).title, 'Z');
 		assert.equal(callCounter, 1);
 	});
 
@@ -84,12 +84,12 @@ suite('DecorationsService', function () {
 			readonly onDidChange: Event<URI[]> = Event.None;
 			provideDecorations(uri: URI) {
 				callCounter += 1;
-				return { color: 'someBlue', tooltip: 'J' };
+				return { color: 'someBlue', title: 'J' };
 			}
 		});
 
 		// trigger -> sync
-		assert.deepEqual(service.getDecoration(uri, false).tooltip, 'J');
+		assert.deepEqual(service.getDecoration(uri, false).title, 'J');
 		assert.equal(callCounter, 1);
 
 		// un-register -> ensure good event

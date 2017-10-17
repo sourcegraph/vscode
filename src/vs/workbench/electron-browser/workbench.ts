@@ -48,8 +48,6 @@ import { ContextMenuService } from 'vs/workbench/services/contextview/electron-b
 import { WorkbenchKeybindingService } from 'vs/workbench/services/keybinding/electron-browser/keybindingService';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { WorkspaceService, DefaultConfigurationExportHelper } from 'vs/workbench/services/configuration/node/configurationService';
-import { IConfigurationEditingService } from 'vs/workbench/services/configuration/common/configurationEditing';
-import { ConfigurationEditingService } from 'vs/workbench/services/configuration/node/configurationEditingService';
 import { IJSONEditingService } from 'vs/workbench/services/configuration/common/jsonEditing';
 import { JSONEditingService } from 'vs/workbench/services/configuration/node/jsonEditingService';
 import { ContextKeyService } from 'vs/platform/contextkey/browser/contextKeyService';
@@ -202,7 +200,6 @@ export class Workbench implements IPartService {
 	private contextKeyService: IContextKeyService;
 	private keybindingService: IKeybindingService;
 	private backupFileService: IBackupFileService;
-	private configurationEditingService: IConfigurationEditingService;
 	private fileService: IFileService;
 	private navService: INavService;
 	private titlebarPart: TitlebarPart;
@@ -660,10 +657,6 @@ export class Workbench implements IPartService {
 		// JSON Editing
 		const jsonEditingService = this.instantiationService.createInstance(JSONEditingService);
 		serviceCollection.set(IJSONEditingService, jsonEditingService);
-
-		// Configuration Editing
-		this.configurationEditingService = this.instantiationService.createInstance(ConfigurationEditingService);
-		serviceCollection.set(IConfigurationEditingService, this.configurationEditingService);
 
 		// Auth Service
 		serviceCollection.set(IAuthService, this.instantiationService.createInstance(AuthService));

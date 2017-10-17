@@ -23,7 +23,7 @@ import { IWorkbenchEditorService, IResourceInputType } from 'vs/workbench/servic
 import { INavBarService } from 'vs/workbench/services/nav/common/navBar';
 import { INavService } from 'vs/workbench/services/nav/common/nav';
 import { IClipboardService } from 'vs/platform/clipboard/common/clipboardService';
-import { IConfigurationEditingService, ConfigurationTarget } from 'vs/workbench/services/configuration/common/configurationEditing';
+import { IConfigurationService, ConfigurationTarget } from 'vs/platform/configuration/common/configuration';
 import { IPartService, Parts } from 'vs/workbench/services/part/common/partService';
 import { NavbarPart } from 'vs/workbench/browser/parts/navbar/navbarPart';
 
@@ -39,7 +39,7 @@ export class FocusLocationBarAction extends Action {
 		label: string,
 		@IPartService private partService: IPartService,
 		@INavBarService private navBarService: INavBarService,
-		@IConfigurationEditingService private configurationEditingService: IConfigurationEditingService
+		@IConfigurationService private configurationService: IConfigurationService
 	) {
 		super(id, label);
 	}
@@ -49,7 +49,7 @@ export class FocusLocationBarAction extends Action {
 
 		const visible = this.partService.isVisible(Parts.NAVBAR_PART);
 		if (!visible) {
-			p = this.configurationEditingService.writeConfiguration(ConfigurationTarget.USER, { key: FocusLocationBarAction.navbarVisibleKey, value: true });
+			p = this.configurationService.updateValue(FocusLocationBarAction.navbarVisibleKey, true, ConfigurationTarget.USER);
 		} else {
 			p = TPromise.as(void 0);
 		}
