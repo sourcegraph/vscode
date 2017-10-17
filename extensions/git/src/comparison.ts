@@ -132,7 +132,7 @@ export class Comparison implements Disposable {
 	 */
 	private getBaseBranch(head: Branch | undefined): string {
 		if (head && head.upstream) {
-			const [remote] = head.upstream.split('/', 2);
+			const [remote] = head.upstream.split('/', 1);
 			if (remote) {
 				return `${remote}/${this.baseBranch}`;
 			}
