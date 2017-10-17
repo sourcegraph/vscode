@@ -100,7 +100,7 @@ function isWelcomePageEnabled(configurationService: IConfigurationService) {
 export class WelcomePageAction extends Action {
 
 	public static ID = 'workbench.action.showWelcomePage';
-	public static LABEL = localize('welcomePage', "Welcome");
+	public static LABEL = localize('welcomePage', "Home");
 
 	constructor(
 		id: string,
@@ -282,7 +282,7 @@ class WelcomePage {
 			});
 		this.editorInput = this.instantiationService.createInstance(WalkThroughInput, {
 			typeId: welcomeInputTypeId,
-			name: localize('welcome.title', "Welcome"),
+			name: localize('welcome.title', "Home"),
 			resource,
 			telemetryFrom,
 			onReady: (container: HTMLElement) => this.onReady(container, installedExtensions)
@@ -293,7 +293,14 @@ class WelcomePage {
 		return this.editorService.openEditor(this.editorInput, { pinned: true }, Position.ONE);
 	}
 
-	private async resolveOrganizationCommentsContainer(container: HTMLElement): Promise<void> {
+	/**
+	 * resolveOrganizationCommentsContainer manages the state of the code comment container. It is responsible for rendering
+	 * a sign up button isntead of comments if the user is not signed into the editor otherwise it is responsible for rendering the
+	 * comments in place of the sign up button.
+	 * @param container The welcome page container resolved by onReady to allow for proper DOM manipulation.
+	 * @param showLoader A boolean to determine if we should show the loading indicator instead of the empty state.
+	 */
+	private async resolveOrganizationCommentsContainer(container: HTMLElement, showLoader?: boolean): Promise<void> {
 		const currentUser = this.authService.currentUser;
 		const signUpContainer = container.querySelector('.sign-in-container') as HTMLElement;
 		const codeCommentsContainer = container.querySelector('.code-comments-container') as HTMLElement;
@@ -305,30 +312,35 @@ class WelcomePage {
 			$(signUpContainer).show();
 			return;
 		}
+		$(this.emptyCodeCommentState()).hide();
 		$(codeCommentsContainer).show();
 		$(signUpContainer).hide();
 		const spinner = document.getElementById('comment-loader');
-		$(spinner).show();
-		if (this.orgComments.repoComments.length) {
-			$(spinner).hide();
+		if (showLoader) {
+			$(spinner).show();
+			if (!this.orgComments.repoComments.length) {
+				return;
+			}
 		}
+		$(spinner).hide();
 
 		const threadContainer = document.querySelector('.comment-list-container') as HTMLElement;
 		if (!threadContainer) {
 			return;
 		}
-		const commentFilterInput = document.getElementById('comment-input-element') as HTMLInputElement;
+		const commentFilterInput = this.commentFilterInput();
 		if (!threadContainer) {
 			return;
 		}
 		commentFilterInput.addEventListener('input', () => {
 			this.filterCommentsList();
 		});
-		this.renderCodeComments(threadContainer);
+
+		this.renderCodeComments(threadContainer, showLoader);
 	}
 
 	private filterCommentsList(): void {
-		const input = document.getElementById('comment-input-element') as HTMLInputElement;
+		const input = this.commentFilterInput();
 		const filter = input.value.toUpperCase();
 		const ul = document.getElementById('comment-list') as HTMLElement;
 		const li = ul.getElementsByTagName('li');
@@ -343,9 +355,25 @@ class WelcomePage {
 		}
 	}
 
-	private renderCodeComments(container: HTMLElement): void {
+	private emptyCodeCommentState(): HTMLElement {
+		return document.querySelector('.empty-comment-container') as HTMLElement;
+	}
+
+	private commentFilterInput(): HTMLInputElement {
+		return document.getElementById('comment-input-element') as HTMLInputElement;
+	}
+
+	private renderCodeComments(container: HTMLElement, showLoader: boolean): void {
 		let commentList = document.getElementById('comment-list') as HTMLElement;
+		if (!commentList) {
+			return;
+		}
 		$(commentList).clearChildren();
+		if (!this.orgComments.repoComments.length && !showLoader) {
+			$(this.emptyCodeCommentState()).show();
+			return;
+		}
+		$(this.emptyCodeCommentState()).hide();
 
 		this.orgComments.repoComments.forEach(repoComment => {
 			if (!repoComment.threads || !repoComment.threads.length) {
@@ -457,25 +485,16 @@ class WelcomePage {
 			this.orgComments = this.codeCommentsService.getOrgComments();
 			this.disposables.push(this.orgComments);
 			this.orgComments.refresh();
-			this.orgComments.onDidChangeRepoComments(() => this.resolveOrganizationCommentsContainer(container), this);
+			this.disposables.push(this.orgComments.onDidChangeRepoComments(() => {
+				return this.resolveOrganizationCommentsContainer(container);
+			}, this));
 		}
-		this.resolveOrganizationCommentsContainer(container);
+		this.resolveOrganizationCommentsContainer(container, true);
 
-		this.scmService.onDidAddRepository(() => {
-			this.resolveOrganizationCommentsContainer(container);
-		});
-		this.scmService.onDidRemoveRepository((e) => {
-			this.resolveOrganizationCommentsContainer(container);
-		});
-
-		this.scmService.onDidChangeRepository(() => {
-			this.resolveOrganizationCommentsContainer(container);
-		});
-
-		this.resolveOrganizationCommentsContainer(container);
-		this.authService.onDidChangeCurrentUser((e) => {
-			this.resolveOrganizationCommentsContainer(container);
-		});
+		this.disposables.push(this.authService.onDidChangeCurrentUser(() => {
+			this.orgComments.refresh();
+			this.resolveOrganizationCommentsContainer(container, true);
+		}));
 
 		const inactiveButtons = container.querySelectorAll('.sg-inactive');
 

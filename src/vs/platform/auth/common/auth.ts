@@ -39,6 +39,12 @@ export interface IAuthService {
 	 * If the user successfully signs out, the onDidChangeCurrentUser event will fire.
 	 */
 	signOut(): void;
+
+	/**
+	 * Sends an invite to join the current user's organization.
+	 * If the user is not signed in or is not currently in an org no invite will be sent.
+	 */
+	inviteTeammate(emailAddress: string): void;
 }
 
 export interface IUser {

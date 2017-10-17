@@ -5,11 +5,12 @@
 'use strict';
 
 import { localize } from 'vs/nls';
+import { format } from 'vs/base/common/strings';
 import URI from 'vs/base/common/uri';
 import { Disposable, IDisposable, dispose } from 'vs/base/common/lifecycle';
 import Event, { Emitter } from 'vs/base/common/event';
 import { IAuthService, IUser, IOrgMember } from 'vs/platform/auth/common/auth';
-import { IRemoteService, IRemoteConfiguration, requestGraphQL } from 'vs/platform/remote/node/remote';
+import { IRemoteService, IRemoteConfiguration, requestGraphQL, requestGraphQLMutation } from 'vs/platform/remote/node/remote';
 import { IConfigurationService, ConfigurationTarget } from 'vs/platform/configuration/common/configuration';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { ICommandService } from 'vs/platform/commands/common/commands';
@@ -123,9 +124,6 @@ export class AuthService extends Disposable implements IAuthService {
 		this.updateConfigDelayer.trigger(() => {
 			const config = this.configurationService.getConfiguration<IRemoteConfiguration>();
 			// Only re-request user data, fire an event, and log telemetry if the cookie actually changed
-			if (!force && this._currentSessionId === config.remote.cookie) {
-				return TPromise.as(null);
-			}
 			this._currentSessionId = config.remote.cookie;
 			if (!this._currentSessionId) {
 				// If user is already signed in, notify them that their signout was successful and log telemetry.
@@ -185,6 +183,30 @@ export class AuthService extends Disposable implements IAuthService {
 					this.telemetryService.publicLog('CurrentUserSignedIn', this._currentUser.getTelemetryData());
 				});
 		});
+	}
+
+	public inviteTeammate(emailAddress: string): void {
+		const email = emailAddress.trim();
+		if (!email.length) {
+			return;
+		}
+		if (!this.currentUser || !this.currentUser.currentOrgMember || !this.currentUser.currentOrgMember.org) {
+			return;
+		}
+		const orgID = this.currentUser.currentOrgMember.org.id;
+		requestGraphQLMutation<{ response: any }>(this.remoteService, `mutation inviteUser(
+			$email: String!, $orgID: Int!
+		) {
+			inviteUser(email: $email, orgID: $orgID) {
+				alwaysNil
+			}
+		}`, { orgID, email })
+			.then(() => {
+				this.telemetryService.publicLog('InviteTeammateSuccess');
+				this.messageService.show(Severity.Info, localize('inviteTeammate.success', format(`Invited {0} to {1}`, email, this.currentUser.currentOrgMember.org.name)));
+			}, (err) => {
+				this.messageService.show(Severity.Error, err);
+			});
 	}
 
 	public refresh(): void {

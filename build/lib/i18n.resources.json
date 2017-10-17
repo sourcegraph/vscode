@@ -115,6 +115,10 @@
 			"project": "vscode-workbench"
 		},
 		{
+			"name": "vs/workbench/parts/invite",
+			"project": "vscode-workbench"
+		},
+		{
 			"name": "vs/workbench/parts/review",
 			"project": "vscode-workbench"
 		},

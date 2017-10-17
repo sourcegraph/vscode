@@ -487,6 +487,7 @@ export const SOURCEGRAPH_EVENT_MAP: { [eventName: string]: EventMapEntry } = {
 	'CreateOrgClicked': { eventCategory: EventCategory.Orgs, eventAction: EventAction.Click },
 	'InviteOrgMemberClicked': { eventCategory: EventCategory.Orgs, eventAction: EventAction.Click },
 	'SwitchActiveOrgClicked': { eventCategory: EventCategory.Orgs, eventAction: EventAction.Click },
+	'InviteTeammateSuccess': { eventCategory: EventCategory.Orgs, eventAction: EventAction.Success },
 
 	// Redirects
 	'EmailInviteClicked': { eventCategory: EventCategory.Marketing, eventAction: EventAction.Redirect, topLevelOnly: true },

@@ -43,6 +43,16 @@ export default () => `
 						<div id="comment-loader" class="loader-icon"></div>
 						<ul id="comment-list" class="comment-list-container no-margin">
 						</ul>
+						<div class="empty-comment-container">
+							<div class="padding-around">
+								<div class="padding-vertical">
+									<button class="solid" data-href="command:workbench.action.inviteTeammate">
+										<div class="help-icon"></div>
+										<span class="detail button-label">${escape(localize('welcomePage.noCommentsHelp', "Looks like your organization doesn't have any comments. Get started by inviting more teammates."))}</span>
+									</button>
+								</div>
+							</div>
+						</div>
 					</div>
 					<div class="sign-in-container">
 						<div class="padding-around">
