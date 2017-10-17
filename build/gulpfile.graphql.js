@@ -49,7 +49,7 @@ gulp.task('watch-graphql', () => {
 				// Don't log spam the same error when polling
 				if (previousErrorMessage !== err.message) {
 					previousErrorMessage = err.message;
-					gulpUtil.log(err);
+					gulpUtil.log(err.message);
 				}
 			})
 			.then(() => new Promise(resolve => setTimeout(resolve, 10000)))
