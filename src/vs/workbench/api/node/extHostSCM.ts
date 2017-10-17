@@ -13,7 +13,7 @@ import { asWinJsPromise } from 'vs/base/common/async';
 import { TernarySearchTree } from 'vs/base/common/map';
 import { IExtensionDescription } from 'vs/platform/extensions/common/extensions';
 import { ExtHostCommands } from 'vs/workbench/api/node/extHostCommands';
-import { MainContext, MainThreadSCMShape, SCMRawResource, SCMRawResourceSplice, SCMRawResourceSplices, IMainContext } from './extHost.protocol';
+import { MainContext, MainThreadSCMShape, SCMRawResource, SCMRawResourceSplice, SCMRawResourceSplices, IMainContext, MainThreadSCMGroupShape } from './extHost.protocol';
 import { sortedDiff } from 'vs/base/common/arrays';
 import { comparePaths } from 'vs/base/common/comparers';
 import * as vscode from 'vscode';
@@ -185,7 +185,7 @@ export class ExtHostSourceControlResourceGroup implements vscode.SourceControlRe
 	private _disposables: IDisposable[] = [];
 
 	constructor(
-		private _proxy: MainThreadSCMShape,
+		private _proxy: MainThreadSCMGroupShape,
 		private _commands: ExtHostCommands,
 		private _sourceControlHandle: number,
 		private _id: string,

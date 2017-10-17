@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 'use strict';
 
-import { ClearAllModalsAction, ShowOnboardingModalAction } from 'vs/workbench/parts/modal/modalActions';
+import { ClearAllModalsAction } from 'vs/workbench/parts/modal/modalActions';
 import { Registry } from 'vs/platform/registry/common/platform';
 import { localize } from 'vs/nls';
 import { SyncActionDescriptor } from 'vs/platform/actions/common/actions';
@@ -56,11 +56,6 @@ CommandsRegistry.registerCommand('sg.modal.clearAllModalsCommand', (accessor: Se
 		});
 	}
 });
-
-Registry.as<IWorkbenchActionRegistry>(Extensions.WorkbenchActions)
-	.registerWorkbenchAction(
-	new SyncActionDescriptor(ShowOnboardingModalAction, ShowOnboardingModalAction.ID, ShowOnboardingModalAction.LABEL),
-	null, localize('view', "View"));
 
 Registry.as<IWorkbenchActionRegistry>(Extensions.WorkbenchActions)
 	.registerWorkbenchAction(

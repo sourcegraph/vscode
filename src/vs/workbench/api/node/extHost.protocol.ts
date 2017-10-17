@@ -357,6 +357,8 @@ export interface SCMProviderFeatures {
 
 export interface ReviewProviderFeatures {
 	reviewCommands?: modes.Command[];
+	date?: number;
+	author?: string;
 }
 
 export interface SCMGroupFeatures {
@@ -388,15 +390,20 @@ export type SCMRawResourceSplices = [
 	SCMRawResourceSplice[]
 ];
 
-export interface MainThreadSCMShape extends IDisposable {
-	$registerSourceControl(handle: number, id: string, label: string, rootUri: string | undefined): void;
-	$updateSourceControl(handle: number, features: SCMProviderFeatures): void;
-	$unregisterSourceControl(handle: number): void;
-
+/**
+ * A subset of MainThreadSCMShape so we can reuse ExtHostSourceControlResourceGroup inside ExtHostReviewControl
+ */
+export interface MainThreadSCMGroupShape {
 	$registerGroup(sourceControlHandle: number, handle: number, id: string, label: string): void;
 	$updateGroup(sourceControlHandle: number, handle: number, features: SCMGroupFeatures): void;
 	$updateGroupLabel(sourceControlHandle: number, handle: number, label: string): void;
 	$unregisterGroup(sourceControlHandle: number, handle: number): void;
+}
+
+export interface MainThreadSCMShape extends MainThreadSCMGroupShape, IDisposable {
+	$registerSourceControl(handle: number, id: string, label: string, rootUri: string | undefined): void;
+	$updateSourceControl(handle: number, features: SCMProviderFeatures): void;
+	$unregisterSourceControl(handle: number): void;
 
 	$spliceResourceStates(sourceControlHandle: number, splices: SCMRawResourceSplices[]): void;
 
@@ -404,7 +411,7 @@ export interface MainThreadSCMShape extends IDisposable {
 }
 
 export interface MainThreadReviewShape extends IDisposable {
-	$registerReviewControl(handle: number, id: string, label: string, rootUri: string): void;
+	$registerReviewControl(handle: number, id: string, label: string, description: string, icon: string, rootUri: string): void;
 	$updateReviewControl(handle: number, features: ReviewProviderFeatures): void;
 	$unregisterReviewControl(handle: number): void;
 

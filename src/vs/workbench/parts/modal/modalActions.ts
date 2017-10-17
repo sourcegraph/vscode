@@ -12,22 +12,6 @@ import { ICommandService } from 'vs/platform/commands/common/commands';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 
 /**
- * Onboarding modal
- */
-export class ShowOnboardingModalAction extends Action {
-	public static ID = 'sg.modal.showOnboardingModal';
-	public static LABEL = localize('sg.modal.showOnboardingModal', "Show Welcome Tour Modal");
-
-	constructor(id: string, label: string, @ICommandService private commandService: ICommandService, @ITelemetryService private telemetryService: ITelemetryService) {
-		super(id, label);
-	}
-	public run(): TPromise<void> {
-		this.telemetryService.publicLog('OnboardingModalInitiated');
-		return this.commandService.executeCommand('sg.modal.pushModal', ModalIdentifiers.ONBOARDING) as TPromise<any>;
-	}
-}
-
-/**
  * Sign in modal
  */
 export class ShowSignInModalAction extends Action {

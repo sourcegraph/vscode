@@ -8,7 +8,6 @@ import * as dom from 'vs/base/browser/dom';
 import { Builder, $ } from 'vs/base/browser/builder';
 import { Part } from 'vs/workbench/browser/part';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
-import { OnboardingModal } from 'vs/workbench/parts/modal/onboarding/onboarding';
 import { SignInModal } from 'vs/workbench/parts/modal/signIn/signInModal';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IModal, Modal, ModalIdentifiers } from 'vs/workbench/parts/modal/modal';
@@ -23,7 +22,7 @@ import { IPartService } from 'vs/workbench/services/part/common/partService';
  */
 export class ModalPart extends Part {
 	// Singleton modals
-	private onboardingSingleton: OnboardingModal;
+
 
 	/**
 	 * Stack of visible modals, organized from bottom to top, with position in the array
@@ -68,10 +67,6 @@ export class ModalPart extends Part {
 		const container = this.getContainer();
 		if (!(modal instanceof Modal)) {
 			switch (modal as ModalIdentifiers) {
-				case ModalIdentifiers.ONBOARDING:
-					this.onboardingSingleton = this.onboardingSingleton || this.instantiationService.createInstance(OnboardingModal, this);
-					modal = this.onboardingSingleton;
-					break;
 				case ModalIdentifiers.SIGNIN:
 					modal = this.instantiationService.createInstance(SignInModal, this);
 					break;

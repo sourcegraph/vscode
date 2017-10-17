@@ -24,17 +24,16 @@ export class ReviewManager implements Disposable {
 	private reviews = new Map<string, Review>();
 
 	constructor(private repository: Repository) {
-		repository.onDidChangeStatus(this.onDidChangeStatus, this, this.disposables);
+		repository.onDidChangeStatus(this.updateReviews, this, this.disposables);
 	}
 
-	private onDidChangeStatus(): void {
+	private updateReviews(): void {
 		const refs = new Map<string, ReviewRef>();
 		for (const ref of this.repository.refs) {
-			const id = ref.fullName;
-			const name = ref.name;
-			const remote = ref.remote;
-			if (id && name && remote && (ref.type === RefType.Head || ref.type === RefType.RemoteHead)) {
-				refs.set(id, { id, name, remote });
+			const { fullName, name, remote, committerDate, committerName } = ref;
+			// Only include branches with a remote upstream
+			if (fullName && name && remote && ref.type === RefType.RemoteHead && ref.type && !['HEAD', 'master'].includes(name.split('/')[1])) {
+				refs.set(fullName, { fullName, name, remote, committerDate, committerName });
 			}
 		}
 
@@ -67,10 +66,10 @@ export class ReviewManager implements Disposable {
  */
 interface ReviewRef {
 	/**
-	 * The id (full name) of the reference.
+	 * The full name of the reference.
 	 * (e.g. "refs/remotes/origin/mybranch")
 	 */
-	id: string;
+	fullName: string;
 
 	/**
 	 * This display name of the branch.
@@ -83,6 +82,16 @@ interface ReviewRef {
 	 * (e.g. "origin", "upstream")
 	 */
 	remote: string;
+
+	/**
+	 * The time of the last update made to this reviewable
+	 */
+	committerDate?: Date;
+
+	/**
+	 * The potential reviewee
+	 */
+	committerName?: string;
 }
 
 class Review implements Disposable {
@@ -92,14 +101,34 @@ class Review implements Disposable {
 	private changesGroup: SourceControlResourceGroup;
 
 	constructor(private repository: Repository, private ref: ReviewRef) {
-		this.reviewControl = this.register(review.createReviewControl(ref.id, ref.name, Uri.file(repository.root)));
+		const id = ref.fullName;
+		// TODO only include the remote if it's ambiguous / not the "default" (origin/upstream of the local branch)
+		const description = `${repository.root.split(/[\\/]/).pop()} / ${ref.remote}`;
+		let label = ref.name;
+		// Don't show the remote name as part of the branch name
+		if (label.indexOf(ref.remote + '/') === 0) {
+			label = label.slice(ref.remote.length + 1);
+		}
+		this.reviewControl = this.register(review.createReviewControl(id, label, description, 'octicon octicon-git-branch', Uri.file(repository.root)));
 		this.changesGroup = this.register(this.reviewControl.createResourceGroup('changes', localize('changes', "Changes")));
 		this.reviewControl.onDidChangeActive(this.onDidChangeActive, this, this.disposables);
+
+		// Update committerDate and committerName
+		this.updateFeatures();
+		repository.onDidChangeStatus(this.updateFeatures, this, this.disposables);
 	}
 
 	private register<T extends Disposable>(disposable: T): T {
 		this.disposables.push(disposable);
 		return disposable;
+	}
+
+	/**
+	 * Updates the details of the underlying ReviewControl with the latest information from the branch tip
+	 */
+	public updateFeatures(): void {
+		this.reviewControl.date = this.ref.committerDate && this.ref.committerDate.getTime();
+		this.reviewControl.author = this.ref.committerName;
 	}
 
 	private didWarnAboutLimit = false;

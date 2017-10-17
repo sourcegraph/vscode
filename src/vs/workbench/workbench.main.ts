@@ -60,7 +60,7 @@ import 'vs/workbench/parts/search/browser/openAnythingHandler'; // can be packag
 import 'vs/workbench/parts/scm/electron-browser/scm.contribution';
 import 'vs/workbench/parts/scm/electron-browser/scmViewlet'; // can be packaged separately
 
-// import 'vs/workbench/parts/review/electron-browser/review.contribution';
+import 'vs/workbench/parts/review/electron-browser/review.contribution';
 
 import 'vs/workbench/parts/debug/electron-browser/debug.contribution';
 import 'vs/workbench/parts/debug/browser/debugQuickOpen';

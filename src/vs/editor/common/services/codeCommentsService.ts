@@ -26,21 +26,28 @@ export interface ICodeCommentsService {
 	getFileComments(file: URI): IFileComments;
 
 	/**
-	 * Returns a model for the comments on a branch.
+	 * Returns a model for the comments on org repos
+	 * @deprecated TODO(kingy): use getThreads instead
 	 */
-	getBranchComments(repo: URI, branch: string): IBranchComments;
+	getOrgComments(): IOrgComments;
 
 	/**
-	* Returns a model for the comments on org repos
-	*/
-	getOrgComments(): IOrgComments;
+	 * Returns a model for threads.
+	 */
+	getThreads(filter: Filter): IThreads;
+}
+
+export interface Filter {
+	resource?: URI;
+	branch?: string;
+	// archived?: boolean;
 }
 
 /**
  * Model for the comments on a branch.
  */
-export interface IBranchComments extends IEventDisposable {
-	readonly threads: IThreadComments[];
+export interface IThreads extends IEventDisposable {
+	readonly threads: ReadonlyArray<IThreadComments>;
 	readonly onDidChangeThreads: Event<void>;
 
 	refresh(): TPromise<void>;
@@ -48,6 +55,7 @@ export interface IBranchComments extends IEventDisposable {
 
 /**
  * Model for the organization comments
+ * @deprecated TODO(kingy) remove this
  */
 export interface IOrgComments extends IEventDisposable {
 	readonly repoComments: IRepoComments[];
@@ -72,7 +80,7 @@ export interface IFileComments extends IEventDisposable {
 	 * Returns all threads on the file.
 	 * Threads are ordered by the timestamp of the most recent comment descending.
 	 */
-	readonly threads: IThreadComments[];
+	readonly threads: ReadonlyArray<IThreadComments>;
 	readonly onDidChangeThreads: Event<void>;
 
 	/**
@@ -251,7 +259,6 @@ export interface IComment {
 
 export interface ICommentAuthor {
 	readonly email: string;
-	// readonly username: string;
 	readonly displayName: string;
 	readonly avatarUrl: string | undefined;
 }
