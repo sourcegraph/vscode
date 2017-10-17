@@ -19,6 +19,7 @@ import * as platform from 'vs/base/common/platform';
 import * as os from 'os';
 import { nfcall } from 'vs/base/common/async';
 import * as cp from 'child_process';
+import * as json from 'vs/base/common/json';
 
 /**
  * This action will migrate user preferences and extensions from other
@@ -96,7 +97,7 @@ export class VSCodeMigrateAction extends Action {
 		const userDir = path.join(this.environmentService.userDataPath, 'User');
 		const extensionDir = path.join(this.environmentService.extensionsPath);
 		await Promise.all([
-			this.migrateDir(source.userDir, userDir),
+			this.migrateDir(source.userDir, userDir, (o, n) => this.mergeUserDir(o, n)),
 			this.migrateDir(source.extensionDir, extensionDir),
 		]);
 		await this.windowService.reloadWindow();
@@ -110,7 +111,8 @@ export class VSCodeMigrateAction extends Action {
 		};
 	}
 
-	private async migrateDir(source: string, target: string): Promise<void> {
+	private async migrateDir(source: string, target: string, merge?: (oldDir: string, newDir: string) => Promise<void>): Promise<void> {
+		// source is typically vscode while target is sourcegraph (the running app)
 		if (source === target) {
 			return;
 		}
@@ -131,9 +133,38 @@ export class VSCodeMigrateAction extends Action {
 		const targetTmp = `${target}.${migrateName}.migrate`;
 		await nfcall(cp.execFile, 'cp', ['-r', source, targetTmp]);
 		if (targetExists) {
+			if (merge) {
+				await merge(target, targetTmp);
+			}
 			await pfs.rename(target, `${target}.${migrateName}.bak`);
 		}
 		await pfs.rename(targetTmp, target);
+	}
+
+	private async mergeUserDir(oldDir: string, newDir: string): Promise<void> {
+		// newDir is typically vscode (the source migrated) while oldDir is sourcegraph
+		// (the running app, target).
+		// We want to use vscode's settings, but retain settings from sourcegraph
+		// not specified in vscode. Concretely this is usually the github.token which
+		// vscode doesn't have. Another way of saying this is we start with the
+		// sourcegraph settings, but override them with settings from vscode.
+		const [oldPrefs, newPrefs] = await Promise.all([
+			this.maybeParseJSONFromPath(path.join(oldDir, 'settings.json')),
+			this.maybeParseJSONFromPath(path.join(newDir, 'settings.json')),
+		]);
+
+		const prefs = { ...oldPrefs, ...newPrefs };
+
+		await pfs.writeFile(path.join(newDir, 'settings.json'), JSON.stringify(prefs, null, 4));
+	}
+
+	private async maybeParseJSONFromPath(p: string): Promise<any> {
+		const exists = await pfs.exists(p);
+		if (!exists) {
+			return {};
+		}
+		const buf = await pfs.readFile(p);
+		return json.parse(buf.toString());
 	}
 }
 
