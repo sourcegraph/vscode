@@ -4,13 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import nls = require('vs/nls');
-import { ViewletActivityAction, GlobalActivityActionItem } from 'vs/workbench/browser/parts/activitybar/activitybarActions';
+import { ViewletActivityAction } from 'vs/workbench/browser/parts/activitybar/activitybarActions';
 import { ActivityActionItem } from 'vs/workbench/browser/parts/compositebar/compositeBarActions';
 import { IActivity, IGlobalActivity } from 'vs/workbench/common/activity';
 import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
 import { IActivityBarService } from 'vs/workbench/services/activity/common/activityBarService';
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
-import { IViewletService, } from 'vs/workbench/services/viewlet/browser/viewlet';
+import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
+import { GlobalViewletDescriptor } from 'vs/workbench/browser/viewlet';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 import DOM = require('vs/base/browser/dom');
@@ -46,11 +47,9 @@ export class GlobalViewletActionItem extends ActivityActionItem {
 				this.action.checked = true;
 			}
 		});
-
-		if (this.action instanceof GlobalActivityActionItem) {
-			this.globalActivity = this.action.activity as IGlobalActivity;
+		if (this.action.activity instanceof GlobalViewletDescriptor) {
+			this.globalActivity = this.instantiationService.createInstance(this.action.activity.globalActivity);
 		}
-
 	}
 
 	private getKeybindingLabel(id: string): string {

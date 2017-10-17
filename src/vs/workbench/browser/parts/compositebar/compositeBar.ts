@@ -189,9 +189,11 @@ export class CompositeBar {
 		}
 
 		let compositesToShow = this.pinnedComposites;
-
-		// Always show the active composite even if it is marked to be hidden
-		if (this.activeCompositeId && !compositesToShow.some(id => id === this.activeCompositeId)) {
+		// PATCH(sourcegraph) The management viewlet is a viewlet with global action items. Therefore we do not want to modify it
+		// as a regular composite.
+		if (this.activeCompositeId === 'workbench.view.management') {
+			this.activeUnpinnedCompositeId = void 0;
+		} else if (this.activeCompositeId && !compositesToShow.some(id => id === this.activeCompositeId)) {
 			this.activeUnpinnedCompositeId = this.activeCompositeId;
 			compositesToShow = compositesToShow.concat(this.activeUnpinnedCompositeId);
 		} else {
