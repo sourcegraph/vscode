@@ -69,11 +69,28 @@ export class GitResourceResolver {
 			}
 		}
 
-		const repoForRemote = await this.model.tryOpenRepositoryWithRemote(repoUri);
-		if (repoForRemote) {
-			if (!revision) {
-				return Uri.file(repoForRemote.root);
+		const reposForRemote = await this.model.tryOpenRepositoryWithRemote(repoUri);
+		if (reposForRemote.length > 0 && !revision) {
+			if (reposForRemote.length === 1) {
+				return Uri.file(reposForRemote[0].root);
 			}
+			const picks = reposForRemote.map(repo => {
+				return {
+					label: path.basename(repo.root),
+					description: [repo.headLabel, repo.syncLabel, repo.root]
+						.filter(l => !!l)
+						.join(' '),
+					repo,
+				};
+			});
+			const placeHolder = localize('pickExistingRepo', "Choose a clone for repository {0}", canonicalResource);
+			const pick = await window.showQuickPick(picks, { placeHolder });
+			if (pick) {
+				return Uri.file(pick.repo.root);
+			}
+		}
+		if (reposForRemote.length > 0 && revision) {
+			const repoForRemote = reposForRemote[0];
 			const headCommit = await repoForRemote.getCommit('HEAD');
 			if (headCommit.hash === revision) {
 				return Uri.file(repoForRemote.root);

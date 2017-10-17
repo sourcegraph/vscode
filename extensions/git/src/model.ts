@@ -287,13 +287,13 @@ export class Model {
 		}
 	}
 
-	async tryOpenRepositoryWithRemote(remote: Uri): Promise<Repository | undefined> {
-		const path = this.globalRepositories.resolveRemote(remote.toString());
-		if (!path) {
-			return undefined;
-		}
-		await this.tryOpenRepository(path, true);
-		return this.getRepository(path, true);
+	async tryOpenRepositoryWithRemote(remote: Uri): Promise<Repository[]> {
+		const remotes = this.globalRepositories.resolveRemotes(remote.toString());
+		const repos = await Promise.all(remotes.map(async path => {
+			await this.tryOpenRepository(path, true);
+			return this.getRepository(path, true);
+		}));
+		return repos.filter(r => !!r) as Repository[];
 	}
 
 	private open(repository: Repository): void {

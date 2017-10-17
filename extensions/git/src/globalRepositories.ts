@@ -13,15 +13,25 @@ import { Git } from './git';
 import { StringDecoder } from 'string_decoder';
 import { EventEmitter } from 'events';
 import { Memento } from 'vscode';
+import { uniqBy } from './util';
 
+/**
+ * Maintains an index from git remotes to repositories on disk.
+ * The main use of this class is to allow the 'repo' quick open to use a users existing clones,
+ * rather than clone a fresh copy.
+ */
 export class GlobalRepositories {
-	private static MEMENTO_KEY = 'git.globalrepositories.map';
+	private static MEMENTO_KEY = 'git.globalrepositories.map.v2';
 
 	private operation = 0;
 	private walker: FolderWalker | null;
 
-	/** canonical remote -> path */
-	private map = new Map<string, string>();
+	/**
+	 * canonical remote -> paths.
+	 * eg 'github.com/gorilla/mux' -> ['/home/user/mux', '/home/user/src/mux']
+	 */
+	private currentEntries = new Map<string, string[]>();
+	private newEntries = new Map<string, string[]>();
 
 	private _onOutput = new EventEmitter();
 	get onOutput(): EventEmitter { return this._onOutput; }
@@ -30,17 +40,39 @@ export class GlobalRepositories {
 		private git: Git,
 		private globalState: Memento,
 	) {
-		const mapEntries = globalState.get<[string, string][]>(GlobalRepositories.MEMENTO_KEY);
+		const mapEntries = globalState.get<[string, string[]][]>(GlobalRepositories.MEMENTO_KEY);
 		if (mapEntries) {
-			this.map = new Map<string, string>(mapEntries);
+			this.currentEntries = new Map<string, string[]>(mapEntries);
 		}
 	}
 
-	public resolveRemote(remote: string): string | undefined {
+	/**
+	 * Returns a list of paths to repositories which have remote as a git remote.
+	 * @param remote A git remote (eg https://github.com/gorilla/mux.git) to look up.
+	 */
+	public resolveRemotes(remote: string): string[] {
 		const key = canonicalRemote(remote);
-		return key ? this.map.get(key) : undefined;
+		if (!key) {
+			return [];
+		}
+		const entries = (this.newEntries.get(key) || []).concat(this.currentEntries.get(key) || []);
+		entries.sort((a, b) => {
+			// We prefer shorter strings
+			if (a.length !== b.length) {
+				return a.length - b.length;
+			}
+			if (a === b) {
+				return 0;
+			}
+			return a < b ? -1 : 1;
+		});
+		return uniqBy(entries, v => v);
 	}
 
+	/**
+	 * scan searches recursively dir for all git repositories and indexes them by the git remotes.
+	 * @param dir The root directory to scan from
+	 */
 	public scan(dir: string): Promise<void> {
 		if (!FolderWalker.available()) {
 			return Promise.resolve();
@@ -54,27 +86,17 @@ export class GlobalRepositories {
 
 		return new Promise<void>((resolve, reject) => {
 			this.log('Starting home directory scan');
-			const oldSize = this.map.size;
-			const staleRemotes = new Set<string>(this.map.keys());
+			const map = new Map<string, string[]>();
+			this.newEntries = map;
 			const remotePromises: Promise<void>[] = [];
 			walker.search(dir, path => {
 				remotePromises.push(this.git.exec(path, ['remote', '--verbose']).then(result => {
 					for (const key of extractCanonicalRemotes(result.stdout)) {
-						if (staleRemotes.has(key)) {
-							// First time we have seen this key on this scan, so overwrite incase the value is stale.
-							this.map.set(key, path);
-							staleRemotes.delete(key);
+						const paths = map.get(key);
+						if (!paths) {
+							map.set(key, [path]);
 						} else {
-							// We want to consistently set the same path for a key. So we only update the key if
-							// * It is unset, or
-							// * It is shorter, or
-							// * It is the same length, but lexicographically before.
-							//
-							// NOTE: When rescanning this does mean temporarily we can have different values. Not preventing that for simplicity.
-							const current = this.map.get(key);
-							if (!current || path.length < current.length || (path.length === current.length && path < current)) {
-								this.map.set(key, path);
-							}
+							paths.push(path);
 						}
 					}
 				}, () => { }));
@@ -87,16 +109,17 @@ export class GlobalRepositories {
 				}
 
 				resolve(Promise.all(remotePromises).then(() => {
-					const count = this.map.size - oldSize;
-					this.log(`Home directory scan found ${count} new remotes (total ${this.map.size})`);
-
 					const canceled = operation !== this.operation;
-					if (!canceled) {
-						// We only know staleRemotes is accurate if the operation finished
-						staleRemotes.forEach(k => this.map.delete(k));
+					if (canceled) {
+						return;
 					}
 
-					return this.globalState.update(GlobalRepositories.MEMENTO_KEY, [...this.map]);
+					const count = map.size - this.currentEntries.size;
+					this.log(`Home directory scan found ${count} new remotes (total ${map.size})`);
+					this.currentEntries = map;
+					this.newEntries = new Map<string, string[]>();
+
+					return this.globalState.update(GlobalRepositories.MEMENTO_KEY, [...map]);
 				}));
 			});
 		});
@@ -118,6 +141,9 @@ export class GlobalRepositories {
 	}
 }
 
+/**
+ * Recursively finds git directories
+ */
 export class FolderWalker {
 
 	private isCanceled = false;
@@ -202,6 +228,9 @@ export class FolderWalker {
 	}
 }
 
+/**
+ * Finds and canonicalizes all remotes in the output of 'git remote'.
+ */
 function extractCanonicalRemotes(stdout: string): string[] {
 	const regex = /^[^\s]+\s+([^\s]+)\s/;
 	return stdout.trim().split(os.EOL)
