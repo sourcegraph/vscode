@@ -7,7 +7,7 @@
 
 import { Uri, scm, SourceControlResourceGroup, SourceControlResourceState, Disposable, window, workspace, SourceControl } from 'vscode';
 import { dispose } from './util';
-import { throttle, sequentialize } from './decorators';
+import { throttle, debounce } from './decorators';
 import { Repository, Resource, GitResourceGroup, ResourceGroupType, Status } from './repository';
 import { Branch } from './git';
 import * as path from 'path';
@@ -79,11 +79,16 @@ export class Comparison implements Disposable {
 		// Suppress count to avoid double-counting changes.
 		this.sourceControl.count = 0;
 
-		this.disposables.push(repository.onDidChangeStatus(() => this.throttledUpdate()));
+		this.disposables.push(repository.onDidChangeStatus(this.onDidChangeStatus, this));
+	}
+
+	@debounce(1000)
+	private onDidChangeStatus(): void {
+		this.throttledUpdate();
 	}
 
 	@throttle
-	public throttledUpdate(): Thenable<void> {
+	private throttledUpdate(): Thenable<void> {
 		// The user will get an error message when they intentionally invoke an update,
 		// so it is OK to suppress the error here.
 		try {
@@ -92,11 +97,6 @@ export class Comparison implements Disposable {
 			window.showErrorMessage(err);
 			return Promise.resolve();
 		}
-	}
-
-	@sequentialize
-	public update(): Thenable<void> {
-		return this.updateModelState();
 	}
 
 	private async updateModelState(): Promise<void> {
