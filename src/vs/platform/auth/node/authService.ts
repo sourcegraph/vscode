@@ -8,7 +8,7 @@ import { localize } from 'vs/nls';
 import URI from 'vs/base/common/uri';
 import { Disposable, IDisposable, dispose } from 'vs/base/common/lifecycle';
 import Event, { Emitter } from 'vs/base/common/event';
-import { IAuthService, IUser, IOrgMember } from 'vs/platform/auth/common/auth';
+import { IAuthService, IUser, IOrgMember, IOrgSettings } from 'vs/platform/auth/common/auth';
 import { IRemoteService, IRemoteConfiguration, requestGraphQL, requestGraphQLMutation } from 'vs/platform/remote/node/remote';
 import { IConfigurationService, ConfigurationTarget } from 'vs/platform/configuration/common/configuration';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
@@ -21,6 +21,9 @@ import { TPromise } from 'vs/base/common/winjs.base';
 import { IStorageService } from 'vs/platform/storage/common/storage';
 import { Memento } from 'vs/workbench/common/memento';
 import * as objects from 'vs/base/common/objects';
+import { IFileService } from 'vs/platform/files/common/files';
+import { IEnvironmentService } from 'vs/platform/environment/common/environment';
+import { ITextFileService } from 'vs/workbench/services/textfile/common/textfiles';
 
 export { Event }
 
@@ -49,6 +52,12 @@ export class AuthService extends Disposable implements IAuthService {
 
 	private updateConfigDelayer: ThrottledDelayer<void>;
 
+	/**
+	 * This flag gets enabled whenever we detect that the organization settings were saved,
+	 * and is reset whenever the organization settings are uploaded.
+	 */
+	private shouldUploadConfigurationSettings = false;
+
 	constructor(
 		@ITelemetryService private telemetryService: ITelemetryService,
 		@IRemoteService private remoteService: IRemoteService,
@@ -57,6 +66,9 @@ export class AuthService extends Disposable implements IAuthService {
 		@IMessageService private messageService: IMessageService,
 		@IWindowsService private windowsService: IWindowsService,
 		@IStorageService private storageService: IStorageService,
+		@IFileService private fileService: IFileService,
+		@IEnvironmentService private environmentService: IEnvironmentService,
+		@ITextFileService private textFileService: ITextFileService,
 	) {
 		super();
 		this.globalState = new Memento(AuthService.MEMENTO_KEY);
@@ -74,6 +86,13 @@ export class AuthService extends Disposable implements IAuthService {
 			this.refresh();
 		}));
 
+		this._register(this.textFileService.models.onModelSaved(model => {
+			if (model.resource.fsPath === this.environmentService.appOrganizationSettingsPath) {
+				this.shouldUploadConfigurationSettings = true;
+				this.onDidUpdateConfiguration();
+			}
+		}));
+
 		this.onDidUpdateConfiguration();
 	}
 
@@ -89,40 +108,48 @@ export class AuthService extends Disposable implements IAuthService {
 		return a === b || objects.equals(a.toMemento(), b.toMemento());
 	}
 
-	private setCurrentUser(user: User | undefined) {
-		if (this.equalUsers(user, this._currentUser)) {
-			return;
+	private setCurrentUser(newUser: User | undefined): TPromise<void> {
+		if (this.equalUsers(newUser, this._currentUser)) {
+			return TPromise.as(undefined);
 		}
-		dispose(this._currentUser);
-		this.toDisposeOnCurrentUserChange = dispose(this.toDisposeOnCurrentUserChange);
+		const newSettings = newUser && newUser.currentOrgMember && newUser.currentOrgMember.org.latestSettings;
+		return this.saveOrgSettingsToDisk(newSettings).then(() => {
+			dispose(this._currentUser);
+			this.toDisposeOnCurrentUserChange = dispose(this.toDisposeOnCurrentUserChange);
 
-		this._currentUser = user;
-		if (this._currentUser) {
-			this.toDisposeOnCurrentUserChange.push(this._currentUser.onDidChangeCurrentOrgMember(() => {
-				this.globalState.saveMemento();
-				this.didChangeCurrentUser.fire();
-			}));
-			this.memento[AuthService.CURRENT_USER_KEY] = user.toMemento();
-		} else {
-			this.memento[AuthService.CURRENT_USER_KEY] = undefined;
-		}
-		this.globalState.saveMemento();
-		this.didChangeCurrentUser.fire();
+			this._currentUser = newUser;
+			if (this._currentUser) {
+				this.toDisposeOnCurrentUserChange.push(this._currentUser.onDidChangeCurrentOrgMember(() => {
+					const newOrgMember = this._currentUser.currentOrgMember;
+					const newOrgSettings = newOrgMember && newOrgMember.org.latestSettings;
+					this.saveOrgSettingsToDisk(newOrgSettings, true);
+					this.globalState.saveMemento();
+					this.didChangeCurrentUser.fire();
+				}));
+				this.memento[AuthService.CURRENT_USER_KEY] = newUser;
+			} else {
+				this.memento[AuthService.CURRENT_USER_KEY] = undefined;
+			}
+			this.globalState.saveMemento();
+			this.didChangeCurrentUser.fire();
+		});
 	}
 
 	private toDisposeOnCurrentUserChange: IDisposable[] = [];
 
 	/**
-	 * Executed on 'remote.cookie' user setting updates. When the user first opens
-	 * the editor, changes their remote.cookie setting manually, or completes
-	 * signing in, signing out, or switching accounts and successfully
-	 * updates their remote.cookie setting, this method requests updated
-	 * user profile data from the remote endpoint.
+	 * Executed when the user first opens the editor, changes their configuration,
+	 * saves their organization settings file, completes signing in, signs out, or
+	 * switches accounts and successfully updates their remote.cookie setting.
+	 *
+	 * This method uploads a organization settings file if the file has been saved with contents
+	 * that differ from the most recently fetched user profile.
+	 *
+	 * This method also requests updated user profile data from the remote endpoint.
 	 */
-	private onDidUpdateConfiguration(force?: boolean): void {
+	private onDidUpdateConfiguration(): void {
 		this.updateConfigDelayer.trigger(() => {
 			const config = this.configurationService.getConfiguration<IRemoteConfiguration>();
-			// Only re-request user data, fire an event, and log telemetry if the cookie actually changed
 			this._currentSessionId = config.remote.cookie;
 			if (!this._currentSessionId) {
 				// If user is already signed in, notify them that their signout was successful and log telemetry.
@@ -135,53 +162,90 @@ export class AuthService extends Disposable implements IAuthService {
 				// Delete user from memory
 				this.setCurrentUser(undefined);
 				this.telemetryService.publicLog('CurrentUserSignedOut');
-				return TPromise.as(null);
+				return TPromise.as(undefined);
+			}
+
+			// If the org configuration was just updated, grab it, and upload to the server.
+			if (this.shouldUploadConfigurationSettings) {
+				const activeOrg = this.currentUser.currentOrgMember && this.currentUser.currentOrgMember.org;
+				if (activeOrg) {
+					const orgSettingsFile = URI.file(this.environmentService.appOrganizationSettingsPath);
+					return this.fileService.resolveContent(orgSettingsFile).then(content => {
+						const newSettingsBlob = content.value;
+
+						// Don't bother uploading if the settings haven't changed.
+						const lastFetchedSettings = activeOrg.latestSettings;
+						if (this.getSettingsBlob(lastFetchedSettings) === newSettingsBlob) {
+							this.shouldUploadConfigurationSettings = false;
+							return this.requestCurrentUser()
+								.then(user => {
+									this.handleUserResponse(user);
+								});
+						}
+
+						return this.uploadNewOrgSettings(lastFetchedSettings, newSettingsBlob)
+							.then(user => {
+								this.shouldUploadConfigurationSettings = false;
+								this.handleUserResponse(user);
+							});
+					});
+				}
+				this.shouldUploadConfigurationSettings = false;
 			}
 			// Request updated user profile information
-			return requestGraphQL<{ currentUser: GQL.IUser }>(this.remoteService, `query CurrentUser {
-					root {
-						currentUser {
-							id
-							sourcegraphID
-							username
-							avatarURL
-							email
-							orgMemberships {
-								id
-								username
-								email
-								displayName
-								avatarURL
-								org {
-									id
-									name
-								}
-							}
-						}
-					}
-				}`, {})
-				.then(response => {
-					const user = response.currentUser;
-					const orgMemberships = user.orgMemberships.map(membership => ({
-						id: membership.id,
-						email: membership.email,
-						username: membership.username,
-						displayName: membership.displayName,
-						avatarUrl: membership.avatarURL,
-						org: membership.org,
-					}));
-					this.setCurrentUser(new User({
-						id: user.sourcegraphID,
-						auth0Id: user.id,
-						username: user.username,
-						email: user.email,
-						avatarUrl: user.avatarURL,
-						orgMemberships,
-						currentOrgMember: orgMemberships[0],
-					}, this.telemetryService));
-					this.telemetryService.publicLog('CurrentUserSignedIn', this._currentUser.getTelemetryData());
-				});
+			return this.requestCurrentUser()
+				.then(user => this.handleUserResponse(user));
 		});
+	}
+
+	private uploadNewOrgSettings(lastFetchedSettings: IOrgSettings | undefined, newSettingsBlob: string): TPromise<GQL.IUser> {
+		const orgID = this.currentUser.currentOrgMember.org.id;
+		return requestGraphQLMutation<{ updateOrgSettings: { author: GQL.IUser } }>(this.remoteService, `mutation UpdateOrgSettings {
+			updateOrgSettings(orgID: $orgID, lastKnownSettingsID: $lastKnownSettingsID, contents: $newSettingsBlob) {
+				author {
+					${userGraphQLRequest}
+				}
+			}
+		}`, {
+				orgID,
+				lastKnownSettingsID: lastFetchedSettings && lastFetchedSettings.id,
+				newSettingsBlob,
+			}).then(response => response.updateOrgSettings.author);
+	}
+
+	private requestCurrentUser(): TPromise<GQL.IUser> {
+		return requestGraphQL<{ currentUser: GQL.IUser }>(this.remoteService, `query CurrentUser {
+			root {
+				currentUser {
+					${userGraphQLRequest}
+				}
+			}
+		}`, {}).then(response => response.currentUser);
+	}
+
+	private handleUserResponse(user: GQL.IUser) {
+		const orgMemberships = user.orgMemberships.map(membership => ({
+			id: membership.id,
+			email: membership.email,
+			username: membership.username,
+			displayName: membership.displayName,
+			avatarUrl: membership.avatarURL,
+			org: membership.org,
+		}));
+		return this.setCurrentUser(new User({
+			id: user.sourcegraphID,
+			auth0Id: user.id,
+			username: user.username,
+			email: user.email,
+			avatarUrl: user.avatarURL,
+			orgMemberships,
+			currentOrgMember: orgMemberships[0],
+		}, this.telemetryService))
+			.then(() => {
+				if (this._currentUser) {
+					this.telemetryService.publicLog('CurrentUserSignedIn', this._currentUser.getTelemetryData());
+				}
+			});
 	}
 
 	public inviteTeammate(emailAddress: string): void {
@@ -209,7 +273,7 @@ export class AuthService extends Disposable implements IAuthService {
 	}
 
 	public refresh(): void {
-		this.onDidUpdateConfiguration(true);
+		this.onDidUpdateConfiguration();
 	}
 
 	/**
@@ -232,7 +296,53 @@ export class AuthService extends Disposable implements IAuthService {
 		// onDidUpdateConfiguration handler, which clears local memory and fires notifications.
 		this.configurationService.updateValue('remote.cookie', '', ConfigurationTarget.USER);
 	}
+
+	private saveOrgSettingsToDisk(newSettings: IOrgSettings, force: boolean = false): TPromise<void> {
+		const newSettingsBlob = this.getSettingsBlob(newSettings);
+		if (!force) {
+			const currentOrgMember = this.currentUser && this.currentUser.currentOrgMember;
+			const oldSettings = currentOrgMember && currentOrgMember.org.latestSettings;
+
+			const oldSettingsBlob = this.getSettingsBlob(oldSettings);
+
+			if (oldSettingsBlob === newSettingsBlob) {
+				return TPromise.as(undefined);
+			}
+		}
+
+		const orgSettingsFile = URI.file(this.environmentService.appOrganizationSettingsPath);
+
+		return this.fileService.createFile(orgSettingsFile, newSettingsBlob, { overwrite: true })
+			.then(() => this.configurationService.reloadConfiguration());
+	}
+
+	private getSettingsBlob(settings: IOrgSettings): string {
+		return (settings && settings.contents) || '{}';
+	}
 }
+
+
+const userGraphQLRequest = `
+	id
+	sourcegraphID
+	username
+	avatarURL
+	email
+	orgMemberships {
+		id
+		username
+		email
+		displayName
+		avatarURL
+		org {
+			id
+			name
+			latestSettings {
+				id
+				contents
+			}
+		}
+	}`;
 
 interface UserMemento {
 	readonly id: number;

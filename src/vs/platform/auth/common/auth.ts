@@ -107,4 +107,18 @@ export interface IOrg {
 	 * name is the display name of an org.
 	 */
 	readonly name: string;
+
+	/**
+	 * lastSettings is the most recent settings object for an org.
+	 */
+	readonly latestSettings: IOrgSettings;
+}
+
+/**
+ * A settings object stored inside of an org.
+ */
+export interface IOrgSettings {
+	readonly id: number;
+
+	readonly contents: string;
 }
