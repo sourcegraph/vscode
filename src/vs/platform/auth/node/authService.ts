@@ -5,7 +5,6 @@
 'use strict';
 
 import { localize } from 'vs/nls';
-import { format } from 'vs/base/common/strings';
 import URI from 'vs/base/common/uri';
 import { Disposable, IDisposable, dispose } from 'vs/base/common/lifecycle';
 import Event, { Emitter } from 'vs/base/common/event';
@@ -203,7 +202,7 @@ export class AuthService extends Disposable implements IAuthService {
 		}`, { orgID, email })
 			.then(() => {
 				this.telemetryService.publicLog('InviteTeammateSuccess');
-				this.messageService.show(Severity.Info, localize('inviteTeammate.success', format(`Invited {0} to {1}`, email, this.currentUser.currentOrgMember.org.name)));
+				this.messageService.show(Severity.Info, localize('inviteTeammate.success', "Invited {0} to {1}", email, this.currentUser.currentOrgMember.org.name));
 			}, (err) => {
 				this.messageService.show(Severity.Error, err);
 			});
