@@ -6,6 +6,7 @@
 'use strict';
 
 import { localize } from 'vs/nls';
+import { join as joinPath } from 'path';
 import { TPromise } from 'vs/base/common/winjs.base';
 import URI from 'vs/base/common/uri';
 import Event, { Emitter } from 'vs/base/common/event';
@@ -353,7 +354,7 @@ class CommentsSCMProvider extends MainThreadSCMProvider {
 			// which looks like a slash and we add a trailing space for formatting purposes.
 			// The real solution is to modify the SCM api to allow us to specify label/sublabel directly
 			// instead of just passing through a URI.
-			const path = thread.title.replace('/', '\u2215 ');
+			const path = joinPath(thread.file, thread.title.replace('/', '\u2215 '));
 			const sourceUri = URI.from({ scheme: 'thread', path });
 			return {
 				resourceGroup: this.commentsGroup,
