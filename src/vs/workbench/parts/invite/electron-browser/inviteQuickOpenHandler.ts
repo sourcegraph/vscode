@@ -11,7 +11,6 @@ import { QuickOpenModel, QuickOpenEntry } from 'vs/base/parts/quickopen/browser/
 import { QuickOpenHandler } from 'vs/workbench/browser/quickopen';
 import { OPEN_INVITE_QUICK_OPEN_ID, INVITE_PREFIX } from 'vs/workbench/parts/invite/common/constants';
 import { IAuthService } from 'vs/platform/auth/common/auth';
-import { format } from 'vs/base/common/strings';
 
 class InviteEntry extends QuickOpenEntry {
 	constructor(
@@ -23,7 +22,7 @@ class InviteEntry extends QuickOpenEntry {
 	}
 
 	public getLabel(): string {
-		return localize('quickOpenInvite.entry', format(`Invite {0} to {1}`, this.emailAddress, this.orgName));
+		return localize('quickOpenInvite.entry', "Invite {0} to {1}", this.emailAddress, this.orgName);
 	}
 
 	public run(mode: Mode, context: IEntryRunContext): boolean {
@@ -84,7 +83,7 @@ export class InviteQuickOpenHandler extends QuickOpenHandler {
 	 * Allows to return a label that will be used when there are no results found
 	 */
 	public getEmptyLabel(searchString: string): string {
-		return localize('quickOpenInvite.enterEmail', format(`Enter the email address of the person that you would like to invite to {0}`, this.orgName));
+		return localize('quickOpenInvite.enterEmail', "Enter the email address of the person that you would like to invite to {0}", this.orgName);
 	}
 
 	public getAutoFocus(searchValue: string, context: { model: IModel<QuickOpenEntry>, quickNavigateConfiguration?: IQuickNavigateConfiguration }): IAutoFocus {
