@@ -347,9 +347,17 @@ class CommentsSCMProvider extends MainThreadSCMProvider {
 
 	private onDidChangeThreads(): void {
 		const resources: ISCMResource[] = this.branchComments.threads.map(thread => {
+			// This is a nasty hack to get thread titles to not break if they have slashes in them.
+			// We are shoving the thread titles through the path of a URI, so a slash
+			// breaks formatting. Instead, we replace slashes with a "DIVISION SLASH"
+			// which looks like a slash and we add a trailing space for formatting purposes.
+			// The real solution is to modify the SCM api to allow us to specify label/sublabel directly
+			// instead of just passing through a URI.
+			const path = thread.title.replace('/', '\u2215 ');
+			const sourceUri = URI.from({ scheme: 'thread', path });
 			return {
 				resourceGroup: this.commentsGroup,
-				sourceUri: URI.parse(`comment://${thread.file}/${encodeURIComponent(thread.title)}`),
+				sourceUri,
 				decorations: {
 					strikeThrough: thread.archived,
 					faded: false,
