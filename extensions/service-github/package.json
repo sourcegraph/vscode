@@ -48,8 +48,9 @@
         },
         "github.cloneProtocol": {
           "type": "string",
-          "default": "https",
+          "default": "detect",
           "enum": [
+            "detect",
             "https",
             "ssh"
           ],

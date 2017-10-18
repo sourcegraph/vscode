@@ -373,7 +373,7 @@ class GitHub {
 	 */
 	async cloneURL(resource: vscode.Uri): Promise<vscode.Uri> {
 		const data = resourceToNameAndOwner(resource);
-		const protocol = vscode.workspace.getConfiguration('github').get<string>('cloneProtocol');
+		const protocol = await this.cloneProtocol();
 		let user: string | null = null;
 		if (protocol === 'ssh') {
 			user = 'git';
@@ -382,6 +382,24 @@ class GitHub {
 		}
 		const userAuthority = user ? `${user}@` : '';
 		return vscode.Uri.parse(`git+${protocol}://${userAuthority}github.com/${data.owner}/${data.name}.git`);
+	}
+
+	private detectSSHPromise: Promise<string>;
+
+	private cloneProtocol(): Promise<string> {
+		const protocol = vscode.workspace.getConfiguration('github').get<string>('cloneProtocol');
+		if (protocol === 'ssh' || protocol === 'https') {
+			return Promise.resolve(protocol);
+		}
+
+		if (this.detectSSHPromise) {
+			return this.detectSSHPromise;
+		}
+		this.detectSSHPromise = new Promise<boolean>((resolve, reject) => {
+			// If we have accessed github.com via ssh before, this command should have a 0 exit code
+			cp.exec('ssh-keygen -F github.com', error => resolve(error === null));
+		}).then(useSSH => useSSH ? 'ssh' : 'https');
+		return this.detectSSHPromise;
 	}
 }
 
