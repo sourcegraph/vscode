@@ -38,6 +38,7 @@ import { IOutputService } from 'vs/workbench/parts/output/common/output';
 // tslint:disable-next-line:import-patterns
 import { CommentsChannelId } from 'vs/workbench/parts/codeComments/common/constants';
 import * as objects from 'vs/base/common/objects';
+import { IWindowsService } from 'vs/platform/windows/common/windows';
 
 export { Event }
 
@@ -260,9 +261,11 @@ export class Threads extends Disposable implements IThreads {
 	}
 
 	private git: Git;
+
 	constructor(
 		private commentService: CodeCommentsService,
 		private filter: Filter,
+		@IWindowsService windowsService: IWindowsService,
 		@IInstantiationService private instantiationService: IInstantiationService,
 		@IRemoteService private remoteService: IRemoteService,
 		@IAuthService private authService: IAuthService,
@@ -273,11 +276,22 @@ export class Threads extends Disposable implements IThreads {
 		this.git = new Git(this.filter.resource, scmService);
 		commentService.onDidFetchThreads(this.onDidFetchThreads, this, this.disposables);
 		commentService.onDidCreateThread(this.onDidCreateThread, this, this.disposables);
+		windowsService.onWindowFocus(this.refresh, this, this.disposables);
 	}
 
 	private refreshDelayer = new ThrottledDelayer<void>(100);
 	public refresh(): TPromise<void> {
+		this.scheduleNextAutoRefresh();
 		return this.refreshDelayer.trigger(() => this.refreshNow());
+	}
+
+	/**
+	 * Refresh the collection after a certain time interval if no other refreshes have happened.
+	 */
+	private refreshTimeout = TPromise.timeout(0);
+	private scheduleNextAutoRefresh(): void {
+		this.refreshTimeout.cancel();
+		this.refreshTimeout = TPromise.timeout(60).then(() => this.refresh());
 	}
 
 	private query: IThreadQueryParams;

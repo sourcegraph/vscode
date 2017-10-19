@@ -129,6 +129,12 @@ export interface ISCMProvider extends IDisposable {
 	getOriginalResource(uri: URI): TPromise<URI>;
 
 	/**
+	 * Called when the provider is focused in the UI.
+	 * This is a good time to refresh data.
+	 */
+	focus?(): void;
+
+	/**
 	 * WARNING: TRY TO AVOID USING THIS METHOD.
 	 * USING IT MEANS WE ARE BREAKING THE SCM ABSTRACTION.
 	 *

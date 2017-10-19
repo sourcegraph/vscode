@@ -41,6 +41,7 @@ export class SCMRepository implements ISCMRepository {
 	) { }
 
 	focus(): void {
+		this.provider.focus();
 		this._onDidFocus.fire();
 	}
 

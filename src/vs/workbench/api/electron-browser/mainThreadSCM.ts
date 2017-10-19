@@ -341,9 +341,19 @@ class CommentsSCMProvider extends MainThreadSCMProvider {
 			return;
 		}
 		this.branchComments = this.commentsService.getThreads({ resource: this.trimmedRootUri, branch: this.branch });
-		this.branchComments.refresh();
+		this.refreshBranchComments();
 		this.branchComments.onDidChangeThreads(this.onDidChangeThreads, this);
 		this.onDidChangeThreads();
+	}
+
+	public focus(): void {
+		this.refreshBranchComments();
+	}
+
+	private refreshBranchComments(): void {
+		if (this.branchComments) {
+			this.branchComments.refresh();
+		}
 	}
 
 	private onDidChangeThreads(): void {
