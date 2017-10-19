@@ -18,8 +18,8 @@ export function activate(context: vscode.ExtensionContext): void {
 	vsCodeContext = context;
 
 	context.subscriptions.push(vscode.workspace.registerResourceResolutionProvider(GITLAB_SCHEME, {
-		async resolveResource(resource: vscode.Uri): Promise<vscode.Uri> {
-			return await gitlab.createCloneUrl(resource);
+		resolveResource(resource: vscode.Uri): Promise<vscode.Uri> {
+			return gitlab.createCloneUrl(resource);
 		}
 	}));
 
@@ -27,8 +27,8 @@ export function activate(context: vscode.ExtensionContext): void {
 		return checkGitlabToken();
 	});
 
-	vscode.commands.registerCommand('gitlab.showCreateAccessTokenWalkthrough', async (skipInfoMessage) => {
-		return await showCreateGitlabTokenWalkthrough(gitlab, skipInfoMessage);
+	vscode.commands.registerCommand('gitlab.showCreateAccessTokenWalkthrough', (skipInfoMessage) => {
+		return showCreateGitlabTokenWalkthrough(gitlab, skipInfoMessage);
 	});
 
 	// It is not possible to register the folder catalog provider without the correct host. So we need
@@ -44,7 +44,7 @@ function setFolderCatalogProvider(host: string) {
 
 	// We have to make sure that the host does not contain the scheme. If so it will cause errors when trying to display
 	// the catalog folders.
-	let authority = vscode.Uri.parse(host).authority;
+	const authority = vscode.Uri.parse(host).authority;
 
 	vsCodeContext.subscriptions.push(vscode.workspace.registerFolderCatalogProvider(vscode.Uri.parse(`gitlab://${authority}`), {
 		resolveFolder(resource: vscode.Uri): Thenable<vscode.CatalogFolder> {
@@ -58,8 +58,8 @@ function setFolderCatalogProvider(host: string) {
 			});
 
 			gitURL = decodeURIComponent(gitURL.trim()).replace(/\.git$/, '');
-			// TODO: Look if it needs adjusting for custom gitlab hosts
-			const match = gitURL.match(/gitlab.com[\/:]([^/]+)\/([^/]+)/);
+
+			const match = gitURL.match(`/${authority}[\/:]([^/]+)\/([^/]+)/`);
 
 			if (match) {
 				return gitlab.nameAndOwnerToResource(match[1], match[2]);
@@ -93,7 +93,7 @@ async function showCreateGitlabTokenWalkthrough(viewer: Gitlab, skipInfoMessage?
 	await vscode.commands.executeCommand('workbench.action.closeQuickOpen');
 	await vscode.commands.executeCommand('workbench.action.closeMessages');
 
-	const createTokenItem: vscode.MessageItem = { title: localize('createToken', "Create Token on gitlab.com") };
+
 	const enterTokenItem: vscode.MessageItem = { title: localize('enterToken', "Enter Token") };
 	const cancelItem: vscode.MessageItem = { title: localize('cancel', "Cancel"), isCloseAffordance: true };
 
@@ -132,7 +132,8 @@ async function showCreateGitlabTokenWalkthrough(viewer: Gitlab, skipInfoMessage?
 		return false;
 	}
 
-	const url = `http://${host}/profile/personal_access_tokens`;
+	const createTokenItem: vscode.MessageItem = { title: localize('createToken', `Create Token on ${host}`) };
+	const url = `${host}/profile/personal_access_tokens`;
 
 	if (skipInfoMessage) {
 		await vscode.commands.executeCommand('vscode.open', vscode.Uri.parse(url));
@@ -150,7 +151,7 @@ async function showCreateGitlabTokenWalkthrough(viewer: Gitlab, skipInfoMessage?
 	}
 
 	const token = await vscode.window.showInputBox({
-		prompt: localize('tokenPrompt', "GitLab Personal Access Token (with 'api' scope)"),
+		prompt: localize('tokenPrompt', "GitLab personal access token (with 'api' scope)"),
 		ignoreFocusOut: true,
 	});
 	if (token) {

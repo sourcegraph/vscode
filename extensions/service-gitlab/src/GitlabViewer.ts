@@ -24,7 +24,7 @@ export class Gitlab {
 	constructor() {
 		// Pre-emptively fetch user related information
 		setTimeout(async () => {
-			await this.setAndValidateState();
+			this.setAndValidateState();
 
 			this.repositories();
 		}, 2000);
@@ -37,7 +37,7 @@ export class Gitlab {
 	public async user(): Promise<UserInformation | null> {
 		if (!this.setAndValidateState()) {
 			this.clearCache();
-			return Promise.resolve(null);
+			return null;
 		}
 
 		if (this.userInfoRequest) {
@@ -54,7 +54,7 @@ export class Gitlab {
 			console.log(error);
 			this.userInfoRequest = null;
 
-			return Promise.resolve(null);
+			return null;
 		}
 
 	}
@@ -81,15 +81,15 @@ export class Gitlab {
 	 * @param query 
 	 */
 	public async search(query: string): Promise<vscode.CatalogFolder[]> {
-		const validState = await this.setAndValidateState();
+		const validState = this.setAndValidateState();
 		if (!validState) {
-			return Promise.resolve([]);
+			return [];
 		}
 
 		const user = await this.user();
 
 		if (!user) {
-			return Promise.resolve([]);
+			return [];
 		}
 
 		const encodedQuery = encodeURIComponent(query);
@@ -103,7 +103,7 @@ export class Gitlab {
 		catch (error) {
 			console.log(error);
 
-			return Promise.resolve([]);
+			return [];
 		}
 	}
 
@@ -114,10 +114,10 @@ export class Gitlab {
 	 * internal cache for efficiency.
 	 */
 	public async repositories(): Promise<vscode.CatalogFolder[]> {
-		const validState = await this.setAndValidateState();
+		const validState = this.setAndValidateState();
 		if (!validState) {
 			this.clearCache();
-			return Promise.resolve([]);
+			return [];
 		}
 
 		if (this.repoRequest) {
@@ -127,7 +127,7 @@ export class Gitlab {
 		const user = await this.user();
 
 		if (!user) {
-			return Promise.resolve([]);
+			return [];
 		}
 
 		const url = `/users/${user.id}/projects`;
@@ -144,7 +144,7 @@ export class Gitlab {
 		} catch (error) {
 			console.error(error);
 			this.repoRequest = null;
-			return Promise.resolve([]);
+			return [];
 		}
 	}
 
@@ -180,13 +180,13 @@ export class Gitlab {
 		// to actually retrieve a list of repositories for this user (authentication needed)
 
 		const userAuthority = user ? `${user}@` : '';
-		let authority = vscode.Uri.parse(this.host).authority;
+		const authority = vscode.Uri.parse(this.host).authority;
 
 		return vscode.Uri.parse(`git+${protocol}://${userAuthority}${authority}/${data.owner}/${data.name}.git`);
 	}
 
 	public nameAndOwnerToResource(owner: string, name: string): vscode.Uri {
-		let authority = vscode.Uri.parse(this.host).authority;
+		const authority = vscode.Uri.parse(this.host).authority;
 
 		return vscode.Uri.parse(`gitlab://${authority}/repository/${owner}/${name}`);
 	}
@@ -195,7 +195,7 @@ export class Gitlab {
 	 * This function will set and validate the state of this instance. If a valid state cannot be set 
 	 * it will return false. It will check the token and the hostname.
 	 */
-	private async setAndValidateState(): Promise<boolean> {
+	private setAndValidateState(): boolean {
 		const token = vscode.workspace.getConfiguration('gitlab').get<string>('token');
 		const host = vscode.workspace.getConfiguration('gitlab').get<string>('host');
 
