@@ -12,7 +12,7 @@ export const GITLAB_SCHEME = 'gitlab';
 
 /**
  * Gets Gitlab information associated for the current user. Uses a cache to prevent multiple
- * requests. Based on the github viewer.
+ * requests. Loosely based on the Viewer class in the github extension.
  */
 export class Gitlab {
 	private token: string;

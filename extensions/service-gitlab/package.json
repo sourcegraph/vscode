@@ -1,7 +1,7 @@
 {
   "name": "service-gitlab",
-  "displayName": "gitlab integration",
-  "description": "Provides access to gitlab repositories",
+  "displayName": "GitLab integration",
+  "description": "Provides access to GitLab repositories",
   "categories": [
     "Other"
   ],
@@ -37,6 +37,7 @@
         },
         "gitlab.host": {
           "type": "string",
+          "default": "https://www.gitlab.com",
           "description": "%config.host%"
         },
         "gitlab.cloneProtocol": {
