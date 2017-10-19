@@ -171,6 +171,39 @@ export class UserSettingsRenderer extends Disposable implements IPreferencesRend
 	}
 }
 
+export class OrganizationSettingsRenderer extends UserSettingsRenderer implements IPreferencesRenderer<ISetting> {
+	constructor(
+		editor: ICodeEditor,
+		preferencesModel: SettingsEditorModel,
+		associatedPreferencesModel: IPreferencesEditorModel<ISetting>,
+
+		@IPreferencesService preferencesService: IPreferencesService,
+		@ITelemetryService telemetryService: ITelemetryService,
+		@ITextFileService textFileService: ITextFileService,
+		@IConfigurationService configurationService: IConfigurationService,
+		@IMessageService messageService: IMessageService,
+		@IInstantiationService instantiationService: IInstantiationService
+	) {
+		super(
+			editor,
+			preferencesModel,
+			associatedPreferencesModel,
+
+			preferencesService,
+			telemetryService,
+			textFileService,
+			configurationService,
+			messageService,
+			instantiationService
+		);
+	}
+
+	protected createHeader(): void {
+		const headerMessage = nls.localize('emptyOrganizationSettingsHeader', 'Settings defined here will be synced across your organization.');
+		this._register(new SettingsHeaderWidget(this.editor, '')).setMessage(headerMessage);
+	}
+}
+
 export class WorkspaceSettingsRenderer extends UserSettingsRenderer implements IPreferencesRenderer<ISetting> {
 
 	private untrustedSettingRenderer: UnsupportedWorkspaceSettingsRenderer;

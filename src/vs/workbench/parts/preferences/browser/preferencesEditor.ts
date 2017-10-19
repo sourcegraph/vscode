@@ -42,7 +42,7 @@ import { ITextModelService } from 'vs/editor/common/services/resolverService';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 import { VSash } from 'vs/base/browser/ui/sash/sash';
 import { Widget } from 'vs/base/browser/ui/widget';
-import { IPreferencesRenderer, DefaultSettingsRenderer, UserSettingsRenderer, WorkspaceSettingsRenderer, FolderSettingsRenderer } from 'vs/workbench/parts/preferences/browser/preferencesRenderers';
+import { IPreferencesRenderer, DefaultSettingsRenderer, UserSettingsRenderer, OrganizationSettingsRenderer, WorkspaceSettingsRenderer, FolderSettingsRenderer } from 'vs/workbench/parts/preferences/browser/preferencesRenderers';
 import { ITextFileService } from 'vs/workbench/services/textfile/common/textfiles';
 import { IEditorGroupService } from 'vs/workbench/services/group/common/groupService';
 import { getCodeEditor } from 'vs/editor/common/services/codeEditorService';
@@ -921,7 +921,7 @@ class SettingsEditorContribution extends AbstractSettingsEditorContribution impl
 					if (settingsModel instanceof SettingsEditorModel && this.editor.getModel()) {
 						switch (settingsModel.configurationTarget) {
 							case ConfigurationTarget.ORGANIZATION:
-								return this.instantiationService.createInstance(UserSettingsRenderer, this.editor, settingsModel, defaultSettingsModel);
+								return this.instantiationService.createInstance(OrganizationSettingsRenderer, this.editor, settingsModel, defaultSettingsModel);
 							case ConfigurationTarget.USER:
 								return this.instantiationService.createInstance(UserSettingsRenderer, this.editor, settingsModel, defaultSettingsModel);
 							case ConfigurationTarget.WORKSPACE:
