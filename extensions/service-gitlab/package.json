@@ -29,7 +29,7 @@
     },
     "configuration": {
       "type": "object",
-      "title": "gitlab",
+      "title": "GitLab",
       "properties": {
         "gitlab.token": {
           "type": "string",

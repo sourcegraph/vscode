@@ -248,7 +248,7 @@ export class Gitlab {
 	}
 
 	private toCatalogFolder(repository: any): vscode.CatalogFolder {
-		let authority = vscode.Uri.parse(this.host).authority;
+		const authority = vscode.Uri.parse(this.host).authority;
 
 		return {
 			resource: vscode.Uri.parse('').with({ scheme: GITLAB_SCHEME, authority: authority, path: `/repository/${repository.path_with_namespace}` }),

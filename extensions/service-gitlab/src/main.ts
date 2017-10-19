@@ -119,7 +119,16 @@ async function showCreateGitlabTokenWalkthrough(viewer: Gitlab, skipInfoMessage?
 		}
 
 		if (!host.includes('http')) {
-			showErrorImmediately(localize('noScheme', "Host must include the scheme (http or https)."), viewer);
+			showErrorImmediatelyAndPromptUserForToken(localize('noScheme', "Host must include the scheme (http or https)."), viewer);
+		}
+
+		// We use the Uri.parse function here to check that the host is in a valid format. Also we remove the slash at end of the url
+		// if present.
+		try {
+			host = host.replace(/\/$/, '');
+			vscode.Uri.parse(host);
+		} catch (error) {
+			showErrorImmediatelyAndPromptUserForToken(localize('invalidUrl', `Host must be a valid URL: ${error.message}.`), viewer);
 			return false;
 		}
 	} else if (!value || value === cancelItem) {
@@ -160,7 +169,7 @@ async function showCreateGitlabTokenWalkthrough(viewer: Gitlab, skipInfoMessage?
 		const userinfo = await viewer.user();
 
 		if (userinfo === null) {
-			showErrorImmediately(localize('noUser', "Unable to retrieve user from GitLab."), viewer);
+			showErrorImmediatelyAndPromptUserForToken(localize('noUser', "Unable to retrieve user from GitLab."), viewer);
 			return false;
 		}
 
@@ -183,8 +192,10 @@ function checkGitlabToken(): boolean {
  * Close quickopen and pass along the error so that the user sees it immediately instead
  * of only when they close the quickopen (which probably isn't showing any results because of
  * the error).
+ * 
+ * This will also prompt the user to reset the token.
  */
-async function showErrorImmediately<T>(error: string, viewer: Gitlab): Promise<T> {
+async function showErrorImmediatelyAndPromptUserForToken<T>(error: string, viewer: Gitlab): Promise<T> {
 	await vscode.commands.executeCommand('workbench.action.closeQuickOpen');
 	await vscode.commands.executeCommand('workbench.action.closeMessages');
 
