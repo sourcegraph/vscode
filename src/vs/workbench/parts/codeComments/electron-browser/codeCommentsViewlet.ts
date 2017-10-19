@@ -150,7 +150,7 @@ export class CodeCommentsViewlet extends Viewlet {
 			}));
 			this.progressService.showWhile(fileComments.refreshingThreads);
 			this.activeEditorListeners.push(fileComments.onDidChangeThreads(() => {
-				this.model.uri = modelUri;
+				this.render();
 			}));
 		}
 		this.model.uri = modelUri;
