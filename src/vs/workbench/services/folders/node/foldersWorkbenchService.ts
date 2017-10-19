@@ -371,19 +371,23 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 		// we code defensively here by retrying on failure. The second time should succeed,
 		// because no workspace folder configuration changes should occur.
 		const unresolvedURIs = anyFolders.map(folder => folder instanceof URI ? folder : folder.resource);
+		await this.ready();
+		const uris = await Promise.all(unresolvedURIs.map(uri => this.resourceResolverService.resolveResource(uri)));
 		try {
-			return await this.addFoldersAsWorkspaceRootFoldersOnce(unresolvedURIs);
+			return await this.addFoldersAsWorkspaceRootFoldersOnce(uris);
 		} catch {/* Try again */ }
 		await new Promise(resolve => setTimeout(resolve, 1000));
-		return this.addFoldersAsWorkspaceRootFoldersOnce(unresolvedURIs);
+		await this.ready();
+		return this.addFoldersAsWorkspaceRootFoldersOnce(uris);
 	}
 
-	private addFoldersAsWorkspaceRootFoldersOnce(unresolvedURIs: URI[]): TPromise<URI[]> {
-		return this.ready()
-			.then(() => TPromise.join(unresolvedURIs.map(uri => this.resourceResolverService.resolveResource(uri))))
-			.then(resolvedUris => this.workspaceEditingService.addFolders(resolvedUris).then(() => resolvedUris))
-			.then(resolvedUris => TPromise.join(resolvedUris.map(resource => this.waitForRepository(resource))).then(() => resolvedUris))
-			.then(resolvedUris => this.configurationService.reloadConfiguration().then(() => resolvedUris));
+	private async addFoldersAsWorkspaceRootFoldersOnce(uris: URI[]): Promise<URI[]> {
+		// Do not mess with order of operations unless you know what you are doing.
+		// See caution in addFoldersAsWorkspaceRootFolders.
+		await this.workspaceEditingService.addFolders(uris);
+		await Promise.all(uris.map(resource => this.waitForRepository(resource)));
+		await this.configurationService.reloadConfiguration();
+		return uris;
 	}
 
 	// Returns a promise which is done once all workspaces folders are ready.
