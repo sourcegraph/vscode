@@ -126,7 +126,6 @@ export class AuthService extends Disposable implements IAuthService {
 
 			// Delete user from memory
 			this.setCurrentUser(undefined);
-			this.telemetryService.publicLog('CurrentUserSignedOut');
 			return;
 		}
 
@@ -162,14 +161,13 @@ export class AuthService extends Disposable implements IAuthService {
 		}
 		dispose(this._currentUser);
 		if (user) {
-			if (!this._currentUser) {
-				this.telemetryService.publicLog('CurrentUserSignedIn', getTelemetryData(user));
-			}
+			this.telemetryService.publicLog('CurrentUserSignedIn', getTelemetryData(user));
 			this._currentUser = new User(user, this.telemetryService);
 			this._currentUser.onDidChangeCurrentOrgMember(this.handleUserChanged, this);
 			this.memento[AuthService.CURRENT_USER_KEY] = user;
 			this.log('updated user');
 		} else {
+			this.telemetryService.publicLog('CurrentUserSignedOut');
 			this._currentUser = undefined;
 			this.memento[AuthService.CURRENT_USER_KEY] = undefined;
 			this.log('removed user');

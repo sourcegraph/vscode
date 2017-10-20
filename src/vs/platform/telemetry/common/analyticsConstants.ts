@@ -252,7 +252,7 @@ export enum EventFeature {
 export const SOURCEGRAPH_EVENT_DEFAULT_MAP: EventMapEntry = { eventCategory: EventCategory.Unknown, eventAction: EventAction.Unknown };
 
 /**
- * When an editorActionInvoked event is logged, Action ID's listed here will
+ * When an editorActionInvoked event is logged, Action IDs listed here will
  * be elevated and logged as first-class events. The original event will not be logged.
  */
 export const SOURCEGRAPH_EAI_ACTION_IDS_TO_ELEVATE: { [id: string]: EventMapEntry } = {
@@ -374,9 +374,10 @@ export const SOURCEGRAPH_EVENT_MAP: { [eventName: string]: EventMapEntry } = {
 	'quickOpenWidgetCancelled': { eventCategory: EventCategory.Search, eventAction: EventAction.Unknown, eventFeature: EventFeature.QuickOpen },
 	'openAnything': { eventCategory: EventCategory.Editor, eventAction: EventAction.Unknown, shouldLog: false },
 
-	// Config
-	'updateConfiguration': { eventCategory: EventCategory.VSCodeInternal, eventAction: EventAction.Passive },
-	'updateConfigurationValues': { eventCategory: EventCategory.VSCodeInternal, eventAction: EventAction.Passive },
+	// Configuration/settings
+	'updateConfiguration': { eventCategory: EventCategory.Settings, eventAction: EventAction.Passive, topLevelOnly: true },
+	'updateConfigurationValues': { eventCategory: EventCategory.Settings, eventAction: EventAction.Passive, topLevelOnly: true },
+
 	'shutdown': { eventCategory: EventCategory.VSCodeInternal, eventAction: EventAction.Passive, shouldLog: false },
 	'update:notAvailable': { eventCategory: EventCategory.VSCodeInternal, eventAction: EventAction.Passive },
 	'update:downloaded': { eventCategory: EventCategory.VSCodeInternal, eventAction: EventAction.Passive },
@@ -389,7 +390,7 @@ export const SOURCEGRAPH_EVENT_MAP: { [eventName: string]: EventMapEntry } = {
 
 	// Misc internal/passive/uninteresting
 	'suggestSnippetInsert': { eventCategory: EventCategory.Editor, eventAction: EventAction.Passive, eventFeature: EventFeature.EditorAutocomplete },
-	'suggestWidget': { eventCategory: EventCategory.Editor, eventAction: EventAction.Passive, eventFeature: EventFeature.EditorSuggestions },
+	'suggestWidget': { eventCategory: EventCategory.Editor, eventAction: EventAction.Passive, eventFeature: EventFeature.EditorSuggestions, shouldLog: false },
 	'suggestWidget:toggleDetails': { eventCategory: EventCategory.Editor, eventAction: EventAction.Passive, eventFeature: EventFeature.EditorSuggestions },
 	'galleryService:query': { eventCategory: EventCategory.VSCodeInternal, eventAction: EventAction.Unknown },
 	'galleryService:downloadVSIX': { eventCategory: EventCategory.VSCodeInternal, eventAction: EventAction.Unknown },
@@ -476,10 +477,16 @@ export const SOURCEGRAPH_EVENT_MAP: { [eventName: string]: EventMapEntry } = {
 	'CompletedGitHubOAuth2Flow': { eventCategory: EventCategory.Auth, eventAction: EventAction.SignIn, topLevelOnly: true },
 	'LogoutClicked': { eventCategory: EventCategory.Auth, eventAction: EventAction.SignOut, topLevelOnly: true },
 	'RemoteSettingsOpened': { eventCategory: EventCategory.External, eventAction: EventAction.Click, topLevelOnly: true },
-	'SignInModalInitiated': { eventCategory: EventCategory.Auth, eventAction: EventAction.Click, eventFeature: EventFeature.SignInModal },
+	'SignInModalInitiated': { eventCategory: EventCategory.Auth, eventAction: EventAction.Click, eventFeature: EventFeature.SignInModal, topLevelOnly: true },
 	'CurrentUserSignedIn': { eventCategory: EventCategory.Auth, eventAction: EventAction.Submit, topLevelOnly: true },
 	'CurrentUserSignedOut': { eventCategory: EventCategory.Auth, eventAction: EventAction.Submit, topLevelOnly: true },
 	'CurrentUserChanged': { eventCategory: EventCategory.Auth, eventAction: EventAction.Submit, topLevelOnly: true },
+
+	// Modals
+	'ModalSkipped': { eventCategory: EventCategory.Unknown, eventAction: EventAction.Close, topLevelOnly: true },
+
+	// Settings
+	'settingsWritten': { eventCategory: EventCategory.Settings, eventAction: EventAction.Submit, topLevelOnly: true },
 
 	// Orgs
 	'CurrentOrgChanged': { eventCategory: EventCategory.Orgs, eventAction: EventAction.Submit },
@@ -508,3 +515,69 @@ export const SOURCEGRAPH_EVENT_MAP: { [eventName: string]: EventMapEntry } = {
 	// View events, handled specially by the Sourcegraph event logger
 	'ViewFile': { eventCategory: EventCategory.View, eventAction: EventAction.Unknown, topLevelOnly: true },
 };
+
+/**
+ * When a workbenchActionExecuted event occurs, Action IDs listed here will
+ * be skipped entirely.
+ */
+export const SOURCEGRAPH_WBA_ACTION_IDS_TO_SKIP: string[] = [
+	// Actions that extend CoreEditorCommand
+	'_moveTo',
+	'_moveToSelect',
+	'columnSelect',
+	'cursorColumnSelectLeft',
+	'cursorColumnSelectRight',
+	'cursorColumnSelectUp',
+	'cursorColumnSelectPageUp',
+	'cursorColumnSelectDown',
+	'cursorColumnSelectPageDown',
+	'cursorMove',
+	'cursorLeft',
+	'cursorLeftSelect',
+	'cursorRight',
+	'cursorRightSelect',
+	'cursorUp',
+	'cursorUpSelect',
+	'cursorPageUp',
+	'cursorPageUpSelect',
+	'cursorDown',
+	'cursorDownSelect',
+	'cursorPageDown',
+	'cursorPageDownSelect',
+	'createCursor',
+	'_lastCursorMoveToSelect',
+	'cursorHome',
+	'cursorHomeSelect',
+	'cursorLineStart',
+	'cursorEnd',
+	'cursorEndSelect',
+	'cursorLineEnd',
+	'cursorTop',
+	'cursorTopSelect',
+	'cursorBottom',
+	'cursorBottomSelect',
+	'editorScroll',
+	'scrollLineUp',
+	'scrollPageUp',
+	'scrollLineDown',
+	'scrollPageDown',
+	'_wordSelect',
+	'_wordSelectDrag',
+	'lastCursorWordSelect',
+	'_lineSelect',
+	'_lineSelectDrag',
+	'lastCursorLineSelect',
+	'lastCursorLineSelectDrag',
+	'expandLineSelection',
+	'cancelSelection',
+	'removeSecondaryCursors',
+	'revealLine',
+	'selectAll',
+	'setSelection',
+	'lineBreakInsert',
+	'outdent',
+	'tab',
+	'deleteLeft',
+	'deleteRight',
+	'editor.action.selectAll',
+];

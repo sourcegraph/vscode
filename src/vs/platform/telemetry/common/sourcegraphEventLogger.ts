@@ -49,6 +49,12 @@ export class SourcegraphEventLogger implements ITelemetryAppender {
 			eventName = eventProperties.id;
 		}
 
+		// Check if this is a workbench action that should be skipped
+		if (eventName === 'workbenchActionExecuted' && eventProperties.id &&
+			AnalyticsConstants.SOURCEGRAPH_WBA_ACTION_IDS_TO_SKIP.indexOf(eventProperties.id) !== -1) {
+			return;
+		}
+
 		if (event.eventCategory === AnalyticsConstants.EventCategory.View) {
 			this.logView(eventProperties.page_title, eventProperties);
 		} else if (event.shouldLog === undefined || event.shouldLog === true) {
