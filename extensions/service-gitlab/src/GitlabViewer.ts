@@ -15,8 +15,8 @@ export const GITLAB_SCHEME = 'gitlab';
  * requests. Loosely based on the Viewer class in the github extension.
  */
 export class Gitlab {
-	private token: string;
-	private host: string;
+	private tokenUsedForCache: string;
+	private hostUsedForCache: string;
 
 	private repoRequest: Thenable<vscode.CatalogFolder[]> | null;
 	private userInfoRequest: Promise<UserInformation | null> | null;
@@ -24,7 +24,7 @@ export class Gitlab {
 	constructor() {
 		// Pre-emptively fetch user related information
 		setTimeout(async () => {
-			this.setAndValidateState();
+			this.validateConfig();
 
 			this.repositories();
 		}, 2000);
@@ -35,19 +35,25 @@ export class Gitlab {
 	 * network request fails or there is no logged in user null is returned.
 	 */
 	public async user(): Promise<UserInformation | null> {
-		if (!this.setAndValidateState()) {
-			this.clearCache();
-			return null;
-		}
-
-		if (this.userInfoRequest) {
-			return this.userInfoRequest;
-		}
-
 		try {
-			const userInformation = this.doGitlabRequest(this.host, this.token, '/user');
+			if (!this.validateConfig()) {
+				return null;
+			}
+
+			if (!this.cacheStillValid()) {
+				this.clearCache();
+			}
+
+			if (this.userInfoRequest) {
+				return this.userInfoRequest;
+			}
+
+			const userInformation = this.doGitlabRequest(this.getHost(), this.getToken(), '/user');
 
 			this.userInfoRequest = userInformation;
+
+			this.tokenUsedForCache = this.getToken();
+			this.hostUsedForCache = this.getHost();
 
 			return userInformation;
 		} catch (error) {
@@ -66,10 +72,14 @@ export class Gitlab {
 	 * @param owner owner of the repository
 	 */
 	public async repository(owner: string, name: string): Promise<vscode.CatalogFolder> {
+		if (!this.validateConfig()) {
+			return Promise.reject(new Error(localize("invalidConfig", "Invalid configuration values set for GitLab.")));
+		}
+
 		const encodedName = encodeURIComponent(`${owner}/${name}`);
 		const url = `/projects/${encodedName}`;
 
-		const repo = await this.doGitlabRequest(this.host, this.token, url);
+		const repo = await this.doGitlabRequest(this.getHost(), this.getToken(), url);
 
 		return this.toCatalogFolder(repo);
 	}
@@ -81,24 +91,24 @@ export class Gitlab {
 	 * @param query 
 	 */
 	public async search(query: string): Promise<vscode.CatalogFolder[]> {
-		const validState = this.setAndValidateState();
-		if (!validState) {
-			return [];
-		}
-
-		const user = await this.user();
-
-		if (!user) {
-			return [];
-		}
-
-		const encodedQuery = encodeURIComponent(query);
-		const url = `/users/${user.id}/projects?search=${encodedQuery}&order_by=last_activity_at`;
-
 		try {
-			const searchResult = await this.doGitlabRequest(this.host, this.token, url);
+			const validState = this.validateConfig();
+			if (!validState) {
+				return [];
+			}
 
-			return searchResult.map(this.toCatalogFolder);
+			const user = await this.user();
+
+			if (!user) {
+				return [];
+			}
+
+			const encodedQuery = encodeURIComponent(query);
+			const url = `/users/${user.id}/projects?search=${encodedQuery}&order_by=last_activity_at`;
+
+			const searchResult = await this.doGitlabRequest(this.getHost(), this.getToken(), url);
+
+			return searchResult.map((repository: any) => this.toCatalogFolder(repository));
 		}
 		catch (error) {
 			console.log(error);
@@ -114,30 +124,35 @@ export class Gitlab {
 	 * internal cache for efficiency.
 	 */
 	public async repositories(): Promise<vscode.CatalogFolder[]> {
-		const validState = this.setAndValidateState();
-		if (!validState) {
-			this.clearCache();
-			return [];
-		}
-
-		if (this.repoRequest) {
-			return this.repoRequest;
-		}
-
-		const user = await this.user();
-
-		if (!user) {
-			return [];
-		}
-
-		const url = `/users/${user.id}/projects`;
-
 		try {
-			const data = await this.doGitlabRequest(this.host, this.token, url);
+			const validState = this.validateConfig();
+			if (!validState) {
+				return [];
+			}
+
+			if (!this.cacheStillValid()) {
+				this.clearCache();
+			}
+
+			if (this.repoRequest) {
+				return this.repoRequest;
+			}
+
+			const user = await this.user();
+
+			if (!user) {
+				return [];
+			}
+
+			const url = `/users/${user.id}/projects`;
+
+			const data = await this.doGitlabRequest(this.getHost(), this.getToken(), url);
 
 			const repositories = data.map((repo: any) => this.toCatalogFolder(repo));
 
 			this.repoRequest = Promise.resolve(repositories);
+			this.tokenUsedForCache = this.getToken();
+			this.hostUsedForCache = this.getHost();
 
 			return repositories;
 
@@ -180,24 +195,31 @@ export class Gitlab {
 		// to actually retrieve a list of repositories for this user (authentication needed)
 
 		const userAuthority = user ? `${user}@` : '';
-		const authority = vscode.Uri.parse(this.host).authority;
+		const authority = vscode.Uri.parse(this.getHost()).authority;
 
 		return vscode.Uri.parse(`git+${protocol}://${userAuthority}${authority}/${data.owner}/${data.name}.git`);
 	}
 
+	/**
+	 * Convert owner and name to a VSCode resource URL.
+	 * 
+	 * @param owner 
+	 * @param name 
+	 */
 	public nameAndOwnerToResource(owner: string, name: string): vscode.Uri {
-		const authority = vscode.Uri.parse(this.host).authority;
+		const authority = vscode.Uri.parse(this.getHost()).authority;
 
 		return vscode.Uri.parse(`gitlab://${authority}/repository/${owner}/${name}`);
 	}
 
 	/**
-	 * This function will set and validate the state of this instance. If a valid state cannot be set 
-	 * it will return false. It will check the token and the hostname.
+	 * This function will validate the configuration. It will make sure the host and token are valid values. 
+	 * 
+	 * Will thrown an error when the host is not in a valid URL format.
 	 */
-	private setAndValidateState(): boolean {
-		const token = vscode.workspace.getConfiguration('gitlab').get<string>('token');
-		const host = vscode.workspace.getConfiguration('gitlab').get<string>('host');
+	private validateConfig(): boolean {
+		const token = this.getToken();
+		const host = this.getHost();
 
 		if (!token) {
 			return false;
@@ -207,25 +229,56 @@ export class Gitlab {
 			return false;
 		}
 
-		// These checks are here to prevent from using invalid tokens. This can happen when user
-		// changes the configuration file after the initial initialization; 
-		if (this.token && token !== this.token) {
+		if (!host.includes('http')) {
 			return false;
 		}
 
-		if (this.host && host !== this.host) {
-			return false;
+		// Check if the url contains a trailing slash
+		if (host.substr(-1) === '/') {
+			throw new Error(localize('trailingSlashPresent', "GitLab host contains a trailing slash."));
 		}
 
-		this.token = token;
-		this.host = host;
+		// If the url is not in a valid format this will throw an exception.
+		vscode.Uri.parse(host);
 
 		return true;
+	}
+
+	private getToken(): string {
+		const value = vscode.workspace.getConfiguration('gitlab').get<string>('token');
+
+		if (!value) {
+			return '';
+		}
+
+		return value;
+	}
+
+	private getHost(): string {
+		const value = vscode.workspace.getConfiguration('gitlab').get<string>('host');
+
+		if (!value) {
+			return '';
+		}
+
+		return value;
 	}
 
 	private clearCache() {
 		this.repoRequest = null;
 		this.userInfoRequest = null;
+	}
+
+	private cacheStillValid(): boolean {
+		if (this.getToken() !== this.tokenUsedForCache) {
+			return false;
+		}
+
+		if (this.getHost() !== this.hostUsedForCache) {
+			return false;
+		}
+
+		return true;
 	}
 
 	private async doGitlabRequest(host: string, token: string, endpoint: string): Promise<any> {
@@ -248,7 +301,7 @@ export class Gitlab {
 	}
 
 	private toCatalogFolder(repository: any): vscode.CatalogFolder {
-		const authority = vscode.Uri.parse(this.host).authority;
+		const authority = vscode.Uri.parse(this.getHost()).authority;
 
 		return {
 			resource: vscode.Uri.parse('').with({ scheme: GITLAB_SCHEME, authority: authority, path: `/repository/${repository.path_with_namespace}` }),
