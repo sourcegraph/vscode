@@ -291,7 +291,7 @@ export class Threads extends Disposable implements IThreads {
 	private refreshTimeout = TPromise.timeout(0);
 	private scheduleNextAutoRefresh(): void {
 		this.refreshTimeout.cancel();
-		this.refreshTimeout = TPromise.timeout(60).then(() => this.refresh());
+		this.refreshTimeout = TPromise.timeout(60 * 1000).then(() => this.refresh());
 	}
 
 	private query: IThreadQueryParams;
