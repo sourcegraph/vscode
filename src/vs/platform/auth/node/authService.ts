@@ -139,7 +139,7 @@ export class AuthService extends Disposable implements IAuthService {
 			org: orgMember.org,
 		}));
 		await this.setCurrentUser({
-			_type: 'memento',
+			memento: true,
 			id: user.sourcegraphID,
 			auth0Id: user.id,
 			username: user.username,
@@ -165,7 +165,7 @@ export class AuthService extends Disposable implements IAuthService {
 				this.telemetryService.publicLog('CurrentUserSignedIn', getTelemetryData(user));
 			}
 			this._currentUser = new User(user, this.telemetryService);
-			this._currentUser.onDidChangeCurrentOrgMember(this.onDidChangeUser, this);
+			this._currentUser.onDidChangeCurrentOrgMember(this.handleUserChanged, this);
 			this.memento[AuthService.CURRENT_USER_KEY] = user;
 			this.log('updated user');
 		} else {
@@ -173,12 +173,14 @@ export class AuthService extends Disposable implements IAuthService {
 			this.memento[AuthService.CURRENT_USER_KEY] = undefined;
 			this.log('removed user');
 		}
-		await this.onDidChangeUser();
+		await this.handleUserChanged();
 	}
 
-	private async onDidChangeUser(): Promise<void> {
-		// Any time the user changes we forcefully write the user's org settings to disk.
-		await this.writeOrgSettingsToDisk();
+	private async handleUserChanged(): Promise<void> {
+		// If the user changed, then the org may have changed.
+		// If the org changed, then we need to write the org settings to disk
+		// so they can be applied.
+		await this.applyOrgSettings();
 
 		// After we know the user's settings are up to date, we fire the change event.
 		this.globalState.saveMemento();
@@ -190,10 +192,10 @@ export class AuthService extends Disposable implements IAuthService {
 	 * This method returns a promise that resolves after the current user's
 	 * org settings are written to disk a loaded in the editor.
 	 */
-	private async writeOrgSettingsToDisk(): Promise<void> {
+	private async applyOrgSettings(): Promise<void> {
 		const currentOrg = this.getCurrentOrg();
 		const newSettings = currentOrg && currentOrg.latestSettings;
-		const newSettingsBlob = this.getSettingsBlob(newSettings);
+		const newSettingsBlob = getSettingsBlob(newSettings);
 		const orgSettingsFile = URI.file(this.environmentService.appOrganizationSettingsPath);
 		await this.fileService.createFile(orgSettingsFile, newSettingsBlob, { overwrite: true });
 		await this.configurationService.reloadConfiguration();
@@ -215,11 +217,11 @@ export class AuthService extends Disposable implements IAuthService {
 		}
 
 		const orgSettingsFile = URI.file(this.environmentService.appOrganizationSettingsPath);
-		const newSettingsBlob = await this.fileService.resolveContent(orgSettingsFile).then(content => content.value);
+		const newSettingsBlob = (await this.fileService.resolveContent(orgSettingsFile)).value;
 
 		// Don't bother uploading if the settings haven't changed.
 		const lastFetchedSettings = activeOrg.latestSettings;
-		if (this.getSettingsBlob(lastFetchedSettings) === newSettingsBlob) {
+		if (getSettingsBlob(lastFetchedSettings) === newSettingsBlob) {
 			return this.requestCurrentUser();
 		}
 
@@ -303,13 +305,13 @@ export class AuthService extends Disposable implements IAuthService {
 		return currentOrgMember && currentOrgMember.org;
 	}
 
-	private getSettingsBlob(settings: IOrgSettings): string {
-		return (settings && settings.contents) || '{}';
-	}
-
 	private log(message: string): void {
 		this.outputService.getChannel(CHANNEL_ID).append(message + '\n');
 	}
+}
+
+function getSettingsBlob(settings: IOrgSettings): string {
+	return (settings && settings.contents) || '{}';
 }
 
 const userGraphQLRequest = `
@@ -339,7 +341,7 @@ const userGraphQLRequest = `
  */
 interface UserMemento {
 	// This property is to prevent us from accidentally using a User as a UserMemento
-	readonly _type: 'memento';
+	readonly memento: true;
 
 	readonly id: number;
 	readonly auth0Id: string;
@@ -383,7 +385,7 @@ class User extends Disposable implements IUser {
 
 	public toMemento(): UserMemento {
 		return {
-			_type: 'memento',
+			memento: true,
 			id: this.id,
 			auth0Id: this.auth0Id,
 			username: this.username,
