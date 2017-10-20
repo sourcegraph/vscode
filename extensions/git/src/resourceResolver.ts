@@ -9,7 +9,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
 import { workspace, window, ProgressLocation, Uri, Disposable, OutputChannel } from 'vscode';
-import { Git, IGitErrorData, GitError } from './git';
+import { Git, IGitErrorData } from './git';
 import { mkdirp, replaceVariables, uniqBy } from './util';
 import { Model } from './model';
 import { Repository } from './repository';
@@ -104,14 +104,14 @@ export class GitResourceResolver {
 			return repo;
 		}
 
-		// TODO(keegan) the worktree code seems to expect an absolute revision. We should resolve one.
-		// But we also have an issue around ensuring the commit is actually in repos[0]
+		// TODO(keegan) ensure the commit is actually in repos[0]
+		const commit = await repos[0].getCommit(resource.revision);
 		this.git.log(localize('useWorktree', "Creating worktree since no repo could automatically be moved to {0}@{1}.", resource.remote, resource.revision));
-		const worktree = await getRepositoryWorktree(repos[0], resource.revision);
+		const worktree = await getRepositoryWorktree(repos[0], commit.hash);
 		if (worktree) {
 			return await this.mustOpenRepository(worktree.path);
 		}
-		const newWorktree = await createTempWorktree(repos[0], resource.revision);
+		const newWorktree = await createTempWorktree(repos[0], commit.hash);
 		return await this.mustOpenRepository(newWorktree.path);
 	}
 
@@ -166,11 +166,14 @@ export class GitResourceResolver {
 
 	private async filterReposAtRevision(resource: GitResourceAtRevision, repos: Repository[]): Promise<Repository[]> {
 		const reposAtRevision = await Promise.all(repos.map(async repo => {
+			const allowedToCheck = await this.headMatchesUpstream(repo, resource.revision);
+			if (!allowedToCheck) {
+				return undefined;
+			}
+
 			// Fetch if we are a ref or are missing the hash
 			if (!isAbsoluteCommitID(resource.revision)) {
 				await repo.executeCommand(['fetch', resource.cloneURL, resource.revision]);
-				// TODO(keegan) Do I need to ensure our upstream tracking branch is revision?
-				// Or is just checking FF sufficient?
 			} else if (!await this.hasCommit(repo, resource.revision)) {
 				await repo.fetch({ all: true });
 				if (!await this.hasCommit(repo, resource.revision)) {
@@ -183,10 +186,14 @@ export class GitResourceResolver {
 			const targetRef = isAbsoluteCommitID(resource.revision) ? resource.revision : 'FETCH_HEAD';
 			let canFF: boolean;
 			try {
+				// Check if the first <commit> is an ancestor of the second <commit>,
+				// and exit with status 0 if true, or with status 1 if not
+				// https://git-scm.com/docs/git-merge-base#git-merge-base---is-ancestor
 				await repo.executeCommand(['merge-base', '--is-ancestor', 'HEAD', targetRef]);
 				canFF = true;
 			} catch (e) {
-				if (!(e.error && e.error instanceof GitError)) {
+				// Errors are signaled by a non-zero status that is not 1
+				if (!e || !e.error || e.error.exitCode !== 1) {
 					throw e;
 				}
 				this.git.log(localize('cantFF', "{0} can't be fast-forwarded to {1}@{2}", repo.root, resource.remote, resource.revision));
@@ -229,6 +236,24 @@ export class GitResourceResolver {
 		} catch (e) {
 			return false;
 		}
+	}
+
+	/**
+	 * If we are on a branch, only proceed if the upstream branch matches or the
+	 * name matches. I (Keegan) always have my upstream branch set to
+	 * origin/master, which is why I added the name match check.
+	 */
+	private async headMatchesUpstream(repo: Repository, revision: string): Promise<boolean> {
+		const head = await repo.getHEAD();
+		if (head.name) {
+			if (head.name === revision || head.commit === revision) {
+				return true;
+			}
+			const branch = await repo.getBranch(head.name);
+			return branch.upstream === revision;
+		}
+		// We allow modifying a detached head
+		return true;
 	}
 
 	private async pick(resource: GitResource, repos: Repository[]): Promise<Repository> {

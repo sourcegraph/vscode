@@ -1627,8 +1627,8 @@ export class CommandCenter {
 			throw new Error(`Expected repository ${reviewControl.rootUri} to exist`);
 		}
 		// Trigger resolve logic to make sure this revision is checked out
-		// TODO instead of using the label to store the branch name, look it up in a Map keyed by ReviewControl
-		const revision = reviewControl.label;
+		// TODO instead of using the label and description to store the remote branch name, look it up in a Map keyed by ReviewControl
+		const revision = reviewControl.description.split('/').pop()!.trim() + '/' + reviewControl.label;
 		if (repository.remotes.length === 0) {
 			throw new Error(localize('no remote', "Repository does not have a remote"));
 		}
