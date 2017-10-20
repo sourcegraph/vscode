@@ -26,6 +26,7 @@ import { IEnvironmentService } from 'vs/platform/environment/common/environment'
 import { ITextFileService } from 'vs/workbench/services/textfile/common/textfiles';
 import { IOutputService, IOutputChannelRegistry, Extensions } from 'vs/workbench/parts/output/common/output';
 import { Registry } from 'vs/platform/registry/common/platform';
+import { first } from 'vs/base/common/arrays';
 
 export { Event }
 
@@ -146,7 +147,7 @@ export class AuthService extends Disposable implements IAuthService {
 			email: user.email,
 			avatarUrl: user.avatarURL,
 			orgMemberships,
-			currentOrgMember: this.getCurrentOrgMember(),
+			currentOrgMember: this.getUpdatedCurrentOrgMember(orgMemberships),
 		});
 	}
 
@@ -296,12 +297,27 @@ export class AuthService extends Disposable implements IAuthService {
 		this.configurationService.updateValue('remote.cookie', '', ConfigurationTarget.USER);
 	}
 
-	private getCurrentOrgMember(): IOrgMember | undefined {
-		return this._currentUser && this._currentUser.currentOrgMember;
+	/**
+	 * getUpdatedCurrentOrgMember finds what the new value of user.currentOrgMember should be after a
+	 * server fetch. It attempts to maintain the user's currently selected org.
+	 * @param newOrgMemberships The newly updated orgMemberships list after a sever fetch.
+	 */
+	private getUpdatedCurrentOrgMember(newOrgMemberships: IOrgMember[]): IOrgMember | undefined {
+		if (newOrgMemberships.length === 0) {
+			return undefined;
+		}
+		const currentOrg = this.getCurrentOrg();
+		if (currentOrg) {
+			const updatedOrgMember = first(newOrgMemberships, orgMember => orgMember.org.id === currentOrg.id);
+			if (updatedOrgMember) {
+				return updatedOrgMember;
+			}
+		}
+		return newOrgMemberships[0];
 	}
 
 	private getCurrentOrg(): IOrg | undefined {
-		const currentOrgMember = this.getCurrentOrgMember();
+		const currentOrgMember = this._currentUser && this._currentUser.currentOrgMember;
 		return currentOrgMember && currentOrgMember.org;
 	}
 
