@@ -199,7 +199,7 @@ export class OrganizationSettingsRenderer extends UserSettingsRenderer implement
 	}
 
 	protected createHeader(): void {
-		const headerMessage = nls.localize('emptyOrganizationSettingsHeader', 'Settings defined here will be synced across your organization.');
+		const headerMessage = nls.localize('emptyOrganizationSettingsHeader', "Settings defined here will be synced across your organization.");
 		this._register(new SettingsHeaderWidget(this.editor, '')).setMessage(headerMessage);
 	}
 }
