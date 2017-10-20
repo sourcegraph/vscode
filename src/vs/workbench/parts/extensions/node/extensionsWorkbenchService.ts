@@ -26,7 +26,7 @@ import { getGalleryExtensionIdFromLocal, getGalleryExtensionTelemetryData, getLo
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { IConfigurationService, ConfigurationTarget } from 'vs/platform/configuration/common/configuration';
 import { IWindowService } from 'vs/platform/windows/common/windows';
-import { IChoiceService, IMessageService } from 'vs/platform/message/common/message';
+import { IChoiceService, IMessageService, IConfirmation } from 'vs/platform/message/common/message';
 import Severity from 'vs/base/common/severity';
 import URI from 'vs/base/common/uri';
 import { IExtension, IExtensionDependencies, ExtensionState, IExtensionsWorkbenchService, IExtensionsConfiguration, ConfigurationKey } from 'vs/workbench/parts/extensions/common/extensions';
@@ -307,6 +307,7 @@ export class ExtensionsWorkbenchService implements IExtensionsWorkbenchService {
 	private installed: Extension[] = [];
 	private syncDelayer: ThrottledDelayer<void>;
 	private autoUpdateDelayer: ThrottledDelayer<void>;
+	private ensureInstalledDelayer: ThrottledDelayer<void>;
 	private disposables: IDisposable[] = [];
 
 	private _onChange: Emitter<void> = new Emitter<void>();
@@ -341,6 +342,7 @@ export class ExtensionsWorkbenchService implements IExtensionsWorkbenchService {
 
 		this.syncDelayer = new ThrottledDelayer<void>(ExtensionsWorkbenchService.SyncPeriod);
 		this.autoUpdateDelayer = new ThrottledDelayer<void>(1000);
+		this.ensureInstalledDelayer = new ThrottledDelayer<void>(1000 * 60); // 1 minute interval.
 
 		chain(urlService.onOpenURL)
 			.filter(uri => /^extension/.test(uri.path))
@@ -355,6 +357,7 @@ export class ExtensionsWorkbenchService implements IExtensionsWorkbenchService {
 					this.checkForUpdates();
 				}
 			}
+			this.ensureInstalledDelayer.trigger(() => TPromise.wrap(this.handleEnsureInstalled()));
 		}, this, this.disposables);
 
 		this.queryLocal().done(() => this.eventuallySyncWithGallery(true));
@@ -564,6 +567,34 @@ export class ExtensionsWorkbenchService implements IExtensionsWorkbenchService {
 
 		return this.extensionService.uninstall(local);
 
+	}
+
+	private async handleEnsureInstalled(): Promise<void> {
+		const ensureInstalledExtensions = this.configurationService.getConfiguration<IExtensionsConfiguration>(ConfigurationKey).ensureInstalled;
+		if (ensureInstalledExtensions.length === 0) {
+			return;
+		}
+
+		const queryOptions = { names: ensureInstalledExtensions, pageSize: ensureInstalledExtensions.length };
+		const [galleryExtensionsPager, localExtensions] = await Promise.all([this.queryGallery(queryOptions), this.queryLocal()]);
+		const galleryExtensions = galleryExtensionsPager.firstPage;
+
+		const localExtensionsByID = index(localExtensions, e => e.id);
+		const extensionsToInstall = galleryExtensions.filter(e => !localExtensionsByID[e.id]);
+		if (extensionsToInstall.length === 0) {
+			return;
+		}
+
+		await Promise.all(extensionsToInstall.map(e => this.install(e)));
+
+		const message = nls.localize('ensureInstalledReload', "Reload to finish installing required extensions.");
+		const confirmation: IConfirmation = { message, type: 'question', primaryButton: nls.localize('reload', "&&Reload Window") };
+		const shouldReload = await this.messageService.confirm(confirmation);
+		if (!shouldReload) {
+			return;
+		}
+
+		await this.windowService.reloadWindow();
 	}
 
 	private promptAndSetEnablement(extension: IExtension, enable: boolean, workspace: boolean): TPromise<any> {

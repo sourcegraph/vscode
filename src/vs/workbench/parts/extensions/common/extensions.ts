@@ -87,4 +87,5 @@ export const ConfigurationKey = 'extensions';
 export interface IExtensionsConfiguration {
 	autoUpdate: boolean;
 	ignoreRecommendations: boolean;
+	ensureInstalled: string[];
 }

@@ -10,7 +10,7 @@ import { KeyMod, KeyChord, KeyCode } from 'vs/base/common/keyCodes';
 import { Registry } from 'vs/platform/registry/common/platform';
 import { SyncActionDescriptor } from 'vs/platform/actions/common/actions';
 import { registerSingleton } from 'vs/platform/instantiation/common/extensions';
-import { IExtensionGalleryService, IExtensionTipsService, ExtensionsLabel, ExtensionsChannelId, PreferencesLabel } from 'vs/platform/extensionManagement/common/extensionManagement';
+import { IExtensionGalleryService, IExtensionTipsService, ExtensionsLabel, ExtensionsChannelId, PreferencesLabel, EXTENSION_IDENTIFIER_PATTERN } from 'vs/platform/extensionManagement/common/extensionManagement';
 import { ExtensionGalleryService } from 'vs/platform/extensionManagement/node/extensionGalleryService';
 import { IWorkbenchActionRegistry, Extensions as WorkbenchActionExtensions } from 'vs/workbench/common/actions';
 import { ExtensionTipsService } from 'vs/workbench/parts/extensions/electron-browser/extensionTipsService';
@@ -187,6 +187,17 @@ Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration)
 				type: 'boolean',
 				description: localize('extensionsIgnoreRecommendations', "Ignore extension recommendations"),
 				default: false
+			},
+			'extensions.ensureInstalled': {
+				type: 'array',
+				description: localize('extensionsEnsureInstalled', "List of extensions that will be automatically installed. The identifier of an extension is always '${publisher}.${name}'. For example: 'lukehoban.go'."),
+				items: {
+					type: 'string',
+					pattern: EXTENSION_IDENTIFIER_PATTERN,
+					errorMessage: localize('extensionsEnsureInstalled.error', "Expected format '${publisher}.${name}'. Example: 'lukehoban.go'.")
+				},
+				// 🚨 SECURITY: The 'isExecutable' flag ensures that this setting can't be defined at the folder level.
+				isExecutable: true,
 			}
 		}
 	});
