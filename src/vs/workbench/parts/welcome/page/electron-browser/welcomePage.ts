@@ -46,6 +46,7 @@ import { ICodeCommentsService, IThreadComments, IOrgComments } from 'vs/editor/c
 import { INavService } from 'vs/workbench/services/nav/common/nav';
 import { IContextViewService } from 'vs/platform/contextview/browser/contextView';
 import { SIDE_BAR_BACKGROUND, SIDE_BAR_BORDER, SIDE_BAR_SECTION_HEADER_BACKGROUND, SIDE_BAR_TITLE_FOREGROUND } from 'vs/workbench/common/theme';
+import { IOpenerService } from 'vs/platform/opener/common/opener';
 
 used();
 
@@ -270,7 +271,8 @@ class WelcomePage {
 		@IAuthService private authService: IAuthService,
 		@ICodeCommentsService private codeCommentsService: ICodeCommentsService,
 		@INavService private navService: INavService,
-		@IContextViewService private contextViewService: IContextViewService
+		@IContextViewService private contextViewService: IContextViewService,
+		@IOpenerService private openerService: IOpenerService
 	) {
 		this.disposables.push(lifecycleService.onShutdown(() => this.dispose()));
 
@@ -312,6 +314,7 @@ class WelcomePage {
 			$(signUpContainer).show();
 			return;
 		}
+		$(this.joinOrganizationState()).hide();
 		$(this.emptyCodeCommentState()).hide();
 		$(codeCommentsContainer).show();
 		$(signUpContainer).hide();
@@ -359,6 +362,10 @@ class WelcomePage {
 		return document.querySelector('.empty-comment-container') as HTMLElement;
 	}
 
+	private joinOrganizationState(): HTMLElement {
+		return document.querySelector('.no-org-container') as HTMLElement;
+	}
+
 	private commentFilterInput(): HTMLInputElement {
 		return document.getElementById('comment-input-element') as HTMLInputElement;
 	}
@@ -369,6 +376,14 @@ class WelcomePage {
 			return;
 		}
 		$(commentList).clearChildren();
+		if (this.joinOrganizationState()) {
+			if (!this.authService.currentUser.currentOrgMember) {
+				$(this.joinOrganizationState()).show();
+				return;
+			}
+			$(this.joinOrganizationState()).hide();
+		}
+
 		if (!this.orgComments.repoComments.length && !showLoader) {
 			$(this.emptyCodeCommentState()).show();
 			return;
@@ -495,6 +510,11 @@ class WelcomePage {
 			this.orgComments.refresh();
 			this.resolveOrganizationCommentsContainer(container, true);
 		}));
+
+		const noOrgButton = document.getElementById('org-help-action');
+		noOrgButton.addEventListener('click', () => {
+			this.openerService.open(URI.parse('https://sourcegraph.com/settings/orgs/new'));
+		});
 
 		const inactiveButtons = container.querySelectorAll('.sg-inactive');
 

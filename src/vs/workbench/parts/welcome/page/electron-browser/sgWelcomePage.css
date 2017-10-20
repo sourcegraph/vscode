@@ -500,6 +500,7 @@
 	align-self: center;
 }
 .monaco-workbench > .part.editor > .content .welcomePage .help-icon {
+	vertical-align: middle;
 	-webkit-mask: url(../../Help.svg) center no-repeat;
 	background-color: #A2B0CD;
 	height: 1.5em;

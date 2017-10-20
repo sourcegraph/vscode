@@ -53,6 +53,16 @@ export default () => `
 								</div>
 							</div>
 						</div>
+						<div class="no-org-container">
+							<div class="padding-around">
+								<div id="org-help-action" class="padding-vertical">
+									<button class="solid">
+										<div class="help-icon"></div>
+										<span class="detail button-label">${escape(localize('welcomePage.noOrgHelp', "Join or create an organization to start using code comments."))}</span>
+									</button>
+								</div>
+							</div>
+						</div>
 					</div>
 					<div class="sign-in-container">
 						<div class="padding-around">
