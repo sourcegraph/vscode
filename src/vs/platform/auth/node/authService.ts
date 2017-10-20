@@ -6,9 +6,9 @@
 
 import { localize } from 'vs/nls';
 import URI from 'vs/base/common/uri';
-import { Disposable, IDisposable, dispose } from 'vs/base/common/lifecycle';
+import { Disposable, dispose } from 'vs/base/common/lifecycle';
 import Event, { Emitter } from 'vs/base/common/event';
-import { IAuthService, IUser, IOrgMember, IOrgSettings } from 'vs/platform/auth/common/auth';
+import { IAuthService, IUser, IOrgMember, IOrgSettings, IOrg } from 'vs/platform/auth/common/auth';
 import { IRemoteService, IRemoteConfiguration, requestGraphQL, requestGraphQLMutation } from 'vs/platform/remote/node/remote';
 import { IConfigurationService, ConfigurationTarget } from 'vs/platform/configuration/common/configuration';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
@@ -24,8 +24,16 @@ import * as objects from 'vs/base/common/objects';
 import { IFileService } from 'vs/platform/files/common/files';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 import { ITextFileService } from 'vs/workbench/services/textfile/common/textfiles';
+import { IOutputService, IOutputChannelRegistry, Extensions } from 'vs/workbench/parts/output/common/output';
+import { Registry } from 'vs/platform/registry/common/platform';
 
 export { Event }
+
+
+const CHANNEL_ID = 'sourcegraphAuth';
+
+Registry.as<IOutputChannelRegistry>(Extensions.OutputChannels)
+	.registerChannel(CHANNEL_ID, localize('authChannelLabel', "Auth"));
 
 /**
  * This service exposes the currently authenticated user and organization context.
@@ -50,8 +58,6 @@ export class AuthService extends Disposable implements IAuthService {
 	 */
 	private _currentSessionId?: string;
 
-	private updateConfigDelayer: ThrottledDelayer<void>;
-
 	/**
 	 * This flag gets enabled whenever we detect that the organization settings were saved,
 	 * and is reset whenever the organization settings are uploaded.
@@ -69,183 +75,178 @@ export class AuthService extends Disposable implements IAuthService {
 		@IFileService private fileService: IFileService,
 		@IEnvironmentService private environmentService: IEnvironmentService,
 		@ITextFileService private textFileService: ITextFileService,
+		@IOutputService private outputService: IOutputService,
 	) {
 		super();
 		this.globalState = new Memento(AuthService.MEMENTO_KEY);
 		this.memento = this.globalState.getMemento(storageService);
 		if (this.memento[AuthService.CURRENT_USER_KEY]) {
-			this._currentUser = new User(this.memento[AuthService.CURRENT_USER_KEY], this.telemetryService);
+			// Restore the signed in state.
+			this.setCurrentUser(this.memento[AuthService.CURRENT_USER_KEY]);
 		}
 
-		this.updateConfigDelayer = new ThrottledDelayer<void>(1000);
+		// Refresh when config changes (auth token may have changed).
+		this._register(this.configurationService.onDidUpdateConfiguration(() => this.refresh()));
 
-		// Load user profile data from remote endpoint on initial load
-		this._register(this.configurationService.onDidUpdateConfiguration(() => this.onDidUpdateConfiguration()));
+		// Refresh on window focus to get the latest user data (including configuration).
+		this._register(this.windowsService.onWindowFocus(() => this.refresh()));
 
-		this._register(this.windowsService.onWindowFocus(() => {
-			this.refresh();
-		}));
-
+		// Upload organization settings to the server when they change.
 		this._register(this.textFileService.models.onModelSaved(model => {
 			if (model.resource.fsPath === this.environmentService.appOrganizationSettingsPath) {
 				this.shouldUploadConfigurationSettings = true;
-				this.onDidUpdateConfiguration();
+				this.refresh();
 			}
 		}));
 
-		this.onDidUpdateConfiguration();
+		// Load user profile data from remote endpoint on initial load
+		this.refresh();
 	}
 
-	public get currentUser(): IUser | undefined {
-		return this._currentUser;
+	private refreshDelayer = new ThrottledDelayer<void>(1000);
+	public refresh(): void {
+		this.refreshDelayer.trigger(() => TPromise.wrap(this.refreshNow()));
 	}
-
-	private equalUsers(a: User, b: User): boolean {
-		if (!a && b || a && !b) {
-			return false;
-		}
-
-		return a === b || objects.equals(a.toMemento(), b.toMemento());
-	}
-
-	private setCurrentUser(newUser: User | undefined): TPromise<void> {
-		if (this.equalUsers(newUser, this._currentUser)) {
-			return TPromise.as(undefined);
-		}
-		const newSettings = newUser && newUser.currentOrgMember && newUser.currentOrgMember.org.latestSettings;
-		return this.saveOrgSettingsToDisk(newSettings).then(() => {
-			dispose(this._currentUser);
-			this.toDisposeOnCurrentUserChange = dispose(this.toDisposeOnCurrentUserChange);
-
-			this._currentUser = newUser;
-			if (this._currentUser) {
-				this.toDisposeOnCurrentUserChange.push(this._currentUser.onDidChangeCurrentOrgMember(() => {
-					const newOrgMember = this._currentUser.currentOrgMember;
-					const newOrgSettings = newOrgMember && newOrgMember.org.latestSettings;
-					this.saveOrgSettingsToDisk(newOrgSettings, true);
-					this.globalState.saveMemento();
-					this.didChangeCurrentUser.fire();
-				}));
-				this.memento[AuthService.CURRENT_USER_KEY] = newUser;
-			} else {
-				this.memento[AuthService.CURRENT_USER_KEY] = undefined;
-			}
-			this.globalState.saveMemento();
-			this.didChangeCurrentUser.fire();
-		});
-	}
-
-	private toDisposeOnCurrentUserChange: IDisposable[] = [];
 
 	/**
-	 * Executed when the user first opens the editor, changes their configuration,
-	 * saves their organization settings file, completes signing in, signs out, or
-	 * switches accounts and successfully updates their remote.cookie setting.
-	 *
-	 * This method uploads a organization settings file if the file has been saved with contents
-	 * that differ from the most recently fetched user profile.
-	 *
-	 * This method also requests updated user profile data from the remote endpoint.
+	 * Refreshes the user model with the latest data from the server.
+	 * If there are any local changes to org settings, they are first uploaded to the server.
 	 */
-	private onDidUpdateConfiguration(): void {
-		this.updateConfigDelayer.trigger(() => {
-			const config = this.configurationService.getConfiguration<IRemoteConfiguration>();
-			this._currentSessionId = config.remote.cookie;
-			if (!this._currentSessionId) {
-				// If user is already signed in, notify them that their signout was successful and log telemetry.
-				// If not, it's possible they ran into this failed request during app launch.
-				if (this.currentUser) {
-					this.telemetryService.publicLog('LogoutClicked');
-					this.messageService.show(Severity.Info, localize('remote.auth.signedOutConfirmation', "Your editor has been signed out of Sourcegraph. Visit {0} to end your web session.", urlToSignOut(this.configurationService)));
-				}
-
-				// Delete user from memory
-				this.setCurrentUser(undefined);
-				this.telemetryService.publicLog('CurrentUserSignedOut');
-				return TPromise.as(undefined);
+	private async refreshNow(): Promise<void> {
+		const config = this.configurationService.getConfiguration<IRemoteConfiguration>();
+		this._currentSessionId = config.remote.cookie;
+		if (!this._currentSessionId) {
+			// If user is already signed in, notify them that their signout was successful and log telemetry.
+			// If not, it's possible they ran into this failed request during app launch.
+			if (this.currentUser) {
+				this.telemetryService.publicLog('LogoutClicked');
+				this.messageService.show(Severity.Info, localize('remote.auth.signedOutConfirmation', "Your editor has been signed out of Sourcegraph. Visit {0} to end your web session.", urlToSignOut(this.configurationService)));
 			}
 
-			// If the org configuration was just updated, grab it, and upload to the server.
-			if (this.shouldUploadConfigurationSettings) {
-				const activeOrg = this.currentUser.currentOrgMember && this.currentUser.currentOrgMember.org;
-				if (activeOrg) {
-					const orgSettingsFile = URI.file(this.environmentService.appOrganizationSettingsPath);
-					return this.fileService.resolveContent(orgSettingsFile).then(content => {
-						const newSettingsBlob = content.value;
+			// Delete user from memory
+			this.setCurrentUser(undefined);
+			this.telemetryService.publicLog('CurrentUserSignedOut');
+			return;
+		}
 
-						// Don't bother uploading if the settings haven't changed.
-						const lastFetchedSettings = activeOrg.latestSettings;
-						if (this.getSettingsBlob(lastFetchedSettings) === newSettingsBlob) {
-							this.shouldUploadConfigurationSettings = false;
-							return this.requestCurrentUser()
-								.then(user => {
-									this.handleUserResponse(user);
-								});
-						}
-
-						return this.uploadNewOrgSettings(lastFetchedSettings, newSettingsBlob)
-							.then(user => {
-								this.shouldUploadConfigurationSettings = false;
-								this.handleUserResponse(user);
-							});
-					});
-				}
-				this.shouldUploadConfigurationSettings = false;
-			}
-			// Request updated user profile information
-			return this.requestCurrentUser()
-				.then(user => this.handleUserResponse(user));
-		});
-	}
-
-	private uploadNewOrgSettings(lastFetchedSettings: IOrgSettings | undefined, newSettingsBlob: string): TPromise<GQL.IUser> {
-		const orgID = this.currentUser.currentOrgMember.org.id;
-		return requestGraphQLMutation<{ updateOrgSettings: { author: GQL.IUser } }>(this.remoteService, `mutation UpdateOrgSettings {
-			updateOrgSettings(orgID: $orgID, lastKnownSettingsID: $lastKnownSettingsID, contents: $newSettingsBlob) {
-				author {
-					${userGraphQLRequest}
-				}
-			}
-		}`, {
-				orgID,
-				lastKnownSettingsID: lastFetchedSettings && lastFetchedSettings.id,
-				newSettingsBlob,
-			}).then(response => response.updateOrgSettings.author);
-	}
-
-	private requestCurrentUser(): TPromise<GQL.IUser> {
-		return requestGraphQL<{ currentUser: GQL.IUser }>(this.remoteService, `query CurrentUser {
-			root {
-				currentUser {
-					${userGraphQLRequest}
-				}
-			}
-		}`, {}).then(response => response.currentUser);
-	}
-
-	private handleUserResponse(user: GQL.IUser) {
-		const orgMemberships = user.orgMemberships.map(membership => ({
-			id: membership.id,
-			email: membership.email,
-			username: membership.username,
-			displayName: membership.displayName,
-			avatarUrl: membership.avatarURL,
-			org: membership.org,
+		const user = await this.syncUser();
+		const orgMemberships = user.orgMemberships.map(orgMember => ({
+			id: orgMember.id,
+			email: orgMember.email,
+			username: orgMember.username,
+			displayName: orgMember.displayName,
+			avatarUrl: orgMember.avatarURL,
+			org: orgMember.org,
 		}));
-		return this.setCurrentUser(new User({
+		await this.setCurrentUser({
+			_type: 'memento',
 			id: user.sourcegraphID,
 			auth0Id: user.id,
 			username: user.username,
 			email: user.email,
 			avatarUrl: user.avatarURL,
 			orgMemberships,
-			currentOrgMember: orgMemberships[0],
-		}, this.telemetryService))
-			.then(() => {
-				if (this._currentUser) {
-					this.telemetryService.publicLog('CurrentUserSignedIn', this._currentUser.getTelemetryData());
+			currentOrgMember: this.getCurrentOrgMember(),
+		});
+	}
+
+
+	public get currentUser(): IUser | undefined {
+		return this._currentUser;
+	}
+
+	private async setCurrentUser(user: UserMemento | undefined): Promise<void> {
+		if (objects.equals(user, this._currentUser && this._currentUser.toMemento())) {
+			return;
+		}
+		dispose(this._currentUser);
+		if (user) {
+			if (!this._currentUser) {
+				this.telemetryService.publicLog('CurrentUserSignedIn', getTelemetryData(user));
+			}
+			this._currentUser = new User(user, this.telemetryService);
+			this._currentUser.onDidChangeCurrentOrgMember(this.onDidChangeUser, this);
+			this.memento[AuthService.CURRENT_USER_KEY] = user;
+			this.log('updated user');
+		} else {
+			this._currentUser = undefined;
+			this.memento[AuthService.CURRENT_USER_KEY] = undefined;
+			this.log('removed user');
+		}
+		await this.onDidChangeUser();
+	}
+
+	private async onDidChangeUser(): Promise<void> {
+		// Any time the user changes we forcefully write the user's org settings to disk.
+		await this.writeOrgSettingsToDisk();
+
+		// After we know the user's settings are up to date, we fire the change event.
+		this.globalState.saveMemento();
+		this.didChangeCurrentUser.fire();
+		this.log('updated org settings');
+	}
+
+	/**
+	 * This method returns a promise that resolves after the current user's
+	 * org settings are written to disk a loaded in the editor.
+	 */
+	private async writeOrgSettingsToDisk(): Promise<void> {
+		const currentOrg = this.getCurrentOrg();
+		const newSettings = currentOrg && currentOrg.latestSettings;
+		const newSettingsBlob = this.getSettingsBlob(newSettings);
+		const orgSettingsFile = URI.file(this.environmentService.appOrganizationSettingsPath);
+		await this.fileService.createFile(orgSettingsFile, newSettingsBlob, { overwrite: true });
+		await this.configurationService.reloadConfiguration();
+	}
+
+	/**
+	 * Uploads the current org settings to the server if necessary
+	 * and fetches the latest user information from the server.
+	 */
+	private async syncUser(): Promise<GQL.IUser> {
+		if (!this.shouldUploadConfigurationSettings) {
+			return this.requestCurrentUser();
+		}
+		this.shouldUploadConfigurationSettings = false;
+
+		const activeOrg = this.getCurrentOrg();
+		if (!activeOrg) {
+			return this.requestCurrentUser();
+		}
+
+		const orgSettingsFile = URI.file(this.environmentService.appOrganizationSettingsPath);
+		const newSettingsBlob = await this.fileService.resolveContent(orgSettingsFile).then(content => content.value);
+
+		// Don't bother uploading if the settings haven't changed.
+		const lastFetchedSettings = activeOrg.latestSettings;
+		if (this.getSettingsBlob(lastFetchedSettings) === newSettingsBlob) {
+			return this.requestCurrentUser();
+		}
+
+		const response = await requestGraphQLMutation<{ updateOrgSettings: { author: GQL.IUser } }>(this.remoteService, `mutation UpdateOrgSettings {
+			updateOrgSettings(orgID: $orgID, lastKnownSettingsID: $lastKnownSettingsID, contents: $newSettingsBlob) {
+				author {
+					${userGraphQLRequest}
 				}
+			}
+		}`, {
+				orgID: activeOrg.id,
+				lastKnownSettingsID: lastFetchedSettings && lastFetchedSettings.id,
+				newSettingsBlob,
 			});
+		this.log('uploaded organization settings');
+		return response.updateOrgSettings.author;
+	}
+
+	private async requestCurrentUser(): Promise<GQL.IUser> {
+		const response = await requestGraphQL<{ currentUser: GQL.IUser }>(this.remoteService, `query CurrentUser {
+			root {
+				currentUser {
+					${userGraphQLRequest}
+				}
+			}
+		}`, {});
+		return response.currentUser;
 	}
 
 	public inviteTeammate(emailAddress: string): void {
@@ -253,27 +254,23 @@ export class AuthService extends Disposable implements IAuthService {
 		if (!email.length) {
 			return;
 		}
-		if (!this.currentUser || !this.currentUser.currentOrgMember || !this.currentUser.currentOrgMember.org) {
+		const currentOrg = this.getCurrentOrg();
+		if (!currentOrg) {
 			return;
 		}
-		const orgID = this.currentUser.currentOrgMember.org.id;
 		requestGraphQLMutation<{ response: any }>(this.remoteService, `mutation inviteUser(
 			$email: String!, $orgID: Int!
 		) {
 			inviteUser(email: $email, orgID: $orgID) {
 				alwaysNil
 			}
-		}`, { orgID, email })
+		}`, { orgID: currentOrg.id, email })
 			.then(() => {
 				this.telemetryService.publicLog('InviteTeammateSuccess');
-				this.messageService.show(Severity.Info, localize('inviteTeammate.success', "Invited {0} to {1}", email, this.currentUser.currentOrgMember.org.name));
+				this.messageService.show(Severity.Info, localize('inviteTeammate.success', "Invited {0} to {1}", email, currentOrg.name));
 			}, (err) => {
 				this.messageService.show(Severity.Error, err);
 			});
-	}
-
-	public refresh(): void {
-		this.onDidUpdateConfiguration();
 	}
 
 	/**
@@ -297,30 +294,23 @@ export class AuthService extends Disposable implements IAuthService {
 		this.configurationService.updateValue('remote.cookie', '', ConfigurationTarget.USER);
 	}
 
-	private saveOrgSettingsToDisk(newSettings: IOrgSettings, force: boolean = false): TPromise<void> {
-		const newSettingsBlob = this.getSettingsBlob(newSettings);
-		if (!force) {
-			const currentOrgMember = this.currentUser && this.currentUser.currentOrgMember;
-			const oldSettings = currentOrgMember && currentOrgMember.org.latestSettings;
+	private getCurrentOrgMember(): IOrgMember | undefined {
+		return this._currentUser && this._currentUser.currentOrgMember;
+	}
 
-			const oldSettingsBlob = this.getSettingsBlob(oldSettings);
-
-			if (oldSettingsBlob === newSettingsBlob) {
-				return TPromise.as(undefined);
-			}
-		}
-
-		const orgSettingsFile = URI.file(this.environmentService.appOrganizationSettingsPath);
-
-		return this.fileService.createFile(orgSettingsFile, newSettingsBlob, { overwrite: true })
-			.then(() => this.configurationService.reloadConfiguration());
+	private getCurrentOrg(): IOrg | undefined {
+		const currentOrgMember = this.getCurrentOrgMember();
+		return currentOrgMember && currentOrgMember.org;
 	}
 
 	private getSettingsBlob(settings: IOrgSettings): string {
 		return (settings && settings.contents) || '{}';
 	}
-}
 
+	private log(message: string): void {
+		this.outputService.getChannel(CHANNEL_ID).append(message + '\n');
+	}
+}
 
 const userGraphQLRequest = `
 	id
@@ -344,18 +334,23 @@ const userGraphQLRequest = `
 		}
 	}`;
 
+/**
+ * A serializable version of a User.
+ */
 interface UserMemento {
+	// This property is to prevent us from accidentally using a User as a UserMemento
+	readonly _type: 'memento';
+
 	readonly id: number;
 	readonly auth0Id: string;
 	readonly username: string;
 	readonly email: string;
 	readonly avatarUrl: string | undefined;
 	readonly orgMemberships: IOrgMember[];
-	readonly currentOrgMember: IOrgMember;
+	readonly currentOrgMember: IOrgMember | undefined;
 }
 
-class User extends Disposable implements IUser, UserMemento {
-
+class User extends Disposable implements IUser {
 	public readonly id: number;
 	public readonly auth0Id: string;
 	public readonly username: string;
@@ -371,7 +366,7 @@ class User extends Disposable implements IUser, UserMemento {
 		this.email = user.email;
 		this.avatarUrl = user.avatarUrl;
 		this.orgMemberships = user.orgMemberships;
-		this._currentOrgMember = user.currentOrgMember;
+		this._currentOrgMember = user.currentOrgMember || user.orgMemberships[0];
 	}
 
 	private _currentOrgMember: IOrgMember | undefined;
@@ -379,7 +374,7 @@ class User extends Disposable implements IUser, UserMemento {
 	public onDidChangeCurrentOrgMember = this.didChangeCurrentOrgMember.event;
 	public get currentOrgMember(): IOrgMember { return this._currentOrgMember; }
 	public set currentOrgMember(orgMember: IOrgMember) {
-		if (this._currentOrgMember !== orgMember) {
+		if (!objects.equals(this._currentOrgMember, orgMember)) {
 			this._currentOrgMember = orgMember;
 			this.didChangeCurrentOrgMember.fire();
 			this.telemetryService.publicLog('CurrentOrgMemberChanged', this.getTelemetryData());
@@ -388,6 +383,7 @@ class User extends Disposable implements IUser, UserMemento {
 
 	public toMemento(): UserMemento {
 		return {
+			_type: 'memento',
 			id: this.id,
 			auth0Id: this.auth0Id,
 			username: this.username,
@@ -399,19 +395,23 @@ class User extends Disposable implements IUser, UserMemento {
 	}
 
 	public getTelemetryData(): any {
-		return {
-			auth: {
-				user: {
-					id: this.id,
-					auth0_id: this.auth0Id,
-					username: this.username,
-					email: this.email,
-					orgMemberships: this.orgMemberships,
-				},
-				currentOrgMember: this.currentOrgMember,
-			}
-		};
+		return getTelemetryData(this.toMemento());
 	}
+}
+
+function getTelemetryData(user: UserMemento): any {
+	return {
+		auth: {
+			user: {
+				id: user.id,
+				auth0_id: user.auth0Id,
+				username: user.username,
+				email: user.email,
+				orgMemberships: user.orgMemberships,
+			},
+			currentOrgMember: user.currentOrgMember,
+		}
+	};
 }
 
 export function urlToSignIn(configService: IConfigurationService): URI {

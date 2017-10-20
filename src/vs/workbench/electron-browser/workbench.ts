@@ -659,7 +659,7 @@ export class Workbench implements IPartService {
 		serviceCollection.set(IJSONEditingService, jsonEditingService);
 
 		// Auth Service
-		serviceCollection.set(IAuthService, this.instantiationService.createInstance(AuthService));
+		serviceCollection.set(IAuthService, new SyncDescriptor(AuthService));
 
 		// Workspace Editing
 		serviceCollection.set(IWorkspaceEditingService, new SyncDescriptor(WorkspaceEditingService));

@@ -65,6 +65,8 @@ export class CodeHostView extends ViewsViewletPanel {
 		$('p').text(nls.localize('codeHostSubtext', "A GitHub personal access token or Bitbucket app password is required to enable remote repository search.")).appendTo(titleDiv);
 
 		let section = $('div.section').appendTo(container);
+		this.gitHubAccessTokenButton = this.createGitHubAccessTokenButton(section);
+		this.bitbucketAccessTokenButton = this.createBitbucketAccessTokenButton(section);
 
 		// Wait for the extension host to be ready.
 		this.extensionService.onReady().then(async () => {
@@ -72,11 +74,9 @@ export class CodeHostView extends ViewsViewletPanel {
 			await this.extensionService.activateByEvent('*');
 
 			const gitHubToken = await this.hasGitHubAccessToken();
-			this.gitHubAccessTokenButton = this.createGitHubAccessTokenButton(section);
 			await this.setGitHubButtonLabel(this.gitHubAccessTokenButton, gitHubToken);
 
 			const bitbucketAppPassword = await this.hasBitbucketAppPassword();
-			this.bitbucketAccessTokenButton = await this.createBitbucketAccessTokenButton(section, bitbucketAppPassword);
 			await this.setBitbucketAppPasswordLabel(this.bitbucketAccessTokenButton, bitbucketAppPassword);
 		});
 	}
@@ -93,7 +93,7 @@ export class CodeHostView extends ViewsViewletPanel {
 		return button;
 	}
 
-	private async createBitbucketAccessTokenButton(section: Builder, hasToken: boolean): TPromise<Button> {
+	private createBitbucketAccessTokenButton(section: Builder): Button {
 		const container = $('div').padding(5, 0, 0, 0).appendTo(section);
 		const button = new Button(container);
 		attachButtonStyler(button, this.themeService);
