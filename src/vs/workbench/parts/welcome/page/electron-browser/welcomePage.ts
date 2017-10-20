@@ -433,6 +433,10 @@ class WelcomePage {
 			if (threads.length) {
 				subContainer.appendChild(repoCommentList);
 				threads.forEach(thread => {
+					if (thread.comments.length === 0) {
+						// We do not want to render code snippets.
+						return;
+					}
 					const threadDiv = document.createElement('li');
 					threadDiv.className = 'repo-row';
 					threadDiv.addEventListener('click', () => {

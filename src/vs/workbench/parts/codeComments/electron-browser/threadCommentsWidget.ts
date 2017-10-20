@@ -15,13 +15,18 @@ import { addDisposableListener, clearNode } from 'vs/base/browser/dom';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { localize } from 'vs/nls';
 import { Action } from 'vs/base/common/actions';
-import { IThreadComments } from 'vs/editor/common/services/codeCommentsService';
+import { IThreadComments, ICodeCommentsService } from 'vs/editor/common/services/codeCommentsService';
 import * as date from 'date-fns';
 import { CommentInput } from 'vs/workbench/parts/codeComments/browser/commentInput';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { getCommentTelemetryData } from 'vs/workbench/parts/codeComments/common/codeComments';
 import { dispose, IDisposable } from 'vs/base/common/lifecycle';
 import { BaseThreadCommentsWidget } from 'vs/workbench/parts/codeComments/browser/baseThreadCommentsWidget';
+import { IClipboardService } from 'vs/platform/clipboard/common/clipboardService';
+import { IRemoteService } from 'vs/platform/remote/node/remote';
+import { Button } from 'vs/base/browser/ui/button/button';
+import { attachButtonStyler } from 'vs/platform/theme/common/styler';
+import { editorBackground, editorActiveLinkForeground } from 'vs/platform/theme/common/colorRegistry';
 
 /**
  * Displays a comment thread inline in the editor.
@@ -34,10 +39,13 @@ export class ThreadCommentsWidget extends BaseThreadCommentsWidget {
 	constructor(
 		editor: ICodeEditor,
 		private threadComments: IThreadComments,
-		@IThemeService themeService: IThemeService,
+		@IThemeService private themeService: IThemeService,
 		@IInstantiationService private instantiationService: IInstantiationService,
 		@IContextMenuService private contextMenuService: IContextMenuService,
 		@ITelemetryService private telemetryService: ITelemetryService,
+		@IClipboardService private _clipboardService: IClipboardService,
+		@IRemoteService private remoteService: IRemoteService,
+		@ICodeCommentsService private codeCommentsService: ICodeCommentsService,
 	) {
 		super(editor, themeService);
 	}
@@ -118,6 +126,27 @@ export class ThreadCommentsWidget extends BaseThreadCommentsWidget {
 					div.div({ class: 'timeAgo' }, div => {
 						const time = localize('timeAgo', "{0} ago", date.distanceInWordsToNow(comment.createdAt));
 						div.text(time);
+					});
+
+					// Share button
+					div.div({ class: 'share' }, div => {
+						const buttonContainer = $('div').addClass('share');
+						const shareButton = new Button(buttonContainer);
+						const label = localize('comment.share', 'Share');
+						shareButton.label = label;
+						this._disposables.push(shareButton.addListener('click', () => {
+							this.codeCommentsService.shareComment(comment.id).then(sharedURL => {
+								this._clipboardService.writeText(sharedURL);
+								shareButton.label = localize('comment.share.copied-to-clipboard', 'Copied to clipboard!');
+								setTimeout(() => shareButton.label = label, 1000);
+							});
+						}));
+						attachButtonStyler(shareButton, this.themeService, {
+							buttonBackground: editorBackground,
+							buttonHoverBackground: editorBackground,
+							buttonForeground: editorActiveLinkForeground
+						});
+						div.append(buttonContainer);
 					});
 				});
 				div.div({ class: 'content' }, div => {

@@ -262,6 +262,10 @@ export class CodeCommentsViewlet extends Viewlet {
 			}
 
 			for (const thread of fileComments.threads) {
+				if (thread.comments.length === 0) {
+					// We do not want to render code snippets.
+					continue;
+				}
 				const recentComment = thread.mostRecentComment;
 				div.div({ class: 'thread' }, div => {
 					div.on('click', () => {

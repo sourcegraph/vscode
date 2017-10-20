@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 'use strict';
-
 import { TPromise } from 'vs/base/common/winjs.base';
 import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
 import { Range } from 'vs/editor/common/core/range';
@@ -35,6 +34,18 @@ export interface ICodeCommentsService {
 	 * Returns a model for threads.
 	 */
 	getThreads(filter: Filter): IThreads;
+
+	/**
+	 * Generates a shared link for the given comment ID.
+	 * @param commentID the comment ID to share.
+	 */
+	shareComment(commentID: number): TPromise<string>;
+
+	/**
+	 * Generates a shared link for the given thread ID.
+	 * @param threadID the thread ID to share.
+	 */
+	shareThread(threadID: number): TPromise<string>;
 }
 
 export interface Filter {
@@ -153,8 +164,10 @@ export interface IDraftThreadComments extends IEventDisposable {
 
 	/**
 	 * Submit the draft.
+	 * @param allowNoComment allows submitting the thread without a comment
+	 * (for creating code snippets).
 	 */
-	submit(): TPromise<IThreadComments>;
+	submit(allowNoComment?: boolean): TPromise<IThreadComments>;
 }
 
 /**

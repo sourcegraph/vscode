@@ -15,7 +15,7 @@ import { Git } from 'vs/workbench/services/codeComments/browser/git';
 import URI from 'vs/base/common/uri';
 import { Schemas } from 'vs/base/common/network';
 import { startsWith } from 'vs/base/common/strings';
-import { IRemoteService, requestGraphQL, requestGraphQLMutation } from 'vs/platform/remote/node/remote';
+import { IRemoteService, requestGraphQL, requestGraphQLMutation, IRemoteConfiguration } from 'vs/platform/remote/node/remote';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { first, uniqueFilter, coalesce } from 'vs/base/common/arrays';
 import { IInstantiationService, ServicesAccessor } from 'vs/platform/instantiation/common/instantiation';
@@ -39,6 +39,7 @@ import { IOutputService } from 'vs/workbench/parts/output/common/output';
 import { CommentsChannelId } from 'vs/workbench/parts/codeComments/common/constants';
 import * as objects from 'vs/base/common/objects';
 import { IWindowsService } from 'vs/platform/windows/common/windows';
+import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 
 export { Event }
 
@@ -140,6 +141,24 @@ export class CodeCommentsService implements ICodeCommentsService {
 		return this.instantiationService.createInstance(Threads, this, filter);
 	}
 
+	public shareComment(commentID: number): TPromise<string> {
+		return requestGraphQLMutation<{ shareComment: string }>(this.remoteService, `mutation ShareComment {
+			shareComment(commentID: $commentID)
+		}`, {
+				commentID: commentID,
+			})
+			.then(response => response.shareComment);
+	}
+
+	public shareThread(threadID: number): TPromise<string> {
+		return requestGraphQLMutation<{ shareThread: string }>(this.remoteService, `mutation ShareThread {
+			shareThread(threadID: $threadID)
+		}`, {
+				threadID: threadID,
+			})
+			.then(response => response.shareThread);
+	}
+
 	/**
 	 * @deprecated TODO(kingy): use Threads instead
 	 */
@@ -238,7 +257,9 @@ export class OrgComments extends Disposable implements IOrgComments {
 				return this.instantiationService.createInstance(ThreadComments, this.commentsService, undefined, gqlThreadToMemento(thread));
 			}).sort((left: ThreadComments, right: ThreadComments) => {
 				// Most recent comment timestamp descending.
-				return right.mostRecentComment.createdAt.getTime() - left.mostRecentComment.createdAt.getTime();
+				const rightTime = right.comments.length === 0 ? right.createdAt : right.mostRecentComment.createdAt;
+				const leftTime = left.comments.length === 0 ? left.createdAt : left.mostRecentComment.createdAt;
+				return rightTime.getTime() - leftTime.getTime();
 			});
 
 			return {
@@ -374,7 +395,9 @@ export class Threads extends Disposable implements IThreads {
 			})
 			.sort((left: ThreadComments, right: ThreadComments) => {
 				// Most recent comment timestamp descending.
-				return right.mostRecentComment.createdAt.getTime() - left.mostRecentComment.createdAt.getTime();
+				const rightTime = right.comments.length === 0 ? right.createdAt : right.mostRecentComment.createdAt;
+				const leftTime = left.comments.length === 0 ? left.createdAt : left.mostRecentComment.createdAt;
+				return rightTime.getTime() - leftTime.getTime();
 			});
 
 		// Dipose everything that is now unused by our collection.
@@ -613,6 +636,7 @@ export class FileComments extends Disposable implements IFileComments {
 						// we don't have lazy computation yet.
 						// .filter(thread => !thread.archived)
 						.filter(uniqueFilter(thread => thread.revision))
+						.filter(thread => thread.revision)
 						.map(thread => this.instantiationService.invokeFunction(resolveContent, this.git, documentId, thread.revision)
 							.then(content => content, err => {
 								this.outputService.getChannel(CommentsChannelId).append(err.message);
@@ -977,7 +1001,14 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 		startCharacter: number,
 		endCharacter: number,
 		rangeLength: number,
+		lines: GQL.IThreadLines,
 	}>;
+
+	/**
+	 * Whether or not the user configuration allows sharing context (the literal
+	 * code being commented on) with the remote Sourcegraph server.
+	 */
+	private shareContext: boolean;
 
 	constructor(
 		private commentsService: CodeCommentsService,
@@ -987,10 +1018,15 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 		@IInstantiationService private instantiationService: IInstantiationService,
 		@IRemoteService private remoteService: IRemoteService,
 		@IAuthService private authService: IAuthService,
+		@IConfigurationService protected configurationService: IConfigurationService,
 	) {
 		super();
 		this.displayRange = this.getNonEmptySelection(editor);
 		const model = editor.getModel();
+
+		// Configure with current configuration now, or with future configuration changes.
+		this.disposable(configurationService.onDidUpdateConfiguration(() => this.onDidUpdateConfiguration()));
+		this.onDidUpdateConfiguration();
 
 		// Save a decoration for the range so if content changes
 		// while we are waiting for promises to resolve, we will have an updated range.
@@ -1016,23 +1052,87 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 					throw new Error(localize('modelDisposedError', "Unable to create comment on editor that no longer exists."));
 				}
 				const originalModel = TextModel.createFromString(content.content);
-				const originalLines = originalModel.getLinesContent();
-				const modifiedLines = model.getLinesContent();
+				const originalLines = originalModel.getLinesContent(); // current git directory state
+				const modifiedLines = model.getLinesContent(); // current editor state
+
+				let lines: GQL.IThreadLines;
+				if (this.shareContext) {
+					// Determine context lines.
+					//
+					// Note that we capture the first character (0) of the start
+					// line up until the last character of the last line + 1. This
+					// means we capture all lines that the user selection
+					// intersects.
+					const contextLines = 3;
+					const linesBeforeRange = new Range(
+						this.displayRange.startLineNumber - contextLines,
+						0, // start character
+						this.displayRange.startLineNumber - 1,
+						model.getLineMaxColumn(this.displayRange.startLineNumber - 1), // end character / end of line
+					);
+					const linesRange = new Range(
+						this.displayRange.startLineNumber,
+						0, // start character
+						this.displayRange.endLineNumber,
+						model.getLineMaxColumn(this.displayRange.endLineNumber), // end character / end of line
+					);
+					const linesAfterRange = new Range(
+						this.displayRange.endLineNumber + 1,
+						0, // start character
+						this.displayRange.endLineNumber + contextLines,
+						model.getLineMaxColumn(this.displayRange.endLineNumber + contextLines), // end character / end of line
+					);
+
+					// For example of what these represent, consider:
+					//
+					// 	const originalUserSelection = lines.text.slice(
+					// 		lines.textSelectionRangeStart,
+					// 		lines.textSelectionRangeStart+lines.textSelectionRangeLength
+					// 	)
+					//
+					// Or consult GQL.IThreadLines documentation.
+					const textSelectionRangeStart = this.displayRange.startColumn - 1;
+					const textSelectionRangeLength = model.getValueLengthInRange(this.displayRange);
+
+					lines = {
+						__typename: 'ThreadLines', // satisfy the GQL.IThreadLines interface
+						textBefore: editor.getTextForRanges([linesBeforeRange]),
+						text: editor.getTextForRanges([linesRange]),
+						textAfter: editor.getTextForRanges([linesAfterRange]),
+						htmlBefore: this.removeOuterDiv(editor.getHTMLForRanges([linesBeforeRange])),
+						html: this.removeOuterDiv(editor.getHTMLForRanges([linesRange])),
+						htmlAfter: this.removeOuterDiv(editor.getHTMLForRanges([linesAfterRange])),
+						textSelectionRangeStart,
+						textSelectionRangeLength,
+					};
+				}
+
 				// Compute reverse diff.
 				const diff = new Diff(modifiedLines, originalLines);
 				const range = diff.transformRange(this.displayRange);
 				if (!range) {
-					return undefined;
+					// Dirty / modified / unpushed code.
+					const rangeLength = model.getValueLengthInRange(this.displayRange);
+					return {
+						dirty: true,
+						range: this.displayRange,
+						rangeLength,
+						lines
+					};
 				}
 				const rangeLength = originalModel.getValueLengthInRange(range);
-				// TODO(nick): this is where we would compute and pass through the actual text (plus some context) being commented on.
-				return { range, rangeLength };
+				return {
+					dirty: false,
+					range,
+					rangeLength,
+					lines
+				};
 			});
 
 		this.submitData = this.join([remoteURI, file, revision, codeSnippet, branch])
 			.then(([remoteURI, file, revision, codeSnippet, branch]) => {
-				if (!codeSnippet) {
-					throw new Error(localize('emptyCommentRange', "Can not comment on code that has not been pushed."));
+				if (codeSnippet.dirty) {
+					revision = ''; // empty string implies dirty / modified / unpushed code
 				}
 				return {
 					remoteURI,
@@ -1044,6 +1144,7 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 					startCharacter: codeSnippet.range.startColumn,
 					endCharacter: codeSnippet.range.endColumn,
 					rangeLength: codeSnippet.rangeLength,
+					lines: codeSnippet.lines,
 				};
 			})
 			.then(undefined, err => {
@@ -1053,6 +1154,30 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 				this.dispose();
 				throw error;
 			});
+	}
+
+	private onDidUpdateConfiguration() {
+		const config = this.configurationService.getConfiguration<IRemoteConfiguration>();
+		this.shareContext = config.remote.shareContext;
+	}
+
+	/**
+	 * removeOuterDiv removes the out <div> wrapping all of the lines.
+	 */
+	private removeOuterDiv(html: string): string {
+		const tmp = document.createElement('div');
+		tmp.innerHTML = html;
+		const divs = tmp.firstElementChild.children;
+
+		// The `html` input string has newlines after each div, which we rely
+		// on / want to retain for easy line splitting later, but
+		// divs.outerHTML doesn't keep those so add them back now.
+		var result = '';
+		for (var i = 0; i < divs.length; i++) {
+			const last = i === divs.length - 1;
+			result += divs[i].outerHTML + (last ? '' : '\n');
+		}
+		return result;
 	}
 
 	private join<T1, T2, T3, T4, T5>(promises: [PromiseLike<T1>, PromiseLike<T2>, PromiseLike<T3>, PromiseLike<T4>, PromiseLike<T5>]): TPromise<[T1, T2, T3, T4, T5]> {
@@ -1065,12 +1190,12 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 		return !!this.submittingPromise;
 	}
 
-	public submit(): TPromise<IThreadComments> {
+	public submit(allowNoComment?: boolean): TPromise<IThreadComments> {
 		if (this.submittingPromise) {
 			return this.submittingPromise;
 		}
 		const contents = this.content;
-		if (!contents.length) {
+		if (!allowNoComment && !contents.length) {
 			return TPromise.wrapError(new Error(localize('emptyCommentError', "Comment can not be empty.")));
 		}
 		const clearSubmittingPromise = () => {
@@ -1092,6 +1217,7 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 						endCharacter: $endCharacter,
 						rangeLength: $rangeLength,
 						contents: $contents,
+						lines: $lines,
 					) {
 						${threadGraphql}
 					}

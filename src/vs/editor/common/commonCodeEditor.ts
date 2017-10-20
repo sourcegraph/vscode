@@ -1010,6 +1010,20 @@ export abstract class CommonCodeEditor extends Disposable implements editorCommo
 	public getTelemetryData(): { [key: string]: any; } {
 		return null;
 	}
+
+	public getTextForRanges(ranges: Range[]): string {
+		return this.viewModel.getPlainTextToCopy(
+			ranges.map(range => this.viewModel.coordinatesConverter.convertModelRangeToViewRange(range)),
+			false
+		);
+	}
+
+	public getHTMLForRanges(ranges: Range[]): string {
+		return this.viewModel.getHTMLToCopy(
+			ranges.map(range => this.viewModel.coordinatesConverter.convertModelRangeToViewRange(range)),
+			false
+		);
+	}
 }
 
 class EditorContextKeysManager extends Disposable {

@@ -27,6 +27,7 @@ export interface IRemoteConfiguration {
 	remote?: {
 		endpoint?: string;
 		cookie?: string;
+		shareContext?: boolean;
 	};
 }
 
@@ -46,6 +47,11 @@ Registry.as<IConfigurationRegistry>(Extensions.Configuration)
 			'remote.cookie': {
 				type: 'string',
 				description: localize('remoteCookie', "The HTTP cookie value (a base64-encoded string) used to authenticate to the remote endpoint (use your sg-session cookie for the Sourcegraph web server)"),
+			},
+			'remote.shareContext': {
+				type: 'boolean',
+				description: localize('remoteShareContext', "Whether or not to share the contextual code when creating comments. This sends the selected code (plus a few lines of context) to the Sourcegraph Server specified by remote.endpoint"),
+				default: false,
 			},
 		}
 	});

@@ -1991,6 +1991,19 @@ export interface ICommonCodeEditor extends IEditor {
 	 * @internal
 	 */
 	getTelemetryData(): { [key: string]: any; };
+
+	/**
+	 * getTextForRanges returns the raw text that would be copied to the
+	 * clipboard for the given ranges.
+	 */
+	getTextForRanges(ranges: Range[]): string;
+
+	/**
+	 * getHTMLForRanges returns the raw HTML that would be copied to the
+	 * clipboard for the given ranges, e.g. if the user was to execute the
+	 * "Copy With Syntax Highlighting" command.
+	 */
+	getHTMLForRanges(ranges: Range[]): string;
 }
 
 export interface ICommonDiffEditor extends IEditor {

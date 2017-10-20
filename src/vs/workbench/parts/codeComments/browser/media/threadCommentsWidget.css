@@ -84,3 +84,9 @@
 	padding: 8px 16px;
 	margin-left: 8px
 }
+
+.thread-comments .share .monaco-button {
+	padding: 0;
+	margin: 0;
+	margin-left: 4px;
+}

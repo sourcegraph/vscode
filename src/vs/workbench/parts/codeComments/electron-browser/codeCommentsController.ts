@@ -181,6 +181,10 @@ export class CodeCommentsController extends Disposable implements IEditorContrib
 	}
 
 	public showThreadWidget(thread: IThreadComments, reveal: boolean): void {
+		if (thread.comments.length === 0) {
+			// We don't want to show thread widget for code snippets.
+			return;
+		}
 		if (!thread.displayRange) {
 			this._register(once(thread.onDidChangeDisplayRange)(() => {
 				this.showThreadWidget(thread, reveal);
@@ -432,6 +436,10 @@ export class CodeCommentsController extends Disposable implements IEditorContrib
 		const threads = this.fileComments.threads.filter(t => {
 			if (!t.displayRange) {
 				// Display range not computed yet.
+				return false;
+			}
+			if (t.comments && t.comments.length === 0) {
+				// We don't want to show thread widget for code snippets.
 				return false;
 			}
 			if (this.openThreadWidgets.get(t.id)) {
