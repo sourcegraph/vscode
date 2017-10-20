@@ -133,8 +133,8 @@ export async function getBestRepositoryWorktree(repos: Repository[], canonicalRe
 		}
 	}
 	// Attempt to create a worktree checked out to the resolved revision
-	for (const { repo, commit, worktreesP } of resolvedRepoRevsWorktrees) {
-		const worktree = await getRepositoryWorktree(repo, commit, worktreesP, true);
+	for (const { repo, commit } of resolvedRepoRevsWorktrees) {
+		const worktree = await createTempWorktree(repo, commit);
 		if (worktree) {
 			return [repo, worktree.path];
 		}
@@ -150,9 +150,8 @@ export async function getBestRepositoryWorktree(repos: Repository[], canonicalRe
  * @param rev is the head revision of the worktree.
  * 		This should match whatever is shown in the `git worktree list` command; no additional resolution is attempted.
  * @param worktrees the worktrees to search over. If not defined, we invoke repository.worktreeList().
- * @param createIfNotExist if true, creates the worktree if it doesn't exist already.
  */
-export async function getRepositoryWorktree(repository: Repository, rev: string, worktreesPromise?: Promise<Worktree[]>, createIfNotExist?: boolean): Promise<Worktree | null> {
+export async function getRepositoryWorktree(repository: Repository, rev: string, worktreesPromise?: Promise<Worktree[]>): Promise<Worktree | null> {
 	let worktrees: Worktree[];
 	if (!worktreesPromise) {
 		await repository.worktreePrune();
@@ -164,9 +163,6 @@ export async function getRepositoryWorktree(repository: Repository, rev: string,
 		if ((worktree.detached && worktree.head === rev) || worktree.branch === `refs/heads/${rev}`) {
 			return worktree;
 		}
-	}
-	if (createIfNotExist) {
-		return await createTempWorktree(repository, rev);
 	}
 	return null;
 }

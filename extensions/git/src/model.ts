@@ -287,8 +287,11 @@ export class Model {
 		}
 	}
 
-	async tryOpenRepositoryWithRemote(remote: Uri): Promise<Repository[]> {
-		const remotes = this.globalRepositories.resolveRemotes(remote.toString());
+	async tryOpenRepositoryWithRemote(remote: Uri | string): Promise<Repository[]> {
+		if (remote instanceof Uri) {
+			remote = remote.toString();
+		}
+		const remotes = this.globalRepositories.resolveRemotes(remote);
 		const repos = await Promise.all(remotes.map(async path => {
 			await this.tryOpenRepository(path, true);
 			return this.getRepository(path, true);
