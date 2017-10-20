@@ -359,6 +359,8 @@ export class Repository implements Disposable {
 	private _sourceControl: SourceControl;
 	get sourceControl(): SourceControl { return this._sourceControl; }
 
+	public readonly comparison: Comparison;
+
 	get inputBox(): SourceControlInputBox { return this._sourceControl.inputBox; }
 
 	private _mergeGroup: SourceControlResourceGroup;
@@ -459,7 +461,9 @@ export class Repository implements Disposable {
 		this.updateCommitTemplate();
 		this.status();
 
-		this.disposables.push(new Comparison(this));
+		this.comparison = new Comparison(this);
+		this.disposables.push(this.comparison);
+
 		this.disposables.push(new ReviewManager(this));
 	}
 

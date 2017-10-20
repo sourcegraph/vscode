@@ -5,7 +5,7 @@
 
 'use strict';
 
-import { Uri, commands, Disposable, window, workspace, QuickPickItem, OutputChannel, Range, WorkspaceEdit, Position, LineChange, SourceControlResourceState, TextDocumentShowOptions, ViewColumn, ProgressLocation, TextEditor } from 'vscode';
+import { Uri, commands, Disposable, window, workspace, QuickPickItem, OutputChannel, Range, WorkspaceEdit, Position, LineChange, SourceControlResourceState, TextDocumentShowOptions, ViewColumn, ProgressLocation, TextEditor, ReviewControl } from 'vscode';
 import { Ref, RefType, Git, GitErrorCodes, Branch } from './git';
 import { Repository, Resource, Status, CommitOptions, ResourceGroupType } from './repository';
 import { ComparisonResource } from './comparison';
@@ -20,6 +20,7 @@ import * as nls from 'vscode-nls';
 import { createTempWorktree } from './repository_helpers';
 import { URLSearchParams } from 'url';
 import { copy } from 'copy-paste';
+import { GitResourceResolver } from './resourceResolver';
 
 const localize = nls.loadMessageBundle();
 
@@ -173,6 +174,7 @@ export class CommandCenter {
 		private git: Git,
 		private model: Model,
 		private outputChannel: OutputChannel,
+		private resourceResolver: GitResourceResolver,
 		private telemetryReporter: TelemetryReporter
 	) {
 		this.disposables = Commands.map(({ commandId, key, method, options }) => {
@@ -1612,6 +1614,54 @@ export class CommandCenter {
 		// Copy to clipboard
 		await new Promise((resolve, reject) => copy(url, err => err ? reject(err) : resolve()));
 		window.showInformationMessage(localize('copied link', "Copied link to clipboard!"));
+	}
+
+	/**
+	 * Starts a review for the given ReviewControl by making sure the branch is checked out
+	 * (possibly in a worktree), then selecting the appropiate SCM comparison provider
+	 */
+	@command('git.review')
+	async review(reviewControl: ReviewControl): Promise<void> {
+		const repository = this.model.getRepository(reviewControl.rootUri);
+		if (!repository) {
+			throw new Error(`Expected repository ${reviewControl.rootUri} to exist`);
+		}
+		// Trigger resolve logic to make sure this revision is checked out
+		// TODO instead of using the label to store the branch name, look it up in a Map keyed by ReviewControl
+		const revision = reviewControl.label;
+		if (repository.remotes.length === 0) {
+			throw new Error(localize('no remote', "Repository does not have a remote"));
+		}
+
+		const openParams = new URLSearchParams();
+
+		const [repoStdout, baseBranch] = await Promise.all([
+			// Try to use the current branch's remote URL
+			repository.executeCommand(['ls-remote', '--get-url']), // TODO the branch upstream may not be the current branch uptream
+			// Currently we don't consider the baseRevision parameter, compare providers always use master
+			// TODO once we handle different base branches let the user pick it
+			'master'
+			// Ask for the base branch
+			// window.showQuickPick(baseBranchPicks, { placeHolder: localize('choose base branch', "Choose a base branch") })
+		]);
+
+		if (!baseBranch) {
+			return;
+		}
+
+		const repoUrl = repoStdout.trim();
+		if (repoUrl) {
+			openParams.set('repo', repoUrl);
+		} else {
+			// Fallback to the first remote
+			openParams.set('repo', repository.remotes[0].url);
+		}
+
+		openParams.set('revision', revision);
+		openParams.set('baseRevision', baseBranch);
+		openParams.set('vcs', 'git');
+		const url = 'https://about.sourcegraph.com/open#open?' + openParams;
+		await commands.executeCommand('workbench.nav.open', url);
 	}
 
 	private createCommand(id: string, key: string, method: Function, options: CommandOptions): (...args: any[]) => any {

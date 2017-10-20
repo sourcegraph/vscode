@@ -409,6 +409,10 @@ class ExtHostSourceControl implements vscode.SourceControl {
 
 	private updatedResourceGroups = new Set<ExtHostSourceControlResourceGroup>();
 
+	select() {
+		return this._proxy.$select(this.handle);
+	}
+
 	createResourceGroup(id: string, label: string): ExtHostSourceControlResourceGroup {
 		const group = new ExtHostSourceControlResourceGroup(this._proxy, this._commands, this.handle, id, label);
 

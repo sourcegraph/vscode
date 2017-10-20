@@ -71,17 +71,17 @@ class ExtHostReviewControl implements vscode.ReviewControl {
 		}
 	}
 
-	private _reviewCommands: vscode.Command[] | undefined = undefined;
+	private _reviewCommand: vscode.Command | undefined = undefined;
 
-	get reviewCommands(): vscode.Command[] | undefined {
-		return this._reviewCommands;
+	get reviewCommand(): vscode.Command | undefined {
+		return this._reviewCommand;
 	}
 
-	set reviewCommands(statusBarCommands: vscode.Command[] | undefined) {
-		this._reviewCommands = statusBarCommands;
+	set reviewCommand(reviewCommand: vscode.Command | undefined) {
+		this._reviewCommand = reviewCommand;
 
-		const internal = (statusBarCommands || []).map(c => this._commands.converter.toInternal(c));
-		this._proxy.$updateReviewControl(this.handle, { reviewCommands: internal });
+		const internal = this._commands.converter.toInternal(reviewCommand);
+		this._proxy.$updateReviewControl(this.handle, { reviewCommand: internal });
 	}
 
 	private handle: number = ExtHostReviewControl._handlePool++;

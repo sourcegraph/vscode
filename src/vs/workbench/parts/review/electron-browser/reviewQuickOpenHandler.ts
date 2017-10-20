@@ -9,15 +9,17 @@ import nls = require('vs/nls');
 import { Mode, IEntryRunContext, IAutoFocus, IQuickNavigateConfiguration, IModel } from 'vs/base/parts/quickopen/common/quickOpen';
 import { QuickOpenModel, QuickOpenEntry } from 'vs/base/parts/quickopen/browser/quickOpenModel';
 import { QuickOpenHandler } from 'vs/workbench/browser/quickopen';
-import { ISearchProfileService } from 'vs/platform/search/common/search';
 import { IReviewService, IReviewItem } from 'vs/workbench/services/review/common/review';
 import { distanceInWordsToNow } from 'date-fns';
 import { matchesFuzzy } from 'vs/base/common/filters';
+import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
+import { ICommandService } from 'vs/platform/commands/common/commands';
 
 class ReviewEntry extends QuickOpenEntry {
 
 	constructor(
-		public readonly reviewItem: IReviewItem
+		public readonly reviewItem: IReviewItem,
+		@ICommandService private commandService: ICommandService,
 	) {
 		super();
 	}
@@ -49,7 +51,14 @@ class ReviewEntry extends QuickOpenEntry {
 
 	public run(mode: Mode, context: IEntryRunContext): boolean {
 		if (mode === Mode.OPEN) {
-			this.reviewItem.focus();
+			const reviewCommand = this.reviewItem.provider.reviewCommand;
+			if (!reviewCommand) {
+				return false;
+			}
+			this.commandService.executeCommand(reviewCommand.id, ...reviewCommand.arguments)
+				.then(null, err => {
+					console.error(err);
+				});
 			return true;
 		}
 		return false;
@@ -65,13 +74,13 @@ export class ReviewQuickOpenHandler extends QuickOpenHandler {
 
 	constructor(
 		@IReviewService private reviewService: IReviewService,
-		@ISearchProfileService private searchProfileService: ISearchProfileService,
+		@IInstantiationService private instantiationService: IInstantiationService,
 	) {
 		super();
 	}
 
 	public onOpen(): void {
-		const entries = this.reviewService.reviewItems.map(reviewItem => new ReviewEntry(reviewItem));
+		const entries = this.reviewService.reviewItems.map(reviewItem => this.instantiationService.createInstance(ReviewEntry, reviewItem));
 		// Newest to the top
 		entries.sort((a, b) => {
 			const aDate = a.reviewItem.provider.date;

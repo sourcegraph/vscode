@@ -61,7 +61,7 @@ export class Comparison implements Disposable {
 
 	private didWarnAboutLimit: boolean;
 	private disposables: Disposable[] = [];
-	private sourceControl: SourceControl;
+	public readonly sourceControl: SourceControl;
 
 	// TODO(nick): figure this out intelligently?
 	private baseBranch = 'master';

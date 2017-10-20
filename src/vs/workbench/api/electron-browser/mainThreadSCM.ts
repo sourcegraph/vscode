@@ -23,6 +23,9 @@ import { rtrim } from 'vs/base/common/strings';
 import { IEditorService } from 'vs/platform/editor/common/editor';
 import { getCodeEditor, ICodeEditorService } from 'vs/editor/common/services/codeEditorService';
 import { ICommonCodeEditor } from 'vs/editor/common/editorCommon';
+import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
+import { VIEWLET_ID as SCM_VIEWLET_ID } from 'vs/workbench/parts/scm/common/scm';
+import { SCMViewlet } from 'vs/workbench/parts/scm/electron-browser/scmViewlet';
 
 class MainThreadSCMResourceCollection implements ISCMResourceCollection {
 
@@ -434,6 +437,7 @@ export class MainThreadSCM implements MainThreadSCMShape {
 
 	constructor(
 		extHostContext: IExtHostContext,
+		@IViewletService private viewletService: IViewletService,
 		@IInstantiationService private instantiationService: IInstantiationService,
 		@ISCMService private scmService: ISCMService,
 		@ICommandService private commandService: ICommandService
@@ -550,5 +554,16 @@ export class MainThreadSCM implements MainThreadSCMShape {
 		}
 
 		repository.input.value = value;
+	}
+
+	async $select(sourceControlHandle: number): Promise<void> {
+		const repository = this._repositories[sourceControlHandle];
+
+		if (!repository) {
+			return;
+		}
+
+		const scmViewlet = await this.viewletService.resolveViewlet(SCM_VIEWLET_ID) as SCMViewlet;
+		scmViewlet.select(repository);
 	}
 }

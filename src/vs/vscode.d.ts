@@ -5949,6 +5949,11 @@ declare module 'vscode' {
 		statusBarCommands?: Command[];
 
 		/**
+		 * Selects this Repository in the SCM viewlet
+		 */
+		select(): void;
+
+		/**
 		 * Create a new [resource group](#SourceControlResourceGroup).
 		 */
 		createResourceGroup(id: string, label: string): SourceControlResourceGroup;
@@ -6020,9 +6025,14 @@ declare module 'vscode' {
 		readonly icon: string;
 
 		/**
-		 * Actions that can be taken to on a review.
+		 * The URI for this review control.
 		 */
-		reviewCommands?: ReadonlyArray<Command>;
+		readonly rootUri: Uri;
+
+		/**
+		 * Command that is executed when the user wants to review this reviewable.
+		 */
+		reviewCommand?: Command;
 
 		/**
 		 * True if the review is active in the UI.

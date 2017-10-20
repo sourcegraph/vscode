@@ -174,7 +174,7 @@ class ProviderRenderer implements IRenderer<IReviewItem, RepositoryTemplateData>
 		const update = () => {
 			disposeActions();
 
-			const commands = reviewItem.provider.reviewCommands || [];
+			const commands = reviewItem.provider.reviewCommand ? [reviewItem.provider.reviewCommand] : [];
 			actions.splice(0, actions.length, ...commands.map(c => new StatusBarAction(c, this.commandService)));
 			templateData.actionBar.clear();
 			templateData.actionBar.push(actions);

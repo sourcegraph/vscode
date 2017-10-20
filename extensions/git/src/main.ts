@@ -47,8 +47,10 @@ async function init(context: ExtensionContext, disposables: Disposable[]): Promi
 	model.onDidCloseComparison(onComparison, null, disposables);
 	onComparison();
 
+	const resourceResolver = new GitResourceResolver(git, model, outputChannel);
+
 	if (!enabled) {
-		const commandCenter = new CommandCenter(git, model, outputChannel, telemetryReporter);
+		const commandCenter = new CommandCenter(git, model, outputChannel, resourceResolver, telemetryReporter);
 		disposables.push(commandCenter);
 		return { git };
 	}
@@ -61,11 +63,10 @@ async function init(context: ExtensionContext, disposables: Disposable[]): Promi
 	disposables.push(toDisposable(() => git.onOutput.removeListener('log', onOutput)));
 	disposables.push(toDisposable(() => model.onOutput.removeListener('log', onOutput)));
 
-	const commandCenter = new CommandCenter(git, model, outputChannel, telemetryReporter);
+	const commandCenter = new CommandCenter(git, model, outputChannel, resourceResolver, telemetryReporter);
 	disposables.push(
 		commandCenter,
-		new GitContentProvider(model),
-		new GitResourceResolver(git, model, commandCenter),
+		new GitContentProvider(model)
 	);
 
 	await checkGitVersion(info);

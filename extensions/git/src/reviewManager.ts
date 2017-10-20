@@ -112,6 +112,11 @@ class Review implements Disposable {
 		this.reviewControl = this.register(review.createReviewControl(id, label, description, 'octicon octicon-git-branch', Uri.file(repository.root)));
 		this.changesGroup = this.register(this.reviewControl.createResourceGroup('changes', localize('changes', "Changes")));
 		this.reviewControl.onDidChangeActive(this.onDidChangeActive, this, this.disposables);
+		this.reviewControl.reviewCommand = {
+			command: 'git.review',
+			title: localize('git.review', "Review"),
+			arguments: [this.reviewControl]
+		};
 
 		// Update committerDate and committerName
 		this.updateFeatures();

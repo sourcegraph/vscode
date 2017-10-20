@@ -114,7 +114,7 @@ class MainThreadReviewProvider implements IReviewProvider {
 		}
 	}
 
-	get reviewCommands(): Command[] | undefined { return this.features.reviewCommands; }
+	get reviewCommand(): Command | undefined { return this.features.reviewCommand; }
 	get date(): number | undefined { return this.features.date; }
 	get author(): string | undefined { return this.features.author; }
 

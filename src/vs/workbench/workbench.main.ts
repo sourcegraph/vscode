@@ -42,6 +42,7 @@ import 'vs/workbench/parts/management/electron-browser/management.contribution';
 import 'vs/workbench/parts/management/electron-browser/managementViewlet';
 
 import 'vs/workbench/browser/parts/navbar/navbar.contribution';
+import 'vs/workbench/services/nav/common/nav.contribution';
 
 import 'vs/workbench/parts/files/browser/explorerViewlet';
 import 'vs/workbench/parts/files/browser/fileActions.contribution';

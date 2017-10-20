@@ -356,7 +356,7 @@ export interface SCMProviderFeatures {
 }
 
 export interface ReviewProviderFeatures {
-	reviewCommands?: modes.Command[];
+	reviewCommand?: modes.Command;
 	date?: number;
 	author?: string;
 }
@@ -408,6 +408,8 @@ export interface MainThreadSCMShape extends MainThreadSCMGroupShape, IDisposable
 	$spliceResourceStates(sourceControlHandle: number, splices: SCMRawResourceSplices[]): void;
 
 	$setInputBoxValue(sourceControlHandle: number, value: string): void;
+
+	$select(sourceControlHandle: number): Promise<void>;
 }
 
 export interface MainThreadReviewShape extends IDisposable {

@@ -8,9 +8,8 @@
 import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
-import { workspace, window, ProgressLocation, Uri, Disposable } from 'vscode';
+import { workspace, window, ProgressLocation, Uri, Disposable, OutputChannel } from 'vscode';
 import { Git, IGitErrorData, GitError } from './git';
-import { CommandCenter } from './commands';
 import { mkdirp, replaceVariables, uniqBy } from './util';
 import { Model } from './model';
 import { Repository } from './repository';
@@ -56,7 +55,7 @@ export class GitResourceResolver {
 	constructor(
 		private git: Git,
 		private model: Model,
-		private commands: CommandCenter,
+		private outputChannel: OutputChannel,
 	) {
 		for (const scheme of GitResourceResolver.SCHEMES) {
 			this.disposables.push(workspace.registerResourceResolutionProvider(scheme, this));
@@ -268,7 +267,7 @@ export class GitResourceResolver {
 
 		// For 'git' scheme, avoid conflict with the TextDocumentContentProvider's git: URIs by only resolving URIs
 		// with a host (authority). The TextDocumentContentProvider does not construct or handle these.
-		if (!repoUri.authority) {
+		if (repoUri.scheme === 'git' && !repoUri.authority) {
 			return repoUri;
 		}
 
@@ -375,7 +374,7 @@ export class GitResourceResolver {
 				}
 				return Uri.file(repository.root);
 			} else {
-				this.commands.showOutput();
+				this.outputChannel.show();
 				// Give advice for github, since it is a common failure path
 				if (cloneUrl.toLowerCase().indexOf('github.com') >= 0) {
 					this.git.log(localize('cloneFailedGitHubAdvice', "GitHub clone failed. Adjust github.cloneProtocol user setting to use ssh or https instead.\n"));

@@ -50,6 +50,7 @@
 	"command.stashPop": "Pop Stash...",
 	"command.stashPopLatest": "Pop Latest Stash",
 	"command.shareDiff": "Share Diff",
+	"command.review": "Review",
 	"config.enabled": "Whether git is enabled",
 	"config.path": "Path to the git executable",
 	"config.autorefresh": "Whether auto refreshing is enabled",
