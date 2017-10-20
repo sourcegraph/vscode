@@ -9,7 +9,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
 import { workspace, window, ProgressLocation, Uri, Disposable } from 'vscode';
-import { Git, IGitErrorData } from './git';
+import { Git, IGitErrorData, GitError } from './git';
 import { CommandCenter } from './commands';
 import { mkdirp, replaceVariables, uniqBy } from './util';
 import { Model } from './model';
@@ -146,9 +146,7 @@ export class GitResourceResolver {
 
 	private async findRepositoriesWithRemote(remote: string): Promise<Repository[]> {
 		// First include repositories that are already open that have remote
-		const open = this.model.repositories.filter(repo => {
-			return repo.remotes.filter(r => canonicalRemote(r.url) === remote).length > 0;
-		});
+		const open = this.model.repositories.filter(repo => repo.remotes.some(r => canonicalRemote(r.url) === remote));
 
 		// Next check if we have already cloned the repo to our well-known location
 		const wellKnownPath = this.getFolderPath(remote);
@@ -162,13 +160,13 @@ export class GitResourceResolver {
 		// Now include repos we have discovered in the users homedir
 		const other = await this.model.tryOpenRepositoryWithRemote(remote);
 
-		const repos = uniqBy(open.concat(wellKnownRepos).concat(other), repo => repo.root);
+		const repos = uniqBy([...open, ...wellKnownRepos, ...other], repo => repo.root);
 		this.git.log(localize('findRepos', "Found {0} repositories for {1}: {2}", repos.length, remote, repos.map(r => r.root).join(' ')));
 		return repos;
 	}
 
-	private filterReposAtRevision(resource: GitResourceAtRevision, repos: Repository[]): Promise<Repository[]> {
-		return Promise.all(repos.map(async repo => {
+	private async filterReposAtRevision(resource: GitResourceAtRevision, repos: Repository[]): Promise<Repository[]> {
+		const reposAtRevision = await Promise.all(repos.map(async repo => {
 			// Fetch if we are a ref or are missing the hash
 			if (!isAbsoluteCommitID(resource.revision)) {
 				await repo.executeCommand(['fetch', resource.cloneURL, resource.revision]);
@@ -189,12 +187,16 @@ export class GitResourceResolver {
 				await repo.executeCommand(['merge-base', '--is-ancestor', 'HEAD', targetRef]);
 				canFF = true;
 			} catch (e) {
+				if (!(e.error && e.error instanceof GitError)) {
+					throw e;
+				}
 				this.git.log(localize('cantFF', "{0} can't be fast-forwarded to {1}@{2}", repo.root, resource.remote, resource.revision));
 				canFF = false;
 			}
 
 			return canFF ? repo : undefined;
-		})).then(repos => repos.filter(r => !!r) as Repository[]);
+		}));
+		return reposAtRevision.filter(r => !!r) as Repository[];
 	}
 
 	private async fastForward(resource: GitResourceAtRevision, repo: Repository): Promise<void> {
@@ -232,9 +234,7 @@ export class GitResourceResolver {
 
 	private async pick(resource: GitResource, repos: Repository[]): Promise<Repository> {
 		// If we have repos that are already workspace roots, only include them
-		const inWorkspace = repos.filter(repo => {
-			return (workspace.workspaceFolders || []).filter(f => f.uri.fsPath === repo.root).length > 0;
-		});
+		const inWorkspace = repos.filter(repo => (workspace.workspaceFolders || []).some(f => f.uri.fsPath === repo.root));
 		if (inWorkspace.length > 0) {
 			repos = inWorkspace;
 		}
