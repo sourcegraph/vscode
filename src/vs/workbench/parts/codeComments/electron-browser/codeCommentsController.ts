@@ -473,7 +473,7 @@ export class CodeCommentsController extends Disposable implements IEditorContrib
 		}
 		const shown = this.showThreads(state);
 		this.fileComments.refreshThreads().then(() => {
-			if (!shown) {
+			if (!shown && this.fileComments) {
 				// If we weren't able to show the threads synchronously because
 				// they weren't loaded, try again now that they are loaded.
 				this.showThreads(state);
