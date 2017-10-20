@@ -207,10 +207,10 @@ export class OrgComments extends Disposable implements IOrgComments {
 
 	private refreshDelayer = new ThrottledDelayer<void>(100);
 	public refresh(): TPromise<void> {
-		return this.refreshDelayer.trigger(() => this.refreshNow());
+		return this.refreshDelayer.trigger(() => TPromise.wrap(this.refreshNow()));
 	}
 
-	private async refreshNow(): TPromise<void> {
+	private async refreshNow(): Promise<void> {
 		if (!this.authService.currentUser || !this.authService.currentUser.currentOrgMember) {
 			return TPromise.as(undefined);
 		}
@@ -282,7 +282,7 @@ export class Threads extends Disposable implements IThreads {
 	private refreshDelayer = new ThrottledDelayer<void>(100);
 	public refresh(): TPromise<void> {
 		this.scheduleNextAutoRefresh();
-		return this.refreshDelayer.trigger(() => this.refreshNow());
+		return this.refreshDelayer.trigger(() => TPromise.wrap(this.refreshNow()));
 	}
 
 	/**
@@ -295,7 +295,7 @@ export class Threads extends Disposable implements IThreads {
 	}
 
 	private query: IThreadQueryParams;
-	private async refreshNow(): TPromise<void> {
+	private async refreshNow(): Promise<void> {
 		const repoFile = await this.getRepoFile();
 		if (!repoFile) {
 			return;
