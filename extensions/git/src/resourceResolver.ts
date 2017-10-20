@@ -23,7 +23,7 @@ const localize = nls.loadMessageBundle();
 /**
  * A GitResource represents the fields we extract from a git URI that needs resolving.
  */
-interface GitResource {
+export interface GitResource {
 	/** The cloneURL for a repository. eg https://github.com/foo/bar */
 	cloneURL: string;
 
