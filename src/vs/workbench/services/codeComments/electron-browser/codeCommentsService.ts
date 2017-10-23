@@ -1176,6 +1176,9 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 	private removeOuterDiv(html: string): string {
 		const tmp = document.createElement('div');
 		tmp.innerHTML = html;
+		if (!tmp.firstElementChild) {
+			return html;
+		}
 		const divs = tmp.firstElementChild.children;
 
 		// The `html` input string has newlines after each div, which we rely
