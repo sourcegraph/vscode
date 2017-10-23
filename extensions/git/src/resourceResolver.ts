@@ -111,7 +111,7 @@ export class GitResourceResolver {
 		if (worktree) {
 			return await this.mustOpenRepository(worktree.path);
 		}
-		const newWorktree = await createTempWorktree(repos[0], commit.hash);
+		const newWorktree = await createTempWorktree(repos[0], resource.revision);
 		return await this.mustOpenRepository(newWorktree.path);
 	}
 
