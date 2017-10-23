@@ -106,7 +106,7 @@ export class GitResourceResolver {
 
 		// TODO(keegan) ensure the commit is actually in repos[0]
 		const commit = await repos[0].getCommit(resource.revision);
-		this.git.log(localize('useWorktree', "Creating worktree since no repo could automatically be moved to {0}@{1}.", resource.remote, resource.revision));
+		this.git.log(localize('useWorktree', "Creating worktree since no repo could automatically be moved to {0}@{1}.\n", resource.remote, resource.revision));
 		const worktree = await getRepositoryWorktree(repos[0], commit.hash);
 		if (worktree) {
 			return await this.mustOpenRepository(worktree.path);
@@ -160,7 +160,7 @@ export class GitResourceResolver {
 		const other = await this.model.tryOpenRepositoryWithRemote(remote);
 
 		const repos = uniqBy([...open, ...wellKnownRepos, ...other], repo => repo.root);
-		this.git.log(localize('findRepos', "Found {0} repositories for {1}: {2}", repos.length, remote, repos.map(r => r.root).join(' ')));
+		this.git.log(localize('findRepos', "Found {0} repositories for {1}: {2}\n", repos.length, remote, repos.map(r => r.root).join(' ')));
 		return repos;
 	}
 
@@ -177,7 +177,7 @@ export class GitResourceResolver {
 			} else if (!await this.hasCommit(repo, resource.revision)) {
 				await repo.fetch({ all: true });
 				if (!await this.hasCommit(repo, resource.revision)) {
-					this.git.log(localize('missingHash', "{0} does not have {1}", repo.root, resource.revision));
+					this.git.log(localize('missingHash', "{0} does not have {1}\n", repo.root, resource.revision));
 					return undefined;
 				}
 			}
@@ -196,7 +196,7 @@ export class GitResourceResolver {
 				if (!e || !e.error || e.error.exitCode !== 1) {
 					throw e;
 				}
-				this.git.log(localize('cantFF', "{0} can't be fast-forwarded to {1}@{2}", repo.root, resource.remote, resource.revision));
+				this.git.log(localize('cantFF', "{0} can't be fast-forwarded to {1}@{2}\n", repo.root, resource.remote, resource.revision));
 				canFF = false;
 			}
 
