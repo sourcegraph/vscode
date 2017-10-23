@@ -90,6 +90,9 @@ startCharacter
 endCharacter
 createdAt
 archivedAt
+lines {
+	text
+}
 repo {
 	remoteUri
 }
@@ -456,6 +459,7 @@ function gqlCommentToMemento(comment: GQL.IComment): IComment {
 
 function gqlThreadToMemento(thread: GQL.IThread): IThreadCommentsMemento {
 	const comments = thread.comments.map(gqlCommentToMemento);
+	const rangeContent = thread.lines && thread.lines.text.substr(thread.lines.textSelectionRangeStart, thread.lines.textSelectionRangeLength);
 	return {
 		id: thread.id,
 		title: thread.title,
@@ -469,6 +473,7 @@ function gqlThreadToMemento(thread: GQL.IThread): IThreadCommentsMemento {
 		repo: thread.repo.remoteUri,
 		displayRange: false,
 		draftReply: undefined,
+		rangeContent,
 	};
 }
 
@@ -660,6 +665,7 @@ export class FileComments extends Disposable implements IFileComments {
 					return {
 						revision: thread.revision,
 						range: thread.range,
+						rangeContent: thread.rangeContent,
 					};
 				});
 				const modifiedLines = this.modelWatcher.model.getLinesContent();
@@ -758,6 +764,7 @@ export interface IThreadCommentsMemento {
 	readonly displayRange: Range | undefined | false;
 
 	readonly repo: string;
+	readonly rangeContent: string | undefined;
 }
 
 export class ThreadComments extends Disposable implements IThreadComments {
@@ -769,6 +776,7 @@ export class ThreadComments extends Disposable implements IThreadComments {
 	public readonly range: Range;
 	public readonly createdAt: Date;
 	public readonly repo: string;
+	public readonly rangeContent: string | undefined;
 
 	private _pendingOperation = false;
 	private didChangePendingOperation = this.disposable(new Emitter<void>());
@@ -851,6 +859,7 @@ export class ThreadComments extends Disposable implements IThreadComments {
 		this.archived = thread.archived;
 		this._comments = thread.comments;
 		this.repo = thread.repo;
+		this.rangeContent = thread.rangeContent;
 		commentsService.onDidUpdateThread(this.onDidUpdateThread, this, this.disposables);
 	}
 

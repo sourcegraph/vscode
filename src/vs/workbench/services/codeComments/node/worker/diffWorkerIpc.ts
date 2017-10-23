@@ -12,14 +12,15 @@ import { IRange } from 'vs/editor/common/core/range';
 
 export interface IDiffWorker {
 	/**
-	 * Transforms a set of ranges between two versions of content.
+	 * Transforms a set of ranges between the current content of a file
+	 * and one or more previous revisions of the same file.
 	 */
 	diff(args: IDiffArgs): TPromise<IDiffResult>;
 }
 
 export interface IDiffArgs {
 	/**
-	 * Past revisions of the file.
+	 * The content of past revisions of the file.
 	 */
 	revLines: IRevLines[];
 
@@ -39,7 +40,14 @@ export interface IDiffArgs {
  * The lines of a file at a revision.
  */
 export interface IRevLines {
+	/**
+	 * The revision of the content in lines.
+	 */
 	revision: string;
+
+	/**
+	 * The content lines of the file at revision.
+	 */
 	lines: string[];
 }
 
@@ -47,8 +55,20 @@ export interface IRevLines {
  * A range at a revision.
  */
 export interface IRevRange {
+	/**
+	 * The revision of content range is associated with.
+	 */
 	revision: string;
+
+	/**
+	 * The range in the content at revision.
+	 */
 	range: IRange;
+
+	/**
+	 * The actual content contained in the range at the revision.
+	 */
+	rangeContent: string | undefined;
 }
 
 /**
