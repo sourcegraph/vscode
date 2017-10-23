@@ -1628,7 +1628,8 @@ export class CommandCenter {
 		}
 		// Trigger resolve logic to make sure this revision is checked out
 		// TODO instead of using the label and description to store the remote branch name, look it up in a Map keyed by ReviewControl
-		const revision = reviewControl.description.split('/').pop()!.trim() + '/' + reviewControl.label;
+		const remoteName = reviewControl.description.split('/').pop()!.trim();
+		const revision = reviewControl.label;
 		if (repository.remotes.length === 0) {
 			throw new Error(localize('no remote', "Repository does not have a remote"));
 		}
@@ -1637,7 +1638,7 @@ export class CommandCenter {
 
 		const [repoStdout, baseBranch] = await Promise.all([
 			// Try to use the current branch's remote URL
-			repository.executeCommand(['ls-remote', '--get-url']), // TODO the branch upstream may not be the current branch uptream
+			repository.executeCommand(['ls-remote', '--get-url', remoteName]), // TODO the branch upstream may not be the current branch uptream
 			// Currently we don't consider the baseRevision parameter, compare providers always use master
 			// TODO once we handle different base branches let the user pick it
 			'master'

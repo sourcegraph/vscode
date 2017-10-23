@@ -9,7 +9,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
 import { workspace, window, ProgressLocation, Uri, Disposable, OutputChannel } from 'vscode';
-import { Git, IGitErrorData } from './git';
+import { Git, IGitErrorData, Commit } from './git';
 import { mkdirp, replaceVariables, uniqBy } from './util';
 import { Model } from './model';
 import { Repository } from './repository';
@@ -105,8 +105,8 @@ export class GitResourceResolver {
 		}
 
 		// TODO(keegan) ensure the commit is actually in repos[0]
-		const commit = await repos[0].getCommit(resource.revision);
 		this.git.log(localize('useWorktree', "Creating worktree since no repo could automatically be moved to {0}@{1}.\n", resource.remote, resource.revision));
+		const commit = await this.updateLocalBranch(repos[0], resource.revision);
 		const worktree = await getRepositoryWorktree(repos[0], commit.hash);
 		if (worktree) {
 			return await this.mustOpenRepository(worktree.path);
@@ -254,6 +254,25 @@ export class GitResourceResolver {
 		}
 		// We allow modifying a detached head
 		return true;
+	}
+
+	/**
+	 * updateLocalBranch will create branch revision if it does not exist to
+	 * point to FETCH_HEAD. The resolved commit is returned.
+	 */
+	private async updateLocalBranch(repo: Repository, revision: string): Promise<Commit> {
+		try {
+			return await repo.getCommit(revision);
+		} catch (e) {
+			// TODO(keegan) only ignore missing commit error
+			if (isAbsoluteCommitID(revision)) {
+				throw e;
+			}
+			// TODO(keegan) we don't always run fetch, so this is flawed!
+			const commit = await repo.getCommit('FETCH_HEAD');
+			await repo.executeCommand(['branch', revision, commit.hash]);
+			return commit;
+		}
 	}
 
 	private async pick(resource: GitResource, repos: Repository[]): Promise<Repository> {
