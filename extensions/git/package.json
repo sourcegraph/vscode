@@ -308,11 +308,6 @@
         "command": "git.shareDiff",
         "title": "%command.shareDiff%",
         "category": "Git"
-      },
-      {
-        "command": "git.review",
-        "title": "%command.review%",
-        "category": "Git"
       }
     ],
     "menus": {
