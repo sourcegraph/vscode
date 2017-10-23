@@ -184,7 +184,7 @@ export class CodeCommentsService implements ICodeCommentsService {
  */
 export interface IThreadQueryParams {
 	readonly orgId: number;
-	readonly repo: string | undefined;
+	readonly remoteURI: string | undefined;
 	readonly branch: string | undefined;
 	readonly file: string | undefined;
 }
@@ -330,7 +330,7 @@ export class Threads extends Disposable implements IThreads {
 		}
 		this.query = {
 			orgId: this.authService.currentUser.currentOrgMember.org.id,
-			repo,
+			remoteURI: repo,
 			branch: this.filter.branch,
 			file,
 		};
@@ -423,7 +423,7 @@ export class Threads extends Disposable implements IThreads {
 			// We are not initialized yet.
 			return false;
 		}
-		if (!this.matchesFilterValue(this.query.repo, thread.repo)) {
+		if (!this.matchesFilterValue(this.query.remoteURI, thread.repo)) {
 			return false;
 		}
 		if (!this.matchesFilterValue(this.query.branch, thread.branch)) {
