@@ -73,7 +73,7 @@ export class Gitlab {
 	 */
 	public async repository(owner: string, name: string): Promise<vscode.CatalogFolder> {
 		if (!this.validateConfig()) {
-			return Promise.reject(new Error(localize("invalidConfig", "Invalid configuration values set for GitLab.")));
+			throw new Error(localize("invalidConfig", "Invalid configuration values set for GitLab."));
 		}
 
 		const encodedName = encodeURIComponent(`${owner}/${name}`);
@@ -245,23 +245,11 @@ export class Gitlab {
 	}
 
 	private getToken(): string {
-		const value = vscode.workspace.getConfiguration('gitlab').get<string>('token');
-
-		if (!value) {
-			return '';
-		}
-
-		return value;
+		return vscode.workspace.getConfiguration('gitlab').get<string>('token') || '';
 	}
 
 	private getHost(): string {
-		const value = vscode.workspace.getConfiguration('gitlab').get<string>('host');
-
-		if (!value) {
-			return '';
-		}
-
-		return value;
+		return vscode.workspace.getConfiguration('gitlab').get<string>('host') || '';
 	}
 
 	private clearCache() {
@@ -270,15 +258,7 @@ export class Gitlab {
 	}
 
 	private cacheStillValid(): boolean {
-		if (this.getToken() !== this.tokenUsedForCache) {
-			return false;
-		}
-
-		if (this.getHost() !== this.hostUsedForCache) {
-			return false;
-		}
-
-		return true;
+		return this.getToken() === this.tokenUsedForCache && this.getHost() === this.hostUsedForCache;
 	}
 
 	private async doGitlabRequest(host: string, token: string, endpoint: string): Promise<any> {
