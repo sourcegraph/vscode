@@ -54,7 +54,8 @@ class DecorationRule {
 		createCSSRule(`.focused .selected .${this.labelClassName}`, `color: inherit;`, element);
 		// letter
 		if (letter) {
-			createCSSRule(`.${this.badgeClassName}::before`, `content: "${letter}"`, element);
+			createCSSRule(`.${this.badgeClassName}::after`, `content: "${letter}"; color: ${theme.getColor(color) || 'inherit'};`, element);
+			createCSSRule(`.focused .selected .${this.badgeClassName}::after`, `color: inherit;`, element);
 		}
 	}
 
@@ -62,14 +63,12 @@ class DecorationRule {
 		// label
 		const { color } = data[0];
 		createCSSRule(`.${this.labelClassName}`, `color: ${theme.getColor(color) || 'inherit'};`, element);
-		createCSSRule(`.focused .selected .${this.labelClassName}`, `color: inherit; opacity: inherit;`, element);
+		createCSSRule(`.focused .selected .${this.labelClassName}`, `color: inherit;`, element);
 
 		// badge
-		let letters: string[] = [];
-		for (const deco of data) {
-			letters.push(deco.letter);
-		}
-		createCSSRule(`.${this.badgeClassName}::before`, `content: "${letters.join(', ')}"`, element);
+		let content = data.map(d => d.letter).join(', ');
+		createCSSRule(`.${this.badgeClassName}::after`, `content: "${content}"; color: ${theme.getColor(color) || 'inherit'};`, element);
+		createCSSRule(`.focused .selected .${this.badgeClassName}::after`, `color: inherit;`, element);
 	}
 
 	removeCSSRules(element: HTMLStyleElement): void {
@@ -151,31 +150,22 @@ class DecorationStyles {
 	cleanUp(iter: IIterator<DecorationProviderWrapper>): void {
 		// remove every rule for which no more
 		// decoration (data) is kept. this isn't cheap
-		let usedDecorations = new Set<IDecorationData>();
-		for (let e = iter.next(); !e.done; e = iter.next()) {
-			e.value.data.forEach(value => {
-				if (value instanceof ResourceDecoration) {
-					if (Array.isArray(value._data)) {
-						value._data.forEach(data => usedDecorations.add(data));
-					} else {
-						usedDecorations.add(value._data);
-					}
-				}
-			});
-		}
-		this._decorationRules.forEach((value, index) => {
-			const { data } = value;
-			let remove: boolean;
-			if (Array.isArray(data)) {
-				remove = data.every(data => !usedDecorations.has(data));
-			} else if (!usedDecorations.has(data)) {
-				remove = true;
-			}
-			if (remove) {
-				value.removeCSSRules(this._styleElement);
-				this._decorationRules.delete(index);
-			}
-		});
+
+		// let usedDecorations = new Set<string>();
+		// for (let e = iter.next(); !e.done; e = iter.next()) {
+		// 	e.value.data.forEach(value => {
+		// 		if (value instanceof ResourceDecoration) {
+		// 			const key = DecorationRule.keyOf(value._data);
+		// 			usedDecorations.add(key);
+		// 		}
+		// 	});
+		// }
+		// this._decorationRules.forEach((value, index) => {
+		// 	if (!usedDecorations.has(index)) {
+		// 		value.removeCSSRules(this._styleElement);
+		// 		this._decorationRules.delete(index);
+		// 	}
+		// });
 	}
 }
 
@@ -383,6 +373,7 @@ export class FileDecorationsService implements IDecorationsService {
 		} else if (onlyChildren) {
 			let result = this._decorationStyles.asDecoration(data.sort((a, b) => b.weight - a.weight)[0]);
 			result.badgeClassName = '';
+			result.title = '';
 			return result;
 		} else if (data.length === 1) {
 			return this._decorationStyles.asDecoration(data[0]);
