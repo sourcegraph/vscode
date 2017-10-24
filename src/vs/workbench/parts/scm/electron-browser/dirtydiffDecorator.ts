@@ -11,7 +11,7 @@ import 'vs/css!./media/dirtydiffDecorator';
 import { ThrottledDelayer, always } from 'vs/base/common/async';
 import { IDisposable, dispose, toDisposable, empty as EmptyDisposable, combinedDisposable } from 'vs/base/common/lifecycle';
 import { TPromise } from 'vs/base/common/winjs.base';
-import Event, { Emitter, any as anyEvent, filterEvent, once } from 'vs/base/common/event';
+import Event, { Emitter, anyEvent as anyEvent, filterEvent, once } from 'vs/base/common/event';
 import * as ext from 'vs/workbench/common/contributions';
 import { CodeEditor } from 'vs/editor/browser/codeEditor';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
@@ -50,6 +50,7 @@ import { MenuId, IMenuService, IMenu, MenuItemAction } from 'vs/platform/actions
 import { fillInActions, MenuItemActionItem } from 'vs/platform/actions/browser/menuItemActionItem';
 import { IChange, ICommonCodeEditor, IEditorModel, ScrollType, IEditorContribution, OverviewRulerLane, IModel } from 'vs/editor/common/editorCommon';
 import { sortedDiff, Splice } from 'vs/base/common/arrays';
+import { IMarginData } from 'vs/editor/browser/controller/mouseTarget';
 
 // TODO@Joao
 // Need to subclass MenuItemActionItem in order to respect
@@ -315,6 +316,10 @@ class DirtyDiffWidget extends PeekViewWidget {
 			secondaryHeadingColor: theme.getColor(peekViewTitleInfoForeground)
 		});
 	}
+
+	protected revealLine(lineNumber: number) {
+		this.editor.revealLineInCenterIfOutsideViewport(lineNumber, ScrollType.Smooth);
+	}
 }
 
 @editorAction
@@ -527,14 +532,6 @@ export class DirtyDiffController implements IEditorContribution {
 	private onEditorMouseDown(e: IEditorMouseEvent): void {
 		this.mouseDownInfo = null;
 
-		// if (!this.model) {
-		// 	return;
-		// }
-
-		// if (this.model.changes.length === 0) {
-		// 	return;
-		// }
-
 		const range = e.target.range;
 
 		if (!range) {
@@ -546,6 +543,14 @@ export class DirtyDiffController implements IEditorContribution {
 		}
 
 		if (e.target.type !== MouseTargetType.GUTTER_LINE_DECORATIONS) {
+			return;
+		}
+
+		const data = e.target.detail as IMarginData;
+		const gutterOffsetX = data.offsetX - data.glyphMarginWidth - data.lineNumbersWidth;
+
+		// TODO@joao TODO@alex TODO@martin this is such that we don't collide with folding
+		if (gutterOffsetX > 12) {
 			return;
 		}
 

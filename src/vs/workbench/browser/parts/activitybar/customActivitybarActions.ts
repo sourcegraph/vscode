@@ -5,10 +5,9 @@
 
 import nls = require('vs/nls');
 import { ViewletActivityAction } from 'vs/workbench/browser/parts/activitybar/activitybarActions';
-import { ActivityActionItem } from 'vs/workbench/browser/parts/compositebar/compositeBarActions';
+import { ActivityActionItem, ICompositeBarColors } from 'vs/workbench/browser/parts/compositebar/compositeBarActions';
 import { IActivity, IGlobalActivity } from 'vs/workbench/common/activity';
 import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
-import { IActivityBarService } from 'vs/workbench/services/activity/common/activityBarService';
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
 import { GlobalViewletDescriptor } from 'vs/workbench/browser/viewlet';
@@ -29,14 +28,14 @@ export class GlobalViewletActionItem extends ActivityActionItem {
 
 	constructor(
 		private action: ViewletActivityAction,
+		colors: ICompositeBarColors,
 		@IContextMenuService private contextMenuService: IContextMenuService,
-		@IActivityBarService private activityBarService: IActivityBarService,
 		@IKeybindingService private keybindingService: IKeybindingService,
 		@IViewletService private viewletService: IViewletService,
 		@IInstantiationService private instantiationService: IInstantiationService,
 		@IThemeService themeService: IThemeService
 	) {
-		super(action, { draggable: false }, themeService);
+		super(action, { draggable: false, colors }, themeService);
 		this.cssClass = action.class;
 		this.viewletService.onDidViewletClose((e) => {
 			this.action.checked = false;

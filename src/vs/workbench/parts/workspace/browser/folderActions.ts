@@ -430,11 +430,12 @@ export class AddLocalWorkspaceFolderAction extends BaseWorkspacesAction {
 		@IWindowService windowService: IWindowService,
 		@IWorkspaceContextService contextService: IWorkspaceContextService,
 		@IEnvironmentService environmentService: IEnvironmentService,
+		@IHistoryService historyService: IHistoryService,
 		@IInstantiationService private instantiationService: IInstantiationService,
 		@IWorkspaceEditingService private workspaceEditingService: IWorkspaceEditingService,
 		@IConfigurationService private configurationService: IConfigurationService,
 	) {
-		super(id, label, windowService, environmentService, contextService);
+		super(id, label, windowService, environmentService, contextService, historyService);
 		this.class = 'add-local-folder';
 		this.enabled = true;
 		onSearchChange(this.onSearchChange, this, this.disposables);
@@ -506,6 +507,7 @@ export class ClearWorkspaceViewletInputAction extends Action {
 }
 
 import { extensionButtonProminentBackground, extensionButtonProminentForeground, extensionButtonProminentHoverBackground } from 'vs/workbench/parts/extensions/browser/extensionsActions';
+import { IHistoryService } from 'vs/workbench/services/history/common/history';
 
 export const folderLabelBackground = registerColor('folderLabel.background', {
 	dark: null,

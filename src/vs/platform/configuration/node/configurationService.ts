@@ -25,8 +25,8 @@ export class ConfigurationService extends Disposable implements IConfigurationSe
 	private userConfigModelWatcher: ConfigWatcher<ConfigurationModel>;
 	private organizationConfigModelWatcher: ConfigWatcher<ConfigurationModel>;
 
-	private _onDidUpdateConfiguration: Emitter<IConfigurationChangeEvent> = this._register(new Emitter<IConfigurationChangeEvent>());
-	readonly onDidUpdateConfiguration: Event<IConfigurationChangeEvent> = this._onDidUpdateConfiguration.event;
+	private _onDidChangeConfiguration: Emitter<IConfigurationChangeEvent> = this._register(new Emitter<IConfigurationChangeEvent>());
+	readonly onDidChangeConfiguration: Event<IConfigurationChangeEvent> = this._onDidChangeConfiguration.event;
 
 	constructor(
 		@IEnvironmentService environmentService: IEnvironmentService
@@ -74,12 +74,12 @@ export class ConfigurationService extends Disposable implements IConfigurationSe
 	getConfiguration<T>(section: string, overrides: IConfigurationOverrides): T
 	getConfiguration(arg1?: any, arg2?: any): any {
 		const section = typeof arg1 === 'string' ? arg1 : void 0;
-		const overrides = isConfigurationOverrides(arg1) ? arg1 : isConfigurationOverrides(arg2) ? arg2 : void 0;
-		return this.configuration.getSection(section, overrides);
+		const overrides = isConfigurationOverrides(arg1) ? arg1 : isConfigurationOverrides(arg2) ? arg2 : {};
+		return this.configuration.getSection(section, overrides, null);
 	}
 
-	getValue(key: string, overrides: IConfigurationOverrides): any {
-		return this.configuration.getValue(key, overrides);
+	getValue(key: string, overrides: IConfigurationOverrides = {}): any {
+		return this.configuration.getValue(key, overrides, null);
 	}
 
 	updateValue(key: string, value: any): TPromise<void>
@@ -98,7 +98,7 @@ export class ConfigurationService extends Disposable implements IConfigurationSe
 		workspaceFolder: T
 		value: T
 	} {
-		return this.configuration.lookup<T>(key);
+		return this.configuration.lookup<T>(key, {}, null);
 	}
 
 	keys(): {
@@ -108,7 +108,7 @@ export class ConfigurationService extends Disposable implements IConfigurationSe
 		workspace: string[];
 		workspaceFolder: string[];
 	} {
-		return this.configuration.keys();
+		return this.configuration.keys(null);
 	}
 
 	reloadConfiguration(folder?: IWorkspaceFolder): TPromise<void> {
@@ -131,11 +131,11 @@ export class ConfigurationService extends Disposable implements IConfigurationSe
 			const oldConfiguartion = this._configuration;
 			this.reset();
 
-			changedKeys = changedKeys.filter(key => !equals(oldConfiguartion.lookup(key).user, this._configuration.lookup(key).user));
+			changedKeys = changedKeys.filter(key => !equals(oldConfiguartion.lookup(key, {}, null).user, this._configuration.lookup(key, {}, null).user));
 			if (changedKeys.length) {
 				this.trigger(changedKeys, ConfigurationTarget.USER);
 			}
-			changedKeysOrg = changedKeysOrg.filter(key => !equals(oldConfiguartion.lookup(key).organization, this._configuration.lookup(key).organization));
+			changedKeysOrg = changedKeysOrg.filter(key => !equals(oldConfiguartion.lookup(key, {}, null).organization, this._configuration.lookup(key, {}, null).organization));
 			if (changedKeysOrg.length) {
 				this.trigger(changedKeysOrg, ConfigurationTarget.ORGANIZATION);
 			}
@@ -155,7 +155,7 @@ export class ConfigurationService extends Disposable implements IConfigurationSe
 	}
 
 	private trigger(keys: string[], source: ConfigurationTarget): void {
-		this._onDidUpdateConfiguration.fire(new ConfigurationChangeEvent().change(keys).telemetryData(source, this.getTargetConfiguration(source)));
+		this._onDidChangeConfiguration.fire(new ConfigurationChangeEvent().change(keys).telemetryData(source, this.getTargetConfiguration(source)));
 	}
 
 	private getTargetConfiguration(target: ConfigurationTarget): any {

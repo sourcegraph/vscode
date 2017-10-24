@@ -131,6 +131,8 @@ export class EnvironmentService implements IEnvironmentService {
 	@memoize
 	get nodeCachedDataDir(): string { return this.isBuilt ? path.join(this.userDataPath, 'CachedData', product.commit || new Array(41).join('0')) : undefined; }
 
+	get disableUpdates(): boolean { return !!this._args['disable-updates']; }
+
 	@memoize
 	get sourcegraphContext(): JSContext {
 		return this._args['sourcegraphContext'] || {};

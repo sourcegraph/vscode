@@ -6,7 +6,7 @@
 'use strict';
 import URI from 'vs/base/common/uri';
 import { TPromise } from 'vs/base/common/winjs.base';
-import Event, { Emitter, any } from 'vs/base/common/event';
+import Event, { Emitter, anyEvent } from 'vs/base/common/event';
 import { IDisposable, combinedDisposable, empty as EmptyDisposable } from 'vs/base/common/lifecycle';
 import * as arrays from 'vs/base/common/arrays';
 import { TernarySearchTree } from 'vs/base/common/map';
@@ -198,6 +198,6 @@ export class CombinedSCMResourceCollection implements ISCMResourceCollection {
 		this._collections.push(other);
 
 		this.resources.push(...other.resources);
-		this._onDidSplice = any(...this._collections.map(collection => collection.onDidSplice));
+		this._onDidSplice = anyEvent(...this._collections.map(collection => collection.onDidSplice));
 	}
 }

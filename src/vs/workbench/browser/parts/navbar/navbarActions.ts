@@ -11,7 +11,6 @@ import { TPromise } from 'vs/base/common/winjs.base';
 import { $ } from 'vs/base/browser/builder';
 import { Action } from 'vs/base/common/actions';
 import { ActionItem, Separator } from 'vs/base/browser/ui/actionbar/actionbar';
-import { IActivityBarService } from 'vs/workbench/services/activity/common/activityBarService';
 import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
@@ -121,7 +120,6 @@ export class LocationHistoryActionItem extends ActionItem {
 	constructor(
 		private action: NavigateBackwardsAction | NavigateForwardAction,
 		@IContextMenuService private contextMenuService: IContextMenuService,
-		@IActivityBarService private activityBarService: IActivityBarService,
 		@IHistoryService private historyService: IHistoryService,
 		@IKeybindingService private keybindingService: IKeybindingService,
 		@IWorkbenchEditorService private editorService: IWorkbenchEditorService,

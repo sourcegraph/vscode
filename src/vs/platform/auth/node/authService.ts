@@ -87,7 +87,7 @@ export class AuthService extends Disposable implements IAuthService {
 		}
 
 		// Refresh when config changes (auth token may have changed).
-		this._register(this.configurationService.onDidUpdateConfiguration(() => this.refresh()));
+		this._register(this.configurationService.onDidChangeConfiguration(() => this.refresh()));
 
 		// Refresh on window focus to get the latest user data (including configuration).
 		this._register(this.windowsService.onWindowFocus(() => this.refresh()));

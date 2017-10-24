@@ -8,7 +8,7 @@
 import { localize } from 'vs/nls';
 import { IWorkbenchContribution } from 'vs/workbench/common/contributions';
 import { IDisposable, dispose, empty as EmptyDisposable } from 'vs/base/common/lifecycle';
-import { IActivityBarService, NumberBadge } from 'vs/workbench/services/activity/common/activityBarService';
+import { IActivityService, NumberBadge } from 'vs/workbench/services/activity/common/activity';
 import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
 import { VIEWLET_ID } from 'vs/workbench/parts/management/common/management';
 import { IStorageService } from 'vs/platform/storage/common/storage';
@@ -24,7 +24,7 @@ export class ManagementUpdater implements IWorkbenchContribution {
 	private disposables: IDisposable[] = [];
 
 	constructor(
-		@IActivityBarService private activityBarService: IActivityBarService,
+		@IActivityService private activityService: IActivityService,
 		@IViewletService private viewletService: IViewletService,
 		@IStorageService private storageService: IStorageService,
 	) {
@@ -49,7 +49,7 @@ export class ManagementUpdater implements IWorkbenchContribution {
 	private render(): void {
 		this.badgeDisposable.dispose();
 		if (!this.getHasToggledCodeViewlet()) {
-			this.badgeDisposable = this.activityBarService.showActivity(VIEWLET_ID, new NumberBadge(1, () => localize('connectCodeHost', "Connect code host")), 'management-viewlet-label');
+			this.badgeDisposable = this.activityService.showActivity(VIEWLET_ID, new NumberBadge(1, () => localize('connectCodeHost', "Connect code host")), 'management-viewlet-label');
 		}
 	}
 

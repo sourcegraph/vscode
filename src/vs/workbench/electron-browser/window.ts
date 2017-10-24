@@ -48,7 +48,7 @@ import { fillInActions } from 'vs/platform/actions/browser/menuItemActionItem';
 import { RunOnceScheduler } from 'vs/base/common/async';
 import { IDisposable, dispose } from 'vs/base/common/lifecycle';
 import { INavService } from 'vs/workbench/services/nav/common/nav';
-import { ConfigurationTarget } from 'vs/platform/configuration/common/configuration';
+import { ConfigurationTarget, IConfigurationChangeEvent } from 'vs/platform/configuration/common/configuration';
 
 const TextInputActions: IAction[] = [
 	new Action('undo', nls.localize('undo', "Undo"), null, true, () => document.execCommand('undo') && TPromise.as(true)),
@@ -257,7 +257,7 @@ export class ElectronWindow extends Themable {
 		});
 
 		// Configuration changes
-		this.toUnbind.push(this.configurationService.onDidUpdateConfiguration(e => this.onDidUpdateConfiguration(e)));
+		this.toUnbind.push(this.configurationService.onDidChangeConfiguration(e => this.onDidUpdateConfiguration(e)));
 
 		// Context menu support in input/textarea
 		window.document.addEventListener('contextmenu', e => this.onContextMenu(e));
@@ -278,7 +278,11 @@ export class ElectronWindow extends Themable {
 		}
 	}
 
-	private onDidUpdateConfiguration(e): void {
+	private onDidUpdateConfiguration(event: IConfigurationChangeEvent): void {
+		if (!event.affectsConfiguration('window.zoomLevel')) {
+			return;
+		}
+
 		const windowConfig: IWindowsConfiguration = this.configurationService.getConfiguration<IWindowsConfiguration>();
 
 		let newZoomLevel = 0;
@@ -417,7 +421,7 @@ export class ElectronWindow extends Themable {
 
 		// Workspace: just add to workspace config
 		if (this.contextService.getWorkbenchState() === WorkbenchState.WORKSPACE) {
-			this.workspaceEditingService.addFolders(foldersToAdd).done(null, errors.onUnexpectedError);
+			this.contextService.addFolders(foldersToAdd).done(null, errors.onUnexpectedError);
 		}
 
 		// Single folder or no workspace: create workspace and open

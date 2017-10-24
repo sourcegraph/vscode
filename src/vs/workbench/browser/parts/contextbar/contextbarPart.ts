@@ -67,7 +67,7 @@ export class ContextbarPart extends Part {
 				this.activeEditorData.dispose();
 			}
 		}));
-		this._register(this.configurationService.onDidUpdateConfiguration(() => this.onConfigurationChanged()));
+		this._register(this.configurationService.onDidChangeConfiguration(() => this.onConfigurationChanged()));
 		this.onConfigurationChanged();
 	}
 

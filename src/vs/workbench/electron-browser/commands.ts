@@ -23,6 +23,7 @@ import { IEditorOptions, Position as EditorPosition } from 'vs/platform/editor/c
 import { IWorkspaceEditingService } from 'vs/workbench/services/workspace/common/workspaceEditing';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { IRemoteService, requestGraphQL } from 'vs/platform/remote/node/remote';
+import { openFolderCommand, openFileInNewWindowCommand, openFileFolderInNewWindowCommand, openFolderInNewWindowCommand, openWorkspaceInNewWindowCommand } from 'vs/workbench/browser/actions/workspaceActions';
 
 // --- List Commands
 
@@ -467,4 +468,11 @@ export function registerCommands(): void {
 			},
 		).then(data => data.dependents);
 	});
+
+	CommandsRegistry.registerCommand('_files.pickFolderAndOpen', openFolderCommand);
+
+	CommandsRegistry.registerCommand('workbench.action.files.openFileInNewWindow', openFileInNewWindowCommand);
+	CommandsRegistry.registerCommand('workbench.action.files.openFolderInNewWindow', openFolderInNewWindowCommand);
+	CommandsRegistry.registerCommand('workbench.action.files.openFileFolderInNewWindow', openFileFolderInNewWindowCommand);
+	CommandsRegistry.registerCommand('workbench.action.openWorkspaceInNewWindow', openWorkspaceInNewWindowCommand);
 }

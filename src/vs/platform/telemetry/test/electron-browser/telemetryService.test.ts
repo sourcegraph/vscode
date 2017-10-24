@@ -706,7 +706,7 @@ suite('TelemetryService', () => {
 					};
 				},
 				keys() { return { default: [], organization: [], user: [], workspace: [], workspaceFolder: [] }; },
-				onDidUpdateConfiguration: emitter.event,
+				onDidChangeConfiguration: emitter.event,
 				reloadConfiguration() { return null; },
 				getConfigurationData() { return null; }
 			});

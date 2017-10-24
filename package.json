@@ -1,7 +1,7 @@
 {
   "name": "src-oss-dev",
   "version": "1.18.0",
-  "electronVersion": "1.7.7",
+  "electronVersion": "1.7.9",
   "distro": "HEAD",
   "author": {
     "name": "Sourcegraph"

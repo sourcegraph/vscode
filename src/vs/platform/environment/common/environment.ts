@@ -46,6 +46,7 @@ export interface ParsedArgs {
 	'disable-telemetry'?: boolean;
 	'export-default-configuration'?: string;
 	'install-source'?: string;
+	'disable-updates'?: string;
 }
 
 export const IEnvironmentService = createDecorator<IEnvironmentService>('environmentService');
@@ -110,6 +111,8 @@ export interface IEnvironmentService {
 	nodeCachedDataDir: string;
 
 	installSource: string;
+	disableUpdates: boolean;
+
 	sourcegraphContext: JSContext;
 	eventLogDebug: boolean;
 }

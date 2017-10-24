@@ -38,7 +38,11 @@ export class PreferencesContribution implements IWorkbenchContribution {
 		@IWorkspaceContextService private workspaceService: IWorkspaceContextService,
 		@IConfigurationService private configurationService: IConfigurationService
 	) {
-		this.settingsListener = this.configurationService.onDidUpdateConfiguration(() => this.handleSettingsEditorOverride());
+		this.settingsListener = this.configurationService.onDidChangeConfiguration(e => {
+			if (e.affectsConfiguration(DEFAULT_SETTINGS_EDITOR_SETTING)) {
+				this.handleSettingsEditorOverride();
+			}
+		});
 		this.handleSettingsEditorOverride();
 
 		this.start();
@@ -62,6 +66,15 @@ export class PreferencesContribution implements IWorkbenchContribution {
 			!endsWith(resource.fsPath.toLowerCase(), 'settings.json') ||			// file must end in settings.json
 			!this.configurationService.getValue(DEFAULT_SETTINGS_EDITOR_SETTING)	// user has not disabled default settings editor
 		) {
+			return;
+		}
+
+		// If the file resource was already opened before in the group, do not prevent
+		// the opening of that resource. Otherwise we would have the same settings
+		// opened twice (https://github.com/Microsoft/vscode/issues/36447)
+		const stacks = this.editorGroupService.getStacksModel();
+		const group = stacks.groupAt(event.position);
+		if (group && group.contains(event.input)) {
 			return;
 		}
 
@@ -112,15 +125,7 @@ export class PreferencesContribution implements IWorkbenchContribution {
 						return TPromise.as(schemaModel);
 					}
 				}
-				return this.preferencesService.resolveContent(uri)
-					.then(content => {
-						if (content !== null && content !== void 0) {
-							let mode = this.modeService.getOrCreateMode('json');
-							const model = this.modelService.createModel(content, mode, uri);
-							return TPromise.as(model);
-						}
-						return null;
-					});
+				return this.preferencesService.resolveModel(uri);
 			}
 		});
 	}
