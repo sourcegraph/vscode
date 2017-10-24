@@ -11,7 +11,8 @@ import { TPromise } from 'vs/base/common/winjs.base';
 import { Disposable } from 'vs/base/common/lifecycle';
 import { IRequestOptions, IRequestContext } from 'vs/base/node/request';
 import { IRequestService } from 'vs/platform/request/node/request';
-import { IRemoteService, IRemoteConfiguration } from 'vs/platform/remote/node/remote';
+import { IRemoteService } from 'vs/platform/remote/node/remote';
+import { IRemoteConfiguration } from 'vs/platform/remote/common/remote';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 
 /**

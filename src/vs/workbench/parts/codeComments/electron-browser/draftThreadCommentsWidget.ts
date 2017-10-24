@@ -26,7 +26,7 @@ export class DraftThreadCommentsWidget extends BaseThreadCommentsWidget {
 		private draftThread: IDraftThreadComments,
 		@IThemeService themeService: IThemeService,
 		@IInstantiationService private instantiationService: IInstantiationService,
-		@ITelemetryService private telemetryService: ITelemetryService,
+		@ITelemetryService private telemetryService: ITelemetryService
 	) {
 		super(editor, themeService);
 		this.create();
@@ -62,6 +62,9 @@ export class DraftThreadCommentsWidget extends BaseThreadCommentsWidget {
 	private createThread(): void {
 		const content = this.draftThread.content;
 		this.draftThread.submit().then(thread => {
+			if (!thread) {
+				return;
+			}
 			this.telemetryService.publicLog('codeComments.createThread', getCommentTelemetryData({ thread, content, error: false }));
 		}, error => {
 			this.telemetryService.publicLog('codeComments.createThread', getCommentTelemetryData({ content, error: true }));

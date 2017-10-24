@@ -9,7 +9,7 @@ import { TPromise } from 'vs/base/common/winjs.base';
 import { Action } from 'vs/base/common/actions';
 import { localize } from 'vs/nls';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
-import { IRemoteConfiguration } from 'vs/platform/remote/node/remote';
+import { IRemoteConfiguration } from 'vs/platform/remote/common/remote';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IOpenerService } from 'vs/platform/opener/common/opener';
 

@@ -163,11 +163,13 @@ export interface IDraftThreadComments extends IEventDisposable {
 	readonly onDidSubmit: Event<IThreadComments>;
 
 	/**
-	 * Submit the draft.
+	 * Submit the draft. Returns the created IThreadComments or undefined if
+	 * the draft cannot be created due to incorrect configuration settings.
+	 * See ShareContextConfigurationAction.
 	 * @param allowNoComment allows submitting the thread without a comment
 	 * (for creating code snippets).
 	 */
-	submit(allowNoComment?: boolean): TPromise<IThreadComments>;
+	submit(allowNoComment?: boolean): TPromise<IThreadComments | undefined>;
 }
 
 /**

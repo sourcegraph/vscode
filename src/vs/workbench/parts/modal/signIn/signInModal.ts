@@ -15,7 +15,7 @@ import { ModalPart } from 'vs/workbench/parts/modal/modalPart';
 import { IAuthService } from 'vs/platform/auth/common/auth';
 import { urlToSignIn } from 'vs/platform/auth/node/authService';
 import { ICommandService } from 'vs/platform/commands/common/commands';
-import { IRemoteConfiguration } from 'vs/platform/remote/node/remote';
+import { IRemoteConfiguration } from 'vs/platform/remote/common/remote';
 import { IConfigurationService, ConfigurationTarget } from 'vs/platform/configuration/common/configuration';
 
 /**

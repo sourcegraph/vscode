@@ -15,7 +15,8 @@ import { Git } from 'vs/workbench/services/codeComments/browser/git';
 import URI from 'vs/base/common/uri';
 import { Schemas } from 'vs/base/common/network';
 import { startsWith } from 'vs/base/common/strings';
-import { IRemoteService, requestGraphQL, requestGraphQLMutation, IRemoteConfiguration } from 'vs/platform/remote/node/remote';
+import { IRemoteService, requestGraphQL, requestGraphQLMutation } from 'vs/platform/remote/node/remote';
+import { IRemoteConfiguration } from 'vs/platform/remote/common/remote';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { first, uniqueFilter, coalesce } from 'vs/base/common/arrays';
 import { IInstantiationService, ServicesAccessor } from 'vs/platform/instantiation/common/instantiation';
@@ -40,6 +41,7 @@ import { CommentsChannelId } from 'vs/workbench/parts/codeComments/common/consta
 import * as objects from 'vs/base/common/objects';
 import { IWindowsService } from 'vs/platform/windows/common/windows';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
+import { ShareContextConfigurationAction } from 'vs/workbench/services/codeComments/electron-browser/threadCommentActions';
 
 export { Event }
 
@@ -1196,13 +1198,13 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 		return TPromise.join<any>(promises) as TPromise<[T1, T2, T3, T4, T5]>;
 	}
 
-	private submittingPromise: TPromise<IThreadComments> | undefined;
+	private submittingPromise: TPromise<IThreadComments | undefined> | undefined;
 
 	public get submitting(): boolean {
 		return !!this.submittingPromise;
 	}
 
-	public submit(allowNoComment?: boolean): TPromise<IThreadComments> {
+	public submit(allowNoComment?: boolean): TPromise<IThreadComments | undefined> {
 		if (this.submittingPromise) {
 			return this.submittingPromise;
 		}
@@ -1216,35 +1218,41 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 		};
 		const promise = this.submitData
 			.then(data => {
-				return requestGraphQLMutation<{ createThread: GQL.IThread }>(this.remoteService, `mutation CreateThread {
-					createThread(
-						orgID: $orgId,
-						remoteURI: $remoteURI,
-						file: $file,
-						branch: $branch,
-						revision: $revision,
-						startLine: $startLine,
-						endLine: $endLine,
-						startCharacter: $startCharacter,
-						endCharacter: $endCharacter,
-						rangeLength: $rangeLength,
-						contents: $contents,
-						lines: $lines,
-					) {
-						${threadGraphql}
+				const shareContextAction = this.instantiationService.createInstance(ShareContextConfigurationAction, ShareContextConfigurationAction.ID, ShareContextConfigurationAction.LABEL, data.branch, allowNoComment);
+				return shareContextAction.run().then(canComment => {
+					if (!canComment) {
+						return TPromise.as(undefined);
 					}
-				}`, {
-						...data,
-						orgId: this.authService.currentUser.currentOrgMember.org.id,
-						contents,
-					});
-			})
-			.then(response => {
-				const threadMemento = gqlThreadToMemento(response.createThread);
-				const thread = this.instantiationService.createInstance(ThreadComments, this.commentsService, this.git, threadMemento);
-				this.commentsService.didCreateThread.fire(threadMemento);
-				this.didSubmit.fire(thread);
-				return thread;
+					return requestGraphQLMutation<{ createThread: GQL.IThread }>(this.remoteService, `mutation CreateThread {
+						createThread(
+							orgID: $orgId,
+							remoteURI: $remoteURI,
+							file: $file,
+							branch: $branch,
+							revision: $revision,
+							startLine: $startLine,
+							endLine: $endLine,
+							startCharacter: $startCharacter,
+							endCharacter: $endCharacter,
+							rangeLength: $rangeLength,
+							contents: $contents,
+							lines: $lines,
+						) {
+							${threadGraphql}
+						}
+					}`, {
+							...data,
+							orgId: this.authService.currentUser.currentOrgMember.org.id,
+							contents,
+						})
+						.then(response => {
+							const threadMemento = gqlThreadToMemento(response.createThread);
+							const thread = this.instantiationService.createInstance(ThreadComments, this.commentsService, this.git, threadMemento);
+							this.commentsService.didCreateThread.fire(threadMemento);
+							this.didSubmit.fire(thread);
+							return thread;
+						});
+				});
 			});
 		this.submittingPromise = promise;
 		this.didChangeSubmitting.fire();

@@ -17,11 +17,8 @@ import { CodeCommentsController } from 'vs/workbench/parts/codeComments/electron
 import { KeyCode, KeyMod } from 'vs/base/common/keyCodes';
 import { EditorContextKeys } from 'vs/editor/common/editorContextKeys';
 import { CommentsContextKeys } from 'vs/workbench/parts/codeComments/browser/commentsContextKeys';
-import { IRemoteConfiguration } from 'vs/platform/remote/node/remote';
 import { IClipboardService } from 'vs/platform/clipboard/common/clipboardService';
 import { IMessageService, Severity } from 'vs/platform/message/common/message';
-import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
-import { Action } from 'vs/base/common/actions';
 
 /**
  * Action to open the code comments viewlet.
@@ -101,27 +98,20 @@ export class ShareSnippetAction extends EditorAction {
 		});
 	}
 
-	public async run(accessor: ServicesAccessor, editor: ICommonCodeEditor): TPromise<any> {
+	public run(accessor: ServicesAccessor, editor: ICommonCodeEditor): TPromise<any> {
+		return TPromise.wrap(this.runAsync(accessor, editor));
+	}
+
+	private async runAsync(accessor: ServicesAccessor, editor: ICommonCodeEditor): Promise<any> {
 		const clipboardService = accessor.get(IClipboardService);
 		const codeCommentsService = accessor.get(ICodeCommentsService);
-		const configurationService = accessor.get(IConfigurationService);
 		const messageService = accessor.get(IMessageService);
 
 		const model = editor.getModel();
 		const fileComments = codeCommentsService.getFileComments(model.uri);
 		const draftThread = fileComments.createDraftThread(editor);
-		const config = configurationService.getConfiguration<IRemoteConfiguration>();
-		if (!config.remote.shareContext) {
-			messageService.show(Severity.Error, {
-				message: localize('shareSnippet.sharing-not-enabled', 'You must set remote.shareContext = true to enable sharing code snippets.'),
-				actions: [
-					new Action('moreInfo', localize('shareSnippet.more-info', "More Info"), null, true, () => {
-						window.open('https://about.sourcegraph.com/docs/editor/share-code');
-						return TPromise.wrap(true);
-					})
-				]
-			});
-			return TPromise.wrap(false);
+		if (!draftThread) {
+			return;
 		}
 
 		const threadComments = await draftThread.submit(true);

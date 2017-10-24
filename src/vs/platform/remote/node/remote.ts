@@ -23,14 +23,6 @@ export interface IRemoteService {
 	request(options: IRequestOptions): TPromise<IRequestContext>;
 }
 
-export interface IRemoteConfiguration {
-	remote?: {
-		endpoint?: string;
-		cookie?: string;
-		shareContext?: boolean;
-	};
-}
-
 Registry.as<IConfigurationRegistry>(Extensions.Configuration)
 	.registerConfiguration({
 		id: 'remote',
