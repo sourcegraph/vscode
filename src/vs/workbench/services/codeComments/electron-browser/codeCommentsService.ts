@@ -1076,22 +1076,22 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 					// intersects.
 					const contextLines = 3;
 					const linesBeforeRange = new Range(
-						this.displayRange.startLineNumber - contextLines,
+						this.lineInRange(this.displayRange.startLineNumber - contextLines, model),
 						0, // start character
 						this.displayRange.startLineNumber - 1,
-						model.getLineMaxColumn(this.displayRange.startLineNumber - 1), // end character / end of line
+						model.getLineMaxColumn(this.lineInRange(this.displayRange.startLineNumber - 1, model)), // end character / end of line
 					);
 					const linesRange = new Range(
 						this.displayRange.startLineNumber,
 						0, // start character
 						this.displayRange.endLineNumber,
-						model.getLineMaxColumn(this.displayRange.endLineNumber), // end character / end of line
+						model.getLineMaxColumn(this.lineInRange(this.displayRange.endLineNumber, model)), // end character / end of line
 					);
 					const linesAfterRange = new Range(
-						this.displayRange.endLineNumber + 1,
+						this.lineInRange(this.displayRange.endLineNumber + 1, model),
 						0, // start character
 						this.displayRange.endLineNumber + contextLines,
-						model.getLineMaxColumn(this.displayRange.endLineNumber + contextLines), // end character / end of line
+						model.getLineMaxColumn(this.lineInRange(this.displayRange.endLineNumber + contextLines, model)), // end character / end of line
 					);
 
 					// For example of what these represent, consider:
@@ -1167,6 +1167,14 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 			});
 	}
 
+	/**
+	 * Returns the provided line, but ensures that it is in range of the given
+	 * model by clamping it.
+	 */
+	private lineInRange(line: number, model: IModel): number {
+		return Math.min(Math.max(line, 1), model.getLineCount());
+	}
+
 	private onDidUpdateConfiguration() {
 		const config = this.configurationService.getConfiguration<IRemoteConfiguration>();
 		this.shareContext = config.remote.shareContext;
@@ -1179,7 +1187,7 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 		const tmp = document.createElement('div');
 		tmp.innerHTML = html;
 		if (!tmp.firstElementChild) {
-			return html;
+			return '';
 		}
 		const divs = tmp.firstElementChild.children;
 
