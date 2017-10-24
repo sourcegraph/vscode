@@ -35,7 +35,6 @@ import { IChoiceService } from 'vs/platform/message/common/message';
 import { TestConfigurationService } from 'vs/platform/configuration/test/common/testConfigurationService';
 import { IWorkspacesService } from 'vs/platform/workspaces/common/workspaces';
 import { IWindowConfiguration } from 'vs/platform/windows/common/windows';
-import { NullResourceResolverService } from 'vs/platform/resourceResolver/common/resourceResolver';
 
 class SettingsTestEnvironmentService extends EnvironmentService {
 
@@ -111,7 +110,7 @@ suite('ConfigurationEditingService', () => {
 		const environmentService = new SettingsTestEnvironmentService(parseArgs(process.argv), process.execPath, globalSettingsFile, orgSettingsPath);
 		instantiationService.stub(IEnvironmentService, environmentService);
 		const workspacesService = instantiationService.stub(IWorkspacesService, {});
-		const workspaceService = new WorkspaceService(environmentService, workspacesService, NullResourceResolverService);
+		const workspaceService = new WorkspaceService(environmentService, workspacesService);
 		instantiationService.stub(IWorkspaceContextService, workspaceService);
 		return workspaceService.initialize(noWorkspace ? <IWindowConfiguration>{} : workspaceDir).then(() => {
 			instantiationService.stub(IConfigurationService, workspaceService);

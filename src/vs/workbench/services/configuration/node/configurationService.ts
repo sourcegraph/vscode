@@ -40,7 +40,6 @@ import { WorkspaceConfiguration, FolderConfiguration } from 'vs/workbench/servic
 import { JSONEditingService } from 'vs/workbench/services/configuration/node/jsonEditingService';
 import { Schemas } from 'vs/base/common/network';
 import { massageFolderPathForWorkspace } from 'vs/platform/workspaces/node/workspaces';
-import { IResourceResolverService } from 'vs/platform/resourceResolver/common/resourceResolver';
 
 export class WorkspaceService extends Disposable implements IWorkspaceConfigurationService, IWorkspaceContextService {
 
@@ -69,7 +68,7 @@ export class WorkspaceService extends Disposable implements IWorkspaceConfigurat
 	private configurationEditingService: ConfigurationEditingService;
 	private jsonEditingService: JSONEditingService;
 
-	constructor(private environmentService: IEnvironmentService, private workspacesService: IWorkspacesService, private resourceResolverService: IResourceResolverService, private workspaceSettingsRootFolder: string = WORKSPACE_CONFIG_FOLDER_DEFAULT_NAME) {
+	constructor(private environmentService: IEnvironmentService, private workspacesService: IWorkspacesService, private workspaceSettingsRootFolder: string = WORKSPACE_CONFIG_FOLDER_DEFAULT_NAME) {
 		super();
 
 		this.workspaceConfiguration = this._register(new WorkspaceConfiguration());
@@ -146,20 +145,7 @@ export class WorkspaceService extends Disposable implements IWorkspaceConfigurat
 
 		const workspaceConfigFolder = dirname(this.getWorkspace().configuration.fsPath);
 
-		const resolvedFoldersToAdd = TPromise.join(foldersToAdd
-			.filter(folder => {
-				return !this.contains(currentWorkspaceFolderUris, URI.isUri(folder) ? folder : folder.uri);
-			})
-			.map(folder => this.resourceResolverService.resolveResource(URI.isUri(folder) ? folder : folder.uri)
-				.then(uri => {
-					return {
-						uri,
-						name: URI.isUri(folder) ? undefined : folder.name,
-					};
-				}))
-		);
-
-		return resolvedFoldersToAdd.then(resolvedFoldersToAdd => resolvedFoldersToAdd.forEach(folderToAdd => {
+		foldersToAdd.forEach(folderToAdd => {
 			let folderResource: URI;
 			let folderName: string;
 			if (URI.isUri(folderToAdd)) {
@@ -194,12 +180,12 @@ export class WorkspaceService extends Disposable implements IWorkspaceConfigurat
 			}
 
 			storedFoldersToAdd.push(storedFolder);
-		})).then(() => {
-			if (storedFoldersToAdd.length > 0) {
-				return this.setFolders([...currentStoredFolders, ...storedFoldersToAdd]);
-			}
-			return TPromise.as(void 0);
 		});
+
+		if (storedFoldersToAdd.length > 0) {
+			return this.setFolders([...currentStoredFolders, ...storedFoldersToAdd]);
+		}
+		return TPromise.as(void 0);
 	}
 
 	private doRemoveFolders(foldersToRemove: URI[]): TPromise<void> {

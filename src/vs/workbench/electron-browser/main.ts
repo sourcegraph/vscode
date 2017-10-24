@@ -41,7 +41,6 @@ import { WorkspacesChannelClient } from 'vs/platform/workspaces/common/workspace
 import { IWorkspacesService } from 'vs/platform/workspaces/common/workspaces';
 import { ICredentialsService } from 'vs/platform/credentials/common/credentials';
 import { CredentialsChannelClient } from 'vs/platform/credentials/node/credentialsIpc';
-import { IResourceResolverService } from 'vs/platform/resourceResolver/common/resourceResolver';
 
 import fs = require('fs');
 gracefulFs.gracefulify(fs); // enable gracefulFs
@@ -78,7 +77,7 @@ function openWorkbench(configuration: IWindowConfiguration): TPromise<void> {
 
 	// Since the configuration service is one of the core services that is used in so many places, we initialize it
 	// right before startup of the workbench shell to have its data ready for consumers
-	return createAndInitializeWorkspaceService(configuration, environmentService, <IWorkspacesService>mainServices.get(IWorkspacesService), <IResourceResolverService>mainServices.get(IResourceResolverService)).then(workspaceService => {
+	return createAndInitializeWorkspaceService(configuration, environmentService, <IWorkspacesService>mainServices.get(IWorkspacesService)).then(workspaceService => {
 		const timerService = new TimerService((<any>window).MonacoEnvironment.timers as IInitData, workspaceService.getWorkbenchState() === WorkbenchState.EMPTY);
 		const storageService = createStorageService(workspaceService, environmentService);
 
@@ -110,9 +109,9 @@ function openWorkbench(configuration: IWindowConfiguration): TPromise<void> {
 	});
 }
 
-function createAndInitializeWorkspaceService(configuration: IWindowConfiguration, environmentService: EnvironmentService, workspacesService: IWorkspacesService, resourceResolverService: IResourceResolverService): TPromise<WorkspaceService> {
+function createAndInitializeWorkspaceService(configuration: IWindowConfiguration, environmentService: EnvironmentService, workspacesService: IWorkspacesService): TPromise<WorkspaceService> {
 	return validateWorkspacePath(configuration).then(() => {
-		const workspaceService = new WorkspaceService(environmentService, workspacesService, resourceResolverService);
+		const workspaceService = new WorkspaceService(environmentService, workspacesService);
 
 		return workspaceService.initialize(configuration.workspace || configuration.folderPath || configuration).then(() => workspaceService, error => workspaceService);
 	});
@@ -195,8 +194,6 @@ function createMainProcessServices(mainProcessClient: ElectronIPCClient): Servic
 
 	const credentialsChannel = mainProcessClient.getChannel('credentials');
 	serviceCollection.set(ICredentialsService, new CredentialsChannelClient(credentialsChannel));
-
-	// TODO(keegan) resolve resource service in main process?
 
 	return serviceCollection;
 }
