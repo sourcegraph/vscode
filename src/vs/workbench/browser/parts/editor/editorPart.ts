@@ -25,7 +25,7 @@ import { EditorInput, EditorOptions, ConfirmResult, IWorkbenchEditorConfiguratio
 import { EditorGroupsControl, Rochade, IEditorGroupsControl, ProgressState } from 'vs/workbench/browser/parts/editor/editorGroupsControl';
 import { WorkbenchProgressService } from 'vs/workbench/services/progress/browser/progressService';
 import { IEditorGroupService, GroupOrientation, GroupArrangement, IEditorTabOptions, IMoveOptions } from 'vs/workbench/services/group/common/groupService';
-import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
+import { IConfigurationService, IConfigurationChangeEvent } from 'vs/platform/configuration/common/configuration';
 import { IEditorPart } from 'vs/workbench/services/editor/common/editorService';
 import { IPartService } from 'vs/workbench/services/part/common/partService';
 import { Position, POSITIONS, Direction, IEditor } from 'vs/platform/editor/common/editor';
@@ -100,7 +100,7 @@ export class EditorPart extends Part implements IEditorPart, IEditorGroupService
 
 	private _onEditorsChanged: Emitter<void>;
 	private _onEditorOpening: Emitter<IEditorOpeningEvent>;
-	private _onEditorsMoved: Emitter<void>;
+	private _onEditorGroupMoved: Emitter<void>;
 	private _onEditorOpenFail: Emitter<EditorInput>;
 	private _onGroupOrientationChanged: Emitter<void>;
 	private _onTabOptionsChanged: Emitter<IEditorTabOptions>;
@@ -134,7 +134,7 @@ export class EditorPart extends Part implements IEditorPart, IEditorGroupService
 
 		this._onEditorsChanged = new Emitter<void>();
 		this._onEditorOpening = new Emitter<IEditorOpeningEvent>();
-		this._onEditorsMoved = new Emitter<void>();
+		this._onEditorGroupMoved = new Emitter<void>();
 		this._onEditorOpenFail = new Emitter<EditorInput>();
 		this._onGroupOrientationChanged = new Emitter<void>();
 		this._onTabOptionsChanged = new Emitter<IEditorTabOptions>();
@@ -205,41 +205,44 @@ export class EditorPart extends Part implements IEditorPart, IEditorGroupService
 		this.toUnbind.push(this.stacks.onEditorClosed(event => this.onEditorClosed(event)));
 		this.toUnbind.push(this.stacks.onGroupOpened(event => this.onEditorGroupOpenedOrClosed()));
 		this.toUnbind.push(this.stacks.onGroupClosed(event => this.onEditorGroupOpenedOrClosed()));
-		this.toUnbind.push(this.configurationService.onDidUpdateConfiguration(e => this.onConfigurationUpdated(this.configurationService.getConfiguration<IWorkbenchEditorConfiguration>())));
+		this.toUnbind.push(this.configurationService.onDidChangeConfiguration(e => this.onConfigurationUpdated(e)));
 	}
 
 	private onEditorGroupOpenedOrClosed(): void {
 		this.updateStyles();
 	}
 
-	private onConfigurationUpdated(configuration: IWorkbenchEditorConfiguration): void {
-		if (configuration && configuration.workbench && configuration.workbench.editor) {
-			const editorConfig = configuration.workbench.editor;
+	private onConfigurationUpdated(event: IConfigurationChangeEvent): void {
+		if (event.affectsConfiguration('workbench.editor')) {
+			const configuration = this.configurationService.getConfiguration<IWorkbenchEditorConfiguration>();
+			if (configuration && configuration.workbench && configuration.workbench.editor) {
+				const editorConfig = configuration.workbench.editor;
 
-			// Pin all preview editors of the user chose to disable preview
-			const newPreviewEditors = editorConfig.enablePreview;
-			if (this.tabOptions.previewEditors !== newPreviewEditors && !newPreviewEditors) {
-				this.stacks.groups.forEach(group => {
-					if (group.previewEditor) {
-						this.pinEditor(group, group.previewEditor);
-					}
-				});
+				// Pin all preview editors of the user chose to disable preview
+				const newPreviewEditors = editorConfig.enablePreview;
+				if (this.tabOptions.previewEditors !== newPreviewEditors && !newPreviewEditors) {
+					this.stacks.groups.forEach(group => {
+						if (group.previewEditor) {
+							this.pinEditor(group, group.previewEditor);
+						}
+					});
+				}
+
+				const oldTabOptions = objects.clone(this.tabOptions);
+				this.tabOptions = {
+					previewEditors: newPreviewEditors,
+					showIcons: editorConfig.showIcons,
+					tabCloseButton: editorConfig.tabCloseButton,
+					showTabs: this.forceHideTabs ? false : editorConfig.showTabs,
+					labelFormat: editorConfig.labelFormat,
+				};
+
+				if (!this.doNotFireTabOptionsChanged && !objects.equals(oldTabOptions, this.tabOptions)) {
+					this._onTabOptionsChanged.fire(this.tabOptions);
+				}
+
+				this.revealIfOpen = editorConfig.revealIfOpen;
 			}
-
-			const oldTabOptions = objects.clone(this.tabOptions);
-			this.tabOptions = {
-				previewEditors: newPreviewEditors,
-				showIcons: editorConfig.showIcons,
-				tabCloseButton: editorConfig.tabCloseButton,
-				showTabs: this.forceHideTabs ? false : editorConfig.showTabs,
-				labelFormat: editorConfig.labelFormat,
-			};
-
-			if (!this.doNotFireTabOptionsChanged && !objects.equals(oldTabOptions, this.tabOptions)) {
-				this._onTabOptionsChanged.fire(this.tabOptions);
-			}
-
-			this.revealIfOpen = editorConfig.revealIfOpen;
 		}
 	}
 
@@ -295,8 +298,8 @@ export class EditorPart extends Part implements IEditorPart, IEditorGroupService
 		return this._onEditorOpening.event;
 	}
 
-	public get onEditorsMoved(): Event<void> {
-		return this._onEditorsMoved.event;
+	public get onEditorGroupMoved(): Event<void> {
+		return this._onEditorGroupMoved.event;
 	}
 
 	public get onEditorOpenFail(): Event<EditorInput> {
@@ -684,7 +687,7 @@ export class EditorPart extends Part implements IEditorPart, IEditorGroupService
 
 		// Emit Editor move event
 		if (rochade !== Rochade.NONE) {
-			this._onEditorsMoved.fire();
+			this._onEditorGroupMoved.fire();
 		}
 	}
 
@@ -898,7 +901,7 @@ export class EditorPart extends Part implements IEditorPart, IEditorGroupService
 		this.focusGroup(fromGroup);
 
 		// Events
-		this._onEditorsMoved.fire();
+		this._onEditorGroupMoved.fire();
 	}
 
 	public moveEditor(input: EditorInput, from: EditorGroup, to: EditorGroup, moveOptions?: IMoveOptions): void;
@@ -1373,7 +1376,7 @@ export class EditorPart extends Part implements IEditorPart, IEditorGroupService
 		// Emitters
 		this._onEditorsChanged.dispose();
 		this._onEditorOpening.dispose();
-		this._onEditorsMoved.dispose();
+		this._onEditorGroupMoved.dispose();
 		this._onEditorOpenFail.dispose();
 
 		// Reset Tokens

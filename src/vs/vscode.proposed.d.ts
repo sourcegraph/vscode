@@ -407,4 +407,53 @@ declare module 'vscode' {
 	export namespace languages {
 		export function registerColorProvider(selector: DocumentSelector, provider: DocumentColorProvider): Disposable;
 	}
+
+	//#region decorations
+
+	//todo@joh -> make class
+	export interface DecorationData {
+		priority?: number;
+		title?: string;
+		bubble?: boolean;
+		abbreviation?: string;
+		color?: ThemeColor;
+	}
+
+	export interface DecorationProvider {
+		onDidChangeDecorations: Event<undefined | Uri | Uri[]>;
+		provideDecoration(uri: Uri, token: CancellationToken): ProviderResult<DecorationData>;
+	}
+
+	export namespace window {
+		export function registerDecorationProvider(provider: DecorationProvider): Disposable;
+	}
+
+	//#endregion
+
+	/**
+	 * Represents the debug console.
+	 */
+	export interface DebugConsole {
+		/**
+		 * Append the given value to the debug console.
+		 *
+		 * @param value A string, falsy values will not be printed.
+		 */
+		append(value: string): void;
+
+		/**
+		 * Append the given value and a line feed character
+		 * to the debug console.
+		 *
+		 * @param value A string, falsy values will be printed.
+		 */
+		appendLine(value: string): void;
+	}
+
+	export namespace debug {
+		/**
+		 * The [debug console](#DebugConsole) singleton.
+		 */
+		export let console: DebugConsole;
+	}
 }

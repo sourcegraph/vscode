@@ -30,7 +30,7 @@ export class RemoteService extends Disposable implements IRemoteService {
 	) {
 		super();
 		this.configure(configurationService.getConfiguration<IRemoteConfiguration>());
-		this._register(configurationService.onDidUpdateConfiguration(() => this.onDidUpdateConfiguration()));
+		this._register(configurationService.onDidChangeConfiguration(() => this.onDidUpdateConfiguration()));
 	}
 
 	private onDidUpdateConfiguration() {

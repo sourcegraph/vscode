@@ -7,10 +7,10 @@
 
 import { localize } from 'vs/nls';
 import { IDisposable, dispose, empty as EmptyDisposable, combinedDisposable } from 'vs/base/common/lifecycle';
-import { filterEvent, any as anyEvent } from 'vs/base/common/event';
+import { filterEvent, anyEvent } from 'vs/base/common/event';
 import { VIEWLET_ID } from 'vs/workbench/parts/review/common/review';
 import { IReviewService, IReviewItem } from 'vs/workbench/services/review/common/review';
-import { IActivityBarService, NumberBadge } from 'vs/workbench/services/activity/common/activityBarService';
+import { IActivityService, NumberBadge } from 'vs/workbench/services/activity/common/activity';
 import { IWorkbenchContribution } from 'vs/workbench/common/contributions';
 import { IContextKeyService, IContextKey } from 'vs/platform/contextkey/common/contextkey';
 import { IStatusbarService } from 'vs/platform/statusbar/common/statusbar';
@@ -29,7 +29,7 @@ export class StatusUpdater implements IWorkbenchContribution {
 
 	constructor(
 		@IReviewService private reviewService: IReviewService,
-		@IActivityBarService private activityBarService: IActivityBarService
+		@IActivityService private activityService: IActivityService,
 	) {
 		this.reviewService.onDidAddReviewItem(this.onDidAddReviewitem, this, this.disposables);
 		this.render();
@@ -68,7 +68,7 @@ export class StatusUpdater implements IWorkbenchContribution {
 
 		if (count > 0) {
 			const badge = new NumberBadge(count, num => localize('reviewPendingChangesBadge', '{0} pending changes', num));
-			this.badgeDisposable = this.activityBarService.showActivity(VIEWLET_ID, badge, 'review-viewlet-label');
+			this.badgeDisposable = this.activityService.showActivity(VIEWLET_ID, badge, 'review-viewlet-label');
 		} else {
 			this.badgeDisposable = EmptyDisposable;
 		}

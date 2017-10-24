@@ -56,6 +56,7 @@ import { ProxyIdentifier } from 'vs/workbench/services/thread/common/threadServi
 import { ExtHostDialogs } from 'vs/workbench/api/node/extHostDialogs';
 import { ExtHostFileSystem } from 'vs/workbench/api/node/extHostFileSystem';
 import { FileChangeType, FileType } from 'vs/platform/files/common/files';
+import { ExtHostDecorations } from 'vs/workbench/api/node/extHostDecorations';
 
 export interface IExtensionApiFactory {
 	(extension: IExtensionDescription): typeof vscode;
@@ -84,6 +85,7 @@ export function createApiFactory(
 
 	// Addressable instances
 	const extHostHeapService = threadService.set(ExtHostContext.ExtHostHeapService, new ExtHostHeapService());
+	const extHostDecorations = threadService.set(ExtHostContext.ExtHostDecorations, new ExtHostDecorations(threadService));
 	const extHostDocumentsAndEditors = threadService.set(ExtHostContext.ExtHostDocumentsAndEditors, new ExtHostDocumentsAndEditors(threadService));
 	const extHostDocuments = threadService.set(ExtHostContext.ExtHostDocuments, new ExtHostDocuments(threadService, extHostDocumentsAndEditors));
 	const extHostDocumentContentProviders = threadService.set(ExtHostContext.ExtHostDocumentContentProviders, new ExtHostDocumentContentProvider(threadService, extHostDocumentsAndEditors));
@@ -378,6 +380,9 @@ export function createApiFactory(
 			sampleFunction: proposedApiFunction(extension, () => {
 				return extHostMessageService.showMessage(extension, Severity.Info, 'Hello Proposed Api!', {}, []);
 			}),
+			registerDecorationProvider: proposedApiFunction(extension, (provider: vscode.DecorationProvider) => {
+				return extHostDecorations.registerDecorationProvider(provider, extension.id);
+			})
 		};
 
 		// namespace: workspace
@@ -503,6 +508,9 @@ export function createApiFactory(
 			get activeDebugSession() {
 				return extHostDebugService.activeDebugSession;
 			},
+			get console() {
+				return extHostDebugService.debugConsole;
+			},
 			startDebugging(folder: vscode.WorkspaceFolder | undefined, nameOrConfig: string | vscode.DebugConfiguration) {
 				return extHostDebugService.startDebugging(folder, nameOrConfig);
 			},
@@ -520,7 +528,7 @@ export function createApiFactory(
 			},
 			registerDebugConfigurationProvider(debugType: string, provider: vscode.DebugConfigurationProvider) {
 				return extHostDebugService.registerDebugConfigurationProvider(debugType, provider);
-			},
+			}
 		};
 
 		// namespace: credentials

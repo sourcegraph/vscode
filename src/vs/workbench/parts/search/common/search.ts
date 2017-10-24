@@ -82,6 +82,7 @@ export interface IWorkbenchSearchConfiguration extends ISearchConfiguration {
 		useRipgrep: boolean,
 		useIgnoreFilesByDefault: boolean,
 		profiles: ISearchProfile[]
+		followSymlinks: boolean;
 	};
 }
 

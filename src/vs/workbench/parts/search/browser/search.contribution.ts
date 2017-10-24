@@ -459,5 +459,10 @@ configurationRegistry.registerConfiguration({
 				}
 			}
 		},
+		'search.followSymlinks': {
+			'type': 'boolean',
+			'description': nls.localize('search.followSymlinks', "Controls whether to follow symlinks while searching."),
+			'default': true
+		}
 	}
 });

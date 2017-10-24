@@ -11,8 +11,8 @@ import * as arrays from 'vs/base/common/arrays';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 import { ipcMain as ipc, app, shell, dialog, Menu, MenuItem, BrowserWindow } from 'electron';
 import { OpenContext, IRunActionInWindowRequest } from 'vs/platform/windows/common/windows';
-import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
-import { IFilesConfiguration, AutoSaveConfiguration } from 'vs/platform/files/common/files';
+import { IConfigurationService, IConfigurationChangeEvent } from 'vs/platform/configuration/common/configuration';
+import { AutoSaveConfiguration } from 'vs/platform/files/common/files';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IUpdateService, State as UpdateState } from 'vs/platform/update/common/update';
 import product from 'vs/platform/node/product';
@@ -29,33 +29,6 @@ interface IExtensionViewlet {
 	label: string;
 }
 
-interface IConfiguration extends IFilesConfiguration {
-	window: {
-		enableMenuBarMnemonics: boolean;
-		nativeTabs: boolean;
-	};
-	workbench: {
-		sideBar: {
-			location: 'left' | 'right';
-		},
-		navBar: {
-			visible: boolean;
-		},
-		statusBar: {
-			visible: boolean;
-		},
-		contextBar: {
-			visible: boolean;
-		},
-		activityBar: {
-			visible: boolean;
-		}
-	};
-	editor: {
-		multiCursorModifier: 'ctrlCmd' | 'alt'
-	};
-}
-
 interface IMenuItemClickHandler {
 	inDevTools: (contents: Electron.WebContents) => void;
 	inNoWindow: () => void;
@@ -67,15 +40,17 @@ export class CodeMenu {
 
 	private static MAX_MENU_RECENT_ENTRIES = 10;
 
-	private currentAutoSaveSetting: string;
-	private currentMultiCursorModifierSetting: string;
-	private currentNavbarVisible: boolean;
-	private currentSidebarLocation: 'left' | 'right';
-	private currentStatusbarVisible: boolean;
-	private currentContextbarVisible: boolean;
-	private currentActivityBarVisible: boolean;
-	private currentEnableMenuBarMnemonics: boolean;
-	private currentEnableNativeTabs: boolean;
+	private keys = [
+		'files.autoSave',
+		'editor.multiCursorModifier',
+		'workbench.contextBar.visible',
+		'workbench.navBar.visible',
+		'workbench.sideBar.location',
+		'workbench.statusBar.visible',
+		'workbench.activityBar.visible',
+		'window.enableMenuBarMnemonics',
+		'window.nativeTabs'
+	];
 
 	private isQuitting: boolean;
 	private appMenuInstalled: boolean;
@@ -107,8 +82,6 @@ export class CodeMenu {
 
 		this.menuUpdater = new RunOnceScheduler(() => this.doUpdateMenu(), 0);
 		this.keybindingsResolver = instantiationService.createInstance(KeybindingsResolver);
-
-		this.onConfigurationUpdated(this.configurationService.getConfiguration<IConfiguration>());
 
 		this.install();
 
@@ -145,7 +118,7 @@ export class CodeMenu {
 		});
 
 		// Update when auto save config changes
-		this.configurationService.onDidUpdateConfiguration(e => this.onConfigurationUpdated(this.configurationService.getConfiguration<IConfiguration>(), true /* update menu if changed */));
+		this.configurationService.onDidChangeConfiguration(e => this.onConfigurationUpdated(e));
 
 		// Listen to update service
 		this.updateService.onStateChange(() => this.updateMenu());
@@ -154,83 +127,62 @@ export class CodeMenu {
 		this.keybindingsResolver.onKeybindingsChanged(() => this.updateMenu());
 	}
 
-	private onConfigurationUpdated(config: IConfiguration, handleMenu?: boolean): void {
-		let updateMenu = false;
-		const newAutoSaveSetting = config && config.files && config.files.autoSave;
-		if (newAutoSaveSetting !== this.currentAutoSaveSetting) {
-			this.currentAutoSaveSetting = newAutoSaveSetting;
-			updateMenu = true;
-		}
-
-		const newMultiCursorModifierSetting = config && config.editor && config.editor.multiCursorModifier;
-		if (newMultiCursorModifierSetting !== this.currentMultiCursorModifierSetting) {
-			this.currentMultiCursorModifierSetting = newMultiCursorModifierSetting;
-			updateMenu = true;
-		}
-
-		let newNavbarVisible = config && config.workbench && config.workbench.navBar && config.workbench.navBar.visible;
-		if (typeof newNavbarVisible !== 'boolean') {
-			newNavbarVisible = true;
-		}
-		if (newNavbarVisible !== this.currentNavbarVisible) {
-			this.currentNavbarVisible = newNavbarVisible;
-			updateMenu = true;
-		}
-
-		const newSidebarLocation = config && config.workbench && config.workbench.sideBar && config.workbench.sideBar.location || 'left';
-		if (newSidebarLocation !== this.currentSidebarLocation) {
-			this.currentSidebarLocation = newSidebarLocation;
-			updateMenu = true;
-		}
-
-		let newStatusbarVisible = config && config.workbench && config.workbench.statusBar && config.workbench.statusBar.visible;
-		if (typeof newStatusbarVisible !== 'boolean') {
-			newStatusbarVisible = true;
-		}
-		if (newStatusbarVisible !== this.currentStatusbarVisible) {
-			this.currentStatusbarVisible = newStatusbarVisible;
-			updateMenu = true;
-		}
-
-		let newContextbarVisible = config && config.workbench && config.workbench.contextBar && config.workbench.contextBar.visible;
-		if (typeof newContextbarVisible !== 'boolean') {
-			newContextbarVisible = true;
-		}
-		if (newContextbarVisible !== this.currentContextbarVisible) {
-			this.currentContextbarVisible = newContextbarVisible;
-			updateMenu = true;
-		}
-
-		let newActivityBarVisible = config && config.workbench && config.workbench.activityBar && config.workbench.activityBar.visible;
-		if (typeof newActivityBarVisible !== 'boolean') {
-			newActivityBarVisible = true;
-		}
-		if (newActivityBarVisible !== this.currentActivityBarVisible) {
-			this.currentActivityBarVisible = newActivityBarVisible;
-			updateMenu = true;
-		}
-
-		let newEnableMenuBarMnemonics = config && config.window && config.window.enableMenuBarMnemonics;
-		if (typeof newEnableMenuBarMnemonics !== 'boolean') {
-			newEnableMenuBarMnemonics = true;
-		}
-		if (newEnableMenuBarMnemonics !== this.currentEnableMenuBarMnemonics) {
-			this.currentEnableMenuBarMnemonics = newEnableMenuBarMnemonics;
-			updateMenu = true;
-		}
-
-		let newEnableNativeTabs = config && config.window && config.window.nativeTabs;
-		if (typeof newEnableNativeTabs !== 'boolean') {
-			newEnableNativeTabs = false;
-		}
-		if (newEnableNativeTabs !== this.currentEnableNativeTabs) {
-			this.currentEnableNativeTabs = newEnableNativeTabs;
-			updateMenu = true;
-		}
-
-		if (handleMenu && updateMenu) {
+	private onConfigurationUpdated(event: IConfigurationChangeEvent): void {
+		if (this.keys.some(key => event.affectsConfiguration(key))) {
 			this.updateMenu();
 		}
+	}
+
+	private get currentAutoSaveSetting(): string {
+		return this.configurationService.getValue<string>('files.autoSave');
+	}
+
+	private get currentNavbarVisible(): boolean {
+		return this.configurationService.getValue<boolean>('workbench.navBar.visible');
+	}
+
+	private get currentMultiCursorModifierSetting(): string {
+		return this.configurationService.getValue<string>('editor.multiCursorModifier');
+	}
+
+	private get currentSidebarLocation(): string {
+		return this.configurationService.getValue<string>('workbench.sideBar.location') || 'left';
+	}
+
+	private get currentContextbarVisible(): boolean {
+		return this.configurationService.getValue<boolean>('workbench.contextBar.visible');
+	}
+
+	private get currentStatusbarVisible(): boolean {
+		let statusbarVisible = this.configurationService.getValue<boolean>('workbench.statusBar.visible');
+		if (typeof statusbarVisible !== 'boolean') {
+			statusbarVisible = true;
+		}
+		return statusbarVisible;
+	}
+
+	private get currentActivityBarVisible(): boolean {
+		let activityBarVisible = this.configurationService.getValue<boolean>('workbench.activityBar.visible');
+		if (typeof activityBarVisible !== 'boolean') {
+			activityBarVisible = true;
+		}
+		return activityBarVisible;
+	}
+
+	private get currentEnableMenuBarMnemonics(): boolean {
+		let enableMenuBarMnemonics = this.configurationService.getValue<boolean>('window.enableMenuBarMnemonics');
+		if (typeof enableMenuBarMnemonics !== 'boolean') {
+			enableMenuBarMnemonics = true;
+		}
+		return enableMenuBarMnemonics;
+	}
+
+	private get currentEnableNativeTabs(): boolean {
+		let enableNativeTabs = this.configurationService.getValue<boolean>('window.nativeTabs');
+		if (typeof enableNativeTabs !== 'boolean') {
+			enableNativeTabs = false;
+		}
+		return enableNativeTabs;
 	}
 
 	private updateMenu(): void {
@@ -280,7 +232,7 @@ export class CodeMenu {
 
 		this.closeWorkspace.visible = isInWorkspaceContext;
 		this.closeFolder.visible = !isInWorkspaceContext;
-		this.closeFolder.enabled = isInFolderContext;
+		this.closeFolder.enabled = isInFolderContext || isLinux /* https://github.com/Microsoft/vscode/issues/36431 */;
 		this.exportWorkspace.enabled = isInFolderContext || isInWorkspaceContext;
 	}
 
@@ -416,9 +368,26 @@ export class CodeMenu {
 			newFile = this.createMenuItem(nls.localize({ key: 'miNewFile', comment: ['&& denotes a mnemonic'] }, "&&New File"), 'workbench.action.files.newUntitledFile');
 		}
 
-		const open = new MenuItem(this.likeAction('workbench.action.files.openFileFolder', { label: this.mnemonicLabel(nls.localize({ key: 'miOpen', comment: ['&& denotes a mnemonic'] }, "&&Open...")), click: (menuItem, win, event) => this.windowsService.pickFileFolderAndOpen({ forceNewWindow: this.isOptionClick(event), telemetryExtraData: { from: telemetryFrom } }) }));
-		const openWorkspace = new MenuItem(this.likeAction('workbench.action.openWorkspace', { label: this.mnemonicLabel(nls.localize({ key: 'miOpenWorkspace', comment: ['&& denotes a mnemonic'] }, "&&Open Workspace...")), click: () => this.windowsService.openWorkspace() }));
-		const openFolder = new MenuItem(this.likeAction('workbench.action.files.openFolder', { label: this.mnemonicLabel(nls.localize({ key: 'miOpenFolder', comment: ['&& denotes a mnemonic'] }, "Open &&Folder...")), click: (menuItem, win, event) => this.windowsService.pickFolderAndOpen({ forceNewWindow: this.isOptionClick(event), telemetryExtraData: { from: telemetryFrom } }) }));
+		let open: Electron.MenuItem;
+		if (hasNoWindows) {
+			open = new MenuItem(this.likeAction('workbench.action.files.openFileFolder', { label: this.mnemonicLabel(nls.localize({ key: 'miOpen', comment: ['&& denotes a mnemonic'] }, "&&Open...")), click: (menuItem, win, event) => this.windowsService.pickFileFolderAndOpen({ forceNewWindow: this.isOptionClick(event), telemetryExtraData: { from: telemetryFrom } }) }));
+		} else {
+			open = this.createMenuItem(nls.localize({ key: 'miOpen', comment: ['&& denotes a mnemonic'] }, "&&Open..."), ['workbench.action.files.openFileFolder', 'workbench.action.files.openFileFolderInNewWindow']);
+		}
+
+		let openWorkspace: Electron.MenuItem;
+		if (hasNoWindows) {
+			openWorkspace = new MenuItem(this.likeAction('workbench.action.openWorkspace', { label: this.mnemonicLabel(nls.localize({ key: 'miOpenWorkspace', comment: ['&& denotes a mnemonic'] }, "&&Open Workspace...")), click: (menuItem, win, event) => this.windowsService.pickWorkspaceAndOpen({ forceNewWindow: this.isOptionClick(event), telemetryExtraData: { from: telemetryFrom } }) }));
+		} else {
+			openWorkspace = this.createMenuItem(nls.localize({ key: 'miOpenWorkspace', comment: ['&& denotes a mnemonic'] }, "&&Open Workspace..."), ['workbench.action.openWorkspace', 'workbench.action.openWorkspaceInNewWindow']);
+		}
+
+		let openFolder: Electron.MenuItem;
+		if (hasNoWindows) {
+			openFolder = new MenuItem(this.likeAction('workbench.action.files.openFolder', { label: this.mnemonicLabel(nls.localize({ key: 'miOpenFolder', comment: ['&& denotes a mnemonic'] }, "Open &&Folder...")), click: (menuItem, win, event) => this.windowsService.pickFolderAndOpen({ forceNewWindow: this.isOptionClick(event), telemetryExtraData: { from: telemetryFrom } }) }));
+		} else {
+			openFolder = this.createMenuItem(nls.localize({ key: 'miOpenFolder', comment: ['&& denotes a mnemonic'] }, "Open &&Folder..."), ['workbench.action.files.openFolder', 'workbench.action.files.openFolderInNewWindow']);
+		}
 
 		let openFile: Electron.MenuItem;
 		if (hasNoWindows) {

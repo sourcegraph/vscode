@@ -28,7 +28,7 @@ import * as editorCommon from 'vs/editor/common/editorCommon';
 import * as modes from 'vs/editor/common/modes';
 import { ITextSource } from 'vs/editor/common/model/textSource';
 
-import { IConfigurationData, ConfigurationTarget } from 'vs/platform/configuration/common/configuration';
+import { IConfigurationData, ConfigurationTarget, IConfigurationModel } from 'vs/platform/configuration/common/configuration';
 
 import { IPickOpenEntry, IPickOptions } from 'vs/platform/quickOpen/common/quickOpen';
 import { SaveReason } from 'vs/workbench/services/textfile/common/textfiles';
@@ -77,6 +77,11 @@ export interface IInitData {
 	extensions: IExtensionDescription[];
 	configuration: IConfigurationData;
 	telemetryInfo: ITelemetryInfo;
+}
+
+export interface IWorkspaceConfigurationChangeEventData {
+	changedConfiguration: IConfigurationModel;
+	changedConfigurationByResource: { [folder: string]: IConfigurationModel };
 }
 
 export interface IExtHostContext {
@@ -135,6 +140,12 @@ export interface MainThreadDialogSaveOptions {
 export interface MainThreadDiaglogsShape extends IDisposable {
 	$showOpenDialog(options: MainThreadDialogOpenOptions): TPromise<string[]>;
 	$showSaveDialog(options: MainThreadDialogSaveOptions): TPromise<string>;
+}
+
+export interface MainThreadDecorationsShape extends IDisposable {
+	$registerDecorationProvider(handle: number, label: string): void;
+	$unregisterDecorationProvider(handle: number): void;
+	$onDidChange(handle: number, resources: URI[]): void;
 }
 
 export interface MainThreadDocumentContentProvidersShape extends IDisposable {
@@ -211,6 +222,7 @@ export interface MainThreadEditorsShape extends IDisposable {
 	$tryHideEditor(id: string): TPromise<void>;
 	$trySetOptions(id: string, options: ITextEditorConfigurationUpdate): TPromise<any>;
 	$trySetDecorations(id: string, key: string, ranges: editorCommon.IDecorationOptions[]): TPromise<any>;
+	$trySetDecorationsFast(id: string, key: string, ranges: string): TPromise<any>;
 	$tryRevealRange(id: string, range: IRange, revealType: TextEditorRevealType): TPromise<any>;
 	$trySetSelections(id: string, selections: ISelection[]): TPromise<any>;
 	$tryApplyEdits(id: string, modelVersionId: number, edits: editorCommon.ISingleEditOperation[], opts: IApplyEditsOptions): TPromise<boolean>;
@@ -375,8 +387,7 @@ export type SCMRawResource = [
 	string[] /*icons: light, dark*/,
 	string /*tooltip*/,
 	boolean /*strike through*/,
-	boolean /*faded*/,
-	{ id: string } /*ThemeColor*/
+	boolean /*faded*/
 ];
 
 export type SCMRawResourceSplice = [
@@ -432,6 +443,7 @@ export interface MainThreadDebugServiceShape extends IDisposable {
 	$unregisterDebugConfigurationProvider(handle: number): TPromise<any>;
 	$startDebugging(folder: URI | undefined, nameOrConfig: string | vscode.DebugConfiguration): TPromise<boolean>;
 	$customDebugAdapterRequest(id: DebugSessionUUID, command: string, args: any): TPromise<any>;
+	$appendDebugConsole(value: string): TPromise<any>;
 }
 
 export interface MainThreadCredentialsShape extends IDisposable {
@@ -452,7 +464,7 @@ export interface ExtHostCommandsShape {
 }
 
 export interface ExtHostConfigurationShape {
-	$acceptConfigurationChanged(data: IConfigurationData): void;
+	$acceptConfigurationChanged(data: IConfigurationData, eventData: IWorkspaceConfigurationChangeEventData): void;
 }
 
 export interface ExtHostDiagnosticsShape {
@@ -645,6 +657,13 @@ export interface ExtHostDebugServiceShape {
 	$acceptDebugSessionCustomEvent(id: DebugSessionUUID, type: string, name: string, event: any): void;
 }
 
+
+export type DecorationData = [number, boolean, string, string, ThemeColor];
+
+export interface ExtHostDecorationsShape {
+	$providerDecorations(handle: number, uri: URI): TPromise<DecorationData>;
+}
+
 export interface ExtHostCredentialsShape {
 }
 
@@ -658,6 +677,7 @@ export const MainContext = {
 	MainThreadCommands: createMainId<MainThreadCommandsShape>('MainThreadCommands'),
 	MainThreadConfiguration: createMainId<MainThreadConfigurationShape>('MainThreadConfiguration'),
 	MainThreadDebugService: createMainId<MainThreadDebugServiceShape>('MainThreadDebugService'),
+	MainThreadDecorations: createMainId<MainThreadDecorationsShape>('MainThreadDecorations'),
 	MainThreadDiagnostics: createMainId<MainThreadDiagnosticsShape>('MainThreadDiagnostics'),
 	MainThreadDialogs: createMainId<MainThreadDiaglogsShape>('MainThreadDiaglogs'),
 	MainThreadDocuments: createMainId<MainThreadDocumentsShape>('MainThreadDocuments'),
@@ -690,6 +710,7 @@ export const ExtHostContext = {
 	ExtHostConfiguration: createExtId<ExtHostConfigurationShape>('ExtHostConfiguration'),
 	ExtHostDiagnostics: createExtId<ExtHostDiagnosticsShape>('ExtHostDiagnostics'),
 	ExtHostDebugService: createExtId<ExtHostDebugServiceShape>('ExtHostDebugService'),
+	ExtHostDecorations: createExtId<ExtHostDecorationsShape>('ExtHostDecorations'),
 	ExtHostDocumentsAndEditors: createExtId<ExtHostDocumentsAndEditorsShape>('ExtHostDocumentsAndEditors'),
 	ExtHostDocuments: createExtId<ExtHostDocumentsShape>('ExtHostDocuments'),
 	ExtHostDocumentContentProviders: createExtId<ExtHostDocumentContentProvidersShape>('ExtHostDocumentContentProviders'),

@@ -7,7 +7,7 @@
 import { localize } from 'vs/nls';
 import { IThreads, ICodeCommentsService, Filter, IFileComments, IThreadComments, IComment, IDraftThreadComments, IOrgComments, IRepoComments } from 'vs/editor/common/services/codeCommentsService';
 import { Range } from 'vs/editor/common/core/range';
-import Event, { Emitter, any } from 'vs/base/common/event';
+import Event, { Emitter, anyEvent } from 'vs/base/common/event';
 import { VSDiff as Diff } from 'vs/workbench/services/codeComments/common/vsdiff';
 import { Disposable } from 'vs/workbench/services/codeComments/common/disposable';
 import { ISCMService, ISCMRepository } from 'vs/workbench/services/scm/common/scm';
@@ -528,7 +528,7 @@ export class FileComments extends Disposable implements IFileComments {
 			this.updateDisplayRanges();
 		}));
 
-		this.disposable(any(
+		this.disposable(anyEvent(
 			scmService.onDidAddRepository,
 			scmService.onDidRemoveRepository,
 			scmService.onDidChangeRepository
@@ -708,7 +708,7 @@ class ModelWatcher extends Disposable {
 	) {
 		super();
 
-		this.disposable(any(
+		this.disposable(anyEvent(
 			modelService.onModelAdded,
 			modelService.onModelRemoved,
 		)(this.handleModelChange, this));
@@ -1034,7 +1034,7 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 		const model = editor.getModel();
 
 		// Configure with current configuration now, or with future configuration changes.
-		this.disposable(configurationService.onDidUpdateConfiguration(() => this.onDidUpdateConfiguration()));
+		this.disposable(configurationService.onDidChangeConfiguration(() => this.onDidUpdateConfiguration()));
 		this.onDidUpdateConfiguration();
 
 		// Save a decoration for the range so if content changes

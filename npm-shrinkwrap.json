@@ -688,7 +688,19 @@
     "windows-mutex": {
       "version": "0.2.0",
       "from": "windows-mutex@>=0.2.0 <0.3.0",
-      "resolved": "https://registry.npmjs.org/windows-mutex/-/windows-mutex-0.2.0.tgz"
+      "resolved": "https://registry.npmjs.org/windows-mutex/-/windows-mutex-0.2.0.tgz",
+      "dependencies": {
+        "bindings": {
+          "version": "1.3.0",
+          "from": "bindings@>=1.2.1 <2.0.0",
+          "resolved": "https://registry.npmjs.org/bindings/-/bindings-1.3.0.tgz"
+        },
+        "nan": {
+          "version": "2.7.0",
+          "from": "nan@>=2.1.0 <3.0.0",
+          "resolved": "https://registry.npmjs.org/nan/-/nan-2.7.0.tgz"
+        }
+      }
     },
     "windows-process-tree": {
       "version": "0.1.6",
@@ -698,7 +710,7 @@
     "xterm": {
       "version": "2.9.1",
       "from": "Tyriar/xterm.js#vscode-release/1.18",
-      "resolved": "git+https://github.com/Tyriar/xterm.js.git#d57ac8df05ddf04b509505eadc0d408a0b3bfa38"
+      "resolved": "git+https://github.com/Tyriar/xterm.js.git#80718295b8f73d809686741a251aa529317c1d35"
     },
     "yauzl": {
       "version": "2.8.0",

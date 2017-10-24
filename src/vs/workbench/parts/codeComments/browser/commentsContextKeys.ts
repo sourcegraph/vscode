@@ -10,7 +10,7 @@ import { Disposable } from 'vs/base/common/lifecycle';
 import { IEditorContribution } from 'vs/editor/common/editorCommon';
 import { ICodeEditor } from 'vs/editor/browser/editorBrowser';
 import { ISCMService } from 'vs/workbench/services/scm/common/scm';
-import { any } from 'vs/base/common/event';
+import { anyEvent } from 'vs/base/common/event';
 import { IAuthService } from 'vs/platform/auth/common/auth';
 
 export namespace CommentsContextKeys {
@@ -43,7 +43,7 @@ export class CommentsContextKeyManager extends Disposable implements IEditorCont
 
 		this._register(authService.onDidChangeCurrentUser(() => this.checkCanComment()));
 		this._register(editor.onDidChangeModel(() => this.checkCanComment()));
-		this._register(any(
+		this._register(anyEvent(
 			scmService.onDidAddRepository,
 			scmService.onDidRemoveRepository,
 			scmService.onDidChangeRepository

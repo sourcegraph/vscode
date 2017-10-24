@@ -13,6 +13,7 @@ import { Model } from './model';
 import { CommandCenter } from './commands';
 import { GitContentProvider } from './contentProvider';
 import { GitResourceResolver } from './resourceResolver';
+import { GitDecorations } from './decorationProvider';
 import { Askpass } from './askpass';
 import { toDisposable } from './util';
 import { IGitExtension } from './api';
@@ -66,7 +67,8 @@ async function init(context: ExtensionContext, disposables: Disposable[]): Promi
 	const commandCenter = new CommandCenter(git, model, outputChannel, resourceResolver, telemetryReporter);
 	disposables.push(
 		commandCenter,
-		new GitContentProvider(model)
+		new GitContentProvider(model),
+		new GitDecorations(model),
 	);
 
 	await checkGitVersion(info);

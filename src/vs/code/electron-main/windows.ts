@@ -1421,8 +1421,8 @@ export class WindowsManager implements IWindowsMainService {
 		return result;
 	}
 
-	public openWorkspace(win?: CodeWindow): void {
-		this.workspacesManager.openWorkspace(win);
+	public pickWorkspaceAndOpen(options: INativeOpenDialogOptions): void {
+		this.workspacesManager.pickWorkspaceAndOpen(options);
 	}
 
 	private onBeforeWindowUnload(e: IWindowUnloadEvent): void {
@@ -1702,7 +1702,7 @@ class FileDialog {
 		});
 	}
 
-	public getFileOrFolderPaths(options: IInternalNativeOpenDialogOptions, clb: (paths: string[]) => void): void {
+	private getFileOrFolderPaths(options: IInternalNativeOpenDialogOptions, clb: (paths: string[]) => void): void {
 
 		// Ensure dialog options
 		if (!options.dialogOptions) {
@@ -1839,13 +1839,8 @@ class WorkspacesManager {
 		});
 	}
 
-	public openWorkspace(window = this.windowsMainService.getLastActiveWindow()): void {
-		let defaultPath: string;
-		if (window && window.openedWorkspace && !this.workspacesService.isUntitledWorkspace(window.openedWorkspace)) {
-			defaultPath = dirname(window.openedWorkspace.configPath);
-		} else {
-			defaultPath = this.getWorkspaceDialogDefaultPath(window ? (window.openedWorkspace || window.openedFolderPath) : void 0);
-		}
+	public pickWorkspaceAndOpen(options: INativeOpenDialogOptions): void {
+		const window = this.windowsMainService.getWindowById(options.windowId) || this.windowsMainService.getFocusedWindow() || this.windowsMainService.getLastActiveWindow();
 
 		this.windowsMainService.pickFileAndOpen({
 			windowId: window ? window.id : void 0,
@@ -1854,8 +1849,11 @@ class WorkspacesManager {
 				title: localize('openWorkspaceTitle', "Open Workspace"),
 				filters: WORKSPACE_FILTER_OPEN,
 				properties: ['openFile'],
-				defaultPath
-			}
+				defaultPath: options.dialogOptions && options.dialogOptions.defaultPath
+			},
+			forceNewWindow: options.forceNewWindow,
+			telemetryEventName: options.telemetryEventName,
+			telemetryExtraData: options.telemetryExtraData
 		});
 	}
 
@@ -1914,7 +1912,7 @@ class WorkspacesManager {
 					buttonLabel: mnemonicButtonLabel(localize({ key: 'save', comment: ['&& denotes a mnemonic'] }, "&&Save")),
 					title: localize('saveWorkspace', "Save Workspace"),
 					filters: WORKSPACE_FILTER_SAVE,
-					defaultPath: this.getWorkspaceDialogDefaultPath(workspace)
+					defaultPath: this.getUntitledWorkspaceSaveDialogDefaultPath(workspace)
 				});
 
 				if (target) {
@@ -1930,7 +1928,7 @@ class WorkspacesManager {
 		}
 	}
 
-	private getWorkspaceDialogDefaultPath(workspace?: IWorkspaceIdentifier | ISingleFolderWorkspaceIdentifier): string {
+	private getUntitledWorkspaceSaveDialogDefaultPath(workspace?: IWorkspaceIdentifier | ISingleFolderWorkspaceIdentifier): string {
 		if (workspace) {
 			if (isSingleFolderWorkspaceIdentifier(workspace)) {
 				return dirname(workspace);
@@ -1945,6 +1943,7 @@ class WorkspacesManager {
 				}
 			}
 		}
+
 		return void 0;
 	}
 }

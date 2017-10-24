@@ -11,8 +11,8 @@ import paths = require('vs/base/common/paths');
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
 import { IDisposable, dispose } from 'vs/base/common/lifecycle';
 import Event, { Emitter } from 'vs/base/common/event';
-import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
-import { ParsedExpression, IExpression } from 'vs/base/common/glob';
+import { IConfigurationService, IConfigurationChangeEvent } from 'vs/platform/configuration/common/configuration';
+import { ParsedExpression, IExpression, parse } from 'vs/base/common/glob';
 import { basename } from 'vs/base/common/paths';
 import { RawContextKey, IContextKeyService, IContextKey } from 'vs/platform/contextkey/common/contextkey';
 import { IModeService } from 'vs/editor/common/services/modeService';
@@ -78,7 +78,7 @@ export class ResourceGlobMatcher {
 
 	constructor(
 		private globFn: (root?: URI) => IExpression,
-		private parseFn: (expression: IExpression) => ParsedExpression,
+		private shouldUpdate: (event: IConfigurationChangeEvent) => boolean,
 		@IWorkspaceContextService private contextService: IWorkspaceContextService,
 		@IConfigurationService private configurationService: IConfigurationService
 	) {
@@ -100,7 +100,11 @@ export class ResourceGlobMatcher {
 	}
 
 	private registerListeners(): void {
-		this.toUnbind.push(this.configurationService.onDidUpdateConfiguration(() => this.updateExcludes(true)));
+		this.toUnbind.push(this.configurationService.onDidChangeConfiguration(e => {
+			if (this.shouldUpdate(e)) {
+				this.updateExcludes(true);
+			}
+		}));
 		this.toUnbind.push(this.contextService.onDidChangeWorkspaceFolders(() => this.updateExcludes(true)));
 	}
 
@@ -113,7 +117,7 @@ export class ResourceGlobMatcher {
 			if (!this.mapRootToExpressionConfig.has(folder.uri.toString()) || !objects.equals(this.mapRootToExpressionConfig.get(folder.uri.toString()), rootExcludes)) {
 				changed = true;
 
-				this.mapRootToParsedExpression.set(folder.uri.toString(), this.parseFn(rootExcludes));
+				this.mapRootToParsedExpression.set(folder.uri.toString(), parse(rootExcludes));
 				this.mapRootToExpressionConfig.set(folder.uri.toString(), objects.clone(rootExcludes));
 			}
 		});
@@ -137,7 +141,7 @@ export class ResourceGlobMatcher {
 		if (!this.mapRootToExpressionConfig.has(ResourceGlobMatcher.NO_ROOT) || !objects.equals(this.mapRootToExpressionConfig.get(ResourceGlobMatcher.NO_ROOT), globalExcludes)) {
 			changed = true;
 
-			this.mapRootToParsedExpression.set(ResourceGlobMatcher.NO_ROOT, this.parseFn(globalExcludes));
+			this.mapRootToParsedExpression.set(ResourceGlobMatcher.NO_ROOT, parse(globalExcludes));
 			this.mapRootToExpressionConfig.set(ResourceGlobMatcher.NO_ROOT, objects.clone(globalExcludes));
 		}
 

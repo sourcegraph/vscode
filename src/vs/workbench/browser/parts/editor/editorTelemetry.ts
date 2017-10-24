@@ -39,7 +39,6 @@ export class EditorViewTelemetryHandler implements IWorkbenchContribution {
 			const uriDescriptor = telemetryURIDescriptor(activeResource);
 			params = {
 				page_title: 'ViewFile',
-				path_name: uriDescriptor.path, // anonymized file path (e.g., /aaa/bbb/ccc)
 				language: uriDescriptor.ext.slice(1)
 			};
 		}

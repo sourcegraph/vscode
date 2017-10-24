@@ -60,7 +60,7 @@ export class MainThreadEditors implements MainThreadEditorsShape {
 		this._toDispose.push(documentsAndEditors.onTextEditorRemove(editors => editors.forEach(this._onTextEditorRemove, this)));
 
 		this._toDispose.push(editorGroupService.onEditorsChanged(() => this._updateActiveAndVisibleTextEditors()));
-		this._toDispose.push(editorGroupService.onEditorsMoved(() => this._updateActiveAndVisibleTextEditors()));
+		this._toDispose.push(editorGroupService.onEditorGroupMoved(() => this._updateActiveAndVisibleTextEditors()));
 
 		this._registeredDecorationTypes = Object.create(null);
 	}
@@ -192,6 +192,14 @@ export class MainThreadEditors implements MainThreadEditorsShape {
 			return TPromise.wrapError(disposed(`TextEditor(${id})`));
 		}
 		this._documentsAndEditors.getEditor(id).setDecorations(key, ranges);
+		return TPromise.as(null);
+	}
+
+	$trySetDecorationsFast(id: string, key: string, ranges: string): TPromise<any> {
+		if (!this._documentsAndEditors.getEditor(id)) {
+			return TPromise.wrapError(disposed(`TextEditor(${id})`));
+		}
+		this._documentsAndEditors.getEditor(id).setDecorationsFast(key, /*TODO: marshaller is too slow*/JSON.parse(ranges));
 		return TPromise.as(null);
 	}
 
