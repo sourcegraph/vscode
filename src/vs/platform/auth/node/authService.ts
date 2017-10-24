@@ -267,7 +267,14 @@ export class AuthService extends Disposable implements IAuthService {
 			}
 		}`, { orgID: currentOrg.id, email })
 			.then(() => {
-				this.telemetryService.publicLog('InviteTeammateSuccess');
+				this.telemetryService.publicLog('InviteTeammateSuccess', {
+					organization: {
+						invite: {
+							user_email: email,
+						},
+						org_id: currentOrg.id,
+					},
+				});
 				this.messageService.show(Severity.Info, localize('inviteTeammate.success', "Invited {0} to {1}", email, currentOrg.name));
 			}, (err) => {
 				this.messageService.show(Severity.Error, err);
