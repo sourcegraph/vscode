@@ -42,8 +42,11 @@ interface GitResourceAtRevision extends GitResource {
 }
 
 interface PickOptions extends QuickPickOptions {
-	/** If the repos contains workspace roots, filter no workspace roots out */
-	autoSelectRoot?: boolean;
+	/**
+	 * If the repos passed to pick contain workspace roots, only the workspace
+	 * roots are presented as options.
+	 */
+	autoSelectWorkspaceRoots?: boolean;
 }
 
 export class GitResourceResolver {
@@ -105,14 +108,14 @@ export class GitResourceResolver {
 		// We have repositories. If it doesn't need to be at a specific revision
 		// we let the user pick one.
 		if (!hasRevision(resource)) {
-			return await this.pick(resource, repos, { autoSelectRoot: true });
+			return await this.pick(resource, repos, { autoSelectWorkspaceRoots: true });
 		}
 
 		// Find repositories which are either at revision or can be fast
 		// forwarded to revision.
 		const reposAtRevision = await this.filterReposAtRevision(resource, repos);
 		if (reposAtRevision.length > 0) {
-			const repo = await this.pick(resource, repos, { autoSelectRoot: true });
+			const repo = await this.pick(resource, repos, { autoSelectWorkspaceRoots: true });
 			// TODO(keegan) What if the working copy is dirty?
 			await this.fastForward(repo, resource);
 			return repo;
@@ -296,15 +299,16 @@ export class GitResourceResolver {
 			options = {};
 		}
 
-		if (options.autoSelectRoot) {
+		if (options.autoSelectWorkspaceRoots) {
 			// If we have repos that are already workspace roots, only include them
 			const inWorkspace = repos.filter(repo => (workspace.workspaceFolders || []).some(f => f.uri.fsPath === repo.root));
 			if (inWorkspace.length > 0) {
 				repos = inWorkspace;
 			}
-			if (repos.length === 1) {
-				return repos[0];
-			}
+		}
+
+		if (repos.length === 1) {
+			return repos[0];
 		}
 
 		const picks = repos.map(repo => {
