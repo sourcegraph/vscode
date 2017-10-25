@@ -21,7 +21,7 @@ import { IWorkbenchActionRegistry, Extensions as ActionExtensions } from 'vs/wor
 import { SyncActionDescriptor } from 'vs/platform/actions/common/actions';
 import { IQuickOpenService } from 'vs/platform/quickOpen/common/quickOpen';
 
-class ReviewQuickOpenAction extends QuickOpenAction {
+export class ReviewQuickOpenAction extends QuickOpenAction {
 	public static readonly ID = 'workbench.action.review';
 	public static readonly LABEL = localize('reviewItems', "Review Code");
 

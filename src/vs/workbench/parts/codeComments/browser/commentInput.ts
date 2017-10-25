@@ -88,7 +88,7 @@ export class CommentInput extends Disposable {
 					const inviteEl = inviteButton.getElement();
 					inviteEl.style.padding = '0px';
 					inviteEl.style.margin = '0px';
-					div.text(localize('submitHint', "Markdown supported. ")).append(buttonContainer);
+					div.text(localize('submitHint', "Markdown supported")).append(buttonContainer);
 				});
 
 				this.secondaryButton = new Button(div.getContainer());

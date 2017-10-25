@@ -81,23 +81,6 @@ export class ReviewQuickOpenHandler extends QuickOpenHandler {
 
 	public onOpen(): void {
 		const entries = this.reviewService.reviewItems.map(reviewItem => this.instantiationService.createInstance(ReviewEntry, reviewItem));
-		// Newest to the top
-		entries.sort((a, b) => {
-			const aDate = a.reviewItem.provider.date;
-			const bDate = b.reviewItem.provider.date;
-			// If timestamps are the same or both not given sort alphanumerically by ID
-			if (aDate === bDate) {
-				return b.reviewItem.provider.id < a.reviewItem.provider.id ? -1 : 1;
-			}
-			// If one of them is not given move that one down
-			if (!aDate) {
-				return 1;
-			}
-			if (!bDate) {
-				return -1;
-			}
-			return bDate - aDate;
-		});
 		this.model = new QuickOpenModel(entries);
 	}
 

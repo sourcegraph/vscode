@@ -8,7 +8,6 @@
 	min-height: 100%;
 	min-width: 800px;
 	justify-content: center;
-	align-items: center;
 }
 
 .monaco-workbench > .part.editor > .content .welcomePage {
@@ -171,6 +170,20 @@
 	min-width: calc(50% - 1em);
 }
 
+.monaco-workbench > .part.editor > .content .welcomePage .inline-block {
+	display: inline-block;
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .search {
+	display: inline-block;
+	cursor: pointer;
+	padding-top: 5px;
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .float-right {
+	float: right;
+}
+
 .monaco-workbench > .part.editor > .content .welcomePage .action-header {
 	color: #A2B0CD;
 	font-weight: 600;
@@ -207,6 +220,14 @@
 	font-size: 12px;
 }
 
+.monaco-workbench > .part.editor > .content .welcomePage .remote-description {
+	opacity: 0.7;
+	display: inline-flex;
+	vertical-align: middle;
+	padding-left: 0.25em;
+	font-size: 12px;
+}
+
 .monaco-workbench > .part.editor > .content .welcomePage .column-container {
 	display: inline-flex;
 	vertical-align: middle;
@@ -222,7 +243,7 @@
 }
 
 .monaco-workbench > .part.editor > .content .welcomePage .padding-right {
-	padding-left: 0.25em;
+	padding-right: 0.25em;
 }
 
 .monaco-workbench > .part.editor > .content .welcomePage .overflow-ellipsis {
@@ -232,15 +253,18 @@
 }
 
 .monaco-workbench > .part.editor > .content .welcomePage .repo-row {
-	display: flex;
 	justify-content: space-between;
 	cursor: pointer;
 	padding: 0.25em 1em 0.25em 1em;
-	height: 28px;
+	min-height: 28px;
 	align-items: center;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: pre;
+}
+
+.monaco-workbench > .part.editor > .content .welcomePage .flex {
+	display: flex;
 }
 
 .monaco-workbench > .part.editor > .content .welcomePage .repo-row:hover {

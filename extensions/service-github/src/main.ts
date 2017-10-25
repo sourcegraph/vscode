@@ -239,13 +239,22 @@ fragment refFields on Ref {
 		}
 	});
 
-
+	vscode.commands.registerCommand('github.recent.repostories', async () => {
+		const ok = await checkGitHubToken();
+		if (!ok) {
+			showCreateGitHubTokenWalkthrough();
+			return;
+		}
+		// Fetch the user repos.
+		return await viewer.contributedRepositories();
+	});
 }
 
 // Fetches and caches the github information associated to the current user.
 class Viewer {
 	private token: string;
 	private repoRequest: Thenable<vscode.CatalogFolder[]> | null;
+	private contributedRequest: Thenable<vscode.CatalogFolder[]> | null;
 	private usernameRequest: Thenable<string | null> | null;
 
 	constructor() {
@@ -254,6 +263,40 @@ class Viewer {
 			this.repositories();
 		}, 2000);
 	}
+
+	public contributedRepositories(): Thenable<vscode.CatalogFolder[]> {
+		if (!this.validState()) {
+			return Promise.resolve([]);
+		}
+		if (this.contributedRequest !== null) {
+			return this.contributedRequest;
+		}
+		const request = requestGraphQL(`
+		{
+			viewer {
+				contributedRepositories(first: 10, orderBy: {field: PUSHED_AT, direction: DESC}) {
+					nodes {
+						...repoFields
+					}
+				}
+			}
+		}
+		fragment repoFields on Repository {
+			${repoFields}
+		}
+			`, {}).then<vscode.CatalogFolder[]>((data: any) => {
+				return [].concat(
+					data.viewer.contributedRepositories.nodes,
+				).map(toCatalogFolder);
+			}, (reason) => {
+				// try again, but don't fail other requests if this fails
+				console.error(reason);
+				this.contributedRequest = null;
+				return [];
+			});
+		this.contributedRequest = request;
+		return request;
+	};
 
 	// Returns the github repositories for the current user. Best-effort, so
 	// should never be rejected. Also cached, so efficient to be repeatedly called.
@@ -355,6 +398,7 @@ class Viewer {
 		}
 		if (token !== this.token) {
 			this.repoRequest = null;
+			this.contributedRequest = null;
 			this.usernameRequest = null;
 		}
 		this.token = token;

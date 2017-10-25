@@ -33,9 +33,17 @@ export class ReviewService implements IReviewService {
 
 	_serviceBrand: any;
 
+	private sorted: boolean;
+
 	private _providerIds = new Set<string>();
 	private _reviewItems: IReviewItem[] = [];
-	get reviewItems(): IReviewItem[] { return [...this._reviewItems]; }
+	get reviewItems(): IReviewItem[] {
+		if (!this.sorted) {
+			this.sortReviewItemsByTimestamp();
+			this.sorted = true;
+		}
+		return [...this._reviewItems];
+	}
 
 	private _onDidAddProvider = new Emitter<IReviewItem>();
 	get onDidAddReviewItem(): Event<IReviewItem> { return this._onDidAddProvider.event; }
@@ -67,8 +75,28 @@ export class ReviewService implements IReviewService {
 
 		const reviewItem = new ReviewItem(provider, disposable);
 		this._reviewItems.push(reviewItem);
+		this.sorted = false;
 		this._onDidAddProvider.fire(reviewItem);
 
 		return reviewItem;
+	}
+
+	sortReviewItemsByTimestamp(): void {
+		this._reviewItems.sort((a, b) => {
+			const aDate = a.provider.date;
+			const bDate = b.provider.date;
+			// If timestamps are the same or both not given sort alphanumerically by ID
+			if (aDate === bDate) {
+				return b.provider.id < a.provider.id ? -1 : 1;
+			}
+			// If one of them is not given move that one down
+			if (!aDate) {
+				return 1;
+			}
+			if (!bDate) {
+				return -1;
+			}
+			return bDate - aDate;
+		});
 	}
 }

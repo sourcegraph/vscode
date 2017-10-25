@@ -42,11 +42,17 @@ import { IFoldersWorkbenchService } from 'vs/workbench/services/folders/common/f
 import { $ } from 'vs/base/browser/builder';
 import { ISCMService } from 'vs/workbench/services/scm/common/scm';
 import { IAuthService } from 'vs/platform/auth/common/auth';
-import { ICodeCommentsService, IThreadComments, IOrgComments } from 'vs/editor/common/services/codeCommentsService';
+import { ICodeCommentsService, IOrgComments } from 'vs/editor/common/services/codeCommentsService';
 import { INavService } from 'vs/workbench/services/nav/common/nav';
 import { IContextViewService } from 'vs/platform/contextview/browser/contextView';
 import { SIDE_BAR_BACKGROUND, SIDE_BAR_BORDER, SIDE_BAR_SECTION_HEADER_BACKGROUND, SIDE_BAR_TITLE_FOREGROUND } from 'vs/workbench/common/theme';
+import { ICommandService } from 'vs/platform/commands/common/commands';
+import { IReviewService } from 'vs/workbench/services/review/common/review';
+import { distanceInWordsToNow } from 'date-fns';
 import { IOpenerService } from 'vs/platform/opener/common/opener';
+import { ReviewQuickOpenAction } from 'vs/workbench/parts/review/electron-browser/review.contribution';
+import { ThrottledDelayer } from 'vs/base/common/async';
+import { IExtensionService } from 'vs/platform/extensions/common/extensions';
 
 used();
 
@@ -272,7 +278,10 @@ class WelcomePage {
 		@ICodeCommentsService private codeCommentsService: ICodeCommentsService,
 		@INavService private navService: INavService,
 		@IContextViewService private contextViewService: IContextViewService,
-		@IOpenerService private openerService: IOpenerService
+		@ICommandService private commandService: ICommandService,
+		@IReviewService private reviewService: IReviewService,
+		@IOpenerService private openerService: IOpenerService,
+		@IExtensionService private extensionService: IExtensionService,
 	) {
 		this.disposables.push(lifecycleService.onShutdown(() => this.dispose()));
 
@@ -429,7 +438,7 @@ class WelcomePage {
 			subContainer.appendChild(subheader);
 			commentList.appendChild(subContainer);
 
-			const threads = repoComment.threads as IThreadComments[];
+			const threads = repoComment.threads.slice(0, Math.min(repoComment.threads.length, 20));
 			if (threads.length) {
 				subContainer.appendChild(repoCommentList);
 				threads.forEach(thread => {
@@ -438,7 +447,7 @@ class WelcomePage {
 						return;
 					}
 					const threadDiv = document.createElement('li');
-					threadDiv.className = 'repo-row';
+					threadDiv.className = 'repo-row flex';
 					threadDiv.addEventListener('click', () => {
 						const remoteUri = repoComment.remoteUri;
 						const query = `?utm_source=welcome_page_feed#open?path=${thread.file}&repo=https://${remoteUri}&revision=${thread.revision}&thread=${thread.id}&vcs=git`;
@@ -499,6 +508,11 @@ class WelcomePage {
 		});
 	}
 
+	private refreshDelayer = new ThrottledDelayer<void>(100);
+	public reviewItemsChanged(): TPromise<void> {
+		return this.refreshDelayer.trigger(() => TPromise.wrap(this.resolveSuggestedRepositoriesContainer()));
+	}
+
 	private onReady(container: HTMLElement, installedExtensions: TPromise<IExtensionStatus[]>): void {
 		if (!this.orgComments) {
 			this.orgComments = this.codeCommentsService.getOrgComments();
@@ -508,25 +522,38 @@ class WelcomePage {
 				return this.resolveOrganizationCommentsContainer(container);
 			}, this));
 		}
+
+		this.reviewItemsChanged();
 		this.resolveOrganizationCommentsContainer(container, true);
+
+		this.disposables.push(this.configurationService.onDidUpdateConfiguration(() => {
+			this.resolveSuggestedRepositoriesContainer();
+		}));
 
 		this.disposables.push(this.authService.onDidChangeCurrentUser(() => {
 			this.orgComments.refresh();
 			this.resolveOrganizationCommentsContainer(container, true);
 		}));
 
+		this.disposables.push(this.reviewService.onDidAddReviewItem(() => {
+			this.reviewItemsChanged();
+		}));
+		this.disposables.push(this.reviewService.onDidRemoveReviewItem(() => {
+			this.reviewItemsChanged();
+		}));
+
+
 		const noOrgButton = document.getElementById('org-help-action');
 		noOrgButton.addEventListener('click', () => {
 			this.openerService.open(URI.parse('https://sourcegraph.com/settings/orgs/new'));
 		});
 
-		const inactiveButtons = container.querySelectorAll('.sg-inactive');
+		const reviewSearchButton = document.getElementById('review-search-action');
+		reviewSearchButton.addEventListener('click', () => {
+			this.commandService.executeCommand(ReviewQuickOpenAction.ID);
+		});
 
-		// TMP: Remove team section from welcome page until fully supported.
-		const teamSection = container.querySelector('.splash.last') as HTMLElement;
-		if (teamSection) {
-			teamSection.style.display = 'none';
-		}
+		const inactiveButtons = container.querySelectorAll('.sg-inactive');
 
 		for (let i = 0; i < inactiveButtons.length; i++) {
 			inactiveButtons[i].addEventListener('click', e => {
@@ -573,6 +600,174 @@ class WelcomePage {
 				});
 			});
 		}
+	}
+
+	/**
+	 * Review Flow Functions
+	 */
+
+	private async resolveSuggestedRepositoriesContainer(): Promise<void> {
+		const codeHostContainer = document.querySelector('.add-code-host') as HTMLElement;
+		const branchListContainer = document.querySelector('.branch-list-container') as HTMLElement;
+		const recentRepositoriesContainer = document.querySelector('.recent-repositories-container') as HTMLElement;
+
+		if (!branchListContainer || !codeHostContainer || !recentRepositoriesContainer) {
+			throw new Error('Could not query codeHostContainer or branchListContainer');
+		}
+
+		$(codeHostContainer).hide();
+		$(branchListContainer).hide();
+		$(recentRepositoriesContainer).hide();
+
+		const branchSpinner = document.getElementById('review-branches-spinner') as HTMLElement;
+		const repoSpinner = document.getElementById('recent-repos-spinner') as HTMLElement;
+
+		const { github, bitbucket } = this.configurationService.getConfiguration();
+		if ((!github || !github.token) && (!bitbucket || !bitbucket.cloud || !bitbucket.cloud.triggerSetup)) {
+			$(codeHostContainer).show();
+			$(branchListContainer).hide();
+			return;
+		}
+
+		$(codeHostContainer).hide();
+		const workspace = this.contextService.getWorkspace();
+		const suggestedRepoContainer = document.querySelector('.recent-repositories-list') as HTMLElement;
+		if (!suggestedRepoContainer) {
+			throw new Error('Could not query recent-repositories-list');
+		}
+		// If there's no workspace show suggested repos.
+		if (!workspace.folders.length) {
+			$(recentRepositoriesContainer).show();
+			$(repoSpinner).show();
+			const respositories = await this.getRecentRepositories();
+			$(repoSpinner).hide();
+			this.buildRecentRepositoriesList(respositories, suggestedRepoContainer);
+		} else {
+			$(recentRepositoriesContainer).hide();
+			$(branchListContainer).show();
+			if (!this.reviewService.reviewItems.length) {
+				const branchList = document.getElementById('branch-list');
+				$(branchList).clearChildren();
+				$(branchSpinner).show();
+			} else {
+				$(branchSpinner).hide();
+				this.renderBranches();
+			}
+		}
+	}
+
+	private recentRepositories: any[];
+	private async getRecentRepositories(): Promise<any[]> {
+		if (!this.recentRepositories) {
+			await this.extensionService.onReady();
+			await this.extensionService.activateByEvent('*');
+			this.recentRepositories = await this.commandService.executeCommand('github.recent.repostories') as any[];
+		}
+		return this.recentRepositories.slice(0, Math.min(this.recentRepositories.length, 10));
+	}
+
+	private hasBuiltRepositoriesList = false;
+
+	private buildRecentRepositoriesList(repositories: any[], container: HTMLElement): void {
+		if (this.hasBuiltRepositoriesList) {
+			return;
+		}
+		this.hasBuiltRepositoriesList = true;
+		repositories.map(repo => {
+			const repoDiv = document.createElement('div');
+			const contents = document.createElement('div');
+			repoDiv.className = 'repo-row flex';
+			const img = document.createElement('div');
+			img.className = 'added-repo-icon';
+			contents.appendChild(img);
+			repoDiv.appendChild(contents);
+			container.appendChild(repoDiv);
+			const nameLabel = document.createElement('div');
+			nameLabel.innerText = repo.displayPath;
+			nameLabel.className = 'repo-name-label';
+			contents.appendChild(nameLabel);
+			repoDiv.addEventListener('click', async (e) => {
+				const root = repo;
+				e.preventDefault();
+				e.stopPropagation();
+				await this.foldersWorkbenchService.addFoldersAsWorkspaceRootFolders([root]);
+			});
+		});
+	}
+
+	private renderBranches(): void {
+		const container = document.querySelector('.branch-list-container') as HTMLElement;
+		if (!container) {
+			throw new Error('Could not query branch-list-container');
+		}
+
+		let repoContainers = document.querySelector('.branch-list') as HTMLElement;
+		$(repoContainers).clearChildren();
+
+		const reviewItems = this.reviewService.reviewItems;
+
+		reviewItems.slice(0, Math.min(reviewItems.length, 10)).forEach(reviewItem => {
+			const description = reviewItem.provider.rootUri.toString().split(/[\\/]/);
+			let repo = reviewItem.provider.rootUri.toString();
+			if (description.length >= 3) {
+				repo = description.slice(description.length - 3).join('/');
+			}
+			let branchList = document.getElementById(`branch-list`);
+			if (!branchList) {
+				const subcontainer = document.createElement('li');
+				repoContainers.appendChild(subcontainer);
+				subcontainer.appendChild(branchList);
+			}
+
+			const repoDiv = document.createElement('li');
+			repoDiv.className = 'repo-row';
+			repoDiv.addEventListener('click', () => {
+				const command = reviewItem.provider.reviewCommand;
+				this.commandService.executeCommand(command.id, ...command.arguments);
+			});
+			branchList.appendChild(repoDiv);
+
+			const titleRow = document.createElement('div');
+			titleRow.className = 'flex';
+			repoDiv.appendChild(titleRow);
+
+			const leftDiv = document.createElement('div');
+			leftDiv.className = 'column-container padding-right';
+			titleRow.appendChild(leftDiv);
+
+			const branchIcon = document.createElement('div');
+			branchIcon.className = `${reviewItem.provider.icon} padding-right`;
+			leftDiv.appendChild(branchIcon);
+
+			const branchName = document.createElement('div');
+			branchName.className = 'overflow-ellipsis';
+			branchName.innerHTML = reviewItem.provider.label;
+			leftDiv.appendChild(branchName);
+
+			const remoteName = document.createElement('div');
+			remoteName.className = 'overflow-ellipsis padding-left remote-description';
+			remoteName.innerHTML = reviewItem.provider.description;
+			leftDiv.appendChild(remoteName);
+
+			const subtitleRow = document.createElement('div');
+			repoDiv.appendChild(subtitleRow);
+
+			const leftSubtitleDiv = document.createElement('div');
+			leftSubtitleDiv.className = 'column-container padding-right';
+			subtitleRow.appendChild(leftSubtitleDiv);
+
+			const authorLabel = document.createElement('div');
+			authorLabel.className = 'overflow-ellipsis remote-description';
+			authorLabel.innerHTML = reviewItem.provider.author;
+			leftSubtitleDiv.appendChild(authorLabel);
+
+			const timetampLabel = document.createElement('div');
+			timetampLabel.className = 'overflow-ellipsis remote-description';
+			timetampLabel.innerHTML = distanceInWordsToNow(reviewItem.provider.date, { addSuffix: true });
+			leftSubtitleDiv.appendChild(timetampLabel);
+		});
+
+		window.dispatchEvent(new Event('resize'));
 	}
 
 	private addExtensionList(container: HTMLElement, listSelector: string, suggestions: ExtensionSuggestion[], strings: Strings) {
