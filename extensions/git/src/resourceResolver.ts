@@ -317,7 +317,8 @@ export class GitResourceResolver {
 	}
 
 	private log(s: string) {
-		this.outputChannel.appendLine(s);
+		const d = new Date();
+		this.outputChannel.appendLine(`${d.getHours()}:${d.getMinutes()}:${d.getSeconds()}.${d.getMilliseconds()} ${s}`);
 	}
 
 	public async resolveResourceDeprecated(resource: Uri): Promise<Uri> {
