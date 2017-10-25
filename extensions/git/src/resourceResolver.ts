@@ -8,14 +8,14 @@
 import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
-import { workspace, window, ProgressLocation, Uri, Disposable, OutputChannel } from 'vscode';
-import { Git, IGitErrorData, Commit } from './git';
+import { workspace, window, ProgressLocation, Uri, Disposable, OutputChannel, QuickPickOptions } from 'vscode';
+import { Git, IGitErrorData, GitErrorCodes } from './git';
 import { mkdirp, replaceVariables, uniqBy } from './util';
 import { Model } from './model';
 import { Repository } from './repository';
 import * as nls from 'vscode-nls';
 import { canonicalRemote } from './uri';
-import { getBestRepositoryWorktree, getRepositoryWorktree, createTempWorktree } from './repository_helpers';
+import { getBestRepositoryWorktree } from './repository_helpers';
 
 const localize = nls.loadMessageBundle();
 
@@ -39,6 +39,19 @@ export interface GitResource {
 interface GitResourceAtRevision extends GitResource {
 	/** the revision in a repository. Can be a commit hash or ref name. */
 	revision: string;
+}
+
+interface PickOptions extends QuickPickOptions {
+	/**
+	 * If the repos passed to pick contain workspace roots, only the workspace
+	 * roots are presented as options.
+	 *
+	 * eg: If we have five repos we can select, but two of them are already
+	 * workspace roots then if this is true only those two workspace roots are
+	 * presented as an option. If we have no workspace roots, then all repos are
+	 * presented.
+	 */
+	autoSelectWorkspaceRoots?: boolean;
 }
 
 export class GitResourceResolver {
@@ -100,28 +113,24 @@ export class GitResourceResolver {
 		// We have repositories. If it doesn't need to be at a specific revision
 		// we let the user pick one.
 		if (!hasRevision(resource)) {
-			return await this.pick(resource, repos);
+			return await this.pick(resource, repos, { autoSelectWorkspaceRoots: true });
 		}
 
 		// Find repositories which are either at revision or can be fast
 		// forwarded to revision.
 		const reposAtRevision = await this.filterReposAtRevision(resource, repos);
 		if (reposAtRevision.length > 0) {
-			const repo = await this.pick(resource, repos);
+			const repo = await this.pick(resource, repos, { autoSelectWorkspaceRoots: true });
 			// TODO(keegan) What if the working copy is dirty?
-			await this.fastForward(resource, repo);
+			await this.fastForward(repo, resource);
 			return repo;
 		}
 
-		// TODO(keegan) ensure the commit is actually in repos[0]
-		this.log(localize('useWorktree', "Creating worktree since no repo could automatically be moved to {0}@{1}.", resource.remote, resource.revision));
-		const commit = await this.updateLocalBranch(repos[0], resource.revision);
-		const worktree = await getRepositoryWorktree(repos[0], commit.hash);
-		if (worktree) {
-			return await this.mustOpenRepository(worktree.path);
-		}
-		const newWorktree = await createTempWorktree(repos[0], resource.revision);
-		return await this.mustOpenRepository(newWorktree.path);
+		const repo = await this.pick(resource, repos, {
+			placeHolder: localize('checkoutExistingRepo', "Choose a repository to stash and checkout {0}@{1}", resource.remote, resource.revision),
+		});
+		await this.stashAndCheckout(repo, resource);
+		return repo;
 	}
 
 	/**
@@ -183,9 +192,9 @@ export class GitResourceResolver {
 
 			// Fetch if we are a ref or are missing the hash
 			if (!isAbsoluteCommitID(resource.revision)) {
-				await repo.executeCommand(['fetch', resource.cloneURL, resource.revision]);
+				await repo.executeCommand(['fetch', '--prune', resource.cloneURL, resource.revision]);
 			} else if (!await this.hasCommit(repo, resource.revision)) {
-				await repo.fetch({ all: true });
+				await repo.fetch({ all: true, prune: true });
 				if (!await this.hasCommit(repo, resource.revision)) {
 					this.log(localize('missingHash', "{0} does not have {1}", repo.root, resource.revision));
 					return undefined;
@@ -217,8 +226,29 @@ export class GitResourceResolver {
 		return reposFiltered;
 	}
 
-	private async fastForward(resource: GitResourceAtRevision, repo: Repository): Promise<void> {
-		this.log(localize('fastforward', "Fast-forwarding {1}", repo.root));
+	/**
+	 * Will fast forward the working copy to resource.revision. For branches it
+	 * relies on FETCH_HEAD being set, as such it will run fetch if
+	 * filterReposAtRevision has not run fetch yet.
+	 */
+	private async fastForward(repo: Repository, resource: GitResourceAtRevision): Promise<void> {
+		this.log(localize('fastforward', "Fast-forwarding {0}", repo.root));
+
+		// If head does not match upstream it means we did not run fetch in
+		// filterReposAtRevision. If that is the case we need to run fetch for
+		// FF to work.
+		if (!await this.headMatchesUpstream(repo, resource.revision)) {
+			// This logic is copied from filterReposAtRevision, except throws on missing commit
+			if (!isAbsoluteCommitID(resource.revision)) {
+				await repo.executeCommand(['fetch', '--prune', resource.cloneURL, resource.revision]);
+			} else if (!await this.hasCommit(repo, resource.revision)) {
+				await repo.fetch({ all: true, prune: true });
+				if (!await this.hasCommit(repo, resource.revision)) {
+					throw new Error(localize('missingHash', "{0} does not have {1}", repo.root, resource.revision));
+				}
+			}
+		}
+
 		// The ref for an abs commit is itself, otherwise we just fetched the upstream branch (FETCH_HEAD)
 		const targetRef = isAbsoluteCommitID(resource.revision) ? resource.revision : 'FETCH_HEAD';
 		// TODO(keegan) prompt user?
@@ -270,35 +300,23 @@ export class GitResourceResolver {
 		return true;
 	}
 
-	/**
-	 * updateLocalBranch will create branch revision if it does not exist to
-	 * point to FETCH_HEAD. The resolved commit is returned.
-	 */
-	private async updateLocalBranch(repo: Repository, revision: string): Promise<Commit> {
-		try {
-			return await repo.getCommit(revision);
-		} catch (e) {
-			// TODO(keegan) only ignore missing commit error
-			if (isAbsoluteCommitID(revision)) {
-				throw e;
-			}
-			// TODO(keegan) we don't always run fetch, so this is flawed!
-			const commit = await repo.getCommit('FETCH_HEAD');
-			await repo.executeCommand(['branch', revision, commit.hash]);
-			return commit;
+	private async pick(resource: GitResource, repos: Repository[], options?: PickOptions): Promise<Repository> {
+		if (!options) {
+			options = {};
 		}
-	}
 
-	private async pick(resource: GitResource, repos: Repository[]): Promise<Repository> {
-		// If we have repos that are already workspace roots, only include them
-		const inWorkspace = repos.filter(repo => (workspace.workspaceFolders || []).some(f => f.uri.fsPath === repo.root));
-		if (inWorkspace.length > 0) {
-			repos = inWorkspace;
+		if (options.autoSelectWorkspaceRoots) {
+			// If we have repos that are already workspace roots, only include them
+			const inWorkspace = repos.filter(repo => (workspace.workspaceFolders || []).some(f => f.uri.fsPath === repo.root));
+			if (inWorkspace.length > 0) {
+				repos = inWorkspace;
+			}
 		}
 
 		if (repos.length === 1) {
 			return repos[0];
 		}
+
 		const picks = repos.map(repo => {
 			return {
 				label: path.basename(repo.root),
@@ -308,13 +326,32 @@ export class GitResourceResolver {
 				repo,
 			};
 		});
-		const placeHolder = localize('pickExistingRepo', "Choose a clone for repository {0}", resource.remote);
-		const pick = await window.showQuickPick(picks, { placeHolder });
+
+		if (!options.placeHolder) {
+			options.placeHolder = localize('pickExistingRepo', "Choose a clone for repository {0}", resource.remote);
+		}
+		const pick = await window.showQuickPick(picks, options);
 		if (!pick) {
 			// TODO(keegan) be more graceful
 			throw new Error('did not pick repo');
 		}
 		return pick.repo;
+	}
+
+	private async stashAndCheckout(repo: Repository, resource: GitResourceAtRevision): Promise<void> {
+		const head = await repo.getHEAD();
+		try {
+			const msg = localize('stashAndCheckout', "WIP on {0} to checkout {1}", head.name || head.commit, resource.revision);
+			await repo.createStash(msg);
+			this.log(`Stashed ${repo.root} ${msg}`);
+		} catch (e) {
+			if (!e.gitErrorCode || e.gitErrorCode !== GitErrorCodes.NoLocalChanges) {
+				throw e;
+			}
+			this.log(localize('checkout', "Checking out {0} to {1}", repo.root, resource.revision));
+		}
+		await repo.checkout(resource.revision);
+		await this.fastForward(repo, resource);
 	}
 
 	private log(s: string) {

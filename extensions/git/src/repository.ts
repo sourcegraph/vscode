@@ -695,7 +695,7 @@ export class Repository implements Disposable {
 	}
 
 	@throttle
-	async fetch(op?: { all?: boolean }): Promise<void> {
+	async fetch(op?: { all?: boolean, prune?: boolean }): Promise<void> {
 		try {
 			await this.run(Operation.Fetch, () => this.repository.fetch(op));
 		} catch (err) {
