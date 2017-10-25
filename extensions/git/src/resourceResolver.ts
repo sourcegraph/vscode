@@ -8,7 +8,7 @@
 import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
-import { workspace, window, ProgressLocation, Uri, Disposable, OutputChannel } from 'vscode';
+import { workspace, window, ProgressLocation, Uri, Disposable, OutputChannel, QuickPickItem } from 'vscode';
 import { Git, IGitErrorData, Commit } from './git';
 import { mkdirp, replaceVariables, uniqBy } from './util';
 import { Model } from './model';
@@ -109,12 +109,19 @@ export class GitResourceResolver {
 		if (reposAtRevision.length > 0) {
 			const repo = await this.pick(resource, repos);
 			// TODO(keegan) What if the working copy is dirty?
-			await this.fastForward(resource, repo);
+			await this.fastForward(repo, resource);
 			return repo;
 		}
 
-		// TODO(keegan) ensure the commit is actually in repos[0]
-		return await this.getOrCreateWorktree(repos[0], resource);
+		const repoToCheckout = await this.promptCheckout(resource, repos);
+		if (repoToCheckout === undefined) {
+			// The user did not pick a repo, so create a checkout
+			// TODO(keegan) ensure the commit is actually in repos[0]
+			return await this.getOrCreateWorktree(repos[0], resource);
+		}
+
+		await this.stashAndCheckout(repoToCheckout, resource);
+		return repoToCheckout;
 	}
 
 	/**
@@ -209,8 +216,29 @@ export class GitResourceResolver {
 		return reposFiltered;
 	}
 
-	private async fastForward(resource: GitResourceAtRevision, repo: Repository): Promise<void> {
-		this.log(localize('fastforward', "Fast-forwarding {1}", repo.root));
+	/**
+	 * Will fast forward the working copy to resource.revision. For branches it
+	 * relies on FETCH_HEAD being set, as such it will run fetch if
+	 * filterReposAtRevision has not run fetch yet.
+	 */
+	private async fastForward(repo: Repository, resource: GitResourceAtRevision): Promise<void> {
+		this.log(localize('fastforward', "Fast-forwarding {0}", repo.root));
+
+		// If head does not match upstream it means we did not run fetch in
+		// filterReposAtRevision. If that is the case we need to run fetch for
+		// FF to work.
+		if (!await this.headMatchesUpstream(repo, resource.revision)) {
+			// This logic is copied from filterReposAtRevision, except throws on missing commit
+			if (!isAbsoluteCommitID(resource.revision)) {
+				await repo.executeCommand(['fetch', resource.cloneURL, resource.revision]);
+			} else if (!await this.hasCommit(repo, resource.revision)) {
+				await repo.fetch({ all: true });
+				if (!await this.hasCommit(repo, resource.revision)) {
+					throw new Error(localize('missingHash', "{0} does not have {1}", repo.root, resource.revision));
+				}
+			}
+		}
+
 		// The ref for an abs commit is itself, otherwise we just fetched the upstream branch (FETCH_HEAD)
 		const targetRef = isAbsoluteCommitID(resource.revision) ? resource.revision : 'FETCH_HEAD';
 		// TODO(keegan) prompt user?
@@ -318,6 +346,44 @@ export class GitResourceResolver {
 			throw new Error('did not pick repo');
 		}
 		return pick.repo;
+	}
+
+	/**
+	 * Prompts the user to select a repository to checkout the resource. Also
+	 * included in the list is the option to create a worktree. If that is
+	 * selected undefined is returned.
+	 */
+	private async promptCheckout(resource: GitResourceAtRevision, repos: Repository[]): Promise<Repository | undefined> {
+		interface Item extends QuickPickItem {
+			repo?: Repository;
+		};
+		const picks: Item[] = repos.map(repo => {
+			return {
+				label: path.basename(repo.root),
+				description: [repo.headLabel, repo.syncLabel, repo.root]
+					.filter(l => !!l)
+					.join(' '),
+				repo,
+			};
+		});
+		picks.push({
+			label: 'Create worktree',
+			description: 'Will create a temporary worktree',
+		});
+		const placeHolder = localize('checkoutExistingRepo', "Choose a repository to stash and checkout {0}@{1}", resource.remote, resource.revision);
+		const pick = await window.showQuickPick(picks, { placeHolder });
+		if (!pick) {
+			// TODO(keegan) be more graceful
+			throw new Error('did not pick repo');
+		}
+		return pick.repo;
+	}
+
+	private async stashAndCheckout(repo: Repository, resource: GitResourceAtRevision): Promise<void> {
+		this.log(localize('stashAndCheckout', "Stash and checkout {0}", repo));
+		await repo.createStash();
+		await repo.checkout(resource.revision);
+		await this.fastForward(repo, resource);
 	}
 
 	private log(s: string) {
