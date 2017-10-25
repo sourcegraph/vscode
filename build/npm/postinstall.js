@@ -36,6 +36,7 @@ const extensions = [
 	'git',
 	'service-bitbucket-cloud',
 	'service-github',
+	'service-gitlab',
 	'scm',
 	'file-links',
 	'gulp',

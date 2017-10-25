@@ -1,0 +1,6 @@
+{
+	"command.mergeRequests.quickopen": "Go to Merge Request...",
+	"config.token": "GitLab personal access token. Create at https://gitlab.com/profile/personal_access_tokens. Must have 'api' scope to access private repositories.",
+	"config.cloneProtocol": "Protocol to use to clone a repository. Defaults to 'https'. Valid values are either 'https' or 'ssh'.",
+	"config.host": "GitLab host, defaults to https://www.gitlab.com."
+}

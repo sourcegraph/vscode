@@ -1,0 +1,68 @@
+{
+  "name": "service-gitlab",
+  "displayName": "GitLab integration",
+  "description": "Provides access to GitLab repositories",
+  "categories": [
+    "Other"
+  ],
+  "main": "./out/main",
+  "version": "0.0.1",
+  "publisher": "sourcegraph",
+  "engines": {
+    "vscode": "^0.10.5"
+  },
+  "activationEvents": [
+    "*"
+  ],
+  "enableProposedApi": true,
+  "contributes": {
+    "commands": [
+      {
+        "command": "gitlab.showCreateAccessTokenWalkthrough",
+        "title": "Initialize GitLab",
+        "category": "GitLab"
+      }
+    ],
+    "menus": {
+      "commandPalette": [],
+      "scm/title": []
+    },
+    "configuration": {
+      "type": "object",
+      "title": "GitLab",
+      "properties": {
+        "gitlab.token": {
+          "type": "string",
+          "description": "%config.token%"
+        },
+        "gitlab.host": {
+          "type": "string",
+          "default": "https://www.gitlab.com",
+          "description": "%config.host%"
+        },
+        "gitlab.cloneProtocol": {
+          "type": "string",
+          "default": "https",
+          "enum": [
+            "https",
+            "ssh"
+          ],
+          "description": "%config.cloneProtocol%"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "dependencies": {
+    "isomorphic-fetch": "^2.2.1",
+    "vscode-nls": "^2.0.2"
+  },
+  "devDependencies": {
+    "@types/mocha": "^2.2.38",
+    "@types/node": "^7.0.12",
+    "vscode": "1.0.1"
+  }
+}
