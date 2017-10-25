@@ -526,7 +526,7 @@ class WelcomePage {
 		this.reviewItemsChanged();
 		this.resolveOrganizationCommentsContainer(container, true);
 
-		this.disposables.push(this.configurationService.onDidUpdateConfiguration(() => {
+		this.disposables.push(this.configurationService.onDidChangeConfiguration(() => {
 			this.resolveSuggestedRepositoriesContainer();
 		}));
 
