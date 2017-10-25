@@ -103,7 +103,7 @@ function findSpecificGit(path: string): Promise<IGit> {
 		const buffers: Buffer[] = [];
 		const child = cp.spawn(path, ['--version']);
 		child.stdout.on('data', (b: Buffer) => buffers.push(b));
-		child.on('error', cpErrorHandler(e));
+		child.on('error', cpErrorHandler(e, path));
 		child.on('exit', code => code ? e(new Error('Not found')) : c({ path, version: parseVersion(Buffer.concat(buffers).toString('utf8').trim()) }));
 	});
 }
@@ -182,12 +182,15 @@ export interface IExecutionResult {
 	stderr: string;
 }
 
-function cpErrorHandler(cb: (reason?: any) => void): (reason?: any) => void {
+function cpErrorHandler(cb: (reason?: any) => void, dir?: string): (reason?: any) => void {
 	return err => {
 		if (/ENOENT/.test(err.message)) {
+			const message = dir
+				? `Failed to execute git (ENOENT) in ${dir}`
+				: 'Failed to execute git (ENOENT)';
 			err = new GitError({
 				error: err,
-				message: 'Failed to execute git (ENOENT)',
+				message,
 				gitErrorCode: GitErrorCodes.NotAGitRepository
 			});
 		}
@@ -226,7 +229,7 @@ async function exec(child: cp.ChildProcess, options: SpawnOptions = {}): Promise
 
 	const [exitCode, stdout, stderr] = await Promise.all<any>([
 		new Promise<number>((c, e) => {
-			once(child, 'error', cpErrorHandler(e));
+			once(child, 'error', cpErrorHandler(e, options.cwd));
 			once(child, 'exit', c);
 		}),
 		new Promise<string>(c => {
@@ -1090,7 +1093,7 @@ export class Repository {
 			child.stderr.setEncoding('utf8');
 			child.stderr.on('data', raw => stderrData.push(raw as string));
 
-			child.on('error', cpErrorHandler(e));
+			child.on('error', cpErrorHandler(e, this.repositoryRoot));
 			child.on('exit', onExit);
 		});
 	}
