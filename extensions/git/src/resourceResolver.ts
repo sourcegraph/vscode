@@ -177,6 +177,7 @@ export class GitResourceResolver {
 		const reposAtRevision = await Promise.all(repos.map(async repo => {
 			const allowedToCheck = await this.headMatchesUpstream(repo, resource.revision);
 			if (!allowedToCheck) {
+				this.log(localize('headMatchesUpstream', "{0} HEAD does not match {1}", repo.root, resource.revision));
 				return undefined;
 			}
 
@@ -263,7 +264,7 @@ export class GitResourceResolver {
 				return true;
 			}
 			const branch = await repo.getBranch(head.name);
-			return branch.upstream === revision;
+			return branch.upstream === revision || branch.commit === revision;
 		}
 		// We allow modifying a detached head
 		return true;
