@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 'use strict';
 
-import { Position } from 'vs/editor/common/core/position';
 import { Range } from 'vs/editor/common/core/range';
 
 /**
@@ -42,11 +41,9 @@ export abstract class Diff {
 	 * does not exist after the diff.
 	 */
 	public transformRange(range: Range): Range | undefined {
-		const trimmedRange = this.trimDeletedLines(range);
-		if (!trimmedRange) {
-			return this.findMovedRange(range);
+		if (this.isModifiedRange(range)) {
+			return undefined;
 		}
-		range = trimmedRange;
 		const effectiveEndLine = getEffectiveEndLine(range);
 
 		// Loop through the line diffs to compute the offsets that should
@@ -66,108 +63,13 @@ export abstract class Diff {
 		return range.isEmpty() ? transformedRange : nonEmptyRange(transformedRange);
 	}
 
-	/**
-	 * Returns the range with leading and trailing deleted lines removed.
-	 * If no lines remain, it returns undefined.
-	 */
-	private trimDeletedLines(range: Range): Range | undefined {
-		if (range.isEmpty()) {
-			// Handle empty case specially because handling it in
-			// the general case below would be tricky.
-			return this.deletedIndex.has(range.startLineNumber) ? undefined : range;
-		}
-		let endPosition: Position | undefined;
-		let startPosition: Position | undefined;
+	private isModifiedRange(range: Range): boolean {
 		for (let line = range.startLineNumber; line <= range.endLineNumber; line++) {
 			if (this.deletedIndex.has(line)) {
-				continue;
-			}
-			if (!startPosition) {
-				if (line === range.startLineNumber) {
-					startPosition = range.getStartPosition();
-				} else {
-					startPosition = new Position(line, 1);
-				}
-			}
-			if (line === range.endLineNumber) {
-				endPosition = range.getEndPosition();
-			} else {
-				// Either we are in the middle of the range and this endPosition will get overwritten
-				// on the next loop iteration, or the diff doesn't contain any context around changes (i.e. -U0).
-				// In either case we don't know the length of this line, so the end position
-				// of the range is just the first character in the next line.
-				// The existance of this case is why we store effectiveEndLine separately.
-				endPosition = new Position(line + 1, 1);
+				return true;
 			}
 		}
-		if (!startPosition || !endPosition) {
-			return undefined;
-		}
-		return nonEmptyRange(new Range(startPosition.lineNumber, startPosition.column, endPosition.lineNumber, endPosition.column));
-	}
-
-	/**
-	 * Returns the moved version of range if it has been moved.
-	 * The input range is assumed to be completely deleted.
-	 */
-	private findMovedRange(range: Range): Range | undefined {
-		let startPosition: Position | undefined;
-		let endPosition: Position | undefined;
-		for (let line = range.startLineNumber; line <= range.endLineNumber; line++) {
-			const deletedLine = this.deletedIndex.get(line);
-			if (!deletedLine) {
-				if (line !== range.endLineNumber && line !== range.startLineNumber) {
-					throw new Error('findMovedRange expected all lines to be deleted');
-				}
-				continue;
-			}
-			let addedLine = this.addedIndexExact.get(deletedLine.content);
-			let columnDelta = 0;
-			if (!addedLine) {
-				const deletedLineTrimmed = deletedLine.content.trim();
-				addedLine = this.addedIndexTrim.get(deletedLineTrimmed);
-				if (addedLine) {
-					const addedLineTrimmed = addedLine.content.trim();
-					const leadingWhitespaceBefore = Math.max(deletedLine.content.indexOf(deletedLineTrimmed[0]), 0);
-					const leadingWhitespaceAfter = Math.max(addedLine.content.indexOf(addedLineTrimmed[0]), 0);
-					columnDelta = leadingWhitespaceAfter - leadingWhitespaceBefore;
-				}
-			}
-			if (!addedLine) {
-				if (startPosition) {
-					// If we already found some part of the range moved,
-					// then we are done.
-					break;
-				}
-				// Keep looking to see if part of the range was moved.
-				continue;
-			}
-
-			const effectiveEndLine = startPosition ? getEffectiveEndLine(Range.fromPositions(startPosition, endPosition)) : 0;
-			if (!startPosition || addedLine.afterLine === effectiveEndLine + 1) {
-				// Starting or continuing a range.
-				if (line === range.endLineNumber) {
-					const endColumn = Math.max(range.endColumn + columnDelta, 1);
-					endPosition = new Position(addedLine.afterLine, endColumn);
-				} else {
-					endPosition = new Position(addedLine.afterLine + 1, 1);
-				}
-			}
-			if (!startPosition) {
-				// Starting a new range.
-				if (line === range.startLineNumber) {
-					const startColumn = Math.max(range.startColumn + columnDelta, 1);
-					startPosition = new Position(addedLine.afterLine, startColumn);
-				} else {
-					startPosition = new Position(addedLine.afterLine, 1);
-				}
-			}
-		}
-		if (!startPosition || !endPosition) {
-			return undefined;
-		}
-		const movedRange = new Range(startPosition.lineNumber, startPosition.column, endPosition.lineNumber, endPosition.column);
-		return range.isEmpty() ? movedRange : nonEmptyRange(movedRange);
+		return false;
 	}
 }
 

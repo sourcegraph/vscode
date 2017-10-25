@@ -13,6 +13,7 @@ suite('diffWorker', function () {
 	const diffWorker = new DiffWorker();
 	suite('diff', function () {
 		const tests: {
+			label?: string;
 			rangeContent: string;
 			modifiedLines: string[];
 			expectedRange: Range;
@@ -33,16 +34,19 @@ suite('diffWorker', function () {
 					expectedRange: new Range(3, 1, 3, 4),
 				},
 				{
+					label: 'Multi-line beginning',
 					rangeContent: 'foo\nbar',
 					modifiedLines: ['foo', 'bar', 'baz'],
 					expectedRange: new Range(1, 1, 2, 4),
 				},
 				{
+					label: 'Multi-line full range',
 					rangeContent: 'foo\nbar\nbaz',
 					modifiedLines: ['foo', 'bar', 'baz'],
 					expectedRange: new Range(1, 1, 3, 4),
 				},
 				{
+					label: 'Multi-line end',
 					rangeContent: 'bar\nbaz',
 					modifiedLines: ['foo', 'bar', 'baz'],
 					expectedRange: new Range(2, 1, 3, 4),
@@ -52,10 +56,45 @@ suite('diffWorker', function () {
 					modifiedLines: ['foo', 'bar', 'baz'],
 					expectedRange: new Range(2, 1, 3, 4),
 				},
+				{
+					label: 'Match whitespace trimmed',
+					rangeContent: 'bar',
+					modifiedLines: ['foo', '  bar  ', 'baz'],
+					expectedRange: new Range(2, 3, 2, 6),
+				},
+				{
+					label: 'Match middle line',
+					rangeContent: 'bar',
+					modifiedLines: ['foo bar baz'],
+					expectedRange: new Range(1, 5, 1, 8),
+				},
+				{
+					label: 'Match indent middle line',
+					rangeContent: 'foo\nbar\nbaz',
+					modifiedLines: ['foo', '  bar  ', 'baz'],
+					expectedRange: new Range(1, 1, 3, 4),
+				},
+				{
+					label: 'Match indent all lines',
+					rangeContent: 'foo\nbar\nbaz',
+					modifiedLines: ['  foo  ', '  bar  ', '  baz  '],
+					expectedRange: new Range(1, 3, 3, 6),
+				},
+				{
+					label: 'Match longest char length, not line length',
+					rangeContent: 'a\nb\nbaz',
+					modifiedLines: ['a', 'b', 'bum', 'baz'],
+					expectedRange: new Range(4, 1, 4, 4),
+				},
+				{
+					rangeContent: 'r',
+					modifiedLines: ['foo', 'bar', 'baz'],
+					expectedRange: new Range(2, 3, 2, 4),
+				},
 			];
 
 		tests.forEach((testCase, idx) => {
-			test(`${idx}: '${testCase.rangeContent}' in '${testCase.modifiedLines.join('\n')}'`, async function () {
+			test(`[${testCase.label || idx}]: '${testCase.rangeContent}' in '${testCase.modifiedLines.join('\n')}'`, async function () {
 				const revision = 'fake-revision';
 				const range = new Range(1, 1, 1, 1);
 				const args: IDiffArgs = {
