@@ -71,9 +71,8 @@
 		{
 			"type": "shell",
 			"taskName": "Initialize dev environment",
-			"identifier": "initializeDevEnvironment",
-			"command": "./scripts/npm.sh install --arch=x64",
-			"creates": "node_modules"
+			"identifier": "init",
+			"command": "./scripts/npm.sh install --arch=x64 && npm run compile"
 		}
 	]
 }
