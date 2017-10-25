@@ -143,10 +143,11 @@ export class NavService extends Disposable implements INavService {
 		// don't all need to be always (eagerly) activated (i.e., '*')
 		await this.extensionService.onReady(); // extensions register resource resolvers
 		await this.extensionService.activateByEvent('*');
-		const resource = parseGitURL(query.repo);
-		if (!resource) {
+		const resourceRaw = parseGitURL(query.repo);
+		if (!resourceRaw) {
 			return;
 		}
+		const resource = hackMassageGitCloneIntoFolderCatalog(resourceRaw);
 		const resourceRev = resource.with({ query: query.revision });
 		let addFolderCompleted = false;
 		const addFolderPromise = this.foldersWorkbenchService.addFoldersAsWorkspaceRootFolders([resourceRev]).then(([resolvedURI]) => {
@@ -308,4 +309,33 @@ export class NavService extends Disposable implements INavService {
 			this._onDidNavigate.fire(this.location);
 		}
 	}
+}
+
+/**
+ * HACK for https://github.com/sourcegraph/src/issues/1394 We translate git
+ * clone URLs into folder catalog URLs since they will be translated into the
+ * appropriate clone protocol. In the future we will only rely on generating
+ * URLs via resolveLocalFolderResource. Can be removed when better fixes are
+ * merged.
+ */
+function hackMassageGitCloneIntoFolderCatalog(uri: URI): URI {
+	let authority = uri.authority;
+	const idx = authority.indexOf('@');
+	if (idx !== -1) {
+		authority = authority.slice(idx + 1);
+	}
+	authority = authority.toLowerCase();
+
+	const path = uri.path
+		.replace(/\/*$/, '') // trailing slash
+		.replace(/\.(git|hg|svn)$/i, '')
+		.toLowerCase();
+
+	if (authority === 'github.com') {
+		return URI.parse('github://github.com').with({ path: '/repository' + path });
+	}
+	if (authority === 'bitbucket.org') {
+		return URI.parse('bitbucketcloud://bitbucket.org').with({ path: '/repository' + path });
+	}
+	return uri;
 }
