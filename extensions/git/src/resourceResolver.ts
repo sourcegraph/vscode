@@ -73,11 +73,20 @@ export class GitResourceResolver {
 			return await this.resolveResourceDeprecated(resource);
 		}
 
-		const repo = await this.resolveRepository(this.parseResource(resource));
-		if (!repo) {
-			return resource;
+		try {
+			const gitResource = this.parseResource(resource);
+			this.log(localize('gitResourceInfo', "Resolving resource {0}@{1} from {2}", gitResource.remote, gitResource.revision || '', gitResource.cloneURL));
+			const repo = await this.resolveRepository(this.parseResource(resource));
+			if (!repo) {
+				this.log(localize('resolveFailed', "Failed to resolve {0}\n", resource.toString()));
+				return resource;
+			}
+			this.log(localize('resolveSuccess', "Successfully resolved {0} to {1}\n", resource.toString(), repo.root));
+			return Uri.file(repo.root);
+		} catch (e) {
+			this.log(localize('resolveError', "Error to resolve {0}: {1}\n", resource.toString(), e.message || e));
+			throw e;
 		}
-		return Uri.file(repo.root);
 	}
 
 	/** Resolves a GitResource to a Repository, potentially cloning it. */
@@ -105,7 +114,7 @@ export class GitResourceResolver {
 		}
 
 		// TODO(keegan) ensure the commit is actually in repos[0]
-		this.git.log(localize('useWorktree', "Creating worktree since no repo could automatically be moved to {0}@{1}.\n", resource.remote, resource.revision));
+		this.log(localize('useWorktree', "Creating worktree since no repo could automatically be moved to {0}@{1}.", resource.remote, resource.revision));
 		const commit = await this.updateLocalBranch(repos[0], resource.revision);
 		const worktree = await getRepositoryWorktree(repos[0], commit.hash);
 		if (worktree) {
@@ -160,7 +169,7 @@ export class GitResourceResolver {
 		const other = await this.model.tryOpenRepositoryWithRemote(remote);
 
 		const repos = uniqBy([...open, ...wellKnownRepos, ...other], repo => repo.root);
-		this.git.log(localize('findRepos', "Found {0} repositories for {1}: {2}\n", repos.length, remote, repos.map(r => r.root).join(' ')));
+		this.log(localize('findRepos', "Found {0} repositories for {1}: {2}", repos.length, remote, repos.map(r => r.root).join(' ')));
 		return repos;
 	}
 
@@ -177,7 +186,7 @@ export class GitResourceResolver {
 			} else if (!await this.hasCommit(repo, resource.revision)) {
 				await repo.fetch({ all: true });
 				if (!await this.hasCommit(repo, resource.revision)) {
-					this.git.log(localize('missingHash', "{0} does not have {1}\n", repo.root, resource.revision));
+					this.log(localize('missingHash', "{0} does not have {1}", repo.root, resource.revision));
 					return undefined;
 				}
 			}
@@ -196,16 +205,19 @@ export class GitResourceResolver {
 				if (!e || !e.error || e.error.exitCode !== 1) {
 					throw e;
 				}
-				this.git.log(localize('cantFF', "{0} can't be fast-forwarded to {1}@{2}\n", repo.root, resource.remote, resource.revision));
+				this.log(localize('cantFF', "{0} can't be fast-forwarded to {1}@{2}", repo.root, resource.remote, resource.revision));
 				canFF = false;
 			}
 
 			return canFF ? repo : undefined;
 		}));
-		return reposAtRevision.filter(r => !!r) as Repository[];
+		const reposFiltered = reposAtRevision.filter(r => !!r) as Repository[];
+		this.log(localize('findReposAtRevision', "Found {0} repositories at {1} for {2}: {3}", reposFiltered.length, resource.revision, resource.remote, reposFiltered.map(r => r.root).join(' ')));
+		return reposFiltered;
 	}
 
 	private async fastForward(resource: GitResourceAtRevision, repo: Repository): Promise<void> {
+		this.log(localize('fastforward', "Fast-forwarding {1}", repo.root));
 		// The ref for an abs commit is itself, otherwise we just fetched the upstream branch (FETCH_HEAD)
 		const targetRef = isAbsoluteCommitID(resource.revision) ? resource.revision : 'FETCH_HEAD';
 		// TODO(keegan) prompt user?
@@ -214,6 +226,7 @@ export class GitResourceResolver {
 
 	private async clone(resource: GitResource): Promise<Repository> {
 		const dir = this.getFolderPath(resource.remote);
+		this.log(localize('cloningResource', "Cloning {0}@{1} from {2} to {3}", resource.remote, resource.revision || 'HEAD', resource.cloneURL, dir));
 		await mkdirp(path.dirname(dir));
 		const uri = await this.cloneAndCheckout(resource.cloneURL, dir, resource.remote, resource.revision || null);
 		return this.mustOpenRepository(uri.fsPath);
@@ -301,6 +314,10 @@ export class GitResourceResolver {
 			throw new Error('did not pick repo');
 		}
 		return pick.repo;
+	}
+
+	private log(s: string) {
+		this.outputChannel.appendLine(s);
 	}
 
 	public async resolveResourceDeprecated(resource: Uri): Promise<Uri> {
@@ -421,7 +438,7 @@ export class GitResourceResolver {
 				this.outputChannel.show();
 				// Give advice for github, since it is a common failure path
 				if (cloneUrl.toLowerCase().indexOf('github.com') >= 0) {
-					this.git.log(localize('cloneFailedGitHubAdvice', "GitHub clone failed. Adjust github.cloneProtocol user setting to use ssh or https instead.\n"));
+					this.log(localize('cloneFailedGitHubAdvice', "GitHub clone failed. Adjust github.cloneProtocol user setting to use ssh or https instead."));
 				}
 				throw new Error(localize('cloneFailed', "Cloning failed: {0} (see output for details)", err.message));
 			}

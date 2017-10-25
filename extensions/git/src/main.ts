@@ -48,7 +48,10 @@ async function init(context: ExtensionContext, disposables: Disposable[]): Promi
 	model.onDidCloseComparison(onComparison, null, disposables);
 	onComparison();
 
-	const resourceResolver = new GitResourceResolver(git, model, outputChannel);
+	const resolverChannel = window.createOutputChannel('Git Deep Links');
+	disposables.push(resolverChannel);
+	const resourceResolver = new GitResourceResolver(git, model, resolverChannel);
+	disposables.push(resourceResolver);
 
 	if (!enabled) {
 		const commandCenter = new CommandCenter(git, model, outputChannel, resourceResolver, telemetryReporter);
