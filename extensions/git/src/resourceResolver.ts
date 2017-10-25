@@ -15,7 +15,6 @@ import { Model } from './model';
 import { Repository } from './repository';
 import * as nls from 'vscode-nls';
 import { canonicalRemote } from './uri';
-import { getBestRepositoryWorktree } from './repository_helpers';
 
 const localize = nls.loadMessageBundle();
 
@@ -80,10 +79,6 @@ export class GitResourceResolver {
 		// with a host (authority). The TextDocumentContentProvider does not construct or handle these.
 		if (resource.scheme === 'git' && !resource.authority) {
 			return resource;
-		}
-
-		if (!workspace.getConfiguration('git').get<boolean>('enableNewResolver')) {
-			return await this.resolveResourceDeprecated(resource);
 		}
 
 		try {
@@ -357,90 +352,6 @@ export class GitResourceResolver {
 	private log(s: string) {
 		const d = new Date();
 		this.outputChannel.appendLine(`${d.getHours()}:${d.getMinutes()}:${d.getSeconds()}.${d.getMilliseconds()} ${s}`);
-	}
-
-	public async resolveResourceDeprecated(resource: Uri): Promise<Uri> {
-		// We only attempt to use worktree if the revision is set.
-		const autoWorktreeEnabled = workspace.getConfiguration('git').get<boolean>('enableAutoWorktree');
-		const revision = (autoWorktreeEnabled && resource.query) || null;
-		let repoUri = resource.with({ query: null } as any);
-
-		// For 'git' scheme, avoid conflict with the TextDocumentContentProvider's git: URIs by only resolving URIs
-		// with a host (authority). The TextDocumentContentProvider does not construct or handle these.
-		if (repoUri.scheme === 'git' && !repoUri.authority) {
-			return repoUri;
-		}
-
-		// `git clone` doesn't actually understand the 'git+' prefix on the URI scheme.
-		if (repoUri.scheme.startsWith('git+')) {
-			repoUri = repoUri.with({ scheme: repoUri.scheme.replace(/^git\+/, '') });
-		}
-		const canonicalResource = canonicalRemote(repoUri.toString());
-
-		// See if a repository with this clone URL already exists. This is best-effort and is based on string
-		// equality between our unresolved resource URI and the repositories' remote URLs.
-		if (canonicalResource && revision) {
-			const repoAndworktree = await this.findRepositoryWithRemoteRevision(canonicalResource, revision);
-			if (repoAndworktree) {
-				const [, worktreePath] = repoAndworktree;
-				return Uri.file(worktreePath);
-			}
-		}
-
-		const reposForRemote = await this.model.tryOpenRepositoryWithRemote(repoUri);
-		if (reposForRemote.length > 0 && !revision) {
-			if (reposForRemote.length === 1) {
-				return Uri.file(reposForRemote[0].root);
-			}
-			const picks = reposForRemote.map(repo => {
-				return {
-					label: path.basename(repo.root),
-					description: [repo.headLabel, repo.syncLabel, repo.root]
-						.filter(l => !!l)
-						.join(' '),
-					repo,
-				};
-			});
-			const placeHolder = localize('pickExistingRepo', "Choose a clone for repository {0}", canonicalResource);
-			const pick = await window.showQuickPick(picks, { placeHolder });
-			if (pick) {
-				return Uri.file(pick.repo.root);
-			}
-		}
-		if (reposForRemote.length > 0 && revision) {
-			const repoForRemote = reposForRemote[0];
-			const headCommit = await repoForRemote.getCommit('HEAD');
-			if (headCommit.hash === revision) {
-				return Uri.file(repoForRemote.root);
-			}
-			if (canonicalResource) {
-				const best = await getBestRepositoryWorktree([repoForRemote], canonicalResource, revision);
-				if (best) {
-					const [, worktreePath] = best;
-					return Uri.file(worktreePath);
-				}
-			}
-		}
-
-		// Repository doesn't exist (or we don't know about it), so clone it to a temporary location.
-		const folderPath = this.getFolderPath(repoUri);
-		await mkdirp(path.dirname(folderPath));
-		const cloneUrl = repoUri.toString();
-		const displayName = canonicalResource || repoUri.toString();
-		return await this.cloneAndCheckout(cloneUrl, folderPath, displayName, revision);
-	}
-
-	/**
-	 * Returns repository and worktree root for the specified canonical resource and revision.
-	 *
-	 * @param canonicalResource is a URI that identifies a remote repository (e.g., "github.com/me/myrepo")
-	 * @param revision is a revision with respect to the remote repository (e.g., "mybranch" or "f79fab5010584ecab400f2f225770f26eb59f4e9")
-	 */
-	private async findRepositoryWithRemoteRevision(canonicalResource: string, revision: string): Promise<[Repository, string] | null> {
-		const repositoriesWithRemote = this.model.repositories.filter(
-			rpo => rpo.remotes.filter(rmt => canonicalRemote(rmt.url) === canonicalResource).length > 0
-		);
-		return await getBestRepositoryWorktree(repositoriesWithRemote, canonicalResource, revision);
 	}
 
 	/**

@@ -867,11 +867,6 @@
           "description": "%config.repositoryScanDirectory%",
           "default": "${homePath}"
         },
-        "git.enableNewResolver": {
-          "type": "boolean",
-          "description": "Temporary feature flag for the new resource resolver",
-          "default": false
-        },
         "git.enableAutoWorktree": {
           "type": "boolean",
           "description": "%config.enableAutoWorktree%",
