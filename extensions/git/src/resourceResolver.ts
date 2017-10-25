@@ -311,10 +311,10 @@ export class GitResourceResolver {
 			if (inWorkspace.length > 0) {
 				repos = inWorkspace;
 			}
-		}
 
-		if (repos.length === 1) {
-			return repos[0];
+			if (repos.length === 1) {
+				return repos[0];
+			}
 		}
 
 		const picks = repos.map(repo => {
