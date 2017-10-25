@@ -114,14 +114,7 @@ export class GitResourceResolver {
 		}
 
 		// TODO(keegan) ensure the commit is actually in repos[0]
-		this.log(localize('useWorktree', "Creating worktree since no repo could automatically be moved to {0}@{1}.", resource.remote, resource.revision));
-		const commit = await this.updateLocalBranch(repos[0], resource.revision);
-		const worktree = await getRepositoryWorktree(repos[0], commit.hash);
-		if (worktree) {
-			return await this.mustOpenRepository(worktree.path);
-		}
-		const newWorktree = await createTempWorktree(repos[0], resource.revision);
-		return await this.mustOpenRepository(newWorktree.path);
+		return await this.getOrCreateWorktree(repos[0], resource);
 	}
 
 	/**
@@ -230,6 +223,17 @@ export class GitResourceResolver {
 		await mkdirp(path.dirname(dir));
 		const uri = await this.cloneAndCheckout(resource.cloneURL, dir, resource.remote, resource.revision || null);
 		return this.mustOpenRepository(uri.fsPath);
+	}
+
+	private async getOrCreateWorktree(repo: Repository, resource: GitResourceAtRevision): Promise<Repository> {
+		this.log(localize('useWorktree', "Creating worktree since no repo could automatically be moved to {0}@{1}.", resource.remote, resource.revision));
+		const commit = await this.updateLocalBranch(repo, resource.revision);
+		const worktree = await getRepositoryWorktree(repo, commit.hash);
+		if (worktree) {
+			return await this.mustOpenRepository(worktree.path);
+		}
+		const newWorktree = await createTempWorktree(repo, resource.revision);
+		return await this.mustOpenRepository(newWorktree.path);
 	}
 
 	/** Opens the repository at path, throws an exception if that fails. */
