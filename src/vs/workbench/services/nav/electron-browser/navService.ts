@@ -129,11 +129,13 @@ export class NavService extends Disposable implements INavService {
 			this.configurationService.updateValue('remote.cookie', query.cookie, ConfigurationTarget.USER);
 		}
 
-		if (!query.repo || !query.vcs) {
+		if (!query.repo) {
 			return Promise.resolve(void 0);
 		}
-		// If a VCS is specified that is not Git we do not support it.
-		if (query.vcs !== 'git') {
+
+		// If a VCS is specified that is not Git we do not support it. If no VCS
+		// is specified it is likely a github:// or bitbucket:// resource URI.
+		if (query.vcs && query.vcs !== 'git') {
 			return Promise.resolve(void 0);
 		}
 
@@ -143,11 +145,10 @@ export class NavService extends Disposable implements INavService {
 		// don't all need to be always (eagerly) activated (i.e., '*')
 		await this.extensionService.onReady(); // extensions register resource resolvers
 		await this.extensionService.activateByEvent('*');
-		const resourceRaw = parseGitURL(query.repo);
-		if (!resourceRaw) {
+		const resource = query.vcs === 'git' ? hackMassageGitCloneIntoFolderCatalog(parseGitURL(query.repo)) : URI.parse(query.repo);
+		if (!resource) {
 			return;
 		}
-		const resource = hackMassageGitCloneIntoFolderCatalog(resourceRaw);
 		const resourceRev = resource.with({ query: query.revision });
 		let addFolderCompleted = false;
 		const addFolderPromise = this.foldersWorkbenchService.addFoldersAsWorkspaceRootFolders([resourceRev]).then(([resolvedURI]) => {
@@ -319,6 +320,10 @@ export class NavService extends Disposable implements INavService {
  * merged.
  */
 function hackMassageGitCloneIntoFolderCatalog(uri: URI): URI {
+	if (!uri) {
+		return uri;
+	}
+
 	let authority = uri.authority;
 	const idx = authority.indexOf('@');
 	if (idx !== -1) {
