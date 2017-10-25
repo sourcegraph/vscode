@@ -329,8 +329,10 @@ export class GitResourceResolver {
 	}
 
 	private async stashAndCheckout(repo: Repository, resource: GitResourceAtRevision): Promise<void> {
-		this.log(localize('stashAndCheckout', "Stash and checkout {0}", repo));
-		await repo.createStash();
+		const head = await repo.getHEAD();
+		const msg = localize('stashAndCheckout', "WIP on {0} to checkout {1}", head.name || head.commit, resource.revision);
+		this.log('Maybe stashing ' + msg);
+		await repo.createStash(msg);
 		await repo.checkout(resource.revision);
 		await this.fastForward(repo, resource);
 	}
