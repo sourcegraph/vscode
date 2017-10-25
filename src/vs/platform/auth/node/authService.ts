@@ -17,7 +17,7 @@ import { ICommandService } from 'vs/platform/commands/common/commands';
 import { IMessageService, Severity } from 'vs/platform/message/common/message';
 import { ModalIdentifiers } from 'vs/workbench/parts/modal/modal';
 import { IWindowsService } from 'vs/platform/windows/common/windows';
-import { ThrottledDelayer } from 'vs/base/common/async';
+import { ThrottledDelayer, IntervalTimer } from 'vs/base/common/async';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { IStorageService } from 'vs/platform/storage/common/storage';
 import { Memento } from 'vs/workbench/common/memento';
@@ -103,6 +103,9 @@ export class AuthService extends Disposable implements IAuthService {
 
 		// Load user profile data from remote endpoint on initial load
 		this.refresh();
+
+		const refreshTimer = this._register(new IntervalTimer());
+		refreshTimer.cancelAndSet(() => this.refresh(), 1000 * 60 * 5); // 5 minute interval
 	}
 
 	private refreshDelayer = new ThrottledDelayer<void>(1000);
