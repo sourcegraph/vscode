@@ -413,6 +413,9 @@ class GitHub {
 	/**
 	 * Returns a clone URL for git for the github repository.
 	 * Note: this will include "git+" in the scheme.
+	 *
+	 * Example github://github.com/repository/gorilla/mux -> git+ssh://git@github.com/gorilla/mux
+	 *
 	 * @param resource The github:// repository resource
 	 */
 	async cloneURL(resource: vscode.Uri): Promise<vscode.Uri> {
@@ -425,7 +428,9 @@ class GitHub {
 			user = await this.viewer.username();
 		}
 		const userAuthority = user ? `${user}@` : '';
-		return vscode.Uri.parse(`git+${protocol}://${userAuthority}github.com/${data.owner}/${data.name}.git`);
+		const uri = vscode.Uri.parse(`git+${protocol}://${userAuthority}github.com/${data.owner}/${data.name}.git`);
+		// revision is optionally in the query
+		return resource.query ? uri.with({ query: resource.query }) : uri;
 	}
 
 	private detectSSHPromise: Promise<string>;

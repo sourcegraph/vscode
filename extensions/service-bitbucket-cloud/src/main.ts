@@ -19,7 +19,9 @@ export function activate(context: vscode.ExtensionContext): void {
 			return fetchFromBitbucket<Repository>(`/repositories/${resourceToApiPath(resource)}`).then(
 				repository => {
 					const folder = toCatalogFolder(repository);
-					return folder.cloneUrl!.with({ scheme: 'git+' + folder.cloneUrl!.scheme });
+					const uri = folder.cloneUrl!.with({ scheme: 'git+' + folder.cloneUrl!.scheme });
+					// revision is optionally in the query
+					return resource.query ? uri.with({ query: resource.query }) : uri;
 				},
 				err => showErrorImmediately(err),
 			);
