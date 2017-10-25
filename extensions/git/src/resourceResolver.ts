@@ -9,7 +9,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
 import { workspace, window, ProgressLocation, Uri, Disposable, OutputChannel, QuickPickOptions } from 'vscode';
-import { Git, IGitErrorData } from './git';
+import { Git, IGitErrorData, GitErrorCodes } from './git';
 import { mkdirp, replaceVariables, uniqBy } from './util';
 import { Model } from './model';
 import { Repository } from './repository';
@@ -330,9 +330,16 @@ export class GitResourceResolver {
 
 	private async stashAndCheckout(repo: Repository, resource: GitResourceAtRevision): Promise<void> {
 		const head = await repo.getHEAD();
-		const msg = localize('stashAndCheckout', "WIP on {0} to checkout {1}", head.name || head.commit, resource.revision);
-		this.log('Maybe stashing ' + msg);
-		await repo.createStash(msg);
+		try {
+			const msg = localize('stashAndCheckout', "WIP on {0} to checkout {1}", head.name || head.commit, resource.revision);
+			await repo.createStash(msg);
+			this.log(`Stashed ${repo.root} ${msg}`);
+		} catch (e) {
+			if (!e.gitErrorCode || e.gitErrorCode !== GitErrorCodes.NoLocalChanges) {
+				throw e;
+			}
+			this.log(localize('checkout', "Checking out {0} to {1}", repo.root, resource.revision));
+		}
 		await repo.checkout(resource.revision);
 		await this.fastForward(repo, resource);
 	}
