@@ -170,9 +170,9 @@ export class GlobalViewletDescriptor extends ViewletDescriptor {
 		cssClass?: string,
 		order?: number,
 		public globalActivity?: IConstructorSignature0<IGlobalActivity>,
-		protected _extensionId?: string
+		_extensionId?: string
 	) {
-		super(ctor, id, name, cssClass, order);
+		super(ctor, id, name, cssClass, order, _extensionId);
 	}
 }
 

@@ -208,6 +208,10 @@ export class CompositeBar implements ICompositeBar {
 			this.activeUnpinnedCompositeId = void 0;
 		}
 
+		// PATCH(sourcegraph) The management viewlet is a viewlet with global action items. Therefore we do not want to modify it
+		// as a regular composite.
+		compositesToShow = compositesToShow.filter(id => id !== 'workbench.view.management');
+
 		// Ensure we are not showing more composites than we have height for
 		let overflows = false;
 		if (this.dimension) {
