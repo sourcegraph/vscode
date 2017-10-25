@@ -94,8 +94,6 @@ createdAt
 archivedAt
 lines {
 	text
-	textSelectionRangeStart
-	textSelectionRangeLength
 }
 repo {
 	remoteUri
@@ -338,7 +336,7 @@ export class Threads extends Disposable implements IThreads {
 			branch: this.filter.branch,
 			file,
 		};
-		const response = await requestGraphQL<GQL.IRoot>(this.remoteService, `query Threads (
+		const response = await requestGraphQL<{ org: { threads2: { nodes: GQL.IThread[] } } }>(this.remoteService, `query Threads (
 			$file: String!,
 		) {
 			root {
