@@ -90,7 +90,7 @@ export class GlobalRepositories {
 			this.newEntries = map;
 			const remotePromises: Promise<void>[] = [];
 			walker.search(dir, path => {
-				remotePromises.push(this.git.exec(path, ['remote', '--verbose']).then(result => {
+				remotePromises.push(this.git.exec(path, ['remote', '--verbose'], { log: false }).then(result => {
 					for (const key of extractCanonicalRemotes(result.stdout)) {
 						const paths = map.get(key);
 						if (!paths) {
