@@ -8,14 +8,14 @@
 import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
-import { workspace, window, ProgressLocation, Uri, Disposable, OutputChannel, QuickPickItem } from 'vscode';
-import { Git, IGitErrorData, Commit } from './git';
+import { workspace, window, ProgressLocation, Uri, Disposable, OutputChannel } from 'vscode';
+import { Git, IGitErrorData } from './git';
 import { mkdirp, replaceVariables, uniqBy } from './util';
 import { Model } from './model';
 import { Repository } from './repository';
 import * as nls from 'vscode-nls';
 import { canonicalRemote } from './uri';
-import { getBestRepositoryWorktree, getRepositoryWorktree, createTempWorktree } from './repository_helpers';
+import { getBestRepositoryWorktree } from './repository_helpers';
 
 const localize = nls.loadMessageBundle();
 
@@ -113,15 +113,9 @@ export class GitResourceResolver {
 			return repo;
 		}
 
-		const repoToCheckout = await this.promptCheckout(resource, repos);
-		if (repoToCheckout === undefined) {
-			// The user did not pick a repo, so create a checkout
-			// TODO(keegan) ensure the commit is actually in repos[0]
-			return await this.getOrCreateWorktree(repos[0], resource);
-		}
-
-		await this.stashAndCheckout(repoToCheckout, resource);
-		return repoToCheckout;
+		const repo = await this.promptCheckout(resource, repos);
+		await this.stashAndCheckout(repo, resource);
+		return repo;
 	}
 
 	/**
@@ -253,17 +247,6 @@ export class GitResourceResolver {
 		return this.mustOpenRepository(uri.fsPath);
 	}
 
-	private async getOrCreateWorktree(repo: Repository, resource: GitResourceAtRevision): Promise<Repository> {
-		this.log(localize('useWorktree', "Creating worktree since no repo could automatically be moved to {0}@{1}.", resource.remote, resource.revision));
-		const commit = await this.updateLocalBranch(repo, resource.revision);
-		const worktree = await getRepositoryWorktree(repo, commit.hash);
-		if (worktree) {
-			return await this.mustOpenRepository(worktree.path);
-		}
-		const newWorktree = await createTempWorktree(repo, resource.revision);
-		return await this.mustOpenRepository(newWorktree.path);
-	}
-
 	/** Opens the repository at path, throws an exception if that fails. */
 	private async mustOpenRepository(path: string): Promise<Repository> {
 		await this.model.tryOpenRepository(path, true);
@@ -301,25 +284,6 @@ export class GitResourceResolver {
 		return true;
 	}
 
-	/**
-	 * updateLocalBranch will create branch revision if it does not exist to
-	 * point to FETCH_HEAD. The resolved commit is returned.
-	 */
-	private async updateLocalBranch(repo: Repository, revision: string): Promise<Commit> {
-		try {
-			return await repo.getCommit(revision);
-		} catch (e) {
-			// TODO(keegan) only ignore missing commit error
-			if (isAbsoluteCommitID(revision)) {
-				throw e;
-			}
-			// TODO(keegan) we don't always run fetch, so this is flawed!
-			const commit = await repo.getCommit('FETCH_HEAD');
-			await repo.executeCommand(['branch', revision, commit.hash]);
-			return commit;
-		}
-	}
-
 	private async pick(resource: GitResource, repos: Repository[]): Promise<Repository> {
 		// If we have repos that are already workspace roots, only include them
 		const inWorkspace = repos.filter(repo => (workspace.workspaceFolders || []).some(f => f.uri.fsPath === repo.root));
@@ -353,11 +317,8 @@ export class GitResourceResolver {
 	 * included in the list is the option to create a worktree. If that is
 	 * selected undefined is returned.
 	 */
-	private async promptCheckout(resource: GitResourceAtRevision, repos: Repository[]): Promise<Repository | undefined> {
-		interface Item extends QuickPickItem {
-			repo?: Repository;
-		};
-		const picks: Item[] = repos.map(repo => {
+	private async promptCheckout(resource: GitResourceAtRevision, repos: Repository[]): Promise<Repository> {
+		const picks = repos.map(repo => {
 			return {
 				label: path.basename(repo.root),
 				description: [repo.headLabel, repo.syncLabel, repo.root]
@@ -365,10 +326,6 @@ export class GitResourceResolver {
 					.join(' '),
 				repo,
 			};
-		});
-		picks.push({
-			label: 'Create worktree',
-			description: 'Will create a temporary worktree',
 		});
 		const placeHolder = localize('checkoutExistingRepo', "Choose a repository to stash and checkout {0}@{1}", resource.remote, resource.revision);
 		const pick = await window.showQuickPick(picks, { placeHolder });
