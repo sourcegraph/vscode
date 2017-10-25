@@ -183,9 +183,9 @@ export class GitResourceResolver {
 
 			// Fetch if we are a ref or are missing the hash
 			if (!isAbsoluteCommitID(resource.revision)) {
-				await repo.executeCommand(['fetch', resource.cloneURL, resource.revision]);
+				await repo.executeCommand(['fetch', '--prune', resource.cloneURL, resource.revision]);
 			} else if (!await this.hasCommit(repo, resource.revision)) {
-				await repo.fetch({ all: true });
+				await repo.fetch({ all: true, prune: true });
 				if (!await this.hasCommit(repo, resource.revision)) {
 					this.log(localize('missingHash', "{0} does not have {1}", repo.root, resource.revision));
 					return undefined;
@@ -231,9 +231,9 @@ export class GitResourceResolver {
 		if (!await this.headMatchesUpstream(repo, resource.revision)) {
 			// This logic is copied from filterReposAtRevision, except throws on missing commit
 			if (!isAbsoluteCommitID(resource.revision)) {
-				await repo.executeCommand(['fetch', resource.cloneURL, resource.revision]);
+				await repo.executeCommand(['fetch', '--prune', resource.cloneURL, resource.revision]);
 			} else if (!await this.hasCommit(repo, resource.revision)) {
-				await repo.fetch({ all: true });
+				await repo.fetch({ all: true, prune: true });
 				if (!await this.hasCommit(repo, resource.revision)) {
 					throw new Error(localize('missingHash', "{0} does not have {1}", repo.root, resource.revision));
 				}
