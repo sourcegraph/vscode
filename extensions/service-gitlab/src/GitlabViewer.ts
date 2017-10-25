@@ -233,11 +233,6 @@ export class Gitlab {
 			return false;
 		}
 
-		// Check if the url contains a trailing slash
-		if (host.substr(-1) === '/') {
-			throw new Error(localize('trailingSlashPresent', "GitLab host contains a trailing slash."));
-		}
-
 		// If the url is not in a valid format this will throw an exception.
 		vscode.Uri.parse(host);
 
@@ -262,6 +257,9 @@ export class Gitlab {
 	}
 
 	private async doGitlabRequest(host: string, token: string, endpoint: string): Promise<any> {
+		// Remove trailing slashes
+		host = host.replace(/\/$/, '');
+
 		const response = await fetch(`${host}/api/v4${endpoint}`, {
 			method: 'GET',
 			headers: { 'PRIVATE-TOKEN': token }
