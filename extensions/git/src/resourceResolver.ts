@@ -45,6 +45,11 @@ interface PickOptions extends QuickPickOptions {
 	/**
 	 * If the repos passed to pick contain workspace roots, only the workspace
 	 * roots are presented as options.
+	 *
+	 * eg: If we have five repos we can select, but two of them are already
+	 * workspace roots then if this is true only those two workspace roots are
+	 * presented as an option. If we have no workspace roots, then all repos are
+	 * presented.
 	 */
 	autoSelectWorkspaceRoots?: boolean;
 }
