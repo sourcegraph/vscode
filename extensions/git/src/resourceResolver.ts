@@ -8,7 +8,7 @@
 import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
-import { workspace, window, ProgressLocation, Uri, Disposable, OutputChannel } from 'vscode';
+import { workspace, window, ProgressLocation, Uri, Disposable, OutputChannel, QuickPickOptions } from 'vscode';
 import { Git, IGitErrorData } from './git';
 import { mkdirp, replaceVariables, uniqBy } from './util';
 import { Model } from './model';
@@ -39,6 +39,11 @@ export interface GitResource {
 interface GitResourceAtRevision extends GitResource {
 	/** the revision in a repository. Can be a commit hash or ref name. */
 	revision: string;
+}
+
+interface PickOptions extends QuickPickOptions {
+	/** If the repos contains workspace roots, filter no workspace roots out */
+	autoSelectRoot?: boolean;
 }
 
 export class GitResourceResolver {
@@ -100,20 +105,22 @@ export class GitResourceResolver {
 		// We have repositories. If it doesn't need to be at a specific revision
 		// we let the user pick one.
 		if (!hasRevision(resource)) {
-			return await this.pick(resource, repos);
+			return await this.pick(resource, repos, { autoSelectRoot: true });
 		}
 
 		// Find repositories which are either at revision or can be fast
 		// forwarded to revision.
 		const reposAtRevision = await this.filterReposAtRevision(resource, repos);
 		if (reposAtRevision.length > 0) {
-			const repo = await this.pick(resource, repos);
+			const repo = await this.pick(resource, repos, { autoSelectRoot: true });
 			// TODO(keegan) What if the working copy is dirty?
 			await this.fastForward(repo, resource);
 			return repo;
 		}
 
-		const repo = await this.promptCheckout(resource, repos);
+		const repo = await this.pick(resource, repos, {
+			placeHolder: localize('checkoutExistingRepo', "Choose a repository to stash and checkout {0}@{1}", resource.remote, resource.revision),
+		});
 		await this.stashAndCheckout(repo, resource);
 		return repo;
 	}
@@ -284,16 +291,22 @@ export class GitResourceResolver {
 		return true;
 	}
 
-	private async pick(resource: GitResource, repos: Repository[]): Promise<Repository> {
-		// If we have repos that are already workspace roots, only include them
-		const inWorkspace = repos.filter(repo => (workspace.workspaceFolders || []).some(f => f.uri.fsPath === repo.root));
-		if (inWorkspace.length > 0) {
-			repos = inWorkspace;
+	private async pick(resource: GitResource, repos: Repository[], options?: PickOptions): Promise<Repository> {
+		if (!options) {
+			options = {};
 		}
 
-		if (repos.length === 1) {
-			return repos[0];
+		if (options.autoSelectRoot) {
+			// If we have repos that are already workspace roots, only include them
+			const inWorkspace = repos.filter(repo => (workspace.workspaceFolders || []).some(f => f.uri.fsPath === repo.root));
+			if (inWorkspace.length > 0) {
+				repos = inWorkspace;
+			}
+			if (repos.length === 1) {
+				return repos[0];
+			}
 		}
+
 		const picks = repos.map(repo => {
 			return {
 				label: path.basename(repo.root),
@@ -303,32 +316,11 @@ export class GitResourceResolver {
 				repo,
 			};
 		});
-		const placeHolder = localize('pickExistingRepo', "Choose a clone for repository {0}", resource.remote);
-		const pick = await window.showQuickPick(picks, { placeHolder });
-		if (!pick) {
-			// TODO(keegan) be more graceful
-			throw new Error('did not pick repo');
-		}
-		return pick.repo;
-	}
 
-	/**
-	 * Prompts the user to select a repository to checkout the resource. Also
-	 * included in the list is the option to create a worktree. If that is
-	 * selected undefined is returned.
-	 */
-	private async promptCheckout(resource: GitResourceAtRevision, repos: Repository[]): Promise<Repository> {
-		const picks = repos.map(repo => {
-			return {
-				label: path.basename(repo.root),
-				description: [repo.headLabel, repo.syncLabel, repo.root]
-					.filter(l => !!l)
-					.join(' '),
-				repo,
-			};
-		});
-		const placeHolder = localize('checkoutExistingRepo', "Choose a repository to stash and checkout {0}@{1}", resource.remote, resource.revision);
-		const pick = await window.showQuickPick(picks, { placeHolder });
+		if (!options.placeHolder) {
+			options.placeHolder = localize('pickExistingRepo', "Choose a clone for repository {0}", resource.remote);
+		}
+		const pick = await window.showQuickPick(picks, options);
 		if (!pick) {
 			// TODO(keegan) be more graceful
 			throw new Error('did not pick repo');
