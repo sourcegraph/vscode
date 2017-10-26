@@ -252,13 +252,13 @@ export class GitResourceResolver {
 	private async maybeFetch(repo: Repository, resource: GitResourceAtRevision): Promise<string | undefined> {
 		// Branches we always fetch to ensure we are up to date.
 		if (!isAbsoluteCommitID(resource.revision)) {
-			await repo.executeCommand(['fetch', '--prune', resource.cloneURL, resource.revision]);
+			await repo.fetch({ prune: true, repository: resource.cloneURL, refspec: resource.revision, throwErr: true });
 			return 'FETCH_HEAD';
 		}
 
 		// Absolute commits we only fetch if not found
 		if (!await this.hasCommit(repo, resource.revision)) {
-			await repo.fetch({ all: true, prune: true });
+			await repo.fetch({ all: true, prune: true, throwErr: true });
 			if (!await this.hasCommit(repo, resource.revision)) {
 				return undefined;
 			}

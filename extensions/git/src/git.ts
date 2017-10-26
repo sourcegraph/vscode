@@ -936,7 +936,7 @@ export class Repository {
 		}
 	}
 
-	async fetch(op?: { all?: boolean, prune?: boolean }): Promise<void> {
+	async fetch(op?: { all?: boolean, prune?: boolean, repository?: string, refspec?: string }): Promise<void> {
 		const args = ['fetch'];
 		if (op) {
 			if (op.all) {
@@ -944,6 +944,22 @@ export class Repository {
 			}
 			if (op.prune) {
 				args.push('--prune');
+			}
+			if (op.repository) {
+				args.push('--', op.repository);
+			}
+			if (op.refspec) {
+				if (!op.repository) {
+					throw new GitError({
+						message: 'Failed to execute git, repository is required if specify refspec for git fetch',
+						stdout: '',
+						stderr: '',
+						exitCode: -1,
+						gitErrorCode: GitErrorCodes.NoRemoteRepositorySpecified,
+						gitCommand: 'git',
+					});
+				}
+				args.push(op.refspec);
 			}
 		}
 		try {
