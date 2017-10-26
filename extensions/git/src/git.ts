@@ -844,8 +844,12 @@ export class Repository {
 		await this.run(args);
 	}
 
-	async merge(ref: string): Promise<void> {
-		const args = ['merge', ref];
+	async merge(ref: string, op?: { ffOnly?: boolean }): Promise<void> {
+		const args = ['merge'];
+		if (op && op.ffOnly) {
+			args.push('--ff-only');
+		}
+		args.push(ref);
 
 		try {
 			await this.run(args);

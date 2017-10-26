@@ -664,8 +664,8 @@ export class Repository implements Disposable {
 		await this.run(Operation.DeleteBranch, () => this.repository.deleteBranch(name, force));
 	}
 
-	async merge(ref: string): Promise<void> {
-		await this.run(Operation.Merge, () => this.repository.merge(ref));
+	async merge(ref: string, op?: { ffOnly?: boolean }): Promise<void> {
+		await this.run(Operation.Merge, () => this.repository.merge(ref, op));
 	}
 
 	async tag(name: string, message?: string): Promise<void> {

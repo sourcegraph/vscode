@@ -241,7 +241,7 @@ export class GitResourceResolver {
 			targetRef = isAbsoluteCommitID(resource.revision) ? resource.revision : 'FETCH_HEAD';
 		}
 
-		await repo.executeCommand(['merge', '--ff-only', targetRef]);
+		await repo.merge(targetRef, { ffOnly: true });
 	}
 
 	/**
