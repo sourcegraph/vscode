@@ -359,31 +359,33 @@ class CommentsSCMProvider extends MainThreadSCMProvider {
 	}
 
 	private onDidChangeThreads(): void {
-		const resources: ISCMResource[] = this.branchComments.threads.map(thread => {
-			// This is a nasty hack to get thread titles to not break if they have slashes in them.
-			// We are shoving the thread titles through the path of a URI, so a slash
-			// breaks formatting. Instead, we replace slashes with a "DIVISION SLASH"
-			// which looks like a slash and we add a trailing space for formatting purposes.
-			// The real solution is to modify the SCM api to allow us to specify label/sublabel directly
-			// instead of just passing through a URI.
-			const path = joinPath(thread.file, thread.title.replace('/', '\u2215 '));
-			const sourceUri = URI.from({ scheme: 'thread', path });
-			return {
-				resourceGroup: this.commentsGroup,
-				sourceUri,
-				decorations: {
-					strikeThrough: thread.archived,
-					faded: false,
-					tooltip: '',
-				},
-				open: async (): TPromise<void> => {
-					const resource = this.trimmedRootUri.with({ path: this.trimmedRootUri.path + thread.file });
-					const editor = await this.openEditor(resource);
-					const codeCommentsContribution = editor.getContribution(CODE_COMMENTS_CONTRIBUTION_ID);
-					codeCommentsContribution.restoreViewState({ openThreadIds: [thread.id], revealThreadId: thread.id });
-				}
-			};
-		});
+		const resources: ISCMResource[] = this.branchComments.threads
+			.filter(thread => thread.comments.length > 0) // Filter out share links
+			.map(thread => {
+				// This is a nasty hack to get thread titles to not break if they have slashes in them.
+				// We are shoving the thread titles through the path of a URI, so a slash
+				// breaks formatting. Instead, we replace slashes with a "DIVISION SLASH"
+				// which looks like a slash and we add a trailing space for formatting purposes.
+				// The real solution is to modify the SCM api to allow us to specify label/sublabel directly
+				// instead of just passing through a URI.
+				const path = joinPath(thread.file, thread.title.replace('/', '\u2215 '));
+				const sourceUri = URI.from({ scheme: 'thread', path });
+				return {
+					resourceGroup: this.commentsGroup,
+					sourceUri,
+					decorations: {
+						strikeThrough: thread.archived,
+						faded: false,
+						tooltip: '',
+					},
+					open: async (): TPromise<void> => {
+						const resource = this.trimmedRootUri.with({ path: this.trimmedRootUri.path + thread.file });
+						const editor = await this.openEditor(resource);
+						const codeCommentsContribution = editor.getContribution(CODE_COMMENTS_CONTRIBUTION_ID);
+						codeCommentsContribution.restoreViewState({ openThreadIds: [thread.id], revealThreadId: thread.id });
+					}
+				};
+			});
 		const collection = this.commentsGroup.resourceCollection;
 		collection.splice(0, collection.resources.length, resources);
 
