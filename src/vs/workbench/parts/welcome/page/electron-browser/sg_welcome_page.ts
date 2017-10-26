@@ -95,7 +95,7 @@ export default () => `
 									<div class="action-header inline-block">RECENT DISCUSSIONS</div>
 									<div id="comments-search-action" class="float-right search octicon octicon-search"></div>
 								</div>
-								<div id="comment-loader" class="loader-icon"></div>
+								<div class="loader-icon comment-loader"></div>
 								<ul id="comment-list" class="comment-list-container no-margin">
 								</ul>
 								<div class="empty-comment-container">

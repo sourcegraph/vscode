@@ -324,18 +324,24 @@ class WelcomePage {
 			$(signUpContainer).show();
 			return;
 		}
-		$(this.joinOrganizationState()).hide();
-		$(this.emptyCodeCommentState()).hide();
+		const joinOrgContainer = this.joinOrganizationState(container);
+		if (joinOrgContainer) {
+			$(joinOrgContainer).hide();
+		}
+		const emptyCodeCommentContainer = this.emptyCodeCommentState(container);
+		if (emptyCodeCommentContainer) {
+			$(emptyCodeCommentContainer).hide();
+		}
 		$(codeCommentsContainer).show();
 		$(signUpContainer).hide();
-		const spinner = document.getElementById('comment-loader');
-		if (showLoader) {
-			$(spinner).show();
-			if (!this.threads.threads.length) {
+		const spinner = container.querySelector('.comment-loader') as HTMLElement;
+		if (spinner) {
+			if (!this.threads.threads.length && showLoader) {
+				$(spinner).show();
 				return;
 			}
+			$(spinner).hide();
 		}
-		$(spinner).hide();
 
 		const threadContainer = document.querySelector('.comment-list-container') as HTMLElement;
 		if (!threadContainer) {
@@ -348,12 +354,12 @@ class WelcomePage {
 		this.renderCodeComments(threadContainer, showLoader);
 	}
 
-	private emptyCodeCommentState(): HTMLElement {
-		return document.querySelector('.empty-comment-container') as HTMLElement;
+	private emptyCodeCommentState(container: HTMLElement): HTMLElement | undefined {
+		return container.querySelector('.empty-comment-container') as HTMLElement;
 	}
 
-	private joinOrganizationState(): HTMLElement {
-		return document.querySelector('.no-org-container') as HTMLElement;
+	private joinOrganizationState(container: HTMLElement): HTMLElement | undefined {
+		return container.querySelector('.no-org-container') as HTMLElement;
 	}
 
 	private renderCodeComments(container: HTMLElement, showLoader: boolean): void {
@@ -361,21 +367,27 @@ class WelcomePage {
 		if (!commentList) {
 			return;
 		}
+		const joinOrganizationContainer = this.joinOrganizationState(container);
 		$(commentList).clearChildren();
-		if (this.joinOrganizationState()) {
+		if (joinOrganizationContainer) {
 			if (!this.authService.currentUser.currentOrgMember) {
-				$(this.joinOrganizationState()).show();
+				$(joinOrganizationContainer).show();
 				return;
 			}
-			$(this.joinOrganizationState()).hide();
+			$(joinOrganizationContainer).hide();
 		}
-
+		const emptyCodeCommentState = this.emptyCodeCommentState(container);
 		if (!this.threads.threads.length && !showLoader) {
-			$(this.emptyCodeCommentState()).show();
+			if (emptyCodeCommentState) {
+				$(emptyCodeCommentState).show();
+			}
 			return;
 		}
-		$(this.emptyCodeCommentState()).hide();
-		this.threads.threads.filter(thread => !!thread.comments.length).slice(0, Math.min(this.threads.threads.length, 10)).forEach(thread => {
+
+		if (emptyCodeCommentState) {
+			$(emptyCodeCommentState).hide();
+		}
+		this.threads.threads.filter(thread => thread.comments && thread.comments.length).slice(0, Math.min(this.threads.threads.length, 10)).forEach(thread => {
 			const threadDiv = document.createElement('li');
 			threadDiv.className = 'repo-row flex';
 			threadDiv.addEventListener('click', () => {
@@ -446,11 +458,11 @@ class WelcomePage {
 			this.disposables.push(this.threads);
 			this.threads.refresh();
 			this.disposables.push(this.threads.onDidChangeThreads(() => {
-				return this.resolveOrganizationCommentsContainer(container);
+				this.resolveOrganizationCommentsContainer(container);
 			}, this));
 		}
 
-		this.reviewItemsChanged();
+		this.resolveSuggestedRepositoriesContainer();
 		this.resolveOrganizationCommentsContainer(container, true);
 
 		this.disposables.push(this.configurationService.onDidChangeConfiguration(() => {
@@ -553,7 +565,7 @@ class WelcomePage {
 		const recentRepositoriesContainer = document.querySelector('.recent-repositories-container') as HTMLElement;
 
 		if (!branchListContainer || !codeHostContainer || !recentRepositoriesContainer) {
-			throw new Error('Could not query codeHostContainer or branchListContainer');
+			return;
 		}
 
 		$(codeHostContainer).hide();
@@ -574,7 +586,7 @@ class WelcomePage {
 		const workspace = this.contextService.getWorkspace();
 		const suggestedRepoContainer = document.querySelector('.recent-repositories-list') as HTMLElement;
 		if (!suggestedRepoContainer) {
-			throw new Error('Could not query recent-repositories-list');
+			return;
 		}
 		// If there's no workspace show suggested repos.
 		if (!workspace.folders.length) {
@@ -639,10 +651,13 @@ class WelcomePage {
 	private renderBranches(): void {
 		const container = document.querySelector('.branch-list-container') as HTMLElement;
 		if (!container) {
-			throw new Error('Could not query branch-list-container');
+			return;
 		}
 
 		let repoContainers = document.querySelector('.branch-list') as HTMLElement;
+		if (!repoContainers) {
+			return;
+		}
 		$(repoContainers).clearChildren();
 
 		const reviewItems = this.reviewService.reviewItems;
@@ -934,6 +949,9 @@ class WelcomePage {
 	}
 
 	dispose(): void {
+		if (this.threads) {
+			this.threads.dispose();
+		}
 		this.disposables = dispose(this.disposables);
 	}
 }
