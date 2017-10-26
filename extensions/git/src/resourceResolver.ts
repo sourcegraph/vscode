@@ -316,6 +316,9 @@ export class GitResourceResolver {
 		if (!options) {
 			options = {};
 		}
+		if (!options.placeHolder) {
+			options.placeHolder = localize('pickExistingRepo', "Choose a clone for repository {0}", resource.remote);
+		}
 
 		if (options.autoSelectWorkspaceRoots) {
 			// If we have repos that are already workspace roots, only include them
@@ -325,6 +328,7 @@ export class GitResourceResolver {
 			}
 
 			if (repos.length === 1) {
+				this.log(localize('autoSelect', "Automatically picked {0} for prompt {1}", repos[0].root, options.placeHolder));
 				return repos[0];
 			}
 		}
@@ -339,14 +343,12 @@ export class GitResourceResolver {
 			};
 		});
 
-		if (!options.placeHolder) {
-			options.placeHolder = localize('pickExistingRepo', "Choose a clone for repository {0}", resource.remote);
-		}
 		const pick = await window.showQuickPick(picks, options);
 		if (!pick) {
 			// TODO(keegan) be more graceful
 			throw new Error('did not pick repo');
 		}
+		this.log(localize('pick', "User picked {0} for prompt {1}", pick.repo.root, options.placeHolder));
 		return pick.repo;
 	}
 
