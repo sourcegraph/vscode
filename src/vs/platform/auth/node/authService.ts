@@ -45,6 +45,7 @@ export class AuthService extends Disposable implements IAuthService {
 
 	private static MEMENTO_KEY = 'auth.currentuser';
 	private static CURRENT_USER_KEY = 'currentUser';
+	private static UPLOAD_CONFIG_KEY = 'shouldUpload';
 
 	private globalState: Memento;
 	private memento: object;
@@ -64,7 +65,7 @@ export class AuthService extends Disposable implements IAuthService {
 	 * This flag gets enabled whenever we detect that the organization settings were saved,
 	 * and is reset whenever the organization settings are uploaded.
 	 */
-	private shouldUploadConfigurationSettings = false;
+	private _shouldUploadConfigurationSettings = false;
 
 	constructor(
 		@ITelemetryService private telemetryService: ITelemetryService,
@@ -87,6 +88,10 @@ export class AuthService extends Disposable implements IAuthService {
 			this.setCurrentUser(this.memento[AuthService.CURRENT_USER_KEY]);
 		}
 
+		if (this.memento[AuthService.UPLOAD_CONFIG_KEY]) {
+			this._shouldUploadConfigurationSettings = this.memento[AuthService.UPLOAD_CONFIG_KEY];
+		}
+
 		// Refresh when config changes (auth token may have changed).
 		this._register(this.configurationService.onDidChangeConfiguration(() => this.refresh()));
 
@@ -96,6 +101,12 @@ export class AuthService extends Disposable implements IAuthService {
 		// Upload organization settings to the server when they change.
 		this._register(this.textFileService.models.onModelSaved(model => {
 			if (model.resource.fsPath === this.environmentService.appOrganizationSettingsPath) {
+				if (!this.currentAuthCookie()) {
+					this.messageService.show(Severity.Warning, localize(
+						'uploadOrgSettings.signedOut', "You are not signed in to Sourcegraph. When you sign in, your editor will show your organization's settings."));
+					return;
+				}
+
 				this.shouldUploadConfigurationSettings = true;
 				this.refresh();
 			}
@@ -118,8 +129,7 @@ export class AuthService extends Disposable implements IAuthService {
 	 * If there are any local changes to org settings, they are first uploaded to the server.
 	 */
 	private async refreshNow(): Promise<void> {
-		const config = this.configurationService.getConfiguration<IRemoteConfiguration>();
-		this._currentSessionId = config.remote.cookie;
+		this._currentSessionId = this.currentAuthCookie();
 		if (!this._currentSessionId) {
 			// If user is already signed in, notify them that their signout was successful and log telemetry.
 			// If not, it's possible they ran into this failed request during app launch.
@@ -154,6 +164,20 @@ export class AuthService extends Disposable implements IAuthService {
 		});
 	}
 
+	private currentAuthCookie(): string {
+		const config = this.configurationService.getConfiguration<IRemoteConfiguration>();
+		return config.remote.cookie;
+	}
+
+	private get shouldUploadConfigurationSettings(): boolean {
+		return this._shouldUploadConfigurationSettings;
+	}
+
+	private set shouldUploadConfigurationSettings(shouldUpload: boolean) {
+		this._shouldUploadConfigurationSettings = shouldUpload;
+		this.memento[AuthService.UPLOAD_CONFIG_KEY] = shouldUpload;
+		this.globalState.saveMemento();
+	}
 
 	public get currentUser(): IUser | undefined {
 		return this._currentUser;
@@ -212,10 +236,12 @@ export class AuthService extends Disposable implements IAuthService {
 		if (!this.shouldUploadConfigurationSettings) {
 			return this.requestCurrentUser();
 		}
-		this.shouldUploadConfigurationSettings = false;
 
 		const activeOrg = this.getCurrentOrg();
 		if (!activeOrg) {
+			this.shouldUploadConfigurationSettings = false;
+			this.messageService.show(Severity.Warning, localize(
+				'uploadOrgSettings.noOrg', "You are not currently in an organization. When you join one, its settings will be reflected here."));
 			return this.requestCurrentUser();
 		}
 
@@ -225,22 +251,31 @@ export class AuthService extends Disposable implements IAuthService {
 		// Don't bother uploading if the settings haven't changed.
 		const lastFetchedSettings = activeOrg.latestSettings;
 		if (getSettingsBlob(lastFetchedSettings) === newSettingsBlob) {
+			this.shouldUploadConfigurationSettings = false;
 			return this.requestCurrentUser();
 		}
 
-		const response = await requestGraphQLMutation<{ updateOrgSettings: { author: GQL.IUser } }>(this.remoteService, `mutation UpdateOrgSettings {
+		try {
+			const response = await requestGraphQLMutation<{ updateOrgSettings: { author: GQL.IUser } }>(this.remoteService, `mutation UpdateOrgSettings {
 			updateOrgSettings(orgID: $orgID, lastKnownSettingsID: $lastKnownSettingsID, contents: $newSettingsBlob) {
 				author {
 					${userGraphQLRequest}
 				}
 			}
 		}`, {
-				orgID: activeOrg.id,
-				lastKnownSettingsID: lastFetchedSettings && lastFetchedSettings.id,
-				newSettingsBlob,
-			});
-		this.log('uploaded organization settings');
-		return response.updateOrgSettings.author;
+					orgID: activeOrg.id,
+					lastKnownSettingsID: lastFetchedSettings && lastFetchedSettings.id,
+					newSettingsBlob,
+				});
+			this.shouldUploadConfigurationSettings = false;
+			this.log('uploaded organization settings');
+			return response.updateOrgSettings.author;
+
+		} catch (e) {
+			this.messageService.show(Severity.Warning, localize(
+				'uploadOrgSettings.failure', "Failed to sync organization settings. Synchronization will be re-attempted later."));
+			throw e;
+		}
 	}
 
 	private async requestCurrentUser(): Promise<GQL.IUser> {
