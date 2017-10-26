@@ -102,7 +102,7 @@ export class GitResourceResolver {
 			this.log(localize('resolveError', "Error to resolve {0}: {1}", resource.toString(), e));
 			this.outputChannel.show();
 
-			if (!e || !e.gitErrorCode) {
+			if (!e.gitErrorCode) {
 				throw e;
 			}
 			// We translate expected errors into a nice error to show the user.
@@ -249,7 +249,7 @@ export class GitResourceResolver {
 			return true;
 		} catch (e) {
 			// Errors are signaled by a non-zero status that is not 1
-			if (!e || e.exitCode !== 1) {
+			if (e.exitCode !== 1) {
 				throw e;
 			}
 			this.log(localize('cantFF', "{0}@{1} can't be fast-forwarded to {2}", repo.root, from, to));
@@ -417,7 +417,7 @@ export class GitResourceResolver {
 			await repo.createStash(msg);
 			this.log(`Stashed ${repo.root} ${msg}`);
 		} catch (e) {
-			if (!e.gitErrorCode || e.gitErrorCode !== GitErrorCodes.NoLocalChanges) {
+			if (e.gitErrorCode !== GitErrorCodes.NoLocalChanges) {
 				throw e;
 			}
 			this.log(localize('checkout', "Checking out {0} to {1}", repo.root, resource.revision));
