@@ -152,26 +152,7 @@ export class NavService extends Disposable implements INavService {
 			return;
 		}
 		const resourceRev = resource.with({ query: query.revision });
-		let addFolderCompleted = false;
-		const addFolderPromise = this.foldersWorkbenchService.addFoldersAsWorkspaceRootFolders([resourceRev])
-			.then(([resolvedURI]) => {
-				addFolderCompleted = true;
-				return resolvedURI;
-			}, reason => {
-				addFolderCompleted = true;
-				return TPromise.wrapError(reason);
-			},
-		);
-
-		// Show message only if adding the folder takes longer than 300ms.
-		TPromise.timeout(300).then(() => {
-			if (!addFolderCompleted) {
-				const dismissMessage = this.messageService.show(Severity.Info, nls.localize('resolvingResource', "Resolving {0}...", query.repo));
-				addFolderPromise.done(() => dismissMessage(), () => dismissMessage());
-			}
-		});
-
-		const root = await addFolderPromise;
+		const [root] = await this.foldersWorkbenchService.addFoldersAsWorkspaceRootFolders([resourceRev]);
 
 		// If path is set, open editor
 		if (query.path) {
