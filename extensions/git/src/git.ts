@@ -292,7 +292,7 @@ export class GitError extends Error {
 			gitCommand: this.gitCommand,
 			stdout: this.stdout,
 			stderr: this.stderr
-		}, [], 2);
+		}, null, 2);
 
 		if (this.error) {
 			result += (<any>this.error).stack;

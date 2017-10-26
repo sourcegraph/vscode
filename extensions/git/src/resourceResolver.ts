@@ -92,7 +92,8 @@ export class GitResourceResolver {
 			this.log(localize('resolveSuccess', "Successfully resolved {0} to {1}\n", resource.toString(), repo.root));
 			return Uri.file(repo.root);
 		} catch (e) {
-			this.log(localize('resolveError', "Error to resolve {0}: {1}\n", resource.toString(), e.message || e));
+			this.log(localize('resolveError', "Error to resolve {0}: {1}\n", resource.toString(), e));
+			this.outputChannel.show();
 			throw e;
 		}
 	}
