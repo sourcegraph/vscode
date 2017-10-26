@@ -38,10 +38,6 @@
 	padding: 0px 10px 0px 10px;
 }
 
-.management-viewlet .organization-view .selected-organization {
-	background-color: #1a4168;
-}
-
 .management-viewlet .organization-view .organization-container {
 	padding: 0px 5px 0px 10px;
 	overflow: hidden;

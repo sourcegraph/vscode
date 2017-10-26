@@ -13,13 +13,14 @@ import { ViewsViewletPanel, IViewletViewOptions, IViewOptions } from 'vs/workben
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
-import { IThemeService } from 'vs/platform/theme/common/themeService';
+import { IThemeService, registerThemingParticipant } from 'vs/platform/theme/common/themeService';
 import { attachButtonStyler } from 'vs/platform/theme/common/styler';
 import { IAuthService } from 'vs/platform/auth/common/auth';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { IAction } from 'vs/base/common/actions';
 import { prepareActions } from 'vs/workbench/browser/actions';
 import { CreateOrganizationAction } from 'vs/workbench/parts/management/browser/managementActions';
+import { listInactiveSelectionBackground } from 'vs/platform/theme/common/colorRegistry';
 
 /**
  * OrganizationView is a collapasble viewlet rendered in the ManagementViewlet
@@ -99,7 +100,7 @@ export class OrganizationView extends ViewsViewletPanel {
 		orgMemberships.forEach(orgMember => {
 			const orgContainer = $('div').addClass('organization-row-container').appendTo(orgsContainer);
 			const nameContainer = $('div').addClass('organization-container').appendTo(orgContainer);
-			if (orgMember === currentOrgMember) {
+			if (orgMember.id === currentOrgMember.id) {
 				$(orgContainer).style('cursor', 'auto');
 				orgContainer.addClass('selected-organization');
 			} else {
@@ -129,3 +130,10 @@ export class OrganizationView extends ViewsViewletPanel {
 		return [this.createOrgAction];
 	}
 }
+
+registerThemingParticipant((theme, collector) => {
+	const buttonBackground = theme.getColor(listInactiveSelectionBackground);
+	if (buttonBackground) {
+		collector.addRule(`.management-viewlet .organization-view .selected-organization { background-color: ${buttonBackground}; }`);
+	}
+});
