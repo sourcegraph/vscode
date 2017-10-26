@@ -369,7 +369,21 @@ export class GitResourceResolver {
 		// The branch might not exist locally, so create it.
 		await this.updateLocalBranch(repo, resource.revision, targetRef);
 
-		// TODO(keegan) only do stash once we are certain our checkout will succeed.
+		// We need to decide how to update the branch to targetRef
+		let checkoutAlgorithm: 'ff' | 'detached' | 'reset';
+		if (isAbsoluteCommitID(resource.revision)) {
+			checkoutAlgorithm = 'detached';
+		} else {
+			const canFF = await this.canFastForward(repo, resource.revision, targetRef);
+			if (canFF) {
+				checkoutAlgorithm = 'ff';
+			} else {
+				checkoutAlgorithm = await this.promptCheckoutAlgorithm(resource.revision);
+			}
+		}
+		this.log(localize('checkoutAlgo', "Will use {0} checkout algorithm", checkoutAlgorithm));
+
+		// Stash
 		const head = await repo.getHEAD();
 		try {
 			const msg = localize('stashAndCheckout', "WIP on {0} to checkout {1}", head.name || head.commit, resource.revision);
@@ -381,9 +395,18 @@ export class GitResourceResolver {
 			}
 			this.log(localize('checkout', "Checking out {0} to {1}", repo.root, resource.revision));
 		}
-		await repo.checkout(resource.revision);
-		// TODO(keegan) Present options to the user if we can't FF: hard reset or detached head.
-		await this.fastForward(repo, resource);
+
+		if (checkoutAlgorithm === 'ff') {
+			await repo.checkout(resource.revision);
+			await this.fastForward(repo, resource);
+		}
+		if (checkoutAlgorithm === 'detached') {
+			await repo.checkout(targetRef);
+		}
+		if (checkoutAlgorithm === 'reset') {
+			await repo.checkout(resource.revision);
+			await repo.reset(targetRef, /* hard = */ true);
+		}
 	}
 
 	/**
@@ -405,6 +428,23 @@ export class GitResourceResolver {
 			const commit = await repo.getCommit(targetRef);
 			await repo.executeCommand(['branch', revision, commit.hash]);
 		}
+	}
+
+	private async promptCheckoutAlgorithm(revision: string): Promise<'detached' | 'reset'> {
+		const detachedItem = localize('detachedItem', "Checkout detached head");
+		const resetItem = localize('resetItem', "Force update");
+		const choice = await window.showWarningMessage(
+			localize('cantFFWarning', "Can't checkout {0} and fast-forward to remote {0}.", revision),
+			detachedItem,
+			resetItem,
+		);
+		if (choice === detachedItem) {
+			return 'detached';
+		}
+		if (choice === resetItem) {
+			return 'reset';
+		}
+		throw new Error('User did not pick option');
 	}
 
 	private log(s: string) {
