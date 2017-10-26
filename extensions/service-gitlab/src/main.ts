@@ -69,6 +69,11 @@ function setFolderCatalogProvider(host: string) {
 		},
 		async search(query: string): Promise<vscode.CatalogFolder[]> {
 			const token = checkGitlabToken();
+
+			if (!token && !vscode.workspace.getConfiguration('gitlab').get<boolean>('triggerSetup')) {
+				return [];
+			}
+
 			if (!token) {
 				const ok = await showCreateGitlabTokenWalkthrough(gitlab);
 				if (!ok) {
@@ -192,7 +197,7 @@ function checkGitlabToken(): boolean {
  * Close quickopen and pass along the error so that the user sees it immediately instead
  * of only when they close the quickopen (which probably isn't showing any results because of
  * the error).
- * 
+ *
  * This will also prompt the user to reset the token.
  */
 async function showErrorImmediatelyAndPromptUserForToken<T>(error: string, viewer: Gitlab): Promise<T> {
