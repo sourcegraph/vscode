@@ -8,7 +8,7 @@
 import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
-import { workspace, window, ProgressLocation, Uri, Disposable, OutputChannel, QuickPickOptions } from 'vscode';
+import { workspace, window, ProgressLocation, Uri, Disposable, OutputChannel, QuickPickOptions, Progress } from 'vscode';
 import { Git, IGitErrorData, GitErrorCodes, Repository } from './git';
 import { mkdirp, replaceVariables, uniqBy } from './util';
 import { Model } from './model';
@@ -48,8 +48,13 @@ export class GitResourceResolver {
 		const gitResource = this.parseResource(resource);
 		this.log(localize('gitResourceInfo', "Resolving resource {0}@{1} from {2}", gitResource.remote, gitResource.revision || '', gitResource.cloneURL));
 		try {
-			const resolver = new Resolver(this.git, this.model, this.outputChannel);
-			const root = await resolver.resolveRepository(this.parseResource(resource));
+			const root = await window.withProgress({
+				location: ProgressLocation.SourceControl,
+				title: localize('progressTitle', "Resolving {0}@{1}", gitResource.remote, gitResource.revision || 'HEAD'),
+			}, progress => {
+				const resolver = new Resolver(this.git, this.model, this.outputChannel, progress);
+				return resolver.resolveRepository(this.parseResource(resource));
+			});
 			if (!root) {
 				this.log(localize('resolveFailed', "Failed to resolve {0}", resource.toString()));
 				return resource;
@@ -164,6 +169,7 @@ class Resolver {
 		private git: Git,
 		private model: Model,
 		private outputChannel: OutputChannel,
+		private progress: Progress<{ message?: string; }>,
 	) { }
 
 	/** Resolves a GitResource to a fsPath, potentially cloning it. */
@@ -313,13 +319,15 @@ class Resolver {
 	private async maybeFetch(repo: Repository, resource: GitResourceAtRevision): Promise<string | undefined> {
 		// Branches we always fetch to ensure we are up to date.
 		if (!isAbsoluteCommitID(resource.revision)) {
+			this.log(localize('fetchRef', "Fetching {0} from {1}", resource.revision, resource.cloneURL));
 			await repo.fetch({ prune: true, repository: resource.cloneURL, refspec: resource.revision });
 			return 'FETCH_HEAD';
 		}
 
 		// Absolute commits we only fetch if not found
 		if (!await this.hasCommit(repo, resource.revision)) {
-			await repo.fetch({ all: true, prune: true });
+			this.log(localize('fetchRef', "Fetching {0} from {1}", resource.revision, resource.cloneURL));
+			await repo.fetch({ prune: true, repository: resource.cloneURL });
 			if (!await this.hasCommit(repo, resource.revision)) {
 				return undefined;
 			}
@@ -496,6 +504,7 @@ class Resolver {
 	private log(s: string) {
 		const d = new Date();
 		this.outputChannel.appendLine(`${d.getHours()}:${d.getMinutes()}:${d.getSeconds()}.${d.getMilliseconds()} ${s}`);
+		this.progress.report({ message: s });
 	}
 
 	/**
