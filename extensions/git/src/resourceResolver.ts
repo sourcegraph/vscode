@@ -193,27 +193,29 @@ export class GitResourceResolver {
 				return undefined;
 			}
 
-			let canFF: boolean;
-			try {
-				// Check if the first <commit> is an ancestor of the second <commit>,
-				// and exit with status 0 if true, or with status 1 if not
-				// https://git-scm.com/docs/git-merge-base#git-merge-base---is-ancestor
-				await repo.getMergeBase(['--is-ancestor', 'HEAD', targetRef]);
-				canFF = true;
-			} catch (e) {
-				// Errors are signaled by a non-zero status that is not 1
-				if (!e || !e.error || e.error.exitCode !== 1) {
-					throw e;
-				}
-				this.log(localize('cantFF', "{0} can't be fast-forwarded to {1}@{2}", repo.root, resource.remote, resource.revision));
-				canFF = false;
-			}
-
+			const canFF = await this.canFastForward(repo, 'HEAD', targetRef);
 			return canFF ? repo : undefined;
 		}));
 		const reposFiltered = reposAtRevision.filter(r => !!r) as Repository[];
 		this.log(localize('findReposAtRevision', "Found {0} repositories at {1} for {2}: {3}", reposFiltered.length, resource.revision, resource.remote, reposFiltered.map(r => r.root).join(' ')));
 		return reposFiltered;
+	}
+
+	private async canFastForward(repo: Repository, from: string, to: string): Promise<boolean> {
+		try {
+			// Check if the first <commit> is an ancestor of the second <commit>,
+			// and exit with status 0 if true, or with status 1 if not
+			// https://git-scm.com/docs/git-merge-base#git-merge-base---is-ancestor
+			await repo.getMergeBase(['--is-ancestor', from, to]);
+			return true;
+		} catch (e) {
+			// Errors are signaled by a non-zero status that is not 1
+			if (!e || e.exitCode !== 1) {
+				throw e;
+			}
+			this.log(localize('cantFF', "{0}@{1} can't be fast-forwarded to {2}", repo.root, from, to));
+			return false;
+		}
 	}
 
 	/**
