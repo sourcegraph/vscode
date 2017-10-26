@@ -607,7 +607,7 @@ export class ExtensionsWorkbenchService implements IExtensionsWorkbenchService {
 
 		const message = nls.localize('ensureInstalledReload', "Reload to finish installing required extensions.");
 		const confirmation: IConfirmation = { message, type: 'question', primaryButton: nls.localize('reload', "&&Reload Window") };
-		const shouldReload = await this.messageService.confirm(confirmation);
+		const shouldReload = (await this.messageService.confirm(confirmation)).confirmed;
 		if (!shouldReload) {
 			return;
 		}
