@@ -198,7 +198,7 @@ export class GitResourceResolver {
 				// Check if the first <commit> is an ancestor of the second <commit>,
 				// and exit with status 0 if true, or with status 1 if not
 				// https://git-scm.com/docs/git-merge-base#git-merge-base---is-ancestor
-				await repo.executeCommand(['merge-base', '--is-ancestor', 'HEAD', targetRef]);
+				await repo.getMergeBase(['--is-ancestor', 'HEAD', targetRef]);
 				canFF = true;
 			} catch (e) {
 				// Errors are signaled by a non-zero status that is not 1
