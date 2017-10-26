@@ -143,24 +143,38 @@ export class AuthService extends Disposable implements IAuthService {
 			return;
 		}
 
-		const user = await this.syncUser();
-		const orgMemberships = user.orgMemberships;
-		await this.setCurrentUser({
-			memento: true,
-			id: user.sourcegraphID,
-			auth0Id: user.id,
-			username: user.username,
-			email: user.email,
-			displayName: user.displayName,
-			avatarUrl: user.avatarURL,
-			orgMemberships,
-			currentOrgMember: this.getUpdatedCurrentOrgMember(orgMemberships),
-		});
+		try {
+			const user = await this.syncUser();
+			const orgMemberships = user.orgMemberships;
+			await this.setCurrentUser({
+				memento: true,
+				id: user.sourcegraphID,
+				auth0Id: user.id,
+				username: user.username,
+				email: user.email,
+				displayName: user.displayName,
+				avatarUrl: user.avatarURL,
+				orgMemberships,
+				currentOrgMember: this.getUpdatedCurrentOrgMember(orgMemberships),
+			});
+		} catch (e) {
+			if (this.isNoCurrentUserErr(e)) {
+				this.signOut();
+			}
+
+			throw e;
+		}
 	}
 
 	private currentAuthCookie(): string {
 		const config = this.configurationService.getConfiguration<IRemoteConfiguration>();
 		return config.remote.cookie;
+	}
+
+	private isNoCurrentUserErr(err: any): boolean {
+		// TODO@sourcegraph: Don't rely on string comparisons. See https://github.com/sourcegraph/sourcegraph/issues/7761
+		const message: string = (err && err.message) || '';
+		return message.indexOf('no current user') !== -1;
 	}
 
 	private get shouldUploadConfigurationSettings(): boolean {
