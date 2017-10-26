@@ -133,7 +133,7 @@ async function showCreateGitlabTokenWalkthrough(viewer: Gitlab, skipInfoMessage?
 			host = host.replace(/\/$/, '');
 			vscode.Uri.parse(host);
 		} catch (error) {
-			showErrorImmediatelyAndPromptUserForToken(localize('invalidUrl', `Host must be a valid URL: ${error.message}.`), viewer);
+			showErrorImmediatelyAndPromptUserForToken(localize('invalidUrl', "Host must be a valid URL: {0}", error.message), viewer);
 			return false;
 		}
 	} else if (!value || value === cancelItem) {
@@ -146,7 +146,7 @@ async function showCreateGitlabTokenWalkthrough(viewer: Gitlab, skipInfoMessage?
 		return false;
 	}
 
-	const createTokenItem: vscode.MessageItem = { title: localize('createToken', `Create Token on ${host}`) };
+	const createTokenItem: vscode.MessageItem = { title: localize('createToken', "Create Token on {0}", host) };
 	const url = `${host}/profile/personal_access_tokens`;
 
 	if (skipInfoMessage) {
