@@ -76,6 +76,7 @@ export class SignInModal extends Modal {
 			'aria-label': localize('sg.signInForm.sessionHeader', "Session ID"),
 			name: 'session-id',
 			type: 'text',
+			autofocus: true,
 			value: remoteConfig && remoteConfig.remote && remoteConfig.remote.cookie ? remoteConfig.remote.cookie : ''
 		})
 			.appendTo($form).domFocus().getHTMLElement() as HTMLTextAreaElement;
