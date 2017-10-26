@@ -1050,6 +1050,8 @@ registerThemingParticipant((theme, collector) => {
 	}
 	const descriptionColor = theme.getColor(descriptionForeground);
 	if (descriptionColor) {
+		collector.addRule(`.monaco-workbench > .part.editor > .content .welcomePage .comment-count-label { color: ${descriptionColor}; }`);
+		collector.addRule(`.monaco-workbench > .part.editor > .content .welcomePage .bubble-icon { background-color: ${descriptionColor}; }`);
 		collector.addRule(`.monaco-workbench > .part.editor > .content .welcomePage .detail { color: ${descriptionColor}; }`);
 	}
 

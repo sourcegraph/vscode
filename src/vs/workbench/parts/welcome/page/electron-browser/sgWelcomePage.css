@@ -197,27 +197,6 @@
 	padding: 0.5em 0em 1.0em 0em;
 }
 
-.monaco-workbench > .part.editor > .content .welcomePage .search-input {
-	display: inline-flex;
-	vertical-align: middle;
-	font-size: 12px;
-	line-height: 32px;
-	width: calc(100% - 17px);
-	border-style: solid;
-	padding-left: 1em;
-	color: #A2B0CD;
-}
-
-.monaco-workbench > .part.editor > .content .welcomePage .comment-search-input {
-	display: inline-flex;
-	vertical-align: middle;
-	font-size: 12px;
-	line-height: 32px;
-	width: calc(100% - 1.25em);
-	border-style: solid;
-	padding-left: 1em;
-}
-
 .monaco-workbench > .part.editor > .content .welcomePage .repo-name-label {
 	display: inline-flex;
 	vertical-align: middle;
@@ -425,7 +404,6 @@
 .monaco-workbench > .part.editor > .content .welcomePage .container .comment-count-label {
 	display: inline-flex;
 	vertical-align: middle;
-	color: #A2B0CD;
 	line-height: 16px;
 	font-size: 12px;
 	padding-right: 4px;
@@ -485,7 +463,6 @@
 
 .monaco-workbench > .part.editor > .content .welcomePage .bubble-icon {
 	-webkit-mask: url(../../Bubble.svg) center no-repeat;
-	background-color: #A2B0CD;
 	display: inline-flex;
 	vertical-align: middle;
 	height: 8px;
