@@ -351,6 +351,18 @@ export class GitResourceResolver {
 	}
 
 	private async stashAndCheckout(repo: Repository, resource: GitResourceAtRevision): Promise<void> {
+		// If we get to this point it means we are not on resource.revision.
+		// That implies we haven't run fetch since the branch would of been
+		// skipped in filterReposAtRevision. So we need to run fetch to ensure
+		// resource.revision even exists in its remotes.
+		// TODO(keegan) Run fetch on every repo before presenting options to the
+		// user to stashAndCheckout.
+		const targetRef = await this.maybeFetch(repo, resource);
+		if (!targetRef) {
+			throw new Error(localize('missingHash', "{0} does not have {1}", repo.root, resource.revision));
+		}
+
+		// TODO(keegan) only do stash once we are certain our checkout will succeed.
 		const head = await repo.getHEAD();
 		try {
 			const msg = localize('stashAndCheckout', "WIP on {0} to checkout {1}", head.name || head.commit, resource.revision);
@@ -362,7 +374,11 @@ export class GitResourceResolver {
 			}
 			this.log(localize('checkout', "Checking out {0} to {1}", repo.root, resource.revision));
 		}
+		// TODO(keegan) If revision is a branch the remote ref may not exist due
+		// to how we fetch. In that case we need to rely on targetref and create
+		// the branch.
 		await repo.checkout(resource.revision);
+		// TODO(keegan) Present options to the user if we can't FF: hard reset or detached head.
 		await this.fastForward(repo, resource);
 	}
 
