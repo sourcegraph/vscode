@@ -364,6 +364,9 @@ export class GitResourceResolver {
 			throw new Error(localize('missingHash', "{0} does not have {1}", repo.root, resource.revision));
 		}
 
+		// The branch might not exist locally, so create it.
+		await this.updateLocalBranch(repo, resource.revision, targetRef);
+
 		// TODO(keegan) only do stash once we are certain our checkout will succeed.
 		const head = await repo.getHEAD();
 		try {
@@ -376,12 +379,30 @@ export class GitResourceResolver {
 			}
 			this.log(localize('checkout', "Checking out {0} to {1}", repo.root, resource.revision));
 		}
-		// TODO(keegan) If revision is a branch the remote ref may not exist due
-		// to how we fetch. In that case we need to rely on targetref and create
-		// the branch.
 		await repo.checkout(resource.revision);
 		// TODO(keegan) Present options to the user if we can't FF: hard reset or detached head.
 		await this.fastForward(repo, resource);
+	}
+
+	/**
+	 * updateLocalBranch will create branch revision if it does not exist to
+	 * point to FETCH_HEAD.
+	 */
+	private async updateLocalBranch(repo: Repository, revision: string, targetRef: string): Promise<void> {
+		// Absolute commits we just use a detached head, no branch to checkout
+		if (isAbsoluteCommitID(revision)) {
+			return;
+		}
+
+		try {
+			// If this succeeds then we have the branch already
+			await repo.getCommit(revision);
+		} catch (e) {
+			// TODO(keegan) only ignore missing commit error
+			// The branch does not exist, so create it to point to targetRef
+			const commit = await repo.getCommit(targetRef);
+			await repo.executeCommand(['branch', revision, commit.hash]);
+		}
 	}
 
 	private log(s: string) {
