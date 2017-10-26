@@ -9,10 +9,9 @@ import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
 import { workspace, window, ProgressLocation, Uri, Disposable, OutputChannel, QuickPickOptions } from 'vscode';
-import { Git, IGitErrorData, GitErrorCodes } from './git';
+import { Git, IGitErrorData, GitErrorCodes, Repository } from './git';
 import { mkdirp, replaceVariables, uniqBy } from './util';
 import { Model } from './model';
-import { Repository } from './repository';
 import * as nls from 'vscode-nls';
 import { canonicalRemote } from './uri';
 
@@ -81,25 +80,47 @@ export class GitResourceResolver {
 			return resource;
 		}
 
+		const gitResource = this.parseResource(resource);
+		this.log(localize('gitResourceInfo', "Resolving resource {0}@{1} from {2}", gitResource.remote, gitResource.revision || '', gitResource.cloneURL));
 		try {
-			const gitResource = this.parseResource(resource);
-			this.log(localize('gitResourceInfo', "Resolving resource {0}@{1} from {2}", gitResource.remote, gitResource.revision || '', gitResource.cloneURL));
-			const repo = await this.resolveRepository(this.parseResource(resource));
-			if (!repo) {
-				this.log(localize('resolveFailed', "Failed to resolve {0}\n", resource.toString()));
+			const root = await this.resolveRepository(this.parseResource(resource));
+			if (!root) {
+				this.log(localize('resolveFailed', "Failed to resolve {0}", resource.toString()));
 				return resource;
 			}
-			this.log(localize('resolveSuccess', "Successfully resolved {0} to {1}\n", resource.toString(), repo.root));
-			return Uri.file(repo.root);
+			this.log(localize('resolveSuccess', "Successfully resolved {0} to {1}", resource.toString(), root));
+
+			// Register the repo with SCM
+			await this.model.tryOpenRepository(root, true);
+			const repo = this.model.getRepository(root, true);
+			if (!repo) {
+				throw new Error('Unable to open repository at ' + root);
+			}
+
+			return Uri.file(root);
 		} catch (e) {
-			this.log(localize('resolveError', "Error to resolve {0}: {1}\n", resource.toString(), e));
+			this.log(localize('resolveError', "Error to resolve {0}: {1}", resource.toString(), e));
 			this.outputChannel.show();
-			throw e;
+
+			if (!e.gitErrorCode) {
+				throw e;
+			}
+			// We translate expected errors into a nice error to show the user.
+			// The full error message will still be visible in the deep link
+			// output channel.
+			let msg = localize('unknownFailure', "Unexpected git error {0} occurred while resolving {1}@{2}", e.gitErrorCode, gitResource.remote, gitResource.revision || 'HEAD');
+			if (e.gitErrorCode === GitErrorCodes.NoRemoteReference) {
+				msg = localize('noRemote', "{0} does not exist on remote {1}", gitResource.revision, gitResource.remote);
+			}
+			this.log(msg);
+			throw new Error(msg);
+		} finally {
+			this.outputChannel.appendLine(''); // Just log newline
 		}
 	}
 
-	/** Resolves a GitResource to a Repository, potentially cloning it. */
-	public async resolveRepository(resource: GitResource): Promise<Repository | undefined> {
+	/** Resolves a GitResource to a fsPath, potentially cloning it. */
+	public async resolveRepository(resource: GitResource): Promise<string | undefined> {
 		const repos = await this.findRepositoriesWithRemote(resource.remote);
 		if (repos.length === 0) {
 			// We have no repositories pointing to this remote, so we clone it.
@@ -109,7 +130,8 @@ export class GitResourceResolver {
 		// We have repositories. If it doesn't need to be at a specific revision
 		// we let the user pick one.
 		if (!hasRevision(resource)) {
-			return await this.pick(resource, repos, { autoSelectWorkspaceRoots: true });
+			const repo = await this.pick(resource, repos, { autoSelectWorkspaceRoots: true });
+			return repo.root;
 		}
 
 		// Find repositories which are either at revision or can be fast
@@ -119,14 +141,14 @@ export class GitResourceResolver {
 			const repo = await this.pick(resource, repos, { autoSelectWorkspaceRoots: true });
 			// TODO(keegan) What if the working copy is dirty?
 			await this.fastForward(repo, resource);
-			return repo;
+			return repo.root;
 		}
 
 		const repo = await this.pick(resource, repos, {
 			placeHolder: localize('checkoutExistingRepo', "Choose a repository to stash and checkout {0}@{1}", resource.remote, resource.revision),
 		});
 		await this.stashAndCheckout(repo, resource);
-		return repo;
+		return repo.root;
 	}
 
 	/**
@@ -159,21 +181,38 @@ export class GitResourceResolver {
 
 	private async findRepositoriesWithRemote(remote: string): Promise<Repository[]> {
 		// First include repositories that are already open that have remote
-		const open = this.model.repositories.filter(repo => repo.remotes.some(r => canonicalRemote(r.url) === remote));
+		const open = this.model.repositories
+			.filter(repo => repo.remotes.some(r => canonicalRemote(r.url) === remote))
+			.map(repo => repo.root);
 
 		// Next check if we have already cloned the repo to our well-known location
 		const wellKnownPath = this.getFolderPath(remote);
-		await this.model.tryOpenRepository(wellKnownPath, true);
-		const wellKnownRepo = this.model.getRepository(wellKnownPath, true);
-		const wellKnownRepos: Repository[] = [];
-		if (wellKnownRepo) {
-			wellKnownRepos.push(wellKnownRepo);
-		}
 
 		// Now include repos we have discovered in the users homedir
-		const other = await this.model.tryOpenRepositoryWithRemote(remote);
+		const other = await this.model.getPossibleRemotesOnDisk(remote);
 
-		const repos = uniqBy([...open, ...wellKnownRepos, ...other], repo => repo.root);
+		// Open all
+		const repoPaths = uniqBy([...open, wellKnownPath, ...other], s => s);
+		const reposRaw = await Promise.all(repoPaths.map(async path => {
+			const modelRepo = this.model.getRepository(Uri.file(path), true);
+			if (modelRepo) {
+				return modelRepo.repository;
+			}
+			try {
+				const repositoryRoot = await this.git.getRepositoryRoot(path);
+				if (repositoryRoot !== path) {
+					return undefined;
+				}
+				return this.git.open(repositoryRoot);
+			} catch (err) {
+				if (err.gitErrorCode === GitErrorCodes.NotAGitRepository) {
+					return undefined;
+				}
+				this.log(localize('repoOpenFail', "Could not open {0} as a git repo: {1}", path, err));
+				return undefined;
+			}
+		}));
+		const repos = reposRaw.filter(repo => !!repo) as Repository[];
 		this.log(localize('findRepos', "Found {0} repositories for {1}: {2}", repos.length, remote, repos.map(r => r.root).join(' ')));
 		return repos;
 	}
@@ -193,27 +232,29 @@ export class GitResourceResolver {
 				return undefined;
 			}
 
-			let canFF: boolean;
-			try {
-				// Check if the first <commit> is an ancestor of the second <commit>,
-				// and exit with status 0 if true, or with status 1 if not
-				// https://git-scm.com/docs/git-merge-base#git-merge-base---is-ancestor
-				await repo.getMergeBase(['--is-ancestor', 'HEAD', targetRef]);
-				canFF = true;
-			} catch (e) {
-				// Errors are signaled by a non-zero status that is not 1
-				if (!e || !e.error || e.error.exitCode !== 1) {
-					throw e;
-				}
-				this.log(localize('cantFF', "{0} can't be fast-forwarded to {1}@{2}", repo.root, resource.remote, resource.revision));
-				canFF = false;
-			}
-
+			const canFF = await this.canFastForward(repo, 'HEAD', targetRef);
 			return canFF ? repo : undefined;
 		}));
 		const reposFiltered = reposAtRevision.filter(r => !!r) as Repository[];
 		this.log(localize('findReposAtRevision', "Found {0} repositories at {1} for {2}: {3}", reposFiltered.length, resource.revision, resource.remote, reposFiltered.map(r => r.root).join(' ')));
 		return reposFiltered;
+	}
+
+	private async canFastForward(repo: Repository, from: string, to: string): Promise<boolean> {
+		try {
+			// Check if the first <commit> is an ancestor of the second <commit>,
+			// and exit with status 0 if true, or with status 1 if not
+			// https://git-scm.com/docs/git-merge-base#git-merge-base---is-ancestor
+			await repo.getMergeBase(['--is-ancestor', from, to]);
+			return true;
+		} catch (e) {
+			// Errors are signaled by a non-zero status that is not 1
+			if (e.exitCode !== 1) {
+				throw e;
+			}
+			this.log(localize('cantFF', "{0}@{1} can't be fast-forwarded to {2}", repo.root, from, to));
+			return false;
+		}
 	}
 
 	/**
@@ -253,13 +294,13 @@ export class GitResourceResolver {
 	private async maybeFetch(repo: Repository, resource: GitResourceAtRevision): Promise<string | undefined> {
 		// Branches we always fetch to ensure we are up to date.
 		if (!isAbsoluteCommitID(resource.revision)) {
-			await repo.fetchNow({ prune: true, repository: resource.cloneURL, refspec: resource.revision, throwErr: true });
+			await repo.fetch({ prune: true, repository: resource.cloneURL, refspec: resource.revision });
 			return 'FETCH_HEAD';
 		}
 
 		// Absolute commits we only fetch if not found
 		if (!await this.hasCommit(repo, resource.revision)) {
-			await repo.fetchNow({ all: true, prune: true, throwErr: true });
+			await repo.fetch({ all: true, prune: true });
 			if (!await this.hasCommit(repo, resource.revision)) {
 				return undefined;
 			}
@@ -267,22 +308,12 @@ export class GitResourceResolver {
 		return resource.revision;
 	}
 
-	private async clone(resource: GitResource): Promise<Repository> {
+	private async clone(resource: GitResource): Promise<string> {
 		const dir = this.getFolderPath(resource.remote);
 		this.log(localize('cloningResource', "Cloning {0}@{1} from {2} to {3}", resource.remote, resource.revision || 'HEAD', resource.cloneURL, dir));
 		await mkdirp(path.dirname(dir));
 		const uri = await this.cloneAndCheckout(resource.cloneURL, dir, resource.remote, resource.revision || null);
-		return this.mustOpenRepository(uri.fsPath);
-	}
-
-	/** Opens the repository at path, throws an exception if that fails. */
-	private async mustOpenRepository(path: string): Promise<Repository> {
-		await this.model.tryOpenRepository(path, true);
-		const repo = this.model.getRepository(path, true);
-		if (!repo) {
-			throw new Error('Unable to open repository at ' + path);
-		}
-		return repo;
+		return uri.fsPath;
 	}
 
 	private async hasCommit(repo: Repository, ref: string): Promise<boolean> {
@@ -316,6 +347,9 @@ export class GitResourceResolver {
 		if (!options) {
 			options = {};
 		}
+		if (!options.placeHolder) {
+			options.placeHolder = localize('pickExistingRepo', "Choose a clone for repository {0}", resource.remote);
+		}
 
 		if (options.autoSelectWorkspaceRoots) {
 			// If we have repos that are already workspace roots, only include them
@@ -325,6 +359,7 @@ export class GitResourceResolver {
 			}
 
 			if (repos.length === 1) {
+				this.log(localize('autoSelect', "Automatically picked {0} for prompt {1}", repos[0].root, options.placeHolder));
 				return repos[0];
 			}
 		}
@@ -332,38 +367,111 @@ export class GitResourceResolver {
 		const picks = repos.map(repo => {
 			return {
 				label: path.basename(repo.root),
-				description: [repo.headLabel, repo.syncLabel, repo.root]
-					.filter(l => !!l)
-					.join(' '),
+				description: repo.root,
 				repo,
 			};
 		});
 
-		if (!options.placeHolder) {
-			options.placeHolder = localize('pickExistingRepo', "Choose a clone for repository {0}", resource.remote);
-		}
 		const pick = await window.showQuickPick(picks, options);
 		if (!pick) {
 			// TODO(keegan) be more graceful
 			throw new Error('did not pick repo');
 		}
+		this.log(localize('pick', "User picked {0} for prompt {1}", pick.repo.root, options.placeHolder));
 		return pick.repo;
 	}
 
 	private async stashAndCheckout(repo: Repository, resource: GitResourceAtRevision): Promise<void> {
+		// If we get to this point it means we are not on resource.revision.
+		// That implies we haven't run fetch since the branch would of been
+		// skipped in filterReposAtRevision. So we need to run fetch to ensure
+		// resource.revision even exists in its remotes.
+		// TODO(keegan) Run fetch on every repo before presenting options to the
+		// user to stashAndCheckout.
+		const targetRef = await this.maybeFetch(repo, resource);
+		if (!targetRef) {
+			throw new Error(localize('missingHash', "{0} does not have {1}", repo.root, resource.revision));
+		}
+
+		// The branch might not exist locally, so create it.
+		await this.updateLocalBranch(repo, resource.revision, targetRef);
+
+		// We need to decide how to update the branch to targetRef
+		let checkoutAlgorithm: 'ff' | 'detached' | 'reset';
+		if (isAbsoluteCommitID(resource.revision)) {
+			checkoutAlgorithm = 'detached';
+		} else {
+			const canFF = await this.canFastForward(repo, resource.revision, targetRef);
+			if (canFF) {
+				checkoutAlgorithm = 'ff';
+			} else {
+				checkoutAlgorithm = await this.promptCheckoutAlgorithm(resource.revision);
+			}
+		}
+		this.log(localize('checkoutAlgo', "Will use {0} checkout algorithm", checkoutAlgorithm));
+
+		// Stash
 		const head = await repo.getHEAD();
 		try {
 			const msg = localize('stashAndCheckout', "WIP on {0} to checkout {1}", head.name || head.commit, resource.revision);
 			await repo.createStash(msg);
 			this.log(`Stashed ${repo.root} ${msg}`);
 		} catch (e) {
-			if (!e.gitErrorCode || e.gitErrorCode !== GitErrorCodes.NoLocalChanges) {
+			if (e.gitErrorCode !== GitErrorCodes.NoLocalChanges) {
 				throw e;
 			}
 			this.log(localize('checkout', "Checking out {0} to {1}", repo.root, resource.revision));
 		}
-		await repo.checkout(resource.revision);
-		await this.fastForward(repo, resource);
+
+		if (checkoutAlgorithm === 'ff') {
+			await repo.checkout(resource.revision, []);
+			await this.fastForward(repo, resource);
+		} else if (checkoutAlgorithm === 'detached') {
+			await repo.checkout(targetRef, []);
+		} else if (checkoutAlgorithm === 'reset') {
+			await repo.checkout(resource.revision, []);
+			await repo.reset(targetRef, /* hard = */ true);
+		} else {
+			throw new Error('Unexpected checkout algorithm ' + checkoutAlgorithm);
+		}
+	}
+
+	/**
+	 * updateLocalBranch will create branch revision if it does not exist to
+	 * point to FETCH_HEAD.
+	 */
+	private async updateLocalBranch(repo: Repository, revision: string, targetRef: string): Promise<void> {
+		// Absolute commits we just use a detached head, no branch to checkout
+		if (isAbsoluteCommitID(revision)) {
+			return;
+		}
+
+		try {
+			// If this succeeds then we have the branch already
+			await repo.getCommit(revision);
+		} catch (e) {
+			// TODO(keegan) only ignore missing commit error
+			// The branch does not exist, so create it to point to targetRef
+			const commit = await repo.getCommit(targetRef);
+			await repo.run(['branch', revision, commit.hash]);
+		}
+	}
+
+	private async promptCheckoutAlgorithm(revision: string): Promise<'detached' | 'reset'> {
+		const detachedItem = localize('detachedItem', "Checkout detached head");
+		const resetItem = localize('resetItem', "Force update");
+		const choice = await window.showWarningMessage(
+			localize('cantFFWarning', "Can't checkout {0} and fast-forward to remote {0}.", revision),
+			detachedItem,
+			resetItem,
+		);
+		if (choice === detachedItem) {
+			return 'detached';
+		}
+		if (choice === resetItem) {
+			return 'reset';
+		}
+		throw new Error('User did not pick option');
 	}
 
 	private log(s: string) {
