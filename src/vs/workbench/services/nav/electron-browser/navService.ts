@@ -96,7 +96,9 @@ export class NavService extends Disposable implements INavService {
 	}
 
 	public handle(location: URI): TPromise<void> {
-		return TPromise.wrap(this.doHandle(location));
+		return TPromise.wrap(this.doHandle(location)).then(null, reason => {
+			this.messageService.show(Severity.Error, reason);
+		});
 	}
 
 	private async doHandle(location: URI): Promise<void> {
@@ -151,16 +153,21 @@ export class NavService extends Disposable implements INavService {
 		}
 		const resourceRev = resource.with({ query: query.revision });
 		let addFolderCompleted = false;
-		const addFolderPromise = this.foldersWorkbenchService.addFoldersAsWorkspaceRootFolders([resourceRev]).then(([resolvedURI]) => {
-			addFolderCompleted = true;
-			return resolvedURI;
-		});
+		const addFolderPromise = this.foldersWorkbenchService.addFoldersAsWorkspaceRootFolders([resourceRev])
+			.then(([resolvedURI]) => {
+				addFolderCompleted = true;
+				return resolvedURI;
+			}, reason => {
+				addFolderCompleted = true;
+				return TPromise.wrapError(reason);
+			},
+		);
 
 		// Show message only if adding the folder takes longer than 300ms.
 		TPromise.timeout(300).then(() => {
 			if (!addFolderCompleted) {
 				const dismissMessage = this.messageService.show(Severity.Info, nls.localize('resolvingResource', "Resolving {0}...", query.repo));
-				addFolderPromise.done(() => dismissMessage());
+				addFolderPromise.done(() => dismissMessage(), () => dismissMessage());
 			}
 		});
 

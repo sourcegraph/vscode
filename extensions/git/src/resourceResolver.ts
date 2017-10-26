@@ -96,8 +96,6 @@ export class GitResourceResolver {
 			this.outputChannel.show();
 
 			if (!e || !e.gitErrorCode) {
-				// Remove once errors are propogated back https://github.com/sourcegraph/src/issues/1539
-				await window.showErrorMessage(e);
 				throw e;
 			}
 			// We translate expected errors into a nice error to show the user.
@@ -108,9 +106,7 @@ export class GitResourceResolver {
 				msg = localize('noRemote', "{0} does not exist on remote {1}", gitResource.revision, gitResource.remote);
 			}
 			this.log(msg);
-			// Remove once errors are propogated back https://github.com/sourcegraph/src/issues/1539
-			await window.showErrorMessage(msg);
-			throw new Error(e);
+			throw new Error(msg);
 		} finally {
 			this.outputChannel.appendLine(''); // Just log newline
 		}
