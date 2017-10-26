@@ -22,7 +22,7 @@ class InviteEntry extends QuickOpenEntry {
 	}
 
 	public getLabel(): string {
-		return localize('quickOpenInvite.entry', "Invite {0} to {1}", this.emailAddress, this.orgName);
+		return localize('quickOpenInvite.entry', "Invite {0} to the {1} organization", this.emailAddress, this.orgName);
 	}
 
 	public run(mode: Mode, context: IEntryRunContext): boolean {
