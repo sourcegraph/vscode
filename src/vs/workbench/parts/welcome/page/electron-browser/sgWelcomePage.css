@@ -99,6 +99,11 @@
 	border-style: solid;
 }
 
+.monaco-workbench > .part.editor > .content .welcomePage .flat-button {
+	text-align: left;
+	height: 50px;
+	line-height: 45px;
+}
 
 .monaco-workbench > .part.editor > .content .welcomePage .detail {
 	line-height: 1.5;
@@ -360,19 +365,16 @@
 }
 
 .monaco-workbench > .part.editor > .content .welcomePage .container .signup {
-	background-color: #1C7CD6;
 	color: white;
 }
 
 .monaco-workbench > .part.editor > .content .welcomePage .container .dashed {
 	border-style: dashed;
-	border-color: #2B3750;
-	background-color: #1D2535;
+	border-width: 1px;
 }
 
 .monaco-workbench > .part.editor > .content .welcomePage .container .solid {
-	border: 1px solid #2B3750;
-	background-color: #1D2535;
+	border: 1px solid;
 }
 
 .monaco-workbench > .part.editor > .content .welcomePage .container .sign-in-container {
@@ -394,9 +396,7 @@
 	border: none;
 	align-items: center;
 	width: 100%;
-	background: #2B3750;
 }
-
 
 .monaco-workbench > .part.editor > .content .welcomePage .container .avatar-img {
 	width: 16px;
@@ -432,6 +432,7 @@
 }
 
 /* Icons */
+
 .monaco-workbench > .part.editor > .content .welcomePage .btn-icon {
 	height: 2em;
 	width: 2em;

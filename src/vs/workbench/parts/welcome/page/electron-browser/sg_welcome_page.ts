@@ -51,35 +51,19 @@ export default () => `
 						<div id="review-branches-spinner" class="loader-icon"></div>
 						<ul id="branch-list" class="branch-list no-margin">
 						</ul>
-						<div class="no-org-container">
-							<div class="padding-around">
-								<div id="org-help-action" class="padding-vertical">
-									<button class="solid">
-										<div class="help-icon"></div>
-										<span class="detail button-label">${escape(localize('welcomePage.noOrgHelp', "Join or create an organization to start using code comments."))}</span>
-									</button>
-								</div>
-							</div>
-						</div>
 					</div>
 					<div class="add-code-host">
 						<div class="padding-around">
 							<div class="action-header">Connect your code hosts</div>
 							<div class="action-subheader">A GitHub personal access token or Bitbucket app password is required to enable remote repository search.</div>
 							<div class="padding-vertical">
-								<button data-href="command:github.showCreateAccessTokenWalkthrough">
-									<div class="gitHub-icon"></div>
-									<span class="detail button-label">${escape(localize('welcomePage.addGitHubToken', "Add GitHub token..."))}</span>
-								</button>
+								<div class="flat-button" id="add-github"></div>
 							</div>
 							<div class="padding-vertical">
-								<button data-href="command:bitbucket.showBitbucketAppPasswordWalkthrough">
-									<div class="bitbucket-icon"></div>
-									<span class="detail button-label">${escape(localize('welcomePage.addBitbuckAppPassword', "Add Bitbucket app password..."))}</span>
-								</button>
+								<div class="flat-button" id="add-bitbucket"></div>
 							</div>
 							<div class="padding-vertical">
-								<button class="dashed">
+								<button id="gitServer-contact" class="dashed">
 									<div class="gitServer-icon"></div>
 									<span class="detail button-label">${escape(localize('welcomePage.serverContact', "We support any Git-base server. Contact us for details."))}</span>
 								</button>
@@ -108,6 +92,16 @@ export default () => `
 										</div>
 									</div>
 								</div>
+								<div class="no-org-container">
+								<div class="padding-around">
+									<div id="org-help-action" class="padding-vertical">
+										<button class="solid">
+											<div class="help-icon"></div>
+											<span class="detail button-label">${escape(localize('welcomePage.noOrgHelp', "Join or create an organization to start using code comments."))}</span>
+										</button>
+									</div>
+								</div>
+							</div>
 							</div>
 							<div class="sign-in-container">
 								<div class="padding-around">

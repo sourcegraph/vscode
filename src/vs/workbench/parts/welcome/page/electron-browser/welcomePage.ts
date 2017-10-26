@@ -33,7 +33,7 @@ import { used } from 'vs/workbench/parts/welcome/page/electron-browser/sg_welcom
 import { ILifecycleService, StartupKind } from 'vs/platform/lifecycle/common/lifecycle';
 import { IDisposable, dispose } from 'vs/base/common/lifecycle';
 import { IThemeService, registerThemingParticipant } from 'vs/platform/theme/common/themeService';
-import { registerColor, focusBorder, textLinkForeground, textLinkActiveForeground, foreground, descriptionForeground, contrastBorder, activeContrastBorder, welcomeButtonBackground, inputBackground, inputBorder, inputForeground } from 'vs/platform/theme/common/colorRegistry';
+import { registerColor, focusBorder, textLinkForeground, textLinkActiveForeground, foreground, descriptionForeground, contrastBorder, activeContrastBorder, welcomeButtonBackground, inputBackground, inputBorder, inputForeground, buttonBackground as editorButtonBackground, buttonHoverBackground as editorButtonHoverBackground } from 'vs/platform/theme/common/colorRegistry';
 import { getExtraColor } from 'vs/workbench/parts/welcome/walkThrough/node/walkThroughUtils';
 import { IExtensionsWorkbenchService } from 'vs/workbench/parts/extensions/common/extensions';
 import { IStorageService } from 'vs/platform/storage/common/storage';
@@ -54,6 +54,8 @@ import { ReviewQuickOpenAction } from 'vs/workbench/parts/review/electron-browse
 import { ThrottledDelayer } from 'vs/base/common/async';
 import { IExtensionService } from 'vs/platform/extensions/common/extensions';
 import { CodeCommentsQuickOpenAction } from 'vs/workbench/parts/codeComments/electron-browser/codeComments.contribution';
+import { attachButtonStyler } from 'vs/platform/theme/common/styler';
+import { Button } from 'vs/base/browser/ui/button/button';
 
 used();
 
@@ -338,9 +340,9 @@ class WelcomePage {
 		if (spinner) {
 			if (!this.threads.threads.length && showLoader) {
 				$(spinner).show();
-				return;
+			} else {
+				$(spinner).hide();
 			}
-			$(spinner).hide();
 		}
 
 		const threadContainer = document.querySelector('.comment-list-container') as HTMLElement;
@@ -355,11 +357,11 @@ class WelcomePage {
 	}
 
 	private emptyCodeCommentState(container: HTMLElement): HTMLElement | undefined {
-		return container.querySelector('.empty-comment-container') as HTMLElement;
+		return document.querySelector('.empty-comment-container') as HTMLElement;
 	}
 
 	private joinOrganizationState(container: HTMLElement): HTMLElement | undefined {
-		return container.querySelector('.no-org-container') as HTMLElement;
+		return document.querySelector('.no-org-container') as HTMLElement;
 	}
 
 	private renderCodeComments(container: HTMLElement, showLoader: boolean): void {
@@ -452,6 +454,42 @@ class WelcomePage {
 		return this.refreshDelayer.trigger(() => TPromise.wrap(this.resolveSuggestedRepositoriesContainer()));
 	}
 
+	private addGitHubCodeHostButton(container: HTMLElement): void {
+		if (document.getElementById('add-github-code-host-button')) {
+			return;
+		}
+		const buttonContainer = document.getElementById('add-github');
+		const gitHubButton = $('div').id('add-github-code-host-button');
+		buttonContainer.appendChild(gitHubButton.getHTMLElement());
+		const button = new Button(gitHubButton);
+		button.getElement().classList.add('flat-button');
+
+		button.label = localize('welcomePage.addGitHubToken', "Add GitHub token");
+		attachButtonStyler(button, this.themeService);
+
+		this.disposables.push(button.addListener('click', () => {
+			this.commandService.executeCommand('github.showCreateAccessTokenWalkthrough');
+		}));
+	}
+
+	private addBitbucketAppPasswordButton(container: HTMLElement): void {
+		if (document.getElementById('add-bitbucket-app-password-button')) {
+			return;
+		}
+		const buttonContainer = document.getElementById('add-bitbucket');
+		const gitHubButton = $('div').id('add-bitbucket-app-password-button');
+		buttonContainer.appendChild(gitHubButton.getHTMLElement());
+		const button = new Button(gitHubButton);
+		button.getElement().classList.add('flat-button');
+
+		button.label = localize('welcomePage.addBitbuckAppPassword', "Add Bitbucket app password");
+		attachButtonStyler(button, this.themeService);
+
+		this.disposables.push(button.addListener('click', () => {
+			this.commandService.executeCommand('bitbucket.showBitbucketAppPasswordWalkthrough');
+		}));
+	}
+
 	private onReady(container: HTMLElement, installedExtensions: TPromise<IExtensionStatus[]>): void {
 		if (!this.threads) {
 			this.threads = this.codeCommentsService.getThreads({});
@@ -461,7 +499,8 @@ class WelcomePage {
 				this.resolveOrganizationCommentsContainer(container);
 			}, this));
 		}
-
+		this.addGitHubCodeHostButton(container);
+		this.addBitbucketAppPasswordButton(container);
 		this.resolveSuggestedRepositoriesContainer();
 		this.resolveOrganizationCommentsContainer(container, true);
 
@@ -504,6 +543,11 @@ class WelcomePage {
 		const commentSearchButton = document.getElementById('comments-search-action');
 		commentSearchButton.addEventListener('click', () => {
 			this.commandService.executeCommand(CodeCommentsQuickOpenAction.ID);
+		});
+
+		const contactButton = document.getElementById('gitServer-contact');
+		contactButton.addEventListener('click', () => {
+			this.openerService.open(URI.parse(`https://about.sourcegraph.com/contact/`));
 		});
 
 		const inactiveButtons = container.querySelectorAll('.sg-inactive');
@@ -1008,18 +1052,35 @@ registerThemingParticipant((theme, collector) => {
 	if (descriptionColor) {
 		collector.addRule(`.monaco-workbench > .part.editor > .content .welcomePage .detail { color: ${descriptionColor}; }`);
 	}
+
 	const welcomeButtonColor = theme.getColor(welcomeButtonBackground, false);
 	const buttonColor = getExtraColor(theme, buttonBackground, { dark: 'rgba(0, 0, 0, .2)', extra_dark: 'rgba(200, 235, 255, .042)', light: 'rgba(0,0,0,.04)', hc: 'black' });
 	if (welcomeButtonColor) {
 		collector.addRule(`.monaco-workbench > .part.editor > .content .welcomePage .start li button { background: ${welcomeButtonColor}; }`);
 		collector.addRule(`.monaco-workbench > .part.editor > .content .welcomePage .commands li button { background: ${welcomeButtonColor}; }`);
+		collector.addRule(`.monaco-workbench > .part.editor > .content .welcomePage .container .dashed { background: ${welcomeButtonColor}; }`);
+		collector.addRule(`.monaco-workbench > .part.editor > .content .welcomePage .container .solid { background: ${welcomeButtonColor}; }`);
 	} else if (buttonColor) {
 		collector.addRule(`.monaco-workbench > .part.editor > .content .welcomePage .commands li button { background: ${buttonColor}; }`);
 		collector.addRule(`.monaco-workbench > .part.editor > .content .welcomePage .start li button { background: ${buttonColor}; }`);
+		collector.addRule(`.monaco-workbench > .part.editor > .content .welcomePage .container .dashed { background: ${buttonColor}; }`);
+		collector.addRule(`.monaco-workbench > .part.editor > .content .welcomePage .container .solid { background: ${buttonColor}; }`);
 	}
 	const buttonHoverColor = getExtraColor(theme, buttonHoverBackground, { dark: 'rgba(200, 235, 255, .072)', extra_dark: 'rgba(200, 235, 255, .072)', light: 'rgba(0,0,0,.10)', hc: null });
 	if (buttonHoverColor) {
 		collector.addRule(`.monaco-workbench > .part.editor > .content .welcomePage .commands li button:hover { background: ${buttonHoverColor}; }`);
+		collector.addRule(`.monaco-workbench > .part.editor > .content .welcomePage .container .dashed:hover { background: ${buttonHoverColor}; }`);
+		collector.addRule(`.monaco-workbench > .part.editor > .content .welcomePage .container .solid:hover { background: ${buttonHoverColor}; }`);
+	}
+	const buttonBackgroundEditor = theme.getColor(editorButtonBackground, false);
+	if (buttonBackgroundEditor) {
+		collector.addRule(`.monaco-workbench > .part.editor > .content .welcomePage .container button { background: ${buttonBackgroundEditor}; }`);
+	} else if (buttonColor) {
+		collector.addRule(`.monaco-workbench > .part.editor > .content .welcomePage .container button { background: ${buttonColor}; }`);
+	}
+	const buttonBackgroundHover = theme.getColor(editorButtonHoverBackground, false);
+	if (buttonBackgroundHover) {
+		collector.addRule(`.monaco-workbench > .part.editor > .content .welcomePage .container button:hover { background: ${buttonBackgroundHover}; }`);
 	}
 	const link = theme.getColor(textLinkForeground);
 	if (link) {
@@ -1037,6 +1098,9 @@ registerThemingParticipant((theme, collector) => {
 	const border = theme.getColor(contrastBorder);
 	if (border) {
 		collector.addRule(`.monaco-workbench > .part.editor > .content .welcomePage .commands li button { border-color: ${border}; }`);
+		collector.addRule(`.monaco-workbench > .part.editor > .content .welcomePage .container button { border-color: ${border}; border-width: 1px; border-style: solid; }`);
+		collector.addRule(`.monaco-workbench > .part.editor > .content .welcomePage .container .dashed { border-color: ${border}; border-width: 1px; border-style: dashed; }`);
+		collector.addRule(`.monaco-workbench > .part.editor > .content .welcomePage .container .solid { border-color: ${border}; border-width: 1px; border-style: solid; }`);
 		collector.addRule(`.monaco-workbench > .part.editor > .content .welcomePage .container { border-color: ${border}; border-width: 1px; border-style: solid; }`);
 	}
 	const activeBorder = theme.getColor(activeContrastBorder);
