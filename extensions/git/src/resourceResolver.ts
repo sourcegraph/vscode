@@ -426,13 +426,13 @@ export class GitResourceResolver {
 		if (checkoutAlgorithm === 'ff') {
 			await repo.checkout(resource.revision, []);
 			await this.fastForward(repo, resource);
-		}
-		if (checkoutAlgorithm === 'detached') {
+		} else if (checkoutAlgorithm === 'detached') {
 			await repo.checkout(targetRef, []);
-		}
-		if (checkoutAlgorithm === 'reset') {
+		} else if (checkoutAlgorithm === 'reset') {
 			await repo.checkout(resource.revision, []);
 			await repo.reset(targetRef, /* hard = */ true);
+		} else {
+			throw new Error('Unexpected checkout algorithm ' + checkoutAlgorithm);
 		}
 	}
 
