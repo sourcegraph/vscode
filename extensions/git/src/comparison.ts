@@ -64,7 +64,7 @@ export class Comparison implements Disposable {
 	public readonly sourceControl: SourceControl;
 
 	// TODO(nick): figure this out intelligently?
-	private baseBranch = 'master';
+	private baseBranch = 'origin/master';
 
 	constructor(
 		public readonly repository: Repository,
