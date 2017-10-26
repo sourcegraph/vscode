@@ -92,7 +92,8 @@ export class GitResourceResolver {
 			this.log(localize('resolveSuccess', "Successfully resolved {0} to {1}\n", resource.toString(), repo.root));
 			return Uri.file(repo.root);
 		} catch (e) {
-			this.log(localize('resolveError', "Error to resolve {0}: {1}\n", resource.toString(), e.message || e));
+			this.log(localize('resolveError', "Error to resolve {0}: {1}\n", resource.toString(), e));
+			this.outputChannel.show();
 			throw e;
 		}
 	}
@@ -186,24 +187,18 @@ export class GitResourceResolver {
 			}
 
 			// Fetch if we are a ref or are missing the hash
-			if (!isAbsoluteCommitID(resource.revision)) {
-				await repo.executeCommand(['fetch', '--prune', resource.cloneURL, resource.revision]);
-			} else if (!await this.hasCommit(repo, resource.revision)) {
-				await repo.fetch({ all: true, prune: true });
-				if (!await this.hasCommit(repo, resource.revision)) {
-					this.log(localize('missingHash', "{0} does not have {1}", repo.root, resource.revision));
-					return undefined;
-				}
+			const targetRef = await this.maybeFetch(repo, resource);
+			if (!targetRef) {
+				this.log(localize('missingHash', "{0} does not have {1}", repo.root, resource.revision));
+				return undefined;
 			}
 
-			// The ref for an abs commit is itself, otherwise we just fetched the upstream branch (FETCH_HEAD)
-			const targetRef = isAbsoluteCommitID(resource.revision) ? resource.revision : 'FETCH_HEAD';
 			let canFF: boolean;
 			try {
 				// Check if the first <commit> is an ancestor of the second <commit>,
 				// and exit with status 0 if true, or with status 1 if not
 				// https://git-scm.com/docs/git-merge-base#git-merge-base---is-ancestor
-				await repo.executeCommand(['merge-base', '--is-ancestor', 'HEAD', targetRef]);
+				await repo.getMergeBase(['--is-ancestor', 'HEAD', targetRef]);
 				canFF = true;
 			} catch (e) {
 				// Errors are signaled by a non-zero status that is not 1
@@ -229,25 +224,47 @@ export class GitResourceResolver {
 	private async fastForward(repo: Repository, resource: GitResourceAtRevision): Promise<void> {
 		this.log(localize('fastforward', "Fast-forwarding {0}", repo.root));
 
-		// If head does not match upstream it means we did not run fetch in
-		// filterReposAtRevision. If that is the case we need to run fetch for
-		// FF to work.
+		// OPTIMIZATION: We only need to run fetch if head does not match
+		// upstream. If head did match upstream it means we have already run
+		// fetch in filterReposAtRevision. We have to run fetch before we can
+		// run FF.
+		let targetRef: string;
 		if (!await this.headMatchesUpstream(repo, resource.revision)) {
-			// This logic is copied from filterReposAtRevision, except throws on missing commit
-			if (!isAbsoluteCommitID(resource.revision)) {
-				await repo.executeCommand(['fetch', '--prune', resource.cloneURL, resource.revision]);
-			} else if (!await this.hasCommit(repo, resource.revision)) {
-				await repo.fetch({ all: true, prune: true });
-				if (!await this.hasCommit(repo, resource.revision)) {
-					throw new Error(localize('missingHash', "{0} does not have {1}", repo.root, resource.revision));
-				}
+			const targetRefRaw = await this.maybeFetch(repo, resource);
+			if (!targetRefRaw) {
+				throw new Error(localize('missingHash', "{0} does not have {1}", repo.root, resource.revision));
 			}
+			targetRef = targetRefRaw;
+		} else {
+			// maybeFetch returns FETCH_HEAD if we are fetching a branch,
+			// otherwise the commit hash. It was run in filterReposAtRevision.
+			targetRef = isAbsoluteCommitID(resource.revision) ? resource.revision : 'FETCH_HEAD';
 		}
 
-		// The ref for an abs commit is itself, otherwise we just fetched the upstream branch (FETCH_HEAD)
-		const targetRef = isAbsoluteCommitID(resource.revision) ? resource.revision : 'FETCH_HEAD';
-		// TODO(keegan) prompt user?
-		await repo.executeCommand(['merge', '--ff-only', targetRef]);
+		await repo.merge(targetRef, { ffOnly: true });
+	}
+
+	/**
+	 * Fetches resource.commit from resource.cloneURL if resource.commit is
+	 * missing or if it is a branch. Returns the ref for the commit (the commit
+	 * hash or FETCH_HEAD) on success. If the commit is missing undefined is
+	 * returned.
+	 */
+	private async maybeFetch(repo: Repository, resource: GitResourceAtRevision): Promise<string | undefined> {
+		// Branches we always fetch to ensure we are up to date.
+		if (!isAbsoluteCommitID(resource.revision)) {
+			await repo.fetchNow({ prune: true, repository: resource.cloneURL, refspec: resource.revision, throwErr: true });
+			return 'FETCH_HEAD';
+		}
+
+		// Absolute commits we only fetch if not found
+		if (!await this.hasCommit(repo, resource.revision)) {
+			await repo.fetchNow({ all: true, prune: true, throwErr: true });
+			if (!await this.hasCommit(repo, resource.revision)) {
+				return undefined;
+			}
+		}
+		return resource.revision;
 	}
 
 	private async clone(resource: GitResource): Promise<Repository> {

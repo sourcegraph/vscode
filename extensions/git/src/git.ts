@@ -292,7 +292,7 @@ export class GitError extends Error {
 			gitCommand: this.gitCommand,
 			stdout: this.stdout,
 			stderr: this.stderr
-		}, [], 2);
+		}, null, 2);
 
 		if (this.error) {
 			result += (<any>this.error).stack;
@@ -844,8 +844,12 @@ export class Repository {
 		await this.run(args);
 	}
 
-	async merge(ref: string): Promise<void> {
-		const args = ['merge', ref];
+	async merge(ref: string, op?: { ffOnly?: boolean }): Promise<void> {
+		const args = ['merge'];
+		if (op && op.ffOnly) {
+			args.push('--ff-only');
+		}
+		args.push(ref);
 
 		try {
 			await this.run(args);
@@ -936,7 +940,7 @@ export class Repository {
 		}
 	}
 
-	async fetch(op?: { all?: boolean, prune?: boolean }): Promise<void> {
+	async fetch(op?: { all?: boolean, prune?: boolean, repository?: string, refspec?: string }): Promise<void> {
 		const args = ['fetch'];
 		if (op) {
 			if (op.all) {
@@ -944,6 +948,22 @@ export class Repository {
 			}
 			if (op.prune) {
 				args.push('--prune');
+			}
+			if (op.repository) {
+				args.push('--', op.repository);
+			}
+			if (op.refspec) {
+				if (!op.repository) {
+					throw new GitError({
+						message: 'Failed to execute git, repository is required if specify refspec for git fetch',
+						stdout: '',
+						stderr: '',
+						exitCode: -1,
+						gitErrorCode: GitErrorCodes.NoRemoteRepositorySpecified,
+						gitCommand: 'git',
+					});
+				}
+				args.push(op.refspec);
 			}
 		}
 		try {

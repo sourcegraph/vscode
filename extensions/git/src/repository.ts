@@ -664,8 +664,8 @@ export class Repository implements Disposable {
 		await this.run(Operation.DeleteBranch, () => this.repository.deleteBranch(name, force));
 	}
 
-	async merge(ref: string): Promise<void> {
-		await this.run(Operation.Merge, () => this.repository.merge(ref));
+	async merge(ref: string, op?: { ffOnly?: boolean }): Promise<void> {
+		await this.run(Operation.Merge, () => this.repository.merge(ref, op));
 	}
 
 	async tag(name: string, message?: string): Promise<void> {
@@ -717,10 +717,20 @@ export class Repository implements Disposable {
 	}
 
 	@throttle
-	async fetch(op?: { all?: boolean, prune?: boolean }): Promise<void> {
+	async fetch(op?: { all?: boolean, prune?: boolean, repository?: string, refspec?: string, throwErr?: boolean }): Promise<void> {
+		await this.fetchNow(op);
+	}
+
+	/**
+	 * fetch is throttled. fetchNow ignores the throttling.
+	 */
+	async fetchNow(op?: { all?: boolean, prune?: boolean, repository?: string, refspec?: string, throwErr?: boolean }): Promise<void> {
 		try {
 			await this.run(Operation.Fetch, () => this.repository.fetch(op));
 		} catch (err) {
+			if (op && op.throwErr) {
+				throw err;
+			}
 			// noop
 		}
 	}
