@@ -74,8 +74,8 @@ export class ProfileView extends ViewsViewletPanel {
 			const nameContainer = $('div').addClass('name-container').appendTo(rowContainer);
 			const { avatarUrl, email } = this.authService.currentUser;
 			let name = email;
-			if (this.authService.currentUser && this.authService.currentUser.currentOrgMember && this.authService.currentUser.currentOrgMember.displayName) {
-				name = this.authService.currentUser.currentOrgMember.displayName;
+			if (this.authService.currentUser && this.authService.currentUser.currentOrgMember && this.authService.currentUser.displayName) {
+				name = this.authService.currentUser.displayName;
 			}
 			$('img').src(avatarUrl).size('30').addClass('avatar-img').appendTo(nameContainer);
 			$('div').addClass('profile-container').text(name).appendTo(nameContainer);

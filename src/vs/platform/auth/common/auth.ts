@@ -69,6 +69,11 @@ export interface IUser {
 	readonly email: string;
 
 	/**
+	 * displayName is the user's name.
+	 */
+	readonly displayName: string;
+
+	/**
 	 * The org memberships of this user.
 	 */
 	readonly orgMemberships: IOrgMember[];
@@ -90,10 +95,6 @@ export interface IUser {
  */
 export interface IOrgMember {
 	readonly id: number;
-	readonly email: string;
-	readonly username: string;
-	readonly displayName: string;
-	readonly avatarUrl: string | undefined;
 	readonly org: IOrg;
 }
 

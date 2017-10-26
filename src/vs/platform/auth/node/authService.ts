@@ -144,20 +144,14 @@ export class AuthService extends Disposable implements IAuthService {
 		}
 
 		const user = await this.syncUser();
-		const orgMemberships = user.orgMemberships.map(orgMember => ({
-			id: orgMember.id,
-			email: orgMember.email,
-			username: orgMember.username,
-			displayName: orgMember.displayName,
-			avatarUrl: orgMember.avatarURL,
-			org: orgMember.org,
-		}));
+		const orgMemberships = user.orgMemberships;
 		await this.setCurrentUser({
 			memento: true,
 			id: user.sourcegraphID,
 			auth0Id: user.id,
 			username: user.username,
 			email: user.email,
+			displayName: user.displayName,
 			avatarUrl: user.avatarURL,
 			orgMemberships,
 			currentOrgMember: this.getUpdatedCurrentOrgMember(orgMemberships),
@@ -379,13 +373,10 @@ const userGraphQLRequest = `
 	sourcegraphID
 	username
 	avatarURL
+	displayName
 	email
 	orgMemberships {
 		id
-		username
-		email
-		displayName
-		avatarURL
 		org {
 			id
 			name
@@ -407,6 +398,7 @@ interface UserMemento {
 	readonly auth0Id: string;
 	readonly username: string;
 	readonly email: string;
+	readonly displayName: string;
 	readonly avatarUrl: string | undefined;
 	readonly orgMemberships: IOrgMember[];
 	readonly currentOrgMember: IOrgMember | undefined;
@@ -418,6 +410,7 @@ class User extends Disposable implements IUser {
 	public readonly username: string;
 	public readonly email: string;
 	public readonly avatarUrl: string | undefined;
+	public readonly displayName: string | undefined;
 	public readonly orgMemberships: IOrgMember[];
 
 	constructor(user: UserMemento, @ITelemetryService private telemetryService: ITelemetryService) {
@@ -427,6 +420,7 @@ class User extends Disposable implements IUser {
 		this.username = user.username;
 		this.email = user.email;
 		this.avatarUrl = user.avatarUrl;
+		this.displayName = user.displayName;
 		this.orgMemberships = user.orgMemberships;
 		this._currentOrgMember = user.currentOrgMember || user.orgMemberships[0];
 	}
@@ -451,6 +445,7 @@ class User extends Disposable implements IUser {
 			username: this.username,
 			email: this.email,
 			avatarUrl: this.avatarUrl,
+			displayName: this.displayName,
 			orgMemberships: this.orgMemberships,
 			currentOrgMember: this.currentOrgMember,
 		};
