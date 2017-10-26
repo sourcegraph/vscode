@@ -492,7 +492,7 @@ export class Repository implements Disposable {
 	private disposables: Disposable[] = [];
 
 	constructor(
-		private readonly repository: BaseRepository
+		readonly repository: BaseRepository
 	) {
 		const fsWatcher = workspace.createFileSystemWatcher('**');
 		this.disposables.push(fsWatcher);

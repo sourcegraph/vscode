@@ -287,16 +287,16 @@ export class Model {
 		}
 	}
 
-	async tryOpenRepositoryWithRemote(remote: Uri | string): Promise<Repository[]> {
+	/**
+	 * Returns locations on disk that have been found to contain the remote.
+	 * Note: This does not validate that the paths still exist, that is left to
+	 * the caller.
+	 */
+	async getPossibleRemotesOnDisk(remote: Uri | string): Promise<string[]> {
 		if (remote instanceof Uri) {
 			remote = remote.toString();
 		}
-		const remotes = this.globalRepositories.resolveRemotes(remote);
-		const repos = await Promise.all(remotes.map(async path => {
-			await this.tryOpenRepository(path, true);
-			return this.getRepository(path, true);
-		}));
-		return repos.filter(r => !!r) as Repository[];
+		return this.globalRepositories.resolveRemotes(remote);
 	}
 
 	private open(repository: Repository): void {
