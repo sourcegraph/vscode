@@ -31,6 +31,11 @@
       "type": "object",
       "title": "GitLab",
       "properties": {
+        "gitlab.triggerSetup": {
+          "type": "boolean",
+          "default": false,
+          "description": "%config.triggerSetup%"
+        },
         "gitlab.token": {
           "type": "string",
           "description": "%config.token%"
