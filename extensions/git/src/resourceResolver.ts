@@ -17,41 +17,6 @@ import { canonicalRemote } from './uri';
 
 const localize = nls.loadMessageBundle();
 
-/**
- * A GitResource represents the fields we extract from a git URI that needs resolving.
- */
-export interface GitResource {
-	/** The cloneURL for a repository. eg https://github.com/foo/bar */
-	cloneURL: string;
-
-	/** The canonical name for the cloneURL. eg github.com/foo/bar */
-	remote: string;
-
-	/** Optionally the revision in a repository. Can be a commit hash or ref name. */
-	revision?: string;
-}
-
-/**
- * GitResourceAtRevision is a GitResource with the revision specified.
- */
-interface GitResourceAtRevision extends GitResource {
-	/** the revision in a repository. Can be a commit hash or ref name. */
-	revision: string;
-}
-
-interface PickOptions extends QuickPickOptions {
-	/**
-	 * If the repos passed to pick contain workspace roots, only the workspace
-	 * roots are presented as options.
-	 *
-	 * eg: If we have five repos we can select, but two of them are already
-	 * workspace roots then if this is true only those two workspace roots are
-	 * presented as an option. If we have no workspace roots, then all repos are
-	 * presented.
-	 */
-	autoSelectWorkspaceRoots?: boolean;
-}
-
 export class GitResourceResolver {
 
 	private static SCHEMES = [
@@ -83,7 +48,8 @@ export class GitResourceResolver {
 		const gitResource = this.parseResource(resource);
 		this.log(localize('gitResourceInfo', "Resolving resource {0}@{1} from {2}", gitResource.remote, gitResource.revision || '', gitResource.cloneURL));
 		try {
-			const root = await this.resolveRepository(this.parseResource(resource));
+			const resolver = new Resolver(this.git, this.model, this.outputChannel);
+			const root = await resolver.resolveRepository(this.parseResource(resource));
 			if (!root) {
 				this.log(localize('resolveFailed', "Failed to resolve {0}", resource.toString()));
 				return resource;
@@ -119,6 +85,87 @@ export class GitResourceResolver {
 		}
 	}
 
+	/**
+	 * Parses a git resource. For example git+ssh://git@github.com/foo/bar.git?master returns
+	 * { remote: "github.com/foo/bar", cloneURL: "ssh://git@github.com/foo/bar.git", revision: "master" }
+	 *
+	 * If the resource is invalid, an error is thrown.
+	 */
+	private parseResource(resource: Uri): GitResource {
+		const revision = resource.query || undefined;
+		resource = resource.with({ query: null } as any);
+
+		// `git clone` doesn't actually understand the 'git+' prefix on the URI scheme.
+		if (resource.scheme.startsWith('git+')) {
+			resource = resource.with({ scheme: resource.scheme.replace(/^git\+/, '') });
+		}
+
+		const cloneURL = resource.toString();
+		const remote = canonicalRemote(cloneURL);
+		if (remote === undefined) {
+			throw new Error(`Invalid git clone URL ${cloneURL}`);
+		}
+
+		return {
+			remote,
+			cloneURL,
+			revision,
+		};
+	}
+
+	private log(s: string) {
+		const d = new Date();
+		this.outputChannel.appendLine(`${d.getHours()}:${d.getMinutes()}:${d.getSeconds()}.${d.getMilliseconds()} ${s}`);
+	}
+
+	dispose(): void {
+		this.disposables.forEach(d => d.dispose());
+	}
+}
+
+/**
+ * A GitResource represents the fields we extract from a git URI that needs resolving.
+ */
+interface GitResource {
+	/** The cloneURL for a repository. eg https://github.com/foo/bar */
+	cloneURL: string;
+
+	/** The canonical name for the cloneURL. eg github.com/foo/bar */
+	remote: string;
+
+	/** Optionally the revision in a repository. Can be a commit hash or ref name. */
+	revision?: string;
+}
+
+/**
+ * GitResourceAtRevision is a GitResource with the revision specified.
+ */
+interface GitResourceAtRevision extends GitResource {
+	/** the revision in a repository. Can be a commit hash or ref name. */
+	revision: string;
+}
+
+interface PickOptions extends QuickPickOptions {
+	/**
+	 * If the repos passed to pick contain workspace roots, only the workspace
+	 * roots are presented as options.
+	 *
+	 * eg: If we have five repos we can select, but two of them are already
+	 * workspace roots then if this is true only those two workspace roots are
+	 * presented as an option. If we have no workspace roots, then all repos are
+	 * presented.
+	 */
+	autoSelectWorkspaceRoots?: boolean;
+}
+
+class Resolver {
+
+	constructor(
+		private git: Git,
+		private model: Model,
+		private outputChannel: OutputChannel,
+	) { }
+
 	/** Resolves a GitResource to a fsPath, potentially cloning it. */
 	public async resolveRepository(resource: GitResource): Promise<string | undefined> {
 		const repos = await this.findRepositoriesWithRemote(resource.remote);
@@ -149,34 +196,6 @@ export class GitResourceResolver {
 		});
 		await this.stashAndCheckout(repo, resource);
 		return repo.root;
-	}
-
-	/**
-	 * Parses a git resource. For example git+ssh://git@github.com/foo/bar.git?master returns
-	 * { remote: "github.com/foo/bar", cloneURL: "ssh://git@github.com/foo/bar.git", revision: "master" }
-	 *
-	 * If the resource is invalid, an error is thrown.
-	 */
-	private parseResource(resource: Uri): GitResource {
-		const revision = resource.query || undefined;
-		resource = resource.with({ query: null } as any);
-
-		// `git clone` doesn't actually understand the 'git+' prefix on the URI scheme.
-		if (resource.scheme.startsWith('git+')) {
-			resource = resource.with({ scheme: resource.scheme.replace(/^git\+/, '') });
-		}
-
-		const cloneURL = resource.toString();
-		const remote = canonicalRemote(cloneURL);
-		if (remote === undefined) {
-			throw new Error(`Invalid git clone URL ${cloneURL}`);
-		}
-
-		return {
-			remote,
-			cloneURL,
-			revision,
-		};
 	}
 
 	private async findRepositoriesWithRemote(remote: string): Promise<Repository[]> {
@@ -533,10 +552,6 @@ export class GitResourceResolver {
 
 		const pathTemplate = workspace.getConfiguration('folders').get<string>('path')!;
 		return replaceVariables(pathTemplate, { folderRelativePath, homePath, separator });
-	}
-
-	dispose(): void {
-		this.disposables.forEach(d => d.dispose());
 	}
 }
 
