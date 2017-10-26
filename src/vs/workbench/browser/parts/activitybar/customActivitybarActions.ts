@@ -35,7 +35,7 @@ export class GlobalViewletActionItem extends ActivityActionItem {
 		@IInstantiationService private instantiationService: IInstantiationService,
 		@IThemeService themeService: IThemeService
 	) {
-		super(action, { draggable: false, colors }, themeService);
+		super(action, { draggable: false, colors, icon: true }, themeService);
 		this.cssClass = action.class;
 		this.viewletService.onDidViewletClose((e) => {
 			this.action.checked = false;

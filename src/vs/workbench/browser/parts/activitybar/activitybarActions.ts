@@ -153,7 +153,7 @@ export class ActivityRunActionItem extends ActivityActionItem {
 		@IThemeService themeService: IThemeService,
 		@IContextMenuService protected contextMenuService: IContextMenuService
 	) {
-		super(action, { draggable: false, colors }, themeService);
+		super(action, { draggable: false, colors, icon: true }, themeService);
 	}
 
 	public render(container: HTMLElement): void {

@@ -263,7 +263,9 @@ export class CompositeBar implements ICompositeBar {
 
 		// Built actions for composites to show
 		const newCompositesToShow = compositesToShow
-			.filter(compositeId => !this.compositeIdToActions[compositeId])
+			.filter(compositeId => {
+				return !this.compositeIdToActions[compositeId] && compositeId !== 'workbench.view.management';
+			})
 			.map(compositeId => this.toAction(compositeId));
 
 		// Update when we have new composites to show
