@@ -81,20 +81,38 @@ export class GitResourceResolver {
 			return resource;
 		}
 
+		const gitResource = this.parseResource(resource);
+		this.log(localize('gitResourceInfo', "Resolving resource {0}@{1} from {2}", gitResource.remote, gitResource.revision || '', gitResource.cloneURL));
 		try {
-			const gitResource = this.parseResource(resource);
-			this.log(localize('gitResourceInfo', "Resolving resource {0}@{1} from {2}", gitResource.remote, gitResource.revision || '', gitResource.cloneURL));
 			const repo = await this.resolveRepository(this.parseResource(resource));
 			if (!repo) {
-				this.log(localize('resolveFailed', "Failed to resolve {0}\n", resource.toString()));
+				this.log(localize('resolveFailed', "Failed to resolve {0}", resource.toString()));
 				return resource;
 			}
-			this.log(localize('resolveSuccess', "Successfully resolved {0} to {1}\n", resource.toString(), repo.root));
+			this.log(localize('resolveSuccess', "Successfully resolved {0} to {1}", resource.toString(), repo.root));
 			return Uri.file(repo.root);
 		} catch (e) {
-			this.log(localize('resolveError', "Error to resolve {0}: {1}\n", resource.toString(), e));
+			this.log(localize('resolveError', "Error to resolve {0}: {1}", resource.toString(), e));
 			this.outputChannel.show();
-			throw e;
+
+			if (!e || !e.gitErrorCode) {
+				// Remove once errors are propogated back https://github.com/sourcegraph/src/issues/1539
+				await window.showErrorMessage(e);
+				throw e;
+			}
+			// We translate expected errors into a nice error to show the user.
+			// The full error message will still be visible in the deep link
+			// output channel.
+			let msg = localize('unknownFailure', "Unexpected git error {0} occurred while resolving {1}@{2}", e.gitErrorCode, gitResource.remote, gitResource.revision || 'HEAD');
+			if (e.gitErrorCode === GitErrorCodes.NoRemoteReference) {
+				msg = localize('noRemote', "{0} does not exist on remote {1}", gitResource.revision, gitResource.remote);
+			}
+			this.log(msg);
+			// Remove once errors are propogated back https://github.com/sourcegraph/src/issues/1539
+			await window.showErrorMessage(msg);
+			throw new Error(e);
+		} finally {
+			this.outputChannel.appendLine(''); // Just log newline
 		}
 	}
 
