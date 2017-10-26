@@ -12,6 +12,7 @@ import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { telemetryURIDescriptor } from 'vs/platform/telemetry/common/telemetryUtils';
 import { IEditorGroupService } from 'vs/workbench/services/group/common/groupService';
 import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
+import { IHashService } from 'vs/workbench/services/hash/common/hashService';
 
 export class EditorViewTelemetryHandler implements IWorkbenchContribution {
 
@@ -23,6 +24,7 @@ export class EditorViewTelemetryHandler implements IWorkbenchContribution {
 		@IEditorGroupService private editorGroupService: IEditorGroupService,
 		@IWorkbenchEditorService private editorService: IWorkbenchEditorService,
 		@ITelemetryService private telemetryService: ITelemetryService,
+		@IHashService private hashService: IHashService,
 	) {
 		this.editorGroupService.onEditorsChanged(this.onEditorsChanged, this, this.disposables);
 	}
@@ -36,7 +38,7 @@ export class EditorViewTelemetryHandler implements IWorkbenchContribution {
 		};
 
 		if (activeResource) {
-			const uriDescriptor = telemetryURIDescriptor(activeResource);
+			const uriDescriptor = telemetryURIDescriptor(activeResource, p => this.hashService.createSHA1(p));
 			params = {
 				page_title: 'ViewFile',
 				language: uriDescriptor.ext.slice(1)

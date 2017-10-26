@@ -889,7 +889,7 @@
         "id": "git.color.modified",
         "description": "Color for modified resources",
         "defaults": {
-          "light": "#D58809",
+          "light": "#a76e12",
           "dark": "#E2C08D",
           "highContrast": "#E2C08D"
         }
@@ -898,7 +898,7 @@
         "id": "git.color.deleted",
         "description": "Color for deleted resources",
         "defaults": {
-          "light": "#c02e11",
+          "light": "#ad0707",
           "dark": "#c74e39",
           "highContrast": "#c74e39"
         }
@@ -907,7 +907,7 @@
         "id": "git.color.untracked",
         "description": "Color for untracked resources",
         "defaults": {
-          "light": "#00B333",
+          "light": "#019001",
           "dark": "#73C991",
           "highContrast": "#73C991"
         }

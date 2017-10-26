@@ -98,6 +98,8 @@ import { IResourceResolverService } from 'vs/platform/resourceResolver/common/re
 import { ResourceResolverService } from 'vs/workbench/services/resourceResolver/common/resourceResolverService';
 import { SourcegraphEventLogger } from 'vs/platform/telemetry/common/sourcegraphEventLogger';
 import { WindowLevel } from 'vs/platform/telemetry/common/analyticsConstants';
+import { HashService } from 'vs/workbench/services/hash/node/hashService';
+import { IHashService } from 'vs/workbench/services/hash/common/hashService';
 
 /**
  * Services that we require for the Shell
@@ -300,6 +302,9 @@ export class WorkbenchShell {
 		// Warm up font cache information before building up too many dom elements
 		restoreFontInfo(this.storageService);
 		readFontInfo(BareFontInfo.createFromRawSettings(this.configurationService.getConfiguration('editor'), browser.getZoomLevel()));
+
+		// Hash
+		serviceCollection.set(IHashService, new SyncDescriptor(HashService));
 
 		// Experiments
 		this.experimentService = instantiationService.createInstance(ExperimentService);
