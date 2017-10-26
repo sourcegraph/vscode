@@ -107,10 +107,12 @@ export class CodeHostView extends ViewsViewletPanel {
 	}
 
 	private async setGitHubButtonLabel(button: Button, hasToken: boolean): TPromise<void> {
+		button.getElement().style.opacity = hasToken ? '0.6' : '1';
 		button.label = hasToken ? nls.localize('updateGitHubAccessToken', "Update GitHub token") : nls.localize('addGitHubAccessToken', "Add GitHub token");
 	}
 
 	private async setBitbucketAppPasswordLabel(button: Button, hasToken: boolean): TPromise<void> {
+		button.getElement().style.opacity = hasToken ? '0.6' : '1';
 		button.label = hasToken ? nls.localize('updateBitbucketAccessToken', "Update Bitbucket app password") : nls.localize('addBitbucketAccessToken', "Set Bitbucket app password");
 	}
 
