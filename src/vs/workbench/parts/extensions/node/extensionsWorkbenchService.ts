@@ -605,7 +605,18 @@ export class ExtensionsWorkbenchService implements IExtensionsWorkbenchService {
 
 		await Promise.all(extensionsToInstall.map(e => this.install(e)));
 
-		const message = nls.localize('ensureInstalledReload', "Reload to finish installing required extensions.");
+		const introduction = nls.localize('ensureInstalledReload.intro', "The following extension(s) have been downloaded in accordance with your organization's settings:");
+		const newExtensionsList = extensionsToInstall.map(e => `- ${e.id}`);
+		const conclusion = nls.localize('ensureInstalledReload.conclusion', "Do you want to reload to finish installing them?");
+
+		const message = [
+			introduction,
+			'',
+			...newExtensionsList,
+			'',
+			conclusion
+		].join('\n');
+
 		const confirmation: IConfirmation = { message, type: 'question', primaryButton: nls.localize('reload', "&&Reload Window") };
 		const shouldReload = (await this.messageService.confirm(confirmation)).confirmed;
 		if (!shouldReload) {
