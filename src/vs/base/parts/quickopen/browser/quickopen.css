@@ -70,6 +70,17 @@
 	flex-shrink: 0;
 }
 
+.quick-open-widget .quick-open-tree .quick-open-entry .quick-open-avatar-icon {
+	border-radius: 8px;
+	overflow: hidden;
+	width: 16px;
+	height: 16px;
+	margin-right: 4px;
+	display: inline-block;
+	vertical-align: middle;
+	flex-shrink: 0;
+}
+
 .quick-open-widget .quick-open-tree .quick-open-entry .monaco-highlighted-label span {
 	opacity: 1;
 }

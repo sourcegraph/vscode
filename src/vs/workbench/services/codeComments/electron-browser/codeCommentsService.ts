@@ -5,7 +5,7 @@
 'use strict';
 
 import { localize } from 'vs/nls';
-import { IThreads, ICodeCommentsService, Filter, IFileComments, IThreadComments, IComment, IDraftThreadComments, IOrgComments, IRepoComments } from 'vs/editor/common/services/codeCommentsService';
+import { IThreads, ICodeCommentsService, Filter, IFileComments, IThreadComments, IComment, IDraftThreadComments } from 'vs/editor/common/services/codeCommentsService';
 import { Range } from 'vs/editor/common/core/range';
 import Event, { Emitter, anyEvent } from 'vs/base/common/event';
 import { VSDiff as Diff } from 'vs/workbench/services/codeComments/common/vsdiff';
@@ -164,13 +164,6 @@ export class CodeCommentsService implements ICodeCommentsService {
 			.then(response => response.shareThread);
 	}
 
-	/**
-	 * @deprecated TODO(kingy): use Threads instead
-	 */
-	public getOrgComments(): IOrgComments {
-		return this.instantiationService.createInstance(OrgComments, this);
-	}
-
 	public readonly didCreateThread = new Emitter<IThreadCommentsMemento>();
 	public readonly onDidCreateThread = this.didCreateThread.event;
 
@@ -205,76 +198,6 @@ export interface IFetchThreadsEvent {
 	 * The threads returned by the server that matched the query.
 	 */
 	readonly threads: ReadonlyArray<IThreadCommentsMemento>;
-}
-
-
-/**
- * @deprecated TODO(kingy): use Threads instead
- */
-export class OrgComments extends Disposable implements IOrgComments {
-	private _repoComments: IRepoComments[] = [];
-	private didChangeRepoComments = this.disposable(new Emitter<void>());
-	public readonly onDidChangeRepoComments = this.didChangeRepoComments.event;
-
-	public get repoComments(): IRepoComments[] {
-		return this._repoComments;
-	}
-
-	constructor(
-		private commentsService: CodeCommentsService,
-		@IInstantiationService private instantiationService: IInstantiationService,
-		@IRemoteService private remoteService: IRemoteService,
-		@IAuthService private authService: IAuthService,
-	) {
-		super();
-	}
-
-	private refreshDelayer = new ThrottledDelayer<void>(100);
-	public refresh(): TPromise<void> {
-		return this.refreshDelayer.trigger(() => TPromise.wrap(this.refreshNow()));
-	}
-
-	private async refreshNow(): Promise<void> {
-		if (!this.authService.currentUser || !this.authService.currentUser.currentOrgMember) {
-			return TPromise.as(undefined);
-		}
-		const response = await requestGraphQL<{ org: { repos: { remoteUri: string, threads: GQL.IThread[] }[] } }>(this.remoteService, `query ThreadsForOrgs (
-			) {
-				root {
-					org(id: $orgId) {
-						repos {
-							remoteUri
-							threads {
-								${threadGraphql}
-							}
-						}
-					}
-				}
-			}`, {
-				orgId: this.authService.currentUser.currentOrgMember.org.id,
-			});
-		if (!response) {
-			return TPromise.as(undefined);
-		}
-
-		this._repoComments = response.org.repos.map(repo => {
-			const threads = repo.threads.map(thread => {
-				return this.instantiationService.createInstance(ThreadComments, this.commentsService, undefined, gqlThreadToMemento(thread));
-			}).sort((left: ThreadComments, right: ThreadComments) => {
-				// Most recent comment timestamp descending.
-				const rightTime = right.comments.length === 0 ? right.createdAt : right.mostRecentComment.createdAt;
-				const leftTime = left.comments.length === 0 ? left.createdAt : left.mostRecentComment.createdAt;
-				return rightTime.getTime() - leftTime.getTime();
-			});
-
-			return {
-				remoteUri: repo.remoteUri,
-				threads: threads,
-			};
-		});
-
-		this.didChangeRepoComments.fire();
-	}
 }
 
 export class Threads extends Disposable implements IThreads {

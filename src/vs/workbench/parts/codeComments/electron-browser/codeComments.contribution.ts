@@ -21,6 +21,9 @@ import { KeyMod, KeyCode } from 'vs/base/common/keyCodes';
 import { OpenCodeCommentsViewletAction } from 'vs/workbench/parts/codeComments/electron-browser/codeCommentsActions';
 import { CodeCommentsViewlet } from 'vs/workbench/parts/codeComments/electron-browser/codeCommentsViewlet';
 import { IOutputChannelRegistry, Extensions as OutputExtensions } from 'vs/workbench/parts/output/common/output';
+import { CodeCommentsQuickOpenHandler } from 'vs/workbench/parts/codeComments/electron-browser/codeCommentsQuickOpenHandler';
+import { IQuickOpenRegistry, Extensions as QuickOpenExtensions, QuickOpenHandlerDescriptor, QuickOpenAction } from 'vs/workbench/browser/quickopen';
+import { IQuickOpenService } from 'vs/platform/quickOpen/common/quickOpen';
 
 registerSingleton(ICodeCommentsService, CodeCommentsService);
 
@@ -46,4 +49,26 @@ actionRegistry.registerWorkbenchAction(
 	new SyncActionDescriptor(OpenCodeCommentsViewletAction, OpenCodeCommentsViewletAction.ID, OpenCodeCommentsViewletAction.LABEL, openViewletKb),
 	'View: Show Code Comments',
 	localize('view', "View")
+);
+
+export class CodeCommentsQuickOpenAction extends QuickOpenAction {
+	public static readonly ID = 'workbench.action.comments';
+	public static readonly LABEL = localize('comments', "Comments");
+
+	constructor(actionId: string, actionLabel: string, @IQuickOpenService quickOpenService: IQuickOpenService) {
+		super(actionId, actionLabel, CodeCommentsQuickOpenHandler.PREFIX, quickOpenService);
+	}
+}
+
+actionRegistry.registerWorkbenchAction(new SyncActionDescriptor(CodeCommentsQuickOpenAction, CodeCommentsQuickOpenAction.ID, CodeCommentsQuickOpenAction.LABEL), 'Review Code');
+
+// Register Quick Open
+(<IQuickOpenRegistry>Registry.as(QuickOpenExtensions.Quickopen)).registerQuickOpenHandler(
+	new QuickOpenHandlerDescriptor(
+		CodeCommentsQuickOpenHandler,
+		CodeCommentsQuickOpenHandler.ID,
+		CodeCommentsQuickOpenHandler.PREFIX,
+		'reviewItemsPicker',
+		localize('comments', "Comments")
+	)
 );

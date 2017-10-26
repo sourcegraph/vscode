@@ -92,8 +92,8 @@ export default () => `
 						<div class="container">
 							<div class="code-comments-container">
 								<div class="padding-around">
-									<div class="action-header">CODE DISCUSSIONS</div>
-									<input class="comment-search-input" id="comment-input-element" placeholder="Search and filter..."/>
+									<div class="action-header inline-block">RECENT DISCUSSIONS</div>
+									<div id="comments-search-action" class="float-right search octicon octicon-search"></div>
 								</div>
 								<div id="comment-loader" class="loader-icon"></div>
 								<ul id="comment-list" class="comment-list-container no-margin">

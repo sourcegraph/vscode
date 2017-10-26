@@ -42,7 +42,7 @@ import { IFoldersWorkbenchService } from 'vs/workbench/services/folders/common/f
 import { $ } from 'vs/base/browser/builder';
 import { ISCMService } from 'vs/workbench/services/scm/common/scm';
 import { IAuthService } from 'vs/platform/auth/common/auth';
-import { ICodeCommentsService, IOrgComments } from 'vs/editor/common/services/codeCommentsService';
+import { ICodeCommentsService, IThreads } from 'vs/editor/common/services/codeCommentsService';
 import { INavService } from 'vs/workbench/services/nav/common/nav';
 import { IContextViewService } from 'vs/platform/contextview/browser/contextView';
 import { SIDE_BAR_BACKGROUND, SIDE_BAR_BORDER, SIDE_BAR_SECTION_HEADER_BACKGROUND, SIDE_BAR_TITLE_FOREGROUND } from 'vs/workbench/common/theme';
@@ -53,6 +53,7 @@ import { IOpenerService } from 'vs/platform/opener/common/opener';
 import { ReviewQuickOpenAction } from 'vs/workbench/parts/review/electron-browser/review.contribution';
 import { ThrottledDelayer } from 'vs/base/common/async';
 import { IExtensionService } from 'vs/platform/extensions/common/extensions';
+import { CodeCommentsQuickOpenAction } from 'vs/workbench/parts/codeComments/electron-browser/codeComments.contribution';
 
 used();
 
@@ -252,7 +253,7 @@ class WelcomePage {
 	private disposables: IDisposable[] = [];
 
 	readonly editorInput: WalkThroughInput;
-	private orgComments: IOrgComments;
+	private threads: IThreads;
 
 	constructor(
 		@IWorkbenchEditorService private editorService: IWorkbenchEditorService,
@@ -330,7 +331,7 @@ class WelcomePage {
 		const spinner = document.getElementById('comment-loader');
 		if (showLoader) {
 			$(spinner).show();
-			if (!this.orgComments.repoComments.length) {
+			if (!this.threads.threads.length) {
 				return;
 			}
 		}
@@ -340,31 +341,11 @@ class WelcomePage {
 		if (!threadContainer) {
 			return;
 		}
-		const commentFilterInput = this.commentFilterInput();
 		if (!threadContainer) {
 			return;
 		}
-		commentFilterInput.addEventListener('input', () => {
-			this.filterCommentsList();
-		});
 
 		this.renderCodeComments(threadContainer, showLoader);
-	}
-
-	private filterCommentsList(): void {
-		const input = this.commentFilterInput();
-		const filter = input.value.toUpperCase();
-		const ul = document.getElementById('comment-list') as HTMLElement;
-		const li = ul.getElementsByTagName('li');
-
-		// Loop through all list items, and hide those who don't match the search query
-		for (let i = 0; i < li.length; i++) {
-			if (li[i].innerHTML.toUpperCase().indexOf(filter) > -1) {
-				li[i].style.display = '';
-			} else {
-				li[i].style.display = 'none';
-			}
-		}
 	}
 
 	private emptyCodeCommentState(): HTMLElement {
@@ -373,10 +354,6 @@ class WelcomePage {
 
 	private joinOrganizationState(): HTMLElement {
 		return document.querySelector('.no-org-container') as HTMLElement;
-	}
-
-	private commentFilterInput(): HTMLInputElement {
-		return document.getElementById('comment-input-element') as HTMLInputElement;
 	}
 
 	private renderCodeComments(container: HTMLElement, showLoader: boolean): void {
@@ -393,119 +370,69 @@ class WelcomePage {
 			$(this.joinOrganizationState()).hide();
 		}
 
-		if (!this.orgComments.repoComments.length && !showLoader) {
+		if (!this.threads.threads.length && !showLoader) {
 			$(this.emptyCodeCommentState()).show();
 			return;
 		}
 		$(this.emptyCodeCommentState()).hide();
-
-		this.orgComments.repoComments.forEach(repoComment => {
-			if (!repoComment.threads || !repoComment.threads.length) {
-				return;
-			}
-			const subContainer = document.createElement('li');
-			const subheader = document.createElement('div');
-			subheader.className = 'repo-name padding-left';
-
-			const repoNameContainer = document.createElement('div');
-			repoNameContainer.className = 'column-container';
-
-			const toggle = document.createElement('div');
-			toggle.className = 'expand-icon';
-			const repoCommentList = document.createElement('ul');
-			subheader.addEventListener('click', () => {
-				if ($(repoCommentList).isHidden()) {
-					toggle.className = 'expand-icon';
-					$(repoCommentList).show();
-				} else {
-					toggle.className = 'collapse-icon';
-					$(repoCommentList).hide();
-				}
+		this.threads.threads.filter(thread => !!thread.comments.length).slice(0, Math.min(this.threads.threads.length, 10)).forEach(thread => {
+			const threadDiv = document.createElement('li');
+			threadDiv.className = 'repo-row flex';
+			threadDiv.addEventListener('click', () => {
+				const remoteUri = thread.repo;
+				const query = `?utm_source=welcome_page_feed#open?path=${thread.file}&repo=https://${remoteUri}&revision=${thread.revision}&thread=${thread.id}&vcs=git`;
+				const url = `https://about.sourcegraph.com/open/${query}`;
+				this.navService.handle(URI.parse(url));
 			});
-			repoNameContainer.appendChild(toggle);
+			commentList.appendChild(threadDiv);
 
-			const img = document.createElement('div');
-			img.className = 'added-repo-icon';
-			repoNameContainer.appendChild(img);
+			const leftDiv = document.createElement('div');
+			leftDiv.className = 'column-container padding-right';
+			threadDiv.appendChild(leftDiv);
 
-			const nameLabel = document.createElement('div');
-			nameLabel.innerText = repoComment.remoteUri;
-			nameLabel.className = 'repo-name-label';
-			repoNameContainer.appendChild(nameLabel);
-
-			subheader.appendChild(repoNameContainer);
-
-			subContainer.appendChild(subheader);
-			commentList.appendChild(subContainer);
-
-			const threads = repoComment.threads.slice(0, Math.min(repoComment.threads.length, 20));
-			if (threads.length) {
-				subContainer.appendChild(repoCommentList);
-				threads.forEach(thread => {
-					if (thread.comments.length === 0) {
-						// We do not want to render code snippets.
-						return;
-					}
-					const threadDiv = document.createElement('li');
-					threadDiv.className = 'repo-row flex';
-					threadDiv.addEventListener('click', () => {
-						const remoteUri = repoComment.remoteUri;
-						const query = `?utm_source=welcome_page_feed#open?path=${thread.file}&repo=https://${remoteUri}&revision=${thread.revision}&thread=${thread.id}&vcs=git`;
-						const url = `https://about.sourcegraph.com/open/${query}`;
-						this.navService.handle(URI.parse(url));
-					});
-					repoCommentList.appendChild(threadDiv);
-
-					const leftDiv = document.createElement('div');
-					leftDiv.className = 'column-container padding-right';
-					threadDiv.appendChild(leftDiv);
-
-					const authorAvatar = document.createElement('div');
-					authorAvatar.className = 'avatar-container';
-					const img = document.createElement('img');
-					const author = thread.comments[0].author;
-					if (author) {
-						img.src = author.avatarUrl;
-					}
-					img.className = 'avatar-img';
-					authorAvatar.appendChild(img);
-					leftDiv.appendChild(authorAvatar);
-
-					const branchName = document.createElement('div');
-					branchName.className = 'overflow-ellipsis padding-right';
-					branchName.innerText = thread.title.substr(0, Math.min(75, thread.title.length));
-					leftDiv.appendChild(branchName);
-
-					const rightDiv = document.createElement('div');
-					rightDiv.className = 'column-container';
-					threadDiv.appendChild(rightDiv);
-
-					const threadCount = document.createElement('div');
-					threadCount.className = 'column-container';
-
-					const bubbleContainer = document.createElement('div');
-					bubbleContainer.className = 'bubble-container';
-					threadCount.appendChild(bubbleContainer);
-
-					const bubble = document.createElement('div');
-					bubble.className = 'bubble-icon';
-					bubbleContainer.appendChild(bubble);
-
-					const commentCount = document.createElement('div');
-					commentCount.className = 'comment-count-label';
-					commentCount.innerText = String(thread.comments.length);
-					bubbleContainer.appendChild(commentCount);
-
-					rightDiv.appendChild(threadCount);
-
-					const threadStatus = document.createElement('div');
-					threadStatus.className = thread.archived ? 'octicon thread octicon-issue-closed' : 'octicon thread octicon-issue-opened';
-					rightDiv.appendChild(threadStatus);
-				});
-				// Ensure the editor size is updated when content is added to the dom.
-				window.dispatchEvent(new Event('resize'));
+			const authorAvatar = document.createElement('div');
+			authorAvatar.className = 'avatar-container';
+			const img = document.createElement('img');
+			const author = thread.comments[0].author;
+			if (author) {
+				img.src = author.avatarUrl;
 			}
+			img.className = 'avatar-img';
+			authorAvatar.appendChild(img);
+			leftDiv.appendChild(authorAvatar);
+
+			const branchName = document.createElement('div');
+			branchName.className = 'overflow-ellipsis padding-right';
+			branchName.innerText = thread.title.substr(0, Math.min(75, thread.title.length));
+			leftDiv.appendChild(branchName);
+
+			const rightDiv = document.createElement('div');
+			rightDiv.className = 'column-container';
+			threadDiv.appendChild(rightDiv);
+
+			const threadCount = document.createElement('div');
+			threadCount.className = 'column-container';
+
+			const bubbleContainer = document.createElement('div');
+			bubbleContainer.className = 'bubble-container';
+			threadCount.appendChild(bubbleContainer);
+
+			const bubble = document.createElement('div');
+			bubble.className = 'bubble-icon';
+			bubbleContainer.appendChild(bubble);
+
+			const commentCount = document.createElement('div');
+			commentCount.className = 'comment-count-label';
+			commentCount.innerText = String(thread.comments.length);
+			bubbleContainer.appendChild(commentCount);
+
+			rightDiv.appendChild(threadCount);
+
+			const threadStatus = document.createElement('div');
+			threadStatus.className = thread.archived ? 'octicon thread octicon-issue-closed' : 'octicon thread octicon-issue-opened';
+			rightDiv.appendChild(threadStatus);
 		});
+		window.dispatchEvent(new Event('resize'));
 	}
 
 	private refreshDelayer = new ThrottledDelayer<void>(100);
@@ -514,11 +441,11 @@ class WelcomePage {
 	}
 
 	private onReady(container: HTMLElement, installedExtensions: TPromise<IExtensionStatus[]>): void {
-		if (!this.orgComments) {
-			this.orgComments = this.codeCommentsService.getOrgComments();
-			this.disposables.push(this.orgComments);
-			this.orgComments.refresh();
-			this.disposables.push(this.orgComments.onDidChangeRepoComments(() => {
+		if (!this.threads) {
+			this.threads = this.codeCommentsService.getThreads({});
+			this.disposables.push(this.threads);
+			this.threads.refresh();
+			this.disposables.push(this.threads.onDidChangeThreads(() => {
 				return this.resolveOrganizationCommentsContainer(container);
 			}, this));
 		}
@@ -531,7 +458,7 @@ class WelcomePage {
 		}));
 
 		this.disposables.push(this.authService.onDidChangeCurrentUser(() => {
-			this.orgComments.refresh();
+			this.threads.refresh();
 			this.resolveOrganizationCommentsContainer(container, true);
 		}));
 
@@ -542,6 +469,15 @@ class WelcomePage {
 			this.reviewItemsChanged();
 		}));
 
+		this.disposables.push(this.scmService.onDidAddRepository(() => {
+			this.reviewItemsChanged();
+			this.resolveSuggestedRepositoriesContainer();
+		}));
+
+		this.disposables.push(this.scmService.onDidRemoveRepository(() => {
+			this.reviewItemsChanged();
+			this.resolveSuggestedRepositoriesContainer();
+		}));
 
 		const noOrgButton = document.getElementById('org-help-action');
 		noOrgButton.addEventListener('click', () => {
@@ -551,6 +487,11 @@ class WelcomePage {
 		const reviewSearchButton = document.getElementById('review-search-action');
 		reviewSearchButton.addEventListener('click', () => {
 			this.commandService.executeCommand(ReviewQuickOpenAction.ID);
+		});
+
+		const commentSearchButton = document.getElementById('comments-search-action');
+		commentSearchButton.addEventListener('click', () => {
+			this.commandService.executeCommand(CodeCommentsQuickOpenAction.ID);
 		});
 
 		const inactiveButtons = container.querySelectorAll('.sg-inactive');

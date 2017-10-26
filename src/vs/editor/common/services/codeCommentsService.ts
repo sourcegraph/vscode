@@ -25,12 +25,6 @@ export interface ICodeCommentsService {
 	getFileComments(file: URI): IFileComments;
 
 	/**
-	 * Returns a model for the comments on org repos
-	 * @deprecated TODO(kingy): use getThreads instead
-	 */
-	getOrgComments(): IOrgComments;
-
-	/**
 	 * Returns a model for threads.
 	 */
 	getThreads(filter: Filter): IThreads;
@@ -60,17 +54,6 @@ export interface Filter {
 export interface IThreads extends IEventDisposable {
 	readonly threads: ReadonlyArray<IThreadComments>;
 	readonly onDidChangeThreads: Event<void>;
-
-	refresh(): TPromise<void>;
-}
-
-/**
- * Model for the organization comments
- * @deprecated TODO(kingy) remove this
- */
-export interface IOrgComments extends IEventDisposable {
-	readonly repoComments: IRepoComments[];
-	readonly onDidChangeRepoComments: Event<void>;
 
 	refresh(): TPromise<void>;
 }
@@ -208,6 +191,11 @@ export interface IThreadComments extends IEventDisposable {
 	readonly range: Range;
 
 	/**
+	 * The repository that the thread was created on.
+	 */
+	readonly repo: string;
+
+	/**
 	 * The date the thread was created.
 	 */
 	readonly createdAt: Date;
@@ -284,9 +272,4 @@ export interface IEventDisposable extends IDisposable {
 	 * Event that is fired on dispose.
 	 */
 	readonly onWillDispose: Event<void>;
-}
-
-export interface IRepoComments {
-	remoteUri: string;
-	threads: IThreadComments[];
 }

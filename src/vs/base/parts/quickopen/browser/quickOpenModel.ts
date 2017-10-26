@@ -67,6 +67,10 @@ export class QuickOpenEntry {
 		this.descriptionHighlights = [];
 	}
 
+	public getIconSrc(): string {
+		return null;
+	}
+
 	/**
 	 * A unique identifier for the entry
 	 */
@@ -235,6 +239,10 @@ export class QuickOpenEntryGroup extends QuickOpenEntry {
 		return this.entry ? this.entry.getIcon() : super.getIcon();
 	}
 
+	public getIconSrc(): string {
+		return this.entry ? this.entry.getIconSrc() : super.getIconSrc();
+	}
+
 	public getDescription(): string {
 		return this.entry ? this.entry.getDescription() : super.getDescription();
 	}
@@ -291,6 +299,7 @@ export interface IQuickOpenEntryTemplateData {
 	container: HTMLElement;
 	entry: HTMLElement;
 	icon: HTMLSpanElement;
+	iconSrc: HTMLImageElement;
 	label: IconLabel;
 	detail: HighlightedLabel;
 	description: HighlightedLabel;
@@ -344,6 +353,8 @@ class Renderer implements IRenderer<QuickOpenEntry> {
 
 		// Icon
 		const icon = document.createElement('span');
+		const iconSrc = document.createElement('img');
+		icon.appendChild(iconSrc);
 		row1.appendChild(icon);
 
 		// Label
@@ -390,6 +401,7 @@ class Renderer implements IRenderer<QuickOpenEntry> {
 			container,
 			entry,
 			icon,
+			iconSrc,
 			label,
 			detail,
 			description,
@@ -455,6 +467,11 @@ class Renderer implements IRenderer<QuickOpenEntry> {
 			// Icon
 			const iconClass = entry.getIcon() ? ('quick-open-entry-icon ' + entry.getIcon()) : '';
 			data.icon.className = iconClass;
+			if (entry.getIconSrc()) {
+				const src = entry.getIconSrc();
+				data.iconSrc.src = src;
+				data.iconSrc.className = 'quick-open-avatar-icon';
+			}
 
 			// Label
 			const options: IIconLabelOptions = entry.getLabelOptions() || Object.create(null);
@@ -487,6 +504,7 @@ class Renderer implements IRenderer<QuickOpenEntry> {
 		data.detail = null;
 		data.group = null;
 		data.icon = null;
+		data.iconSrc = null;
 		data.label.dispose();
 		data.label = null;
 	}
