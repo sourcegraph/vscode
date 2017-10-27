@@ -54,6 +54,7 @@ export class ProfileView extends ViewsViewletPanel {
 			this.maximumBodySize = 50;
 		} else {
 			this.minimumBodySize = 150;
+			this.maximumBodySize = 200;
 		}
 	}
 

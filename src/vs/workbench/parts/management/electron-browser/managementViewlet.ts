@@ -79,6 +79,17 @@ export class ManagementViewlet extends PersistentViewsViewlet implements IManage
 	}
 
 	/**
+	 * Set the viewlet title
+	 */
+	public getTitle(): string {
+		return localize('accountManagement', 'Account Management');
+	}
+
+	protected updateViewHeaders(): void {
+		/** noop */
+	}
+
+	/**
 	 * Initalizes and registers viewlet actions.
 	 */
 	private registerActions(): void {
@@ -150,10 +161,11 @@ export class ManagementViewlet extends PersistentViewsViewlet implements IManage
 		ViewsRegistry.registerViews(viewDescriptorsToRegister);
 	}
 
-	async create(parent: Builder): TPromise<void> {
-		await super.create(parent);
-		const el = parent.getHTMLElement();
-		DOM.addClass(el, 'management-viewlet');
+	create(parent: Builder): TPromise<void> {
+		return super.create(parent).then(() => {
+			const el = parent.getHTMLElement();
+			DOM.addClass(el, 'management-viewlet');
+		});
 	}
 
 	private createProfileViewDescriptor(): IViewDescriptor {
