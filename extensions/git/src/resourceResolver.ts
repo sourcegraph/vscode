@@ -163,6 +163,18 @@ interface PickOptions extends QuickPickOptions {
 	autoSelectWorkspaceRoots?: boolean;
 }
 
+/**
+ * Thrown when the user cancels the resource resolver. Specific error to allow
+ * the navService to respond gracefully.
+ */
+export class CancelError extends Error {
+	constructor() {
+		// We hardcode this message since when errors cross over IPC from the
+		// extension only the message is preserved.
+		super('canceled');
+	}
+}
+
 class Resolver {
 
 	constructor(
@@ -401,8 +413,7 @@ class Resolver {
 
 		const pick = await window.showQuickPick(picks, options);
 		if (!pick) {
-			// TODO(keegan) be more graceful
-			throw new Error('did not pick repo');
+			throw new CancelError();
 		}
 		this.log(localize('pick', "User picked {0} for prompt {1}", pick.repo.root, options.placeHolder));
 		return pick.repo;
@@ -498,7 +509,7 @@ class Resolver {
 		if (choice === resetItem) {
 			return 'reset';
 		}
-		throw new Error('User did not pick option');
+		throw new CancelError();
 	}
 
 	private log(s: string) {

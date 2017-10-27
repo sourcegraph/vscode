@@ -97,6 +97,11 @@ export class NavService extends Disposable implements INavService {
 
 	public handle(location: URI): TPromise<void> {
 		return TPromise.wrap(this.doHandle(location)).then(null, reason => {
+			// We hardcode this message since when errors cross over IPC from
+			// the extension only the message is preserved.
+			if (reason.message === 'canceled') {
+				return;
+			}
 			this.messageService.show(Severity.Error, reason);
 		});
 	}
