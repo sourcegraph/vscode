@@ -451,7 +451,7 @@ export class AddLocalWorkspaceFolderAction extends BaseWorkspacesAction {
 		}
 
 		if (this.contextService.getWorkbenchState() === WorkbenchState.FOLDER) {
-			return this.windowService.createAndEnterWorkspace([this.contextService.getWorkspace().folders[0].toString()]);
+			return this.windowService.createAndEnterWorkspace([this.contextService.getWorkspace().folders[0]]);
 		}
 
 		const folders = super.pickFolders(mnemonicButtonLabel(localize({ key: 'add', comment: ['&& denotes a mnemonic'] }, "&&Add")), localize('addFolderToWorkspaceTitle', "Add Folder to Workspace"));
@@ -459,8 +459,8 @@ export class AddLocalWorkspaceFolderAction extends BaseWorkspacesAction {
 			return TPromise.as(null);
 		}
 
-		return this.workspaceEditingService.addFolders(folders.map(folder => URI.file(folder)))
-			.then(() => this.configurationService.reloadConfiguration());;
+		return this.workspaceEditingService.addFolders(folders.map(folder => ({ uri: URI.file(folder) })))
+			.then(() => this.configurationService.reloadConfiguration());
 	}
 
 	dispose(): void {

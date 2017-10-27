@@ -40,7 +40,7 @@ import { IActionBarRegistry, Extensions as ActionBarExtensions } from 'vs/workbe
 import { PanelRegistry, Extensions as PanelExtensions } from 'vs/workbench/browser/panel';
 import { QuickOpenController } from 'vs/workbench/browser/parts/quickopen/quickOpenController';
 import { getServices } from 'vs/platform/instantiation/common/extensions';
-import { Position, Parts, IPartService } from 'vs/workbench/services/part/common/partService';
+import { Position, Parts, IPartService, ILayoutOptions } from 'vs/workbench/services/part/common/partService';
 import { IWorkspaceContextService, WorkbenchState } from 'vs/platform/workspace/common/workspace';
 import { IStorageService, StorageScope } from 'vs/platform/storage/common/storage';
 import { ContextMenuService } from 'vs/workbench/services/contextview/electron-browser/contextmenuService';
@@ -1021,6 +1021,14 @@ export class Workbench implements IPartService {
 		});
 	}
 
+	public toggleMaximizedPanel(): void {
+		this.workbenchLayout.layout({ toggleMaximizedPanel: true });
+	}
+
+	public isPanelMaximized(): boolean {
+		return this.workbenchLayout.isPanelMaximized();
+	}
+
 	public getSideBarPosition(): Position {
 		return this.sideBarPosition;
 	}
@@ -1091,9 +1099,9 @@ export class Workbench implements IPartService {
 	 * Asks the workbench and all its UI components inside to lay out according to
 	 * the containers dimension the workbench is living in.
 	 */
-	public layout(): void {
+	public layout(options?: ILayoutOptions): void {
 		if (this.isStarted()) {
-			this.workbenchLayout.layout();
+			this.workbenchLayout.layout(options);
 		}
 	}
 

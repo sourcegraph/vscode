@@ -384,7 +384,7 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 	private async addFoldersAsWorkspaceRootFoldersOnce(uris: URI[]): Promise<URI[]> {
 		// Do not mess with order of operations unless you know what you are doing.
 		// See caution in addFoldersAsWorkspaceRootFolders.
-		await this.workspaceEditingService.addFolders(uris);
+		await this.workspaceEditingService.addFolders(uris.map(uri => ({ uri })));
 		await Promise.all(uris.map(resource => this.waitForRepository(resource)));
 		await this.configurationService.reloadConfiguration();
 		return uris;

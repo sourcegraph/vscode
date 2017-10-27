@@ -29,11 +29,12 @@ import { IWindowsMainService, IOpenConfiguration, IWindowsCountChangedEvent } fr
 import { IHistoryMainService } from 'vs/platform/history/common/history';
 import { IProcessEnvironment, isLinux, isMacintosh, isWindows } from 'vs/base/common/platform';
 import { TPromise } from 'vs/base/common/winjs.base';
-import { IWorkspacesMainService, IWorkspaceIdentifier, ISingleFolderWorkspaceIdentifier, isSingleFolderWorkspaceIdentifier, WORKSPACE_FILTER_OPEN, WORKSPACE_FILTER_SAVE } from 'vs/platform/workspaces/common/workspaces';
+import { IWorkspacesMainService, IWorkspaceIdentifier, ISingleFolderWorkspaceIdentifier, isSingleFolderWorkspaceIdentifier, WORKSPACE_FILTER_OPEN, WORKSPACE_FILTER_SAVE, IWorkspaceFolderCreationData } from 'vs/platform/workspaces/common/workspaces';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { mnemonicButtonLabel } from 'vs/base/common/labels';
 import { Schemas } from 'vs/base/common/network';
 import { normalizeNFC, startsWith } from 'vs/base/common/strings';
+import URI from 'vs/base/common/uri';
 
 enum WindowError {
 	UNRESPONSIVE,
@@ -855,7 +856,7 @@ export class WindowsManager implements IWindowsMainService {
 		if (!openConfig.addMode && isCommandLineOrAPICall) {
 			const foldersToOpen = windowsToOpen.filter(path => !!path.folderPath);
 			if (foldersToOpen.length > 1) {
-				const workspace = this.workspacesService.createWorkspaceSync(foldersToOpen.map(folder => folder.folderPath));
+				const workspace = this.workspacesService.createWorkspaceSync(foldersToOpen.map(folder => ({ uri: URI.file(folder.folderPath) })));
 
 				// Add workspace and remove folders thereby
 				windowsToOpen.push({ workspace });
@@ -1147,10 +1148,10 @@ export class WindowsManager implements IWindowsMainService {
 		// Force open in multi-root workspace (prevent opening in non-multi-root
 		// workspace).
 		if (!configuration.workspace) {
-			const folders: string[] = [];
+			const folders: IWorkspaceFolderCreationData[] = [];
 			if (configuration.folderPath) {
 				if (configuration.folderPath !== '.') {
-					folders.push(configuration.folderPath);
+					folders.push({ uri: URI.file(configuration.folderPath) });
 				}
 				configuration.folderPath = undefined;
 			}
@@ -1406,8 +1407,8 @@ export class WindowsManager implements IWindowsMainService {
 		return this.workspacesManager.saveAndEnterWorkspace(win, path).then(result => this.doEnterWorkspace(win, result));
 	}
 
-	public createAndEnterWorkspace(win: CodeWindow, folderPaths?: string[], path?: string): TPromise<IEnterWorkspaceResult> {
-		return this.workspacesManager.createAndEnterWorkspace(win, folderPaths, path).then(result => this.doEnterWorkspace(win, result));
+	public createAndEnterWorkspace(win: CodeWindow, folders?: IWorkspaceFolderCreationData[], path?: string): TPromise<IEnterWorkspaceResult> {
+		return this.workspacesManager.createAndEnterWorkspace(win, folders, path).then(result => this.doEnterWorkspace(win, result));
 	}
 
 	private doEnterWorkspace(win: CodeWindow, result: IEnterWorkspaceResult): IEnterWorkspaceResult {
@@ -1770,12 +1771,12 @@ class WorkspacesManager {
 		return this.doSaveAndOpenWorkspace(window, window.openedWorkspace, path);
 	}
 
-	public createAndEnterWorkspace(window: CodeWindow, folderPaths?: string[], path?: string): TPromise<IEnterWorkspaceResult> {
+	public createAndEnterWorkspace(window: CodeWindow, folders?: IWorkspaceFolderCreationData[], path?: string): TPromise<IEnterWorkspaceResult> {
 		if (!window || !window.win || window.readyState !== ReadyState.READY || !this.isValidTargetWorkspacePath(window, path)) {
 			return TPromise.as(null); // return early if the window is not ready or disposed
 		}
 
-		return this.workspacesService.createWorkspace(folderPaths).then(workspace => {
+		return this.workspacesService.createWorkspace(folders).then(workspace => {
 			return this.doSaveAndOpenWorkspace(window, workspace, path);
 		});
 	}

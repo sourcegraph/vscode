@@ -220,7 +220,7 @@ export class FolderEntry extends QuickOpenEntry {
 			if (this.contextService.getWorkbenchState() !== WorkbenchState.WORKSPACE) {
 				// Upgrade workspace to multi-root workspace.
 				const p = this.resourceResolverService.resolveResource(this.folder.resource)
-					.then(resolvedResource => this.workspacesService.createWorkspace([resolvedResource.toString()]))
+					.then(resolvedResource => this.workspacesService.createWorkspace([{ uri: resolvedResource }]))
 					.then(({ configPath }) => this.windowsService.openWindow([configPath]));
 				p.done(null, errors.onUnexpectedError);
 				this.progressService.withProgress({

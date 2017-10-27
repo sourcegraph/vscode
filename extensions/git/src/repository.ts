@@ -187,8 +187,10 @@ export class Resource implements SourceControlResourceState {
 		const tooltip = this.tooltip;
 		const strikeThrough = this.strikeThrough;
 		const faded = this.faded;
+		const letter = this.letter;
+		const color = this.color;
 
-		return { strikeThrough, faded, tooltip, light, dark };
+		return { strikeThrough, faded, tooltip, light, dark, letter, color, source: 'git.resource' /*todo@joh*/ };
 	}
 
 	get letter(): string | undefined {
@@ -275,7 +277,7 @@ export class Resource implements SourceControlResourceState {
 		const abbreviation = this.letter;
 		const color = this.color;
 		const priority = this.priority;
-		return { bubble: true, title, abbreviation, color, priority };
+		return { bubble: true, source: 'git.resource', title, abbreviation, color, priority };
 	}
 
 	constructor(
@@ -356,6 +358,7 @@ function isReadOnly(operation: Operation): boolean {
 function shouldShowProgress(operation: Operation): boolean {
 	switch (operation) {
 		case Operation.Fetch:
+		case Operation.CheckIgnore:
 			return false;
 		default:
 			return true;

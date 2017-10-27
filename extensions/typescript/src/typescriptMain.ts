@@ -35,6 +35,7 @@ import { getContributedTypeScriptServerPlugins, TypeScriptServerPlugin } from '.
 import { openOrCreateConfigFile, isImplicitProjectConfigFile } from './utils/tsconfig';
 import { tsLocationToVsPosition } from './utils/convert';
 import FormattingConfigurationManager from './features/formattingConfigurationManager';
+import * as languageModeIds from './utils/languageModeIds';
 
 interface LanguageDescription {
 	id: string;
@@ -54,21 +55,16 @@ interface ProjectConfigMessageItem extends MessageItem {
 	id: ProjectConfigAction;
 }
 
-const MODE_ID_TS = 'typescript';
-const MODE_ID_TSX = 'typescriptreact';
-const MODE_ID_JS = 'javascript';
-const MODE_ID_JSX = 'javascriptreact';
-
 const standardLanguageDescriptions: LanguageDescription[] = [
 	{
 		id: 'typescript',
 		diagnosticSource: 'ts',
-		modeIds: [MODE_ID_TS, MODE_ID_TSX],
+		modeIds: [languageModeIds.typescript, languageModeIds.typescriptreact],
 		configFile: 'tsconfig.json'
 	}, {
 		id: 'javascript',
 		diagnosticSource: 'js',
-		modeIds: [MODE_ID_JS, MODE_ID_JSX],
+		modeIds: [languageModeIds.javascript, languageModeIds.javascriptreact],
 		configFile: 'jsconfig.json'
 	}
 ];
@@ -570,7 +566,7 @@ class TypeScriptServiceClientHost implements ITypescriptServiceClientHost {
 
 		switch (selected && selected.id) {
 			case ProjectConfigAction.CreateConfig:
-				openOrCreateConfigFile(isTypeScriptProject, rootPath);
+				openOrCreateConfigFile(isTypeScriptProject, rootPath, this.client.configuration);
 				return;
 
 			case ProjectConfigAction.LearnMore:

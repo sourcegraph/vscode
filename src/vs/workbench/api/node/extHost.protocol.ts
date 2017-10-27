@@ -51,6 +51,7 @@ import { SerializedError } from 'vs/base/common/errors';
 import { IRelativePattern } from 'vs/base/common/glob';
 import { IWorkspaceFolderData } from 'vs/platform/workspace/common/workspace';
 import { IStat, IFileChange } from 'vs/platform/files/common/files';
+import { ConfigurationScope } from 'vs/platform/configuration/common/configurationRegistry';
 
 export interface IEnvironment {
 	isExtensionDevelopmentDebug: boolean;
@@ -75,8 +76,12 @@ export interface IInitData {
 	environment: IEnvironment;
 	workspace: IWorkspaceData;
 	extensions: IExtensionDescription[];
-	configuration: IConfigurationData;
+	configuration: IConfigurationInitData;
 	telemetryInfo: ITelemetryInfo;
+}
+
+export interface IConfigurationInitData extends IConfigurationData {
+	configurationScopes: ConfigurationScope[];
 }
 
 export interface IWorkspaceConfigurationChangeEventData {
@@ -387,7 +392,11 @@ export type SCMRawResource = [
 	string[] /*icons: light, dark*/,
 	string /*tooltip*/,
 	boolean /*strike through*/,
-	boolean /*faded*/
+	boolean /*faded*/,
+
+	string /*source*/,
+	string /*letter*/,
+	ThemeColor /*color*/
 ];
 
 export type SCMRawResourceSplice = [
@@ -595,6 +604,21 @@ export interface IExtHostSuggestResult {
 	incomplete?: boolean;
 }
 
+export interface IdObject {
+	_id: number;
+}
+
+export namespace IdObject {
+	let n = 0;
+	export function mixin<T extends object>(object: T): T & IdObject {
+		(<any>object)._id = n++;
+		return <any>object;
+	}
+}
+
+export type IWorkspaceSymbol = IdObject & modes.SymbolInformation;
+export interface IWorkspaceSymbols extends IdObject { symbols: IWorkspaceSymbol[]; };
+
 export interface ExtHostLanguageFeaturesShape {
 	$provideDocumentSymbols(handle: number, resource: URI): TPromise<modes.SymbolInformation[]>;
 	$provideCodeLenses(handle: number, resource: URI): TPromise<modes.ICodeLensSymbol[]>;
@@ -609,8 +633,9 @@ export interface ExtHostLanguageFeaturesShape {
 	$provideDocumentFormattingEdits(handle: number, resource: URI, options: modes.FormattingOptions): TPromise<editorCommon.ISingleEditOperation[]>;
 	$provideDocumentRangeFormattingEdits(handle: number, resource: URI, range: IRange, options: modes.FormattingOptions): TPromise<editorCommon.ISingleEditOperation[]>;
 	$provideOnTypeFormattingEdits(handle: number, resource: URI, position: IPosition, ch: string, options: modes.FormattingOptions): TPromise<editorCommon.ISingleEditOperation[]>;
-	$provideWorkspaceSymbols(handle: number, search: string): TPromise<modes.SymbolInformation[]>;
-	$resolveWorkspaceSymbol(handle: number, symbol: modes.SymbolInformation): TPromise<modes.SymbolInformation>;
+	$provideWorkspaceSymbols(handle: number, search: string): TPromise<IWorkspaceSymbols>;
+	$resolveWorkspaceSymbol(handle: number, symbol: modes.SymbolInformation): TPromise<IWorkspaceSymbol>;
+	$releaseWorkspaceSymbols(handle: number, id: number): void;
 	$provideRenameEdits(handle: number, resource: URI, position: IPosition, newName: string): TPromise<modes.WorkspaceEdit>;
 	$provideCompletionItems(handle: number, resource: URI, position: IPosition, context: modes.SuggestContext): TPromise<IExtHostSuggestResult>;
 	$resolveCompletionItem(handle: number, resource: URI, position: IPosition, suggestion: modes.ISuggestion): TPromise<modes.ISuggestion>;
@@ -658,7 +683,7 @@ export interface ExtHostDebugServiceShape {
 }
 
 
-export type DecorationData = [number, boolean, string, string, ThemeColor];
+export type DecorationData = [number, boolean, string, string, ThemeColor, string];
 
 export interface ExtHostDecorationsShape {
 	$providerDecorations(handle: number, uri: URI): TPromise<DecorationData>;

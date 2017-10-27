@@ -429,7 +429,7 @@ export function registerCommands(): void {
 		const workspaceEditingService = accessor.get(IWorkspaceEditingService);
 		const configurationService = accessor.get(IConfigurationService);
 
-		return workspaceEditingService.addFolders(foldersToAdd).then(() => {
+		return workspaceEditingService.addFolders(foldersToAdd.map(uri => ({ uri }))).then(() => {
 			// Wait for workspace to reload and detect its newly added root.
 			return configurationService.reloadConfiguration();
 		});
