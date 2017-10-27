@@ -76,6 +76,7 @@ export class CommentInput extends Disposable {
 				div.div({ class: 'hint' }, div => {
 					const buttonContainer = $('div').addClass('hint');
 					const inviteButton = new Button(buttonContainer);
+					inviteButton.getElement().style.textAlign = 'left';
 					inviteButton.label = localize('comment.inviteOrgMember', "Invite a member to your organization");
 					this.disposables.push(inviteButton.addListener('click', () => {
 						this.commandService.executeCommand(OPEN_INVITE_ACTION_ID);
