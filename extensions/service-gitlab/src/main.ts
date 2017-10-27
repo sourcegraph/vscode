@@ -6,15 +6,15 @@
 
 import * as vscode from 'vscode';
 import * as nls from 'vscode-nls';
-import { Gitlab, GITLAB_SCHEME } from './GitlabViewer';
+import { GitLab, GITLAB_SCHEME } from './GitlabViewer';
 import * as cp from 'child_process';
 
 const localize = nls.loadMessageBundle();
 let vsCodeContext: vscode.ExtensionContext;
-let gitlab: Gitlab;
+let gitlab: GitLab;
 
 export function activate(context: vscode.ExtensionContext): void {
-	gitlab = new Gitlab();
+	gitlab = new GitLab();
 	vsCodeContext = context;
 
 	context.subscriptions.push(vscode.workspace.registerResourceResolutionProvider(GITLAB_SCHEME, {
@@ -24,27 +24,26 @@ export function activate(context: vscode.ExtensionContext): void {
 	}));
 
 	vscode.commands.registerCommand('gitlab.checkAccessToken', () => {
-		return checkGitlabToken();
+		return checkGitLabToken();
 	});
 
 	vscode.commands.registerCommand('gitlab.showCreateAccessTokenWalkthrough', (skipInfoMessage) => {
-		return showCreateGitlabTokenWalkthrough(gitlab, skipInfoMessage);
+		return showCreateGitLabTokenWalkthrough(gitlab, skipInfoMessage);
 	});
 
-	// It is not possible to register the folder catalog provider without the correct host. So we need
-	// to check if the host is already set.
-	const host = vscode.workspace.getConfiguration('gitlab').get<string>('host');
-
-	if (host) {
-		setFolderCatalogProvider(host);
+	// It is not possible to register the folder catalog provider without the correct base URL. So we need
+	// to check if the URL is already set.
+	const url = vscode.workspace.getConfiguration('gitlab').get<string>('url');
+	if (url) {
+		setFolderCatalogProvider(url);
 	}
 }
 
-function setFolderCatalogProvider(host: string) {
+function setFolderCatalogProvider(url: string) {
 
-	// We have to make sure that the host does not contain the scheme. If so it will cause errors when trying to display
+	// We have to make sure that the URL does not contain the scheme. If so it will cause errors when trying to display
 	// the catalog folders.
-	const authority = vscode.Uri.parse(host).authority;
+	const authority = vscode.Uri.parse(url).authority;
 
 	vsCodeContext.subscriptions.push(vscode.workspace.registerFolderCatalogProvider(vscode.Uri.parse(`gitlab://${authority}`), {
 		resolveFolder(resource: vscode.Uri): Thenable<vscode.CatalogFolder> {
@@ -68,14 +67,14 @@ function setFolderCatalogProvider(host: string) {
 			return null;
 		},
 		async search(query: string): Promise<vscode.CatalogFolder[]> {
-			const token = checkGitlabToken();
+			const token = checkGitLabToken();
 
 			if (!token && !vscode.workspace.getConfiguration('gitlab').get<boolean>('triggerSetup')) {
 				return [];
 			}
 
 			if (!token) {
-				const ok = await showCreateGitlabTokenWalkthrough(gitlab);
+				const ok = await showCreateGitLabTokenWalkthrough(gitlab);
 				if (!ok) {
 					return [];
 				}
@@ -91,69 +90,69 @@ function setFolderCatalogProvider(host: string) {
 }
 
 /**
- * Shows the gitlab token creation walkthrough and returns if a gitlab token was added.
+ * Shows the GitLab token creation walkthrough and returns if a GitLab token was added.
  */
-async function showCreateGitlabTokenWalkthrough(viewer: Gitlab, skipInfoMessage?: boolean): Promise<boolean> {
+async function showCreateGitLabTokenWalkthrough(viewer: GitLab, skipInfoMessage?: boolean): Promise<boolean> {
 	// Close quickopen so the user sees our message.
 	await vscode.commands.executeCommand('workbench.action.closeQuickOpen');
 	await vscode.commands.executeCommand('workbench.action.closeMessages');
 
-
-	const enterTokenItem: vscode.MessageItem = { title: localize('enterToken', "Enter Token") };
 	const cancelItem: vscode.MessageItem = { title: localize('cancel', "Cancel"), isCloseAffordance: true };
-
-	const enterHostItem: vscode.MessageItem = { title: localize('enterHost', "Enter host name.") };
-
+	const enterURLItem: vscode.MessageItem = { title: localize('enterURL', "Enter base URL") };
 	const value = await vscode.window.showInformationMessage(
-		localize('nogitlabHost', "A GitLab host is needed to search for repositories"),
+		localize('noGitLabURL', "A GitLab URL is needed to search for repositories"),
 		{ modal: false },
-		enterHostItem, cancelItem,
+		enterURLItem, cancelItem,
 	);
 
 	// Display host message
-	let host;
-	if (value === enterHostItem) {
-		host = await vscode.window.showInputBox({
+	let baseURL: string | undefined;
+	if (value === enterURLItem) {
+		baseURL = await vscode.window.showInputBox({
 			prompt: localize('hostPrompt', "GitLab host is required to search for repositories (defaults to https://www.gitlab.com)"),
 			ignoreFocusOut: true,
-			value: 'https://www.gitlab.com'
+			value: vscode.workspace.getConfiguration('gitlab').get<string>('url'),
 		});
 
-		if (!host) {
-			host = 'https://www.gitlab.com';
+		if (!baseURL) {
+			baseURL = '';
 		}
 
-		if (!host.includes('http')) {
-			showErrorImmediatelyAndPromptUserForToken(localize('noScheme', "Host must include the scheme (http or https)."), viewer);
+		if (!baseURL.includes('http')) {
+			showErrorImmediatelyAndPromptUserForToken(localize('noScheme', "GitLab URL must include the scheme (http or https)."), viewer);
 		}
 
-		// We use the Uri.parse function here to check that the host is in a valid format. Also we remove the slash at end of the url
+		// We use the Uri.parse function here to check that the URL is in a valid format. Also we remove the slash at end of the url
 		// if present.
 		try {
-			host = host.replace(/\/$/, '');
-			vscode.Uri.parse(host);
+			baseURL = baseURL.replace(/\/$/, '');
+			const parsed = vscode.Uri.parse(baseURL);
+			if (parsed.path !== '/') {
+				throw new Error(localize('invalidPath', "Only GitLab URLs with path '/' are supported."));
+			}
 		} catch (error) {
-			showErrorImmediatelyAndPromptUserForToken(localize('invalidUrl', "Host must be a valid URL: {0}", error.message), viewer);
+			showErrorImmediatelyAndPromptUserForToken(localize('invalidUrl', "Invalid GitLab URL: {0}", error.message), viewer);
 			return false;
 		}
 	} else if (!value || value === cancelItem) {
 		return false;
 	}
 
-	if (host) {
-		await vscode.workspace.getConfiguration('gitlab').update('host', host, vscode.ConfigurationTarget.Global);
+	if (baseURL) {
+		await vscode.workspace.getConfiguration('gitlab').update('url', baseURL, vscode.ConfigurationTarget.Global);
 	} else {
 		return false;
 	}
 
-	const createTokenItem: vscode.MessageItem = { title: localize('createToken', "Create Token on {0}", host) };
-	const url = `${host}/profile/personal_access_tokens`;
+	const createTokenItem: vscode.MessageItem = { title: localize('createToken', "Create Token on {0}", baseURL) };
+	const url = `${baseURL}/profile/personal_access_tokens`;
 
 	if (skipInfoMessage) {
 		await vscode.commands.executeCommand('vscode.open', vscode.Uri.parse(url));
 	} else {
+		const enterTokenItem: vscode.MessageItem = { title: localize('enterToken', "Enter Token") };
 		const value = await vscode.window.showInformationMessage(
-			localize('nogitlabToken', "A GitLab personal access token is required to search for repositories."),
+			localize('noGitLabToken', "A GitLab personal access token is required to search for repositories."),
 			{ modal: false },
 			createTokenItem, enterTokenItem, cancelItem,
 		);
@@ -179,7 +178,7 @@ async function showCreateGitlabTokenWalkthrough(viewer: Gitlab, skipInfoMessage?
 		}
 
 		// As last we need to set the catalog provider.
-		setFolderCatalogProvider(host);
+		setFolderCatalogProvider(baseURL);
 
 		return true;
 	}
@@ -187,9 +186,9 @@ async function showCreateGitlabTokenWalkthrough(viewer: Gitlab, skipInfoMessage?
 }
 
 /**
- * Checks if the user has a gitlab token configured.
+ * Checks if the user has a GitLab token configured.
  */
-function checkGitlabToken(): boolean {
+function checkGitLabToken(): boolean {
 	return !!vscode.workspace.getConfiguration('gitlab').get<string>('token');
 }
 
@@ -200,7 +199,7 @@ function checkGitlabToken(): boolean {
  *
  * This will also prompt the user to reset the token.
  */
-async function showErrorImmediatelyAndPromptUserForToken<T>(error: string, viewer: Gitlab): Promise<T> {
+async function showErrorImmediatelyAndPromptUserForToken<T>(error: string, viewer: GitLab): Promise<T> {
 	await vscode.commands.executeCommand('workbench.action.closeQuickOpen');
 	await vscode.commands.executeCommand('workbench.action.closeMessages');
 
@@ -214,8 +213,8 @@ async function showErrorImmediatelyAndPromptUserForToken<T>(error: string, viewe
 		if (hasToken) {
 			await vscode.workspace.getConfiguration('gitlab').update('token', undefined, vscode.ConfigurationTarget.Global);
 		}
-		if (checkGitlabToken()) {
-			showCreateGitlabTokenWalkthrough(viewer); // will walk the user through recreating the token
+		if (checkGitLabToken()) {
+			showCreateGitLabTokenWalkthrough(viewer); // will walk the user through recreating the token
 		}
 	}
 

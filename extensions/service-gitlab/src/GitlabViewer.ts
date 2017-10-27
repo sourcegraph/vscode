@@ -11,12 +11,12 @@ const localize = nls.loadMessageBundle();
 export const GITLAB_SCHEME = 'gitlab';
 
 /**
- * Gets Gitlab information associated for the current user. Uses a cache to prevent multiple
- * requests. Loosely based on the Viewer class in the github extension.
+ * Gets GitLab information associated for the current user. Uses a cache to prevent multiple
+ * requests. Loosely based on the Viewer class in the service-github extension.
  */
-export class Gitlab {
+export class GitLab {
 	private tokenUsedForCache: string;
-	private hostUsedForCache: string;
+	private urlUsedForCache: string;
 
 	private repoRequest: Thenable<vscode.CatalogFolder[]> | null;
 	private userInfoRequest: Promise<UserInformation | null> | null;
@@ -32,7 +32,7 @@ export class Gitlab {
 
 	/**
 	 * Returns the user information of the currently logged in user. It is best-effort, so if the
-	 * network request fails or there is no logged in user null is returned.
+	 * network request fails or there is no logged in user, null is returned.
 	 */
 	public async user(): Promise<UserInformation | null> {
 		try {
@@ -48,12 +48,12 @@ export class Gitlab {
 				return this.userInfoRequest;
 			}
 
-			const userInformation = this.doGitlabRequest(this.getHost(), this.getToken(), '/user');
+			const userInformation = this.doGitLabRequest(this.getURL(), this.getToken(), '/user');
 
 			this.userInfoRequest = userInformation;
 
 			this.tokenUsedForCache = this.getToken();
-			this.hostUsedForCache = this.getHost();
+			this.urlUsedForCache = this.getURL();
 
 			return userInformation;
 		} catch (error) {
@@ -67,7 +67,7 @@ export class Gitlab {
 
 	/**
 	 * Retrieves a specific repository from the GitLab instance.
-	 * 
+	 *
 	 * @param name name of the repository
 	 * @param owner owner of the repository
 	 */
@@ -79,16 +79,16 @@ export class Gitlab {
 		const encodedName = encodeURIComponent(`${owner}/${name}`);
 		const url = `/projects/${encodedName}`;
 
-		const repo = await this.doGitlabRequest(this.getHost(), this.getToken(), url);
+		const repo = await this.doGitLabRequest(this.getURL(), this.getToken(), url);
 
 		return this.toCatalogFolder(repo);
 	}
 
 	/**
 	 * Search the GitLab projects of the user using the given string. Like the other functions this
-	 * is best-effort. When an error ocurres a empty array is returned. 
-	 * 
-	 * @param query 
+	 * is best-effort. When an error occurs, an empty array is returned.
+	 *
+	 * @param query
 	 */
 	public async search(query: string): Promise<vscode.CatalogFolder[]> {
 		try {
@@ -106,7 +106,7 @@ export class Gitlab {
 			const encodedQuery = encodeURIComponent(query);
 			const url = `/users/${user.id}/projects?search=${encodedQuery}&order_by=last_activity_at`;
 
-			const searchResult = await this.doGitlabRequest(this.getHost(), this.getToken(), url);
+			const searchResult = await this.doGitLabRequest(this.getURL(), this.getToken(), url);
 
 			return searchResult.map((repository: any) => this.toCatalogFolder(repository));
 		}
@@ -118,9 +118,9 @@ export class Gitlab {
 	}
 
 	/**
-	 * Retrieve Gitlab Repositories for the current user.
-	 *  
-	 * Like the github one this one is best-effort, so rejections should never happen. Uses
+	 * Retrieve GitLab Repositories for the current user.
+	 *
+	 * Like the GitHub one this one is best-effort, so rejections should never happen. Uses
 	 * internal cache for efficiency.
 	 */
 	public async repositories(): Promise<vscode.CatalogFolder[]> {
@@ -146,13 +146,13 @@ export class Gitlab {
 
 			const url = `/users/${user.id}/projects`;
 
-			const data = await this.doGitlabRequest(this.getHost(), this.getToken(), url);
+			const data = await this.doGitLabRequest(this.getURL(), this.getToken(), url);
 
 			const repositories = data.map((repo: any) => this.toCatalogFolder(repo));
 
 			this.repoRequest = Promise.resolve(repositories);
 			this.tokenUsedForCache = this.getToken();
-			this.hostUsedForCache = this.getHost();
+			this.urlUsedForCache = this.getURL();
 
 			return repositories;
 
@@ -164,11 +164,11 @@ export class Gitlab {
 	}
 
 	/**
-	 * Returns a URI that can be used to clone the git repository. 
-	 * 
+	 * Returns a URI that can be used to clone the git repository.
+	 *
 	 * Note: this will include "git+" in the scheme.
-	 * 
-	 * @param resource 
+	 *
+	 * @param resource
 	 */
 	public async createCloneUrl(resource: vscode.Uri): Promise<vscode.Uri> {
 		const data = this.resourceToNameAndOwner(resource);
@@ -187,54 +187,54 @@ export class Gitlab {
 			}
 		}
 
-		// User can be undefinied in some cases, the url will also work without username.
+		// User can be undefined in some cases, the url will also work without username.
 		//
-		// This can happen when the username request to GitLab fails and the request is not cached. The 
-		// two main reasons why the request can fail are network issues (gitlab down) or an 
-		// authentication failure. Authentication is unlikely here since the only way to reach this 
+		// This can happen when the username request to GitLab fails and the request is not cached. The
+		// two main reasons why the request can fail are network issues (GitLab down) or an
+		// authentication failure. Authentication is unlikely here since the only way to reach this
 		// to actually retrieve a list of repositories for this user (authentication needed)
 
 		const userAuthority = user ? `${user}@` : '';
-		const authority = vscode.Uri.parse(this.getHost()).authority;
+		const authority = vscode.Uri.parse(this.getURL()).authority;
 
 		return vscode.Uri.parse(`git+${protocol}://${userAuthority}${authority}/${data.owner}/${data.name}.git`);
 	}
 
 	/**
-	 * Convert owner and name to a VSCode resource URL.
-	 * 
-	 * @param owner 
-	 * @param name 
+	 * Convert owner and name to a VS Code resource URL.
+	 *
+	 * @param owner
+	 * @param name
 	 */
 	public nameAndOwnerToResource(owner: string, name: string): vscode.Uri {
-		const authority = vscode.Uri.parse(this.getHost()).authority;
+		const authority = vscode.Uri.parse(this.getURL()).authority;
 
 		return vscode.Uri.parse(`gitlab://${authority}/repository/${owner}/${name}`);
 	}
 
 	/**
-	 * This function will validate the configuration. It will make sure the host and token are valid values. 
-	 * 
-	 * Will thrown an error when the host is not in a valid URL format.
+	 * This function will validate the configuration. It will make sure the URL and token are valid values.
+	 *
+	 * Will thrown an error when the URL is not a valid URL.
 	 */
 	private validateConfig(): boolean {
 		const token = this.getToken();
-		const host = this.getHost();
+		const url = this.getURL();
 
 		if (!token) {
 			return false;
 		}
 
-		if (!host) {
+		if (!url) {
 			return false;
 		}
 
-		if (!host.includes('http')) {
+		if (!url.includes('http')) {
 			return false;
 		}
 
-		// If the url is not in a valid format this will throw an exception.
-		vscode.Uri.parse(host);
+		// If the url is invalid, this will throw an exception.
+		vscode.Uri.parse(url);
 
 		return true;
 	}
@@ -243,8 +243,8 @@ export class Gitlab {
 		return vscode.workspace.getConfiguration('gitlab').get<string>('token') || '';
 	}
 
-	private getHost(): string {
-		return vscode.workspace.getConfiguration('gitlab').get<string>('host') || '';
+	private getURL(): string {
+		return vscode.workspace.getConfiguration('gitlab').get<string>('url') || '';
 	}
 
 	private clearCache() {
@@ -253,14 +253,14 @@ export class Gitlab {
 	}
 
 	private cacheStillValid(): boolean {
-		return this.getToken() === this.tokenUsedForCache && this.getHost() === this.hostUsedForCache;
+		return this.getToken() === this.tokenUsedForCache && this.getURL() === this.urlUsedForCache;
 	}
 
-	private async doGitlabRequest(host: string, token: string, endpoint: string): Promise<any> {
+	private async doGitLabRequest(url: string, token: string, endpoint: string): Promise<any> {
 		// Remove trailing slashes
-		host = host.replace(/\/$/, '');
+		url = url.replace(/\/$/, '');
 
-		const response = await fetch(`${host}/api/v4${endpoint}`, {
+		const response = await fetch(`${url}/api/v4${endpoint}`, {
 			method: 'GET',
 			headers: { 'PRIVATE-TOKEN': token }
 		});
@@ -279,7 +279,7 @@ export class Gitlab {
 	}
 
 	private toCatalogFolder(repository: any): vscode.CatalogFolder {
-		const authority = vscode.Uri.parse(this.getHost()).authority;
+		const authority = vscode.Uri.parse(this.getURL()).authority;
 
 		return {
 			resource: vscode.Uri.parse('').with({ scheme: GITLAB_SCHEME, authority: authority, path: `/repository/${repository.path_with_namespace}` }),
@@ -305,12 +305,12 @@ export class Gitlab {
 
 	/**
 	 * Get the owner and name of from resource path. Resource path is in the form:
-	 * 
-	 * gitlab://www.gitlab.com/repository/owner/name 
-	 * 
-	 * Above example will return owner / name. This form is used as resource in a VS code catalog folder.
-	 * 
-	 * @param resourcePath resouce of CatalogFolder
+	 *
+	 * gitlab://www.gitlab.com/repository/owner/name
+	 *
+	 * Above example will return owner / name. This form is used as resource in a VS Code catalog folder.
+	 *
+	 * @param resourcePath resource of CatalogFolder
 	 */
 	private resourceToNameAndOwner(resourcePath: vscode.Uri): { owner: string, name: string } {
 		const parts = resourcePath.path.replace(/^\/repository\//, '').split('/');

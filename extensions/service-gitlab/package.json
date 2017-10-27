@@ -40,10 +40,10 @@
           "type": "string",
           "description": "%config.token%"
         },
-        "gitlab.host": {
+        "gitlab.url": {
           "type": "string",
           "default": "https://www.gitlab.com",
-          "description": "%config.host%"
+          "description": "%config.url%"
         },
         "gitlab.cloneProtocol": {
           "type": "string",
