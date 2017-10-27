@@ -57,8 +57,8 @@ export class CreateCodeCommentAction extends EditorAction {
 				primary: KeyMod.CtrlCmd | KeyMod.Alt | KeyCode.KEY_M,
 			},
 			menuOpts: {
-				group: '3_codecomments',
-				order: 3.1,
+				group: '1_codecomments',
+				order: 1.1,
 			}
 		});
 	}
@@ -92,8 +92,8 @@ export class ShareSnippetAction extends EditorAction {
 				primary: KeyMod.Alt | KeyCode.KEY_S,
 			},
 			menuOpts: {
-				group: '3_codecomments',
-				order: 3.1,
+				group: '1_codecomments',
+				order: 1.2,
 			}
 		});
 	}
