@@ -1570,6 +1570,47 @@ export class CommandCenter {
 			throw new Error(localize('no remote', "Repository does not have a remote"));
 		}
 
+		const copyAnywayOption = localize('copyAnyway', "Copy link anyway");
+		if (repository.workingTreeGroup.resourceStates.length > 0) {
+			const choice = await window.showWarningMessage(localize('share.uncommittedChanges', "You have uncommitted changes. Please commit and push them to share your changes."), copyAnywayOption);
+			if (!choice) {
+				return;
+			}
+		}
+
+		if (!repository.HEAD.upstream) {
+			const pushOption = localize('push', "Push branch");
+			const choice = await window.showWarningMessage(localize('share.notPushed', "Your branch is not pushed to an upstream. Do you want to push it?"), pushOption, copyAnywayOption);
+			switch (choice) {
+				case pushOption:
+					await this.publish(repository);
+					break;
+				case undefined:
+					return;
+			}
+		} else if (repository.HEAD.ahead && repository.HEAD.behind) {
+			const choice = await window.showWarningMessage(localize('share.diverged', "Your local branch {0} and its upstream diverged. Please bring them up to date to share your changes.", repository.HEAD.name), copyAnywayOption);
+			if (!choice) {
+				return;
+			}
+		} else if (repository.HEAD.ahead) {
+			const pushAndCopyOption = localize('share.pushAndCopyLink', "Push and copy link");
+			const copyLinkWithoutPushingOption = localize('share.copyLinkWithoutPush', "Copy link without pushing");
+			const choice = await window.showWarningMessage(localize('share.ahead', "Your branch {0} has unpushed local commits. Do you want to push them?", repository.HEAD.name), pushAndCopyOption, copyLinkWithoutPushingOption);
+			switch (choice) {
+				case pushAndCopyOption:
+					await repository.push();
+					break;
+				case undefined:
+					return;
+			}
+		} else if (repository.HEAD.behind) {
+			const choice = await window.showWarningMessage(localize('share.behind', "Your branch {0} has commits upstream that you don't have locally.", repository.HEAD.name), copyAnywayOption);
+			if (!choice) {
+				return;
+			}
+		}
+
 		const openParams = new URLSearchParams();
 
 		const baseBranchPicks: string[] = [];
