@@ -50,9 +50,9 @@ export class DiffWorker implements IDiffWorker {
 					// The thread wasn't populated with a snippet, but we have access to the
 					// original file content, so populate the snippet manually.
 					const revLines = linesByRev.get(revRange.revision);
-					const rangeLines = revLines.slice(fromRange.startLineNumber - 1, fromRange.endLineNumber - 1);
+					const rangeLines = revLines.slice(fromRange.startLineNumber - 1, fromRange.endLineNumber);
 					rangeLines[0] = rangeLines[0].slice(fromRange.startColumn - 1);
-					rangeLines[rangeLines.length - 1] = rangeLines[rangeLines.length - 1].slice(0, fromRange.endColumn - 1);
+					rangeLines[rangeLines.length - 1] = rangeLines[rangeLines.length - 1].slice(0, fromRange.endColumn);
 					revRange.rangeContent = rangeLines.join('\n');
 				}
 			}
