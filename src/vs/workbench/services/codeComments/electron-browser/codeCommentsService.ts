@@ -18,14 +18,14 @@ import { startsWith } from 'vs/base/common/strings';
 import { IRemoteService, requestGraphQL, requestGraphQLMutation } from 'vs/platform/remote/node/remote';
 import { IRemoteConfiguration } from 'vs/platform/remote/common/remote';
 import { TPromise } from 'vs/base/common/winjs.base';
-import { first, uniqueFilter, coalesce } from 'vs/base/common/arrays';
+import { first, uniqueFilter } from 'vs/base/common/arrays';
 import { IInstantiationService, ServicesAccessor } from 'vs/platform/instantiation/common/instantiation';
 import { IModelService } from 'vs/editor/common/services/modelService';
 import { ICommonCodeEditor, IModel } from 'vs/editor/common/editorCommon';
 import { RawTextSource } from 'vs/editor/common/model/textSource';
 import { dispose, IDisposable } from 'vs/base/common/lifecycle';
 import { StrictResourceMap } from 'vs/base/common/map';
-import { IMessageService, Severity } from 'vs/platform/message/common/message';
+import { IMessageService } from 'vs/platform/message/common/message';
 import { IModelContentChangedEvent } from 'vs/editor/common/model/textModelEvents';
 import { InterruptibleDelayer, ThrottledDelayer } from 'vs/base/common/async';
 import { IAuthService } from 'vs/platform/auth/common/auth';
@@ -85,7 +85,8 @@ id
 title
 file
 branch
-revision
+repoRevision
+linesRevision
 startLine
 endLine
 startCharacter
@@ -392,7 +393,8 @@ function gqlThreadToMemento(thread: GQL.IThread): IThreadCommentsMemento {
 		title: thread.title,
 		file: thread.file,
 		branch: thread.branch,
-		revision: thread.revision,
+		repoRevision: thread.repoRevision,
+		linesRevision: thread.linesRevision,
 		range: new Range(thread.startLine, thread.startCharacter, thread.endLine, thread.endCharacter),
 		createdAt: new Date(thread.createdAt),
 		archived: !!thread.archivedAt,
@@ -567,9 +569,9 @@ export class FileComments extends Disposable implements IFileComments {
 						// unless the user actually clicks on it. For now, we compute them up front because
 						// we don't have lazy computation yet.
 						// .filter(thread => !thread.archived)
-						.filter(uniqueFilter(thread => thread.revision))
-						.filter(thread => thread.revision)
-						.map(thread => this.instantiationService.invokeFunction(resolveContent, this.git, documentId, thread.revision)
+						.filter(uniqueFilter(thread => thread.linesRevision))
+						.filter(thread => thread.linesRevision)
+						.map(thread => this.instantiationService.invokeFunction(resolveContent, this.git, documentId, thread.linesRevision)
 							.then(content => content, err => {
 								this.outputService.getChannel(CommentsChannelId).append(err.message);
 								return undefined;
@@ -590,7 +592,7 @@ export class FileComments extends Disposable implements IFileComments {
 					});
 				const revRanges = this.threads.map(thread => {
 					return {
-						revision: thread.revision,
+						revision: thread.linesRevision,
 						range: thread.range,
 						rangeContent: thread.rangeContent,
 					};
@@ -607,7 +609,7 @@ export class FileComments extends Disposable implements IFileComments {
 					return;
 				}
 				for (const thread of this.threads) {
-					const transforms = result[thread.revision];
+					const transforms = result[thread.linesRevision];
 					if (transforms) {
 						thread.displayRange = Range.lift(transforms[thread.range.toString()]);
 					}
@@ -673,7 +675,8 @@ export interface IThreadCommentsMemento {
 	readonly title: string;
 	readonly file: string;
 	readonly branch: string;
-	readonly revision: string;
+	readonly repoRevision: string;
+	readonly linesRevision: string;
 	readonly range: Range;
 	readonly createdAt: Date;
 
@@ -699,7 +702,8 @@ export class ThreadComments extends Disposable implements IThreadComments {
 	public readonly title: string;
 	public readonly file: string;
 	public readonly branch: string;
-	public readonly revision: string;
+	public readonly repoRevision: string;
+	public readonly linesRevision: string;
 	public readonly range: Range;
 	public readonly createdAt: Date;
 	public readonly repo: string;
@@ -780,7 +784,8 @@ export class ThreadComments extends Disposable implements IThreadComments {
 		this.title = thread.title;
 		this.file = thread.file;
 		this.branch = thread.branch;
-		this.revision = thread.revision;
+		this.repoRevision = thread.repoRevision;
+		this.linesRevision = thread.linesRevision;
 		this.range = thread.range;
 		this.createdAt = thread.createdAt;
 		this.archived = thread.archived;
@@ -927,169 +932,188 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 	private didChangeSubmitting = this.disposable(new Emitter<void>());
 	public readonly onDidChangeSubmitting = this.didChangeSubmitting.event;
 
-	private submitData: TPromise<{
-		remoteURI: string,
-		file: string,
-		branch: string,
-		revision: string,
-		startLine: number,
-		endLine: number,
-		startCharacter: number,
-		endCharacter: number,
-		rangeLength: number,
-		lines: GQL.IThreadLines,
-	}>;
-
-	/**
-	 * Whether or not the user configuration allows sharing context (the literal
-	 * code being commented on) with the remote Sourcegraph server.
-	 */
-	private shareContext: boolean;
+	private model: IModel;
 
 	constructor(
 		private commentsService: CodeCommentsService,
 		private git: Git,
-		editor: ICommonCodeEditor,
+		private editor: ICommonCodeEditor,
 		@IMessageService messageService: IMessageService,
 		@IInstantiationService private instantiationService: IInstantiationService,
 		@IRemoteService private remoteService: IRemoteService,
 		@IAuthService private authService: IAuthService,
-		@IConfigurationService protected configurationService: IConfigurationService,
+		@IConfigurationService private configurationService: IConfigurationService,
+		@ISCMService private scmService: ISCMService,
 	) {
 		super();
 		this.displayRange = this.getNonEmptySelection(editor);
-		const model = editor.getModel();
-
-		// Configure with current configuration now, or with future configuration changes.
-		this.disposable(configurationService.onDidChangeConfiguration(() => this.onDidUpdateConfiguration()));
-		this.onDidUpdateConfiguration();
+		this.model = editor.getModel();
 
 		// Save a decoration for the range so if content changes
 		// while we are waiting for promises to resolve, we will have an updated range.
-		const rangeDecorationId = model.changeDecorations(change => {
+		const rangeDecorationId = this.model.changeDecorations(change => {
 			return change.addDecoration(this.displayRange, {});
 		});
-		this.disposable(model.onDidChangeContent(() => {
-			this.displayRange = model.getDecorationRange(rangeDecorationId);
+		this.disposable(this.model.onDidChangeContent(() => {
+			this.displayRange = this.model.getDecorationRange(rangeDecorationId);
 		}));
+	}
 
-		const remoteURI = git.getRemoteRepo();
-		const file = instantiationService.invokeFunction(getPathRelativeToResource, model.uri);
-		const revision = git.getLastPushedRevision();
-		const branch = git.getBranch();
-		const codeSnippet = TPromise.join<any>([
-			remoteURI,
-			file,
-			revision,
-		])
-			.then(([repo, file, revision]) => instantiationService.invokeFunction(resolveContent, git, { repo, file }, revision))
-			.then(content => {
-				if (model.isDisposed()) {
-					throw new Error(localize('modelDisposedError', "Unable to create comment on editor that no longer exists."));
-				}
-				const originalModel = TextModel.createFromString(content.content);
-				const originalLines = originalModel.getLinesContent(); // current git directory state
-				const modifiedLines = model.getLinesContent(); // current editor state
+	private _submitting = false;
 
-				let lines: GQL.IThreadLines;
-				if (this.shareContext) {
-					// Determine context lines.
-					//
-					// Note that we capture the first character (0) of the start
-					// line up until the last character of the last line + 1. This
-					// means we capture all lines that the user selection
-					// intersects.
-					const contextLines = 3;
-					const linesBeforeRange = new Range(
-						this.lineInRange(this.displayRange.startLineNumber - contextLines, model),
-						0, // start character
-						this.displayRange.startLineNumber - 1,
-						model.getLineMaxColumn(this.lineInRange(this.displayRange.startLineNumber - 1, model)), // end character / end of line
-					);
-					const linesRange = new Range(
-						this.displayRange.startLineNumber,
-						0, // start character
-						this.displayRange.endLineNumber,
-						model.getLineMaxColumn(this.lineInRange(this.displayRange.endLineNumber, model)), // end character / end of line
-					);
-					const linesAfterRange = new Range(
-						this.lineInRange(this.displayRange.endLineNumber + 1, model),
-						0, // start character
-						this.displayRange.endLineNumber + contextLines,
-						model.getLineMaxColumn(this.lineInRange(this.displayRange.endLineNumber + contextLines, model)), // end character / end of line
-					);
+	public get submitting(): boolean {
+		return this._submitting;
+	}
 
-					// For example of what these represent, consider:
-					//
-					// 	const originalUserSelection = lines.text.slice(
-					// 		lines.textSelectionRangeStart,
-					// 		lines.textSelectionRangeStart+lines.textSelectionRangeLength
-					// 	)
-					//
-					// Or consult GQL.IThreadLines documentation.
-					const textSelectionRangeStart = this.displayRange.startColumn - 1;
-					const textSelectionRangeLength = model.getValueLengthInRange(this.displayRange);
+	public submit(allowNoComment?: boolean): TPromise<IThreadComments | undefined> {
+		return TPromise.wrap(this.submitAsync(allowNoComment));
+	}
 
-					lines = {
-						__typename: 'ThreadLines', // satisfy the GQL.IThreadLines interface
-						textBefore: editor.getTextForRanges([linesBeforeRange]),
-						text: editor.getTextForRanges([linesRange]),
-						textAfter: editor.getTextForRanges([linesAfterRange]),
-						htmlBefore: this.removeOuterDiv(editor.getHTMLForRanges([linesBeforeRange])),
-						html: this.removeOuterDiv(editor.getHTMLForRanges([linesRange])),
-						htmlAfter: this.removeOuterDiv(editor.getHTMLForRanges([linesAfterRange])),
-						textSelectionRangeStart,
-						textSelectionRangeLength,
-					};
-				}
+	private async submitAsync(allowNoComment?: boolean): Promise<IThreadComments | undefined> {
+		if (this._submitting) {
+			throw new Error(localize('alreadySubmitting', "Comment is already being submitted."));
+		}
 
-				// Compute reverse diff.
-				const diff = new Diff(modifiedLines, originalLines);
-				const range = diff.transformRange(this.displayRange);
-				if (!range) {
-					// Dirty / modified / unpushed code.
-					const rangeLength = model.getValueLengthInRange(this.displayRange);
-					return {
-						dirty: true,
-						range: this.displayRange,
-						rangeLength,
-						lines
-					};
-				}
-				const rangeLength = originalModel.getValueLengthInRange(range);
-				return {
-					dirty: false,
-					range,
-					rangeLength,
-					lines
-				};
-			});
+		const contents = this.content;
+		if (!allowNoComment && !contents.length) {
+			throw new Error(localize('emptyCommentError', "Comment can not be empty."));
+		}
 
-		this.submitData = this.join([remoteURI, file, revision, codeSnippet, branch])
-			.then(([remoteURI, file, revision, codeSnippet, branch]) => {
-				if (codeSnippet.dirty) {
-					revision = ''; // empty string implies dirty / modified / unpushed code
-				}
-				return {
-					remoteURI,
+		this._submitting = true;
+		this.didChangeSubmitting.fire();
+
+		try {
+			const repository = this.scmService.getRepositoryForResource(this.model.uri);
+			const repoRevision = repository.provider.revision.id;
+			const branch = repository.provider.revision.specifier;
+			const root = endsWithSlash(repository.provider.rootUri.path);
+			const file = this.model.uri.path.substr(root.length);
+
+			const canComment = await this.instantiationService.createInstance(ShareContextConfigurationAction, ShareContextConfigurationAction.ID, ShareContextConfigurationAction.LABEL, branch, allowNoComment).run();
+			if (!canComment) {
+				return undefined;
+			}
+
+			const [repo, blameRevision] = await Promise.all([
+				this.git.getRemoteRepo(),
+				this.git.getBlameRevision(file, this.displayRange.startLineNumber, this.displayRange.endLineNumber),
+			]);
+
+			const lines = this.getShareContext();
+			let range = this.displayRange;
+			let rangeLength = this.model.getValueLengthInRange(this.displayRange);
+
+			if (blameRevision) {
+				const blameContent = (await this.instantiationService.invokeFunction(resolveContent, this.git, { repo, file }, blameRevision)).content;
+
+				const blameModel = TextModel.createFromString(blameContent);
+				const blameLines = blameModel.getLinesContent();
+				const modifiedLines = this.model.getLinesContent(); // current editor state
+
+				// Compute reverse diff so we transform the display range to a valid range at the blame revision
+				// which is the revision we are attaching this comment to.
+				const diff = new Diff(modifiedLines, blameLines);
+				range = diff.transformRange(this.displayRange);
+				rangeLength = blameModel.getValueLengthInRange(range);
+			}
+
+			const response = await requestGraphQLMutation<{ createThread: GQL.IThread }>(this.remoteService, `mutation CreateThread {
+			createThread(
+				orgID: $orgId,
+				remoteURI: $remoteURI,
+				file: $file,
+				branch: $branch,
+				repoRevision: $repoRevision,
+				linesRevision: $linesRevision,
+				startLine: $startLine,
+				endLine: $endLine,
+				startCharacter: $startCharacter,
+				endCharacter: $endCharacter,
+				rangeLength: $rangeLength,
+				contents: $contents,
+				lines: $lines,
+			) {
+				${threadGraphql}
+			}
+		}`, {
+					orgId: this.authService.currentUser.currentOrgMember.org.id,
+					remoteURI: repo,
 					file,
 					branch,
-					revision,
-					startLine: codeSnippet.range.startLineNumber,
-					endLine: codeSnippet.range.endLineNumber,
-					startCharacter: codeSnippet.range.startColumn,
-					endCharacter: codeSnippet.range.endColumn,
-					rangeLength: codeSnippet.rangeLength,
-					lines: codeSnippet.lines,
-				};
-			})
-			.then(undefined, err => {
-				const errors = coalesce(Array.isArray(err) ? err : [err]);
-				const error = errors[0];
-				messageService.show(Severity.Error, error.message);
-				this.dispose();
-				throw error;
-			});
+					repoRevision,
+					linesRevision: blameRevision || '',
+					startLine: range.startLineNumber,
+					endLine: range.endLineNumber,
+					startCharacter: range.startColumn,
+					endCharacter: range.endColumn,
+					rangeLength,
+					contents,
+					lines,
+				});
+
+			const threadMemento = gqlThreadToMemento(response.createThread);
+			const thread = this.instantiationService.createInstance(ThreadComments, this.commentsService, this.git, threadMemento);
+			this.commentsService.didCreateThread.fire(threadMemento);
+			this.didSubmit.fire(thread);
+			return thread;
+		} finally {
+			this._submitting = false;
+			this.didChangeSubmitting.fire();
+		}
+	};
+
+	private getShareContext(): GQL.IThreadLinesInput | undefined {
+		const { remote } = this.configurationService.getConfiguration<IRemoteConfiguration>();
+		if (!remote || !remote.shareContext) {
+			return undefined;
+		}
+
+		// Determine context lines.
+		//
+		// Note that we capture the first character (0) of the start
+		// line up until the last character of the last line + 1. This
+		// means we capture all lines that the user selection
+		// intersects.
+		const contextLines = 3;
+		const linesBeforeRange = new Range(
+			this.lineInRange(this.displayRange.startLineNumber - contextLines, this.model),
+			0, // start character
+			this.displayRange.startLineNumber - 1,
+			this.model.getLineMaxColumn(this.lineInRange(this.displayRange.startLineNumber - 1, this.model)), // end character / end of line
+		);
+		const linesRange = new Range(
+			this.displayRange.startLineNumber,
+			0, // start character
+			this.displayRange.endLineNumber,
+			this.model.getLineMaxColumn(this.lineInRange(this.displayRange.endLineNumber, this.model)), // end character / end of line
+		);
+		const linesAfterRange = new Range(
+			this.lineInRange(this.displayRange.endLineNumber + 1, this.model),
+			0, // start character
+			this.displayRange.endLineNumber + contextLines,
+			this.model.getLineMaxColumn(this.lineInRange(this.displayRange.endLineNumber + contextLines, this.model)), // end character / end of line
+		);
+
+		// For example of what these represent, consider:
+		//
+		// 	const originalUserSelection = lines.text.slice(
+		// 		lines.textSelectionRangeStart,
+		// 		lines.textSelectionRangeStart+lines.textSelectionRangeLength
+		// 	)
+		//
+		// Or consult GQL.IThreadLines documentation.
+		const textSelectionRangeStart = this.displayRange.startColumn - 1;
+		const textSelectionRangeLength = this.model.getValueLengthInRange(this.displayRange);
+		return {
+			textBefore: this.editor.getTextForRanges([linesBeforeRange]),
+			text: this.editor.getTextForRanges([linesRange]),
+			textAfter: this.editor.getTextForRanges([linesAfterRange]),
+			htmlBefore: this.removeOuterDiv(this.editor.getHTMLForRanges([linesBeforeRange])),
+			html: this.removeOuterDiv(this.editor.getHTMLForRanges([linesRange])),
+			htmlAfter: this.removeOuterDiv(this.editor.getHTMLForRanges([linesAfterRange])),
+			textSelectionRangeStart,
+			textSelectionRangeLength,
+		};
 	}
 
 	/**
@@ -1098,11 +1122,6 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 	 */
 	private lineInRange(line: number, model: IModel): number {
 		return Math.min(Math.max(line, 1), model.getLineCount());
-	}
-
-	private onDidUpdateConfiguration() {
-		const config = this.configurationService.getConfiguration<IRemoteConfiguration>();
-		this.shareContext = config.remote.shareContext;
 	}
 
 	/**
@@ -1126,72 +1145,6 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 		}
 		return result;
 	}
-
-	private join<T1, T2, T3, T4, T5>(promises: [PromiseLike<T1>, PromiseLike<T2>, PromiseLike<T3>, PromiseLike<T4>, PromiseLike<T5>]): TPromise<[T1, T2, T3, T4, T5]> {
-		return TPromise.join<any>(promises) as TPromise<[T1, T2, T3, T4, T5]>;
-	}
-
-	private submittingPromise: TPromise<IThreadComments | undefined> | undefined;
-
-	public get submitting(): boolean {
-		return !!this.submittingPromise;
-	}
-
-	public submit(allowNoComment?: boolean): TPromise<IThreadComments | undefined> {
-		if (this.submittingPromise) {
-			return this.submittingPromise;
-		}
-		const contents = this.content;
-		if (!allowNoComment && !contents.length) {
-			return TPromise.wrapError(new Error(localize('emptyCommentError', "Comment can not be empty.")));
-		}
-		const clearSubmittingPromise = () => {
-			this.submittingPromise = undefined;
-			this.didChangeSubmitting.fire();
-		};
-		const promise = this.submitData
-			.then(data => {
-				const shareContextAction = this.instantiationService.createInstance(ShareContextConfigurationAction, ShareContextConfigurationAction.ID, ShareContextConfigurationAction.LABEL, data.branch, allowNoComment);
-				return shareContextAction.run().then(canComment => {
-					if (!canComment) {
-						return TPromise.as(undefined);
-					}
-					return requestGraphQLMutation<{ createThread: GQL.IThread }>(this.remoteService, `mutation CreateThread {
-						createThread(
-							orgID: $orgId,
-							remoteURI: $remoteURI,
-							file: $file,
-							branch: $branch,
-							revision: $revision,
-							startLine: $startLine,
-							endLine: $endLine,
-							startCharacter: $startCharacter,
-							endCharacter: $endCharacter,
-							rangeLength: $rangeLength,
-							contents: $contents,
-							lines: $lines,
-						) {
-							${threadGraphql}
-						}
-					}`, {
-							...data,
-							orgId: this.authService.currentUser.currentOrgMember.org.id,
-							contents,
-						})
-						.then(response => {
-							const threadMemento = gqlThreadToMemento(response.createThread);
-							const thread = this.instantiationService.createInstance(ThreadComments, this.commentsService, this.git, threadMemento);
-							this.commentsService.didCreateThread.fire(threadMemento);
-							this.didSubmit.fire(thread);
-							return thread;
-						});
-				});
-			});
-		this.submittingPromise = promise;
-		this.didChangeSubmitting.fire();
-		promise.done(clearSubmittingPromise, clearSubmittingPromise);
-		return promise;
-	};
 
 	/**
 	 * Returns the range that the new comment should be attached to.

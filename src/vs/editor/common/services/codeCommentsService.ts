@@ -180,10 +180,17 @@ export interface IThreadComments extends IEventDisposable {
 	readonly branch: string;
 
 	/**
-	 * An absolute revision that the comment is attached to.
+	 * The commit id of the repo when the thread was created.
 	 * (e.g. SHA-1 for Git).
 	 */
-	readonly revision: string;
+	readonly repoRevision: string;
+
+	/**
+	 * The oldest commit id that contains all of the lines in the range
+	 * that the thread is attached to.
+	 * (e.g. SHA-1 for Git).
+	 */
+	readonly linesRevision: string;
 
 	/**
 	 * The range that the comment is attached to on the file at the revision.

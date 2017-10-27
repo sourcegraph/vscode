@@ -394,8 +394,8 @@ class WelcomePage {
 			threadDiv.className = 'repo-row flex';
 			threadDiv.addEventListener('click', () => {
 				const remoteUri = thread.repo;
-				const query = `?utm_source=welcome_page_feed#open?path=${thread.file}&repo=https://${remoteUri}&revision=${thread.revision}&thread=${thread.id}&vcs=git`;
-				const url = `https://about.sourcegraph.com/open/${query}`;
+				const revision = thread.branch || thread.repoRevision;
+				const url = `src:open?path=${thread.file}&revision=${revision}&thread=${thread.id}&vcs=git&repo=https://${remoteUri}`;
 				this.navService.handle(URI.parse(url));
 			});
 			commentList.appendChild(threadDiv);

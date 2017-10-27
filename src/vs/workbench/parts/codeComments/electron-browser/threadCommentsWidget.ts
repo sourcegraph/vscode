@@ -113,12 +113,12 @@ export class ThreadCommentsWidget extends BaseThreadCommentsWidget {
 
 	private toDisposeOnRender: IDisposable[] = [];
 	private renderComments(): void {
-
 		const primaryHeading = localize('thread.title', "Discussion");
+		const revision = this.threadComments.repoRevision.substring(0, 7);
 		if (this.threadComments.branch) {
-			this.setTitle(primaryHeading, localize('thread.subtitle.branch', "on branch {0} at commit {1}", this.threadComments.branch, this.threadComments.revision.substring(0, 7)));
+			this.setTitle(primaryHeading, localize('thread.subtitle.branch', "on branch {0} at commit {1}", this.threadComments.branch, revision));
 		} else {
-			this.setTitle(primaryHeading, localize('thread.subtitle.commit', "at commit {0}", this.threadComments.revision.substring(0, 7)));
+			this.setTitle(primaryHeading, localize('thread.subtitle.commit', "at commit {0}", revision));
 		}
 
 		clearNode(this.commentsElement);
