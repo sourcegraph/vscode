@@ -64,7 +64,7 @@ export class Comparison implements Disposable {
 	public readonly sourceControl: SourceControl;
 
 	// TODO(nick): figure this out intelligently?
-	private baseBranch = 'origin/master';
+	private baseBranch = 'master';
 
 	constructor(
 		public readonly repository: Repository,
@@ -137,7 +137,7 @@ export class Comparison implements Disposable {
 				return `${remote}/${this.baseBranch}`;
 			}
 		}
-		return this.baseBranch;
+		return `origin/${this.baseBranch}`;
 	}
 
 	dispose(): void {
