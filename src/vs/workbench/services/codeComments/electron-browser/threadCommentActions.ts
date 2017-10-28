@@ -12,10 +12,29 @@ import { IConfigurationService } from 'vs/platform/configuration/common/configur
 import URI from 'vs/base/common/uri';
 import { IRemoteConfiguration } from 'vs/platform/remote/common/remote';
 import { TPromise } from 'vs/base/common/winjs.base';
+import { Registry } from 'vs/platform/registry/common/platform';
+import { IConfigurationRegistry, Extensions } from 'vs/platform/configuration/common/configurationRegistry';
 
-export interface ICodeCommentsConfiguration {
-	codeComments?: {
-		assumeNoHistoryRewritingOnBranches?: string[],
+Registry.as<IConfigurationRegistry>(Extensions.Configuration)
+	.registerConfiguration({
+		id: 'sharing',
+		type: 'object',
+		title: localize('sharingConfigurationTitle', "Sharing"),
+		properties: {
+			'sharing.stableBranches': {
+				type: 'array',
+				description: localize('stableBranchesDescription', "It is assumed that a stable branch will never be deleted and never have its history rewritten."),
+				default: ['master'],
+			},
+			items: {
+				type: 'string',
+			},
+		},
+	});
+
+export interface ISharingConfiguration {
+	sharing?: {
+		stableBranches?: string[],
 	};
 }
 
@@ -50,10 +69,10 @@ export class ShareContextConfigurationAction extends Action {
 		if (remote && remote.shareContext) {
 			return true;
 		}
-		const codeCommentsConfig = this.configurationService.getConfiguration<ICodeCommentsConfiguration>();
-		if (codeCommentsConfig.codeComments && codeCommentsConfig.codeComments.assumeNoHistoryRewritingOnBranches) {
-			const branches = codeCommentsConfig.codeComments.assumeNoHistoryRewritingOnBranches;
-			if (branches.indexOf(this.branch) !== -1) {
+
+		const { sharing } = this.configurationService.getConfiguration<ISharingConfiguration>();
+		if (sharing && sharing.stableBranches) {
+			if (sharing.stableBranches.indexOf(this.branch) !== -1) {
 				return true;
 			}
 		}
