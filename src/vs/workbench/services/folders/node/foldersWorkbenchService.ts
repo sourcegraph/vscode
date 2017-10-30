@@ -5,7 +5,7 @@
 
 'use strict';
 
-import Event, { Emitter, filterEvent, toPromise } from 'vs/base/common/event';
+import Event, { Emitter, filterEvent } from 'vs/base/common/event';
 import * as paths from 'vs/base/common/paths';
 import * as arrays from 'vs/base/common/arrays';
 import { localize } from 'vs/nls';
@@ -25,6 +25,7 @@ import { IProgressService2, IProgressOptions, ProgressLocation } from 'vs/platfo
 import { IWorkspaceEditingService } from 'vs/workbench/services/workspace/common/workspaceEditing';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { IResourceResolverService } from 'vs/platform/resourceResolver/common/resourceResolver';
+import { IExtensionService } from 'vs/platform/extensions/common/extensions';
 
 interface IWorkspaceFolderStateProvider {
 	(folder: Folder): WorkspaceFolderState;
@@ -208,6 +209,7 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 		@IWorkspaceEditingService private workspaceEditingService: IWorkspaceEditingService,
 		@IConfigurationService private configurationService: IConfigurationService,
 		@IResourceResolverService private resourceResolverService: IResourceResolverService,
+		@IExtensionService private extensionService: IExtensionService,
 	) {
 		this.stateProvider = folder => this.getFolderState(folder);
 
@@ -370,14 +372,20 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 		// in the Promise chain. This is a subtle flaw in the extension API at the moment, so
 		// we code defensively here by retrying on failure. The second time should succeed,
 		// because no workspace folder configuration changes should occur.
+
+		// Wait for all extensions to register resource resolvers.
+		//
+		// TODO(sqs): add resource resolver-specific activation events for extensions so that they
+		// don't all need to be always (eagerly) activated (i.e., '*')
+		await this.extensionService.onReady(); // extensions register resource resolvers
+		await this.extensionService.activateByEvent('*');
+
 		const unresolvedURIs = anyFolders.map(folder => folder instanceof URI ? folder : folder.resource);
-		await this.ready();
 		const uris = await Promise.all(unresolvedURIs.map(uri => this.resourceResolverService.resolveResource(uri)));
 		try {
 			return await this.addFoldersAsWorkspaceRootFoldersOnce(uris);
 		} catch {/* Try again */ }
 		await new Promise(resolve => setTimeout(resolve, 1000));
-		await this.ready();
 		return this.addFoldersAsWorkspaceRootFoldersOnce(uris);
 	}
 
@@ -385,32 +393,8 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 		// Do not mess with order of operations unless you know what you are doing.
 		// See caution in addFoldersAsWorkspaceRootFolders.
 		await this.workspaceEditingService.addFolders(uris.map(uri => ({ uri })));
-		await Promise.all(uris.map(resource => this.waitForRepository(resource)));
 		await this.configurationService.reloadConfiguration();
 		return uris;
-	}
-
-	// Returns a promise which is done once all workspaces folders are ready.
-	private ready(): TPromise<void> {
-		const workspace = this.contextService.getWorkspace();
-		if (!workspace || arrays.isFalsyOrEmpty(workspace.folders)) {
-			return TPromise.as(void 0);
-		}
-		return TPromise.join(workspace.folders.map(folder => this.waitForRepository(folder.uri))).then(() => { });
-	}
-
-	private waitForRepository(resource: URI): TPromise<void> {
-		const ready = () => {
-			if (this.contextService.getWorkbenchState() !== WorkbenchState.WORKSPACE) {
-				return false;
-			}
-			return !!this.scmService.getRepositoryForResource(resource);
-		};
-
-		if (ready()) {
-			return TPromise.as(void 0);
-		}
-		return toPromise(filterEvent(this.onChange, () => ready()));
 	}
 
 	public removeFoldersAsWorkspaceRootFolders(folders: IFolder[]): TPromise<void> {

@@ -217,6 +217,10 @@ class Resolver {
 	}
 
 	private async findRepositoriesWithRemote(remote: string): Promise<Repository[]> {
+		// On startup we may have not registered all the repositories for the
+		// workspace roots. So we try open every workspace root.
+		await Promise.all((workspace.workspaceFolders || []).map(f => this.model.tryOpenRepository(f.uri.fsPath, true)));
+
 		// First include repositories that are already open that have remote
 		const open = this.model.repositories
 			.filter(repo => repo.remotes.some(r => canonicalRemote(r.url) === remote))

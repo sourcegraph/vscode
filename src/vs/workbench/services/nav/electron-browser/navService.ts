@@ -146,12 +146,6 @@ export class NavService extends Disposable implements INavService {
 			return Promise.resolve(void 0);
 		}
 
-		// Wait for all extensions to register resource resolvers.
-		//
-		// TODO(sqs): add resource resolver-specific activation events for extensions so that they
-		// don't all need to be always (eagerly) activated (i.e., '*')
-		await this.extensionService.onReady(); // extensions register resource resolvers
-		await this.extensionService.activateByEvent('*');
 		const resource = query.vcs === 'git' ? hackMassageGitCloneIntoFolderCatalog(parseGitURL(query.repo)) : URI.parse(query.repo);
 		if (!resource) {
 			return;
