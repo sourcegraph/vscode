@@ -8,8 +8,8 @@
 import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
-import { workspace, window, ProgressLocation, Uri, Disposable, OutputChannel, QuickPickOptions, Progress } from 'vscode';
-import { Git, IGitErrorData, GitErrorCodes, Repository } from './git';
+import { workspace, window, ProgressLocation, Uri, Disposable, OutputChannel, QuickPickOptions, Progress, MessageItem, QuickPickItem } from 'vscode';
+import { Git, IGitErrorData, GitErrorCodes, Repository, RefType, Ref } from './git';
 import { mkdirp, replaceVariables, uniqBy } from './util';
 import { Model } from './model';
 import * as nls from 'vscode-nls';
@@ -53,7 +53,7 @@ export class GitResourceResolver {
 				title: localize('progressTitle', "Resolving {0}@{1}", gitResource.remote, gitResource.revision || 'HEAD'),
 			}, progress => {
 				const resolver = new Resolver(this.git, this.model, this.outputChannel, progress);
-				return resolver.resolveRepository(this.parseResource(resource));
+				return resolver.resolveRepository(gitResource);
 			});
 			if (!root) {
 				this.log(localize('resolveFailed', "Failed to resolve {0}", resource.toString()));
@@ -265,7 +265,7 @@ class Resolver {
 			// Fetch if we are a ref or are missing the hash
 			const targetRef = await this.maybeFetch(repo, resource);
 			if (!targetRef) {
-				this.log(localize('missingHash', "{0} does not have {1}", repo.root, resource.revision));
+				this.log(localize('revisionNotFound', "{0} does not have {1}", repo.root, resource.revision));
 				return undefined;
 			}
 
@@ -308,11 +308,7 @@ class Resolver {
 		// run FF.
 		let targetRef: string;
 		if (!await this.headMatchesUpstream(repo, resource.revision)) {
-			const targetRefRaw = await this.maybeFetch(repo, resource);
-			if (!targetRefRaw) {
-				throw new Error(localize('missingHash', "{0} does not have {1}", repo.root, resource.revision));
-			}
-			targetRef = targetRefRaw;
+			targetRef = await this.mustFetch(repo, resource);
 		} else {
 			// maybeFetch returns FETCH_HEAD if we are fetching a branch,
 			// otherwise the commit hash. It was run in filterReposAtRevision.
@@ -320,6 +316,17 @@ class Resolver {
 		}
 
 		await repo.merge(targetRef, { ffOnly: true });
+	}
+
+	/**
+	 * Similar to maybeFetch except it throws an error if the resource can not be fetched.
+	 */
+	private async mustFetch(repo: Repository, resource: GitResourceAtRevision): Promise<string> {
+		const revision = await this.maybeFetch(repo, resource);
+		if (!revision) {
+			throw new Error(localize('revisionNotFound', "{0} does not have {1}", repo.root, resource.revision));
+		}
+		return revision;
 	}
 
 	/**
@@ -341,6 +348,7 @@ class Resolver {
 			this.log(localize('fetchRef', "Fetching {0} from {1}", resource.revision, resource.cloneURL));
 			await repo.fetch({ prune: true, repository: resource.cloneURL });
 			if (!await this.hasCommit(repo, resource.revision)) {
+				this.log(localize('revisionNotFound', "{0} does not have {1}", repo.root, resource.revision));
 				return undefined;
 			}
 		}
@@ -426,9 +434,30 @@ class Resolver {
 		// resource.revision even exists in its remotes.
 		// TODO(keegan) Run fetch on every repo before presenting options to the
 		// user to stashAndCheckout.
-		const targetRef = await this.maybeFetch(repo, resource);
+		let targetRef = await this.maybeFetch(repo, resource);
 		if (!targetRef) {
-			throw new Error(localize('missingHash', "{0} does not have {1}", repo.root, resource.revision));
+			// We couldn't fetch the ref, which means that it was probably deleted.
+			// Ask the user if they wish to continue resolving the resource in another
+			// branch or cancel the resolution process.
+			const chooseBranch: MessageItem = {
+				title: localize('chooseBranch', "Choose a branch to checkout"),
+			};
+			const cancel: MessageItem = {
+				title: localize('cancel', "Cancel"),
+				isCloseAffordance: true,
+			};
+			const choice = await window.showErrorMessage(localize('revisionDoesNotExist', "Revision no longer exists: {0}", resource.revision), chooseBranch, cancel);
+			if (choice !== chooseBranch) {
+				this.log('Did not choose a branch.');
+				throw new CancelError();
+			}
+			const branch = await this.pickBranch(repo);
+			if (!branch) {
+				this.log('Did not pick a branch.');
+				throw new CancelError();
+			}
+			resource.revision = branch;
+			targetRef = await this.mustFetch(repo, resource);
 		}
 
 		// The branch might not exist locally, so create it.
@@ -472,6 +501,29 @@ class Resolver {
 		} else {
 			throw new Error('Unexpected checkout algorithm ' + checkoutAlgorithm);
 		}
+	}
+
+	/**
+	 * Prompts the user to select a remote branch.
+	 */
+	private async pickBranch(repo: Repository): Promise<string | undefined> {
+		const refs = await repo.getRefs();
+		const picks = refs.reduce((picks: QuickPickItem[], ref: Ref) => {
+			if (ref.type === RefType.RemoteHead && ref.name && ref.remote) {
+				const label = ref.name.substr(ref.remote.length + 1);
+				picks.push({
+					label,
+					description: ref.remote,
+				});
+			}
+			return picks;
+		}, []);
+		if (picks.length < 1) {
+			return picks[0].label;
+		}
+		const placeHolder = localize('chooseBranch', "Choose a branch to checkout");
+		const picked = await window.showQuickPick(picks, { placeHolder });
+		return picked && picked.label;
 	}
 
 	/**
