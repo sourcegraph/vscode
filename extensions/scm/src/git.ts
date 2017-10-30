@@ -46,7 +46,7 @@ export class GitRepository implements Repository {
 				'-M', '--no-merges',
 				'--format=%H -%nauthor %an%nauthor-date %at%nparents %P%nsummary %B%nfilename ?',
 				revision,
-			]).then(raw => {
+			], { readOnly: true }).then(raw => {
 				const log = parseGitLog(raw, 'file', undefined, false, undefined);
 				if (!log || !log.entries || !log.entries[0]) {
 					throw new Error(`error resolving commit: ${revision}`);
@@ -83,7 +83,7 @@ export class GitRepository implements Repository {
 			// doesn't easily support whitelisting -L because it has no long form with
 			// '='.
 			cacheKey = JSON.stringify(['blame', revision, path]);
-			runCommand = () => this.commandExecutor.executeCommand(['blame', '--root', '--incremental', revision.id, '--', path]);
+			runCommand = () => this.commandExecutor.executeCommand(['blame', '--root', '--incremental', revision.id, '--', path], { readOnly: true });
 		} else {
 			// For mutable documents, we only blame the lines in the given range, because
 			// we're unlikely to be able to cache blame data of the whole file for very
@@ -106,7 +106,9 @@ export class GitRepository implements Repository {
 			// Don't include full contents in cache key; the doc version suffices.
 			cacheKey = JSON.stringify((args as any[]).concat(doc.version, path, revision || ''));
 
-			const options: vscode.CommandOptions = {};
+			const options: vscode.CommandOptions = {
+				readOnly: true,
+			};
 			if (doc.isDirty) {
 				args.push('--contents', '-');
 				options.stdin = doc.getText();

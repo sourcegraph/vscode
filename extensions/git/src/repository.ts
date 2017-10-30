@@ -317,6 +317,7 @@ export enum Operation {
 	RevParse = 1 << 26,
 	WorktreeList = 1 << 27,
 	ExecuteCommand = 1 << 28,
+	ExecuteCommandReadOnly = 1 << 29,
 }
 
 // function getOperationName(operation: Operation): string {
@@ -349,6 +350,7 @@ function isReadOnly(operation: Operation): boolean {
 		case Operation.MergeBase:
 		case Operation.RevParse:
 		case Operation.CheckIgnore:
+		case Operation.ExecuteCommandReadOnly:
 			return true;
 		default:
 			return false;
@@ -574,7 +576,8 @@ export class Repository implements Disposable {
 	// }
 
 	async executeCommand(args: string[], options?: CommandOptions): Promise<string> {
-		return await this.run(Operation.ExecuteCommand, () => {
+		const op = (options && options.readOnly) ? Operation.ExecuteCommandReadOnly : Operation.ExecuteCommand;
+		return await this.run(op, () => {
 			let runOptions: any;
 			if (options) {
 				if (typeof options.stdin === 'string') {

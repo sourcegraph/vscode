@@ -354,6 +354,12 @@ declare module 'vscode' {
 	 */
 	export interface CommandOptions {
 		stdin?: string;
+
+		/**
+		 * The command does not modify any state. When true the Command executor
+		 * does not need to re-check SCM state.
+		 */
+		readOnly?: boolean;
 	}
 
 	export interface CommandExecutor {
