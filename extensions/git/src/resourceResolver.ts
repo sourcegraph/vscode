@@ -9,7 +9,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
 import { workspace, window, ProgressLocation, Uri, Disposable, OutputChannel, QuickPickOptions, Progress, MessageItem, QuickPickItem } from 'vscode';
-import { Git, IGitErrorData, GitErrorCodes, Repository, RefType, Ref } from './git';
+import { Git, IGitErrorData, GitErrorCodes, Repository as BaseRepository, RefType, Ref, Commit, Branch } from './git';
 import { mkdirp, replaceVariables, uniqBy } from './util';
 import { Model } from './model';
 import * as nls from 'vscode-nls';
@@ -253,9 +253,9 @@ class Resolver {
 				return undefined;
 			}
 		}));
-		const repos = reposRaw.filter(repo => !!repo) as Repository[];
+		const repos = reposRaw.filter(repo => !!repo) as BaseRepository[];
 		this.log(localize('findRepos', "Found {0} repositories for {1}: {2}", repos.length, remote, repos.map(r => r.root).join(' ')));
-		return repos;
+		return repos.map(r => new Repository(r));
 	}
 
 	private async filterReposAtRevision(resource: GitResourceAtRevision, repos: Repository[]): Promise<Repository[]> {
@@ -495,12 +495,12 @@ class Resolver {
 		}
 
 		if (checkoutAlgorithm === 'ff') {
-			await repo.checkout(resource.revision, []);
+			await repo.checkout(resource.revision);
 			await this.fastForward(repo, resource);
 		} else if (checkoutAlgorithm === 'detached') {
-			await repo.checkout(targetRef, []);
+			await repo.checkout(targetRef);
 		} else if (checkoutAlgorithm === 'reset') {
-			await repo.checkout(resource.revision, []);
+			await repo.checkout(resource.revision);
 			await repo.reset(targetRef, /* hard = */ true);
 		} else {
 			throw new Error('Unexpected checkout algorithm ' + checkoutAlgorithm);
@@ -547,7 +547,7 @@ class Resolver {
 			// TODO(keegan) only ignore missing commit error
 			// The branch does not exist, so create it to point to targetRef
 			const commit = await repo.getCommit(targetRef);
-			await repo.run(['branch', revision, commit.hash]);
+			await repo.branch(revision, { startPoint: commit.hash });
 		}
 	}
 
@@ -629,6 +629,86 @@ class Resolver {
 		const pathTemplate = workspace.getConfiguration('folders').get<string>('path')!;
 		return replaceVariables(pathTemplate, { folderRelativePath, homePath, separator });
 	}
+}
+
+/**
+ * Wraps a BaseRepository such that we retry operations when we encounter an
+ * index locked error.
+ */
+class Repository {
+
+	constructor(private repository: BaseRepository) { }
+
+	get root(): string {
+		return this.repository.root;
+	}
+
+	async getMergeBase(args: string[]): Promise<string[]> {
+		return await this.retryRun(() => this.repository.getMergeBase(args));
+	}
+
+	async merge(ref: string, op?: { ffOnly?: boolean }): Promise<void> {
+		await this.retryRun(() => this.repository.merge(ref, op));
+	}
+
+	async fetch(op?: { all?: boolean, prune?: boolean, repository?: string, refspec?: string }): Promise<void> {
+		await this.retryRun(() => this.repository.fetch(op));
+	}
+
+	async getCommit(ref: string): Promise<Commit> {
+		return await this.repository.getCommit(ref);
+	}
+
+	async getHEAD(): Promise<Ref> {
+		return await this.repository.getHEAD();
+	}
+
+	async getBranch(branch: string): Promise<Branch> {
+		return await this.repository.getBranch(branch);
+	}
+
+	async createStash(message?: string): Promise<void> {
+		return await this.retryRun(() => this.repository.createStash(message));
+	}
+
+	async checkout(treeish: string): Promise<void> {
+		await this.retryRun(() => this.repository.checkout(treeish, []));
+	}
+
+	async branch(branch: string, op: { startPoint: string }): Promise<void> {
+		await this.retryRun(() => this.repository.run(['branch', branch, op.startPoint]));
+	}
+
+	async getRefs(): Promise<Ref[]> {
+		return await this.repository.getRefs();
+	}
+
+	async reset(treeish: string, hard?: boolean): Promise<void> {
+		await this.retryRun(() => this.repository.reset(treeish, hard));
+	}
+
+	// retryRun is copied from repository.ts Copyright (c) Microsoft Corporation
+	private async retryRun<T>(runOperation: () => Promise<T> = () => Promise.resolve<any>(null)): Promise<T> {
+		let attempt = 0;
+
+		while (true) {
+			try {
+				attempt++;
+				return await runOperation();
+			} catch (err) {
+				if (err.gitErrorCode === GitErrorCodes.RepositoryIsLocked && attempt <= 10) {
+					// quatratic backoff
+					await timeout(Math.pow(attempt, 2) * 50);
+				} else {
+					throw err;
+				}
+			}
+		}
+	}
+}
+
+function timeout(millis: number): Promise<void> {
+	return new Promise(c => setTimeout(c, millis));
 }
 
 function hasRevision(resource: GitResource): resource is GitResourceAtRevision {
