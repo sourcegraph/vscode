@@ -720,7 +720,7 @@ export class Repository implements Disposable {
 	}
 
 	@throttle
-	async fetch(op?: { all?: boolean, prune?: boolean, repository?: string, refspec?: string, throwErr?: boolean }): Promise<void> {
+	async fetch(op?: { all?: boolean, prune?: boolean, repository?: string, refspec?: string }): Promise<void> {
 		await this.fetchNow(op);
 	}
 
