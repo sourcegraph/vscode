@@ -45,7 +45,7 @@
         },
         "scm.blame.selection": {
           "type": "boolean",
-          "default": true,
+          "default": false,
           "description": "%scm.config.blame.selection%"
         }
       }

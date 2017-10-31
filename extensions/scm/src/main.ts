@@ -12,8 +12,17 @@ import { create as createLogger } from './log';
 import { dispose as disposeRepositories } from './repositoryMap';
 
 export function activate(context: vscode.ExtensionContext): void {
-	context.subscriptions.push(createLogger());
 
+	const config = vscode.workspace.getConfiguration('scm');
+	const blameCursorEnabled = !!config.get<boolean>('blame.cursor');
+	const blameSelectionEnabled = !!config.get<boolean>('blame.selection');
+	const blameFileEnabled = !!config.get<boolean>('blame.file');
+
+	if (!blameCursorEnabled && !blameSelectionEnabled && !blameFileEnabled) {
+		return;
+	}
+
+	context.subscriptions.push(createLogger());
 	context.subscriptions.push(createBlameStatusBarItem());
 	context.subscriptions.push(createBlameLine());
 	context.subscriptions.push(createBlameFile());
