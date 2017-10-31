@@ -81,8 +81,8 @@ export class ExtensionTipsService extends Disposable implements IExtensionTipsSe
 
 	getAllRecommendationsWithReason(): { [id: string]: string; } {
 		let output: { [id: string]: string; } = Object.create(null);
-		Object.keys(this._fileBasedRecommendations).forEach(x => output[x.toLowerCase()] = localize('fileBasedRecommendation', "Based on your recent file history, we recommend this extension."));
-		this._allWorkspaceRecommendedExtensions.forEach(x => output[x.toLowerCase()] = localize('workspaceRecommendation', "Your team recommends this extension."));
+		Object.keys(this._fileBasedRecommendations).forEach(x => output[x.toLowerCase()] = localize('fileBasedRecommendation', "This extension is recommended based on the files you recently opened."));
+		this._allWorkspaceRecommendedExtensions.forEach(x => output[x.toLowerCase()] = localize('workspaceRecommendation', "This extension is recommended by users of the current workspace."));
 		return output;
 	}
 
@@ -293,7 +293,7 @@ export class ExtensionTipsService extends Disposable implements IExtensionTipsSe
 									*/
 									this.telemetryService.publicLog('extensionRecommendations:popup', { userReaction: 'show', extensionId: name });
 									return recommendationsAction.run();
-								case 1: this.importantRecommendationsIgnoreList.push(id);
+								case 2: this.importantRecommendationsIgnoreList.push(id);
 									this.storageService.store(
 										'extensionsAssistant/importantRecommendationsIgnore',
 										JSON.stringify(this.importantRecommendationsIgnoreList),
@@ -307,7 +307,7 @@ export class ExtensionTipsService extends Disposable implements IExtensionTipsSe
 									*/
 									this.telemetryService.publicLog('extensionRecommendations:popup', { userReaction: 'neverShowAgain', extensionId: name });
 									return this.ignoreExtensionRecommendations();
-								case 2:
+								case 3:
 									/* __GDPR__
 										"extensionRecommendations:popup" : {
 											"userReaction" : { "classification": "SystemMetaData", "purpose": "FeatureInsight" },

@@ -366,7 +366,9 @@ export class ViewsViewlet extends PanelViewlet {
 
 			return result;
 
-		}, [[], [], unregisteredViews]);
+		}, [[], [], []]);
+
+		toRemove.push(...unregisteredViews.filter(viewDescriptor => this.isCurrentlyVisible(viewDescriptor)));
 
 		const toCreate: ViewsViewletPanel[] = [];
 
@@ -457,7 +459,13 @@ export class ViewsViewlet extends PanelViewlet {
 		this.viewsViewletPanels.splice(toIndex, 0, panel);
 
 		for (let order = 0; order < this.viewsViewletPanels.length; order++) {
-			this.viewsStates.get(this.viewsViewletPanels[order].id).order = order;
+			const view = this.viewsStates.get(this.viewsViewletPanels[order].id);
+
+			if (!view) {
+				continue;
+			}
+
+			view.order = order;
 		}
 	}
 

@@ -20,7 +20,7 @@ import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
 import { IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
 import { ICommandService } from 'vs/platform/commands/common/commands';
-import { append, $, toggleClass, addClass } from 'vs/base/browser/dom';
+import { append, $, toggleClass } from 'vs/base/browser/dom';
 import { PagedList } from 'vs/base/browser/ui/list/listPaging';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { Delegate, Renderer } from 'vs/workbench/parts/extensions/browser/extensionsList';
@@ -47,15 +47,15 @@ export class ExtensionsListView extends ViewsViewletPanel {
 	private messageBox: HTMLElement;
 	private extensionsList: HTMLElement;
 	private badge: CountBadge;
-	private listActionBar: HTMLElement;
+	protected badgeContainer: HTMLElement;
 	private list: PagedList<IExtension>;
 
 	constructor(
 		private options: IViewletViewOptions,
-		@IMessageService private messageService: IMessageService,
+		@IMessageService protected messageService: IMessageService,
 		@IKeybindingService keybindingService: IKeybindingService,
 		@IContextMenuService contextMenuService: IContextMenuService,
-		@IInstantiationService private instantiationService: IInstantiationService,
+		@IInstantiationService protected instantiationService: IInstantiationService,
 		@IListService private listService: IListService,
 		@IThemeService private themeService: IThemeService,
 		@IContextKeyService private contextKeyService: IContextKeyService,
@@ -76,23 +76,8 @@ export class ExtensionsListView extends ViewsViewletPanel {
 		const titleDiv = append(container, $('div.title'));
 		append(titleDiv, $('span')).textContent = this.options.name;
 
-		this.listActionBar = append(container, $('.list-actionbar-container'));
-		const actionbar = new ActionBar(this.listActionBar, {
-			animated: false
-		});
-		actionbar.addListener(EventType.RUN, ({ error }) => error && this.messageService.show(Severity.Error, error));
-		const installAllAction = this.instantiationService.createInstance(InstallWorkspaceRecommendedExtensionsAction, InstallWorkspaceRecommendedExtensionsAction.ID, InstallWorkspaceRecommendedExtensionsAction.LABEL);
-		const configureWorkspaceFolderAction = this.instantiationService.createInstance(ConfigureWorkspaceFolderRecommendedExtensionsAction, ConfigureWorkspaceFolderRecommendedExtensionsAction.ID, ConfigureWorkspaceFolderRecommendedExtensionsAction.LABEL);
-
-		installAllAction.class = 'octicon octicon-cloud-download';
-		configureWorkspaceFolderAction.class = 'octicon octicon-pencil';
-
-		actionbar.push([installAllAction], { icon: true, label: false });
-		actionbar.push([configureWorkspaceFolderAction], { icon: true, label: false });
-
-		this.disposables.push(actionbar);
-
-		this.badge = new CountBadge(append(container, $('.count-badge-wrapper')));
+		this.badgeContainer = append(container, $('.count-badge-wrapper'));
+		this.badge = new CountBadge(this.badgeContainer);
 		this.disposables.push(attachBadgeStyler(this.badge, this.themeService));
 	}
 
@@ -130,15 +115,8 @@ export class ExtensionsListView extends ViewsViewletPanel {
 	}
 
 	async show(query: string): TPromise<IPagedModel<IExtension>> {
-		addClass(this.listActionBar, 'hidden');
 		const model = await this.query(query);
 		this.setModel(model);
-
-		if (ExtensionsListView.isWorkspaceRecommendedExtensionsQuery(query)) {
-			this.setExpanded(model.length > 0);
-			toggleClass(this.listActionBar, 'hidden', model.length === 0);
-		}
-
 		return model;
 	}
 
@@ -210,6 +188,15 @@ export class ExtensionsListView extends ViewsViewletPanel {
 				.filter(e => e.type === LocalExtensionType.User && e.name.toLowerCase().indexOf(value) > -1);
 
 			return new PagedModel(result);
+		}
+
+		const idMatch = /@id:([a-z0-9][a-z0-9\-]*\.[a-z0-9][a-z0-9\-]*)/.exec(value);
+
+		if (idMatch) {
+			const name = idMatch[1];
+
+			return this.extensionsWorkbenchService.queryGallery({ names: [name] })
+				.then(pager => new PagedModel(pager));
 		}
 
 		if (/@outdated/i.test(value)) {
@@ -396,8 +383,7 @@ export class ExtensionsListView extends ViewsViewletPanel {
 		const value = query.value.replace(/@recommended:workspace/g, '').trim().toLowerCase();
 		return this.tipsService.getWorkspaceRecommendations()
 			.then(recommendations => {
-				const installed = this.extensionsWorkbenchService.local.map(x => x.id.toLowerCase());
-				const names = recommendations.filter(name => name.toLowerCase().indexOf(value) > -1 && installed.indexOf(name.toLowerCase()) === -1);
+				const names = recommendations.filter(name => name.toLowerCase().indexOf(value) > -1);
 				/* __GDPR__
 			"extensionWorkspaceRecommendations:open" : {
 				"count" : { "classification": "SystemMetaData", "purpose": "FeatureInsight" }
@@ -576,8 +562,32 @@ export class RecommendedExtensionsView extends ExtensionsListView {
 
 export class WorkspaceRecommendedExtensionsView extends ExtensionsListView {
 
+	renderHeader(container: HTMLElement): void {
+		super.renderHeader(container);
+
+		const listActionBar = $('.list-actionbar-container');
+		container.insertBefore(listActionBar, this.badgeContainer);
+
+		const actionbar = new ActionBar(listActionBar, {
+			animated: false
+		});
+		actionbar.addListener(EventType.RUN, ({ error }) => error && this.messageService.show(Severity.Error, error));
+		const installAllAction = this.instantiationService.createInstance(InstallWorkspaceRecommendedExtensionsAction, InstallWorkspaceRecommendedExtensionsAction.ID, InstallWorkspaceRecommendedExtensionsAction.LABEL);
+		const configureWorkspaceFolderAction = this.instantiationService.createInstance(ConfigureWorkspaceFolderRecommendedExtensionsAction, ConfigureWorkspaceFolderRecommendedExtensionsAction.ID, ConfigureWorkspaceFolderRecommendedExtensionsAction.LABEL);
+
+		installAllAction.class = 'octicon octicon-cloud-download';
+		configureWorkspaceFolderAction.class = 'octicon octicon-pencil';
+
+		actionbar.push([installAllAction], { icon: true, label: false });
+		actionbar.push([configureWorkspaceFolderAction], { icon: true, label: false });
+
+		this.disposables.push(actionbar);
+	}
+
 	async show(query: string): TPromise<IPagedModel<IExtension>> {
-		return super.show('@recommended:workspace');
+		let model = await super.show('@recommended:workspace');
+		this.setExpanded(model.length > 0);
+		return model;
 	}
 
 	showRecommendedLabel() {

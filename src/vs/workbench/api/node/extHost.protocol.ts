@@ -336,6 +336,8 @@ export interface MainThreadWorkspaceShape extends IDisposable {
 
 	$registerResourceResolutionProvider(handle: number, scheme: string): void;
 	$registerFolderCatalogProvider(handle: number, root: URI): void;
+	$addFolder(extensioName: string, uri: URI, name?: string): Thenable<boolean>;
+	$removeFolder(extensioName: string, uri: URI): Thenable<boolean>;
 }
 
 export interface MainThreadFileSystemShape extends IDisposable {
