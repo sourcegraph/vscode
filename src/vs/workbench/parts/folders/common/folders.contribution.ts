@@ -27,5 +27,11 @@ configurationRegistry.registerConfiguration({
 \${folderRelativePath}: e.g. github.com/myUser/myFolder (derived from the clone URL for a repository)
 \${separator}: the path separator for the OS (slash on macOS and Linux, backslash on Windows)`)
 		},
+		'folders.neverPromptInit': {
+			'type': 'boolean',
+			'default': false,
+			'description': nls.localize({ comment: ['This is the description for a setting. Values surrounded by curly braces are not to be translated.'], key: 'neverPromptInit' },
+				"If true, you will never be automatically prompted to run a folder's 'init' task when adding it to your workspace.")
+		},
 	}
 });

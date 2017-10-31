@@ -116,3 +116,10 @@ export interface IFoldersWorkbenchService {
 	 */
 	getWorkspaceFolderForCatalogFolder(catalogFolder: IFolder): URI | undefined;
 }
+
+export const FoldersConfigurationKey = 'folders';
+
+export interface IFolderConfiguration {
+	path: string;
+	neverPromptInit: boolean;
+}

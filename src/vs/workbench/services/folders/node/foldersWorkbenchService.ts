@@ -14,18 +14,21 @@ import { assign } from 'vs/base/common/objects';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { IDisposable, dispose, combinedDisposable } from 'vs/base/common/lifecycle';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
-import { IMessageService } from 'vs/platform/message/common/message';
+import { IMessageService, Severity, CloseAction } from 'vs/platform/message/common/message';
 import URI from 'vs/base/common/uri';
-import { IFolder, ISearchQuery, ISearchComplete, ISearchStats, WorkspaceFolderState, FolderOperation, IFoldersWorkbenchService } from 'vs/workbench/services/folders/common/folders';
-import { IWorkspaceContextService, WorkbenchState } from 'vs/platform/workspace/common/workspace';
+import { IFolder, ISearchQuery, ISearchComplete, ISearchStats, WorkspaceFolderState, FolderOperation, IFoldersWorkbenchService, IFolderConfiguration, FoldersConfigurationKey } from 'vs/workbench/services/folders/common/folders';
+import { IWorkspaceContextService, WorkbenchState, IWorkspaceFoldersChangeEvent, IWorkspaceFolder } from 'vs/platform/workspace/common/workspace';
 import { IEditorGroupService } from 'vs/workbench/services/group/common/groupService';
 import { IFolderCatalogService, ICatalogFolder, FolderGenericIconClass } from 'vs/platform/folders/common/folderCatalog';
 import { ISCMService, ISCMRepository } from 'vs/workbench/services/scm/common/scm';
 import { IProgressService2, IProgressOptions, ProgressLocation } from 'vs/platform/progress/common/progress';
 import { IWorkspaceEditingService } from 'vs/workbench/services/workspace/common/workspaceEditing';
-import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
+import { IConfigurationService, ConfigurationTarget } from 'vs/platform/configuration/common/configuration';
 import { IResourceResolverService } from 'vs/platform/resourceResolver/common/resourceResolver';
 import { IExtensionService } from 'vs/platform/extensions/common/extensions';
+// tslint:disable-next-line:import-patterns
+import { ITaskService } from 'vs/workbench/parts/tasks/common/taskService';
+import { Action } from 'vs/base/common/actions';
 
 interface IWorkspaceFolderStateProvider {
 	(folder: Folder): WorkspaceFolderState;
@@ -210,6 +213,7 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 		@IConfigurationService private configurationService: IConfigurationService,
 		@IResourceResolverService private resourceResolverService: IResourceResolverService,
 		@IExtensionService private extensionService: IExtensionService,
+		@ITaskService private taskService: ITaskService,
 	) {
 		this.stateProvider = folder => this.getFolderState(folder);
 
@@ -219,7 +223,7 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 	private registerListeners(): void {
 		// Fire onChange even for folder operations that aren't monitored by
 		// monitorFolderOperation.
-		this.disposables.push(this.contextService.onDidChangeWorkspaceFolders(() => this._onChange.fire()));
+		this.disposables.push(this.contextService.onDidChangeWorkspaceFolders(e => this.handleWorkspaceFoldersChanged(e)));
 		this.disposables.push(this.scmService.onDidAddRepository(repository => this.onDidAddRepository(repository)));
 		this.disposables.push(this.scmService.onDidChangeRepository(() => this._onChange.fire()));
 		for (const repository of this.scmService.repositories) {
@@ -487,6 +491,54 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 		const eventName = toTelemetryEventName(active.operation);
 
 		this.telemetryService.publicLog(eventName, assign(data, { success, duration }));
+	}
+
+	private async handleWorkspaceFoldersChanged(e: IWorkspaceFoldersChangeEvent): Promise<void> {
+		await Promise.all(e.added.map(f => this.promptForInitTask(f)));
+		this._onChange.fire();
+	}
+
+	private async promptForInitTask(folder: IWorkspaceFolder): Promise<void> {
+		// Adding a folder to a workspace can result in configuration changes that
+		// cause the extension host to be restarted. This results in all outstanding
+		// promises that communicate with the extension host to be killed / cancelled.
+		// taskService communicates with the extension host, so there is a risk
+		// that its promise is cancelled if the host restarts. We try prompting twice
+		// to handle this case.
+		// See the comment in addFoldersAsWorkspaceRootFolders for more context.
+		try {
+			return await this.doPromptForInitTask(folder);
+		} catch { /* Try again after a second*/ }
+
+		await new Promise(resolve => setTimeout(resolve, 1000));
+		await this.doPromptForInitTask(folder);
+	}
+
+	private async doPromptForInitTask(folder: IWorkspaceFolder): Promise<void> {
+		const initTask = await this.taskService.getTask(folder, 'init');
+
+		if (!initTask) {
+			return;
+		}
+
+		const neverPromptInit = this.configurationService.getConfiguration<IFolderConfiguration>(FoldersConfigurationKey).neverPromptInit;
+		if (neverPromptInit) {
+			return;
+		}
+
+		const message = localize('folder.promptInit', "Enhance code intelligence by running the init task configured in {0}?", folder.name);
+		this.messageService.show(Severity.Info, {
+			message,
+			actions: [
+				new Action('folder.prompt.run.id', localize('folder.promptInit.run.label', "Run"), null, true, () => {
+					return this.taskService.run(initTask);
+				}),
+				new Action('folder.prompt.never.id', localize('folder.promptInit.never.label', "Never"), null, true, () => {
+					return this.configurationService.updateValue(`${FoldersConfigurationKey}.neverPromptInit`, true, ConfigurationTarget.USER);
+				}),
+				CloseAction,
+			]
+		});
 	}
 
 	dispose(): void {

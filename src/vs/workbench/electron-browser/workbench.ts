@@ -633,9 +633,6 @@ export class Workbench implements IPartService {
 		// Folder Catalog Service
 		serviceCollection.set(IFolderCatalogService, new SyncDescriptor(FolderCatalogService));
 
-		// Folders Service
-		serviceCollection.set(IFoldersWorkbenchService, new SyncDescriptor(FoldersWorkbenchService));
-
 		// History
 		serviceCollection.set(IHistoryService, new SyncDescriptor(HistoryService));
 
@@ -683,6 +680,15 @@ export class Workbench implements IPartService {
 		this.toShutdown.push(this.quickOpen);
 		serviceCollection.set(IQuickOpenService, this.quickOpen);
 
+		// Contributed services
+		const contributedServices = getServices();
+		for (let contributedService of contributedServices) {
+			serviceCollection.set(contributedService.id, contributedService.descriptor);
+		}
+
+		// Folders Service
+		serviceCollection.set(IFoldersWorkbenchService, new SyncDescriptor(FoldersWorkbenchService));
+
 		// Nav Service
 		this.navService = this.instantiationService.createInstance(NavService);
 		serviceCollection.set(INavService, this.navService);
@@ -692,12 +698,6 @@ export class Workbench implements IPartService {
 		this.toDispose.push(this.navbarPart);
 		this.toShutdown.push(this.navbarPart);
 		serviceCollection.set(INavBarService, this.navbarPart);
-
-		// Contributed services
-		const contributedServices = getServices();
-		for (let contributedService of contributedServices) {
-			serviceCollection.set(contributedService.id, contributedService.descriptor);
-		}
 
 		// Set the some services to registries that have been created eagerly
 		Registry.as<IActionBarRegistry>(ActionBarExtensions.Actionbar).setInstantiationService(this.instantiationService);
