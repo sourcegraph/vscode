@@ -169,6 +169,8 @@ const validateSetting = 'validate.enable';
 class LanguageProvider {
 
 	private syntaxDiagnostics: ObjectMap<Diagnostic[]>;
+	private semanticDiagnostics: ObjectMap<Diagnostic[]>;
+
 	private readonly currentDiagnostics: DiagnosticCollection;
 	private readonly bufferSyncSupport: BufferSyncSupport;
 	private readonly formattingOptionsManager: FormattingConfigurationManager;
@@ -194,6 +196,7 @@ class LanguageProvider {
 			}
 		}, this._validate);
 		this.syntaxDiagnostics = Object.create(null);
+		this.semanticDiagnostics = Object.create(null);
 		this.currentDiagnostics = languages.createDiagnosticCollection(description.id);
 
 		this.typingsStatus = new TypingsStatus(client);
@@ -354,6 +357,7 @@ class LanguageProvider {
 			this.triggerAllDiagnostics();
 		} else {
 			this.syntaxDiagnostics = Object.create(null);
+			this.semanticDiagnostics = Object.create(null);
 			this.currentDiagnostics.clear();
 		}
 	}
@@ -361,6 +365,7 @@ class LanguageProvider {
 	public reInitialize(): void {
 		this.currentDiagnostics.clear();
 		this.syntaxDiagnostics = Object.create(null);
+		this.semanticDiagnostics = Object.create(null);
 		this.bufferSyncSupport.reOpenDocuments();
 		this.bufferSyncSupport.requestAllDiagnostics();
 		this.formattingOptionsManager.reset();
@@ -394,21 +399,22 @@ class LanguageProvider {
 		this.bufferSyncSupport.requestAllDiagnostics();
 	}
 
-	public syntaxDiagnosticsReceived(file: string, diagnostics: Diagnostic[]): void {
-		if (this._validate) {
-			this.syntaxDiagnostics[file] = diagnostics;
+	public syntaxDiagnosticsReceived(file: string, syntaxDiagnostics: Diagnostic[]): void {
+		if (!this._validate) {
+			return;
 		}
+		this.syntaxDiagnostics[file] = syntaxDiagnostics;
+		const semanticDianostics = this.semanticDiagnostics[file] || [];
+		this.currentDiagnostics.set(this.client.asUrl(file), semanticDianostics.concat(syntaxDiagnostics));
 	}
 
-	public semanticDiagnosticsReceived(file: string, diagnostics: Diagnostic[]): void {
-		if (this._validate) {
-			const syntaxMarkers = this.syntaxDiagnostics[file];
-			if (syntaxMarkers) {
-				delete this.syntaxDiagnostics[file];
-				diagnostics = syntaxMarkers.concat(diagnostics);
-			}
-			this.currentDiagnostics.set(this.client.asUrl(file), diagnostics);
+	public semanticDiagnosticsReceived(file: string, semanticDiagnostics: Diagnostic[]): void {
+		if (!this._validate) {
+			return;
 		}
+		this.semanticDiagnostics[file] = semanticDiagnostics;
+		const syntaxDiagnostics = this.syntaxDiagnostics[file] || [];
+		this.currentDiagnostics.set(this.client.asUrl(file), semanticDiagnostics.concat(syntaxDiagnostics));
 	}
 
 	public configFileDiagnosticsReceived(file: string, diagnostics: Diagnostic[]): void {

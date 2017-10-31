@@ -1060,7 +1060,8 @@ export class FileDragAndDrop extends SimpleFileResourceDragAndDrop {
 				checkbox: {
 					label: nls.localize('doNotAskAgain', "Do not ask me again")
 				},
-				type: 'question'
+				type: 'question',
+				primaryButton: nls.localize({ key: 'moveButtonLabel', comment: ['&& denotes a mnemonic'] }, "&&Move")
 			});
 		} else {
 			confirmPromise = TPromise.as({ confirmed: true } as IConfirmationResult);
@@ -1070,7 +1071,7 @@ export class FileDragAndDrop extends SimpleFileResourceDragAndDrop {
 
 			// Check for confirmation checkbox
 			let updateConfirmSettingsPromise: TPromise<void> = TPromise.as(void 0);
-			if (confirmation.checkboxChecked === true) {
+			if (confirmation.confirmed && confirmation.checkboxChecked === true) {
 				updateConfirmSettingsPromise = this.configurationService.updateValue(FileDragAndDrop.CONFIRM_DND_SETTING_KEY, false, ConfigurationTarget.USER);
 			}
 

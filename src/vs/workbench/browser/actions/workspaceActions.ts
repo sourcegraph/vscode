@@ -20,6 +20,7 @@ import { IMessageService, Severity } from 'vs/platform/message/common/message';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 import { isLinux } from 'vs/base/common/platform';
 import { dirname, basename } from 'vs/base/common/paths';
+import * as resources from 'vs/base/common/resources';
 import { mnemonicButtonLabel, getPathLabel } from 'vs/base/common/labels';
 import { isParent, FileKind } from 'vs/platform/files/common/files';
 import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
@@ -527,7 +528,7 @@ CommandsRegistry.registerCommand(PICK_WORKSPACE_FOLDER_COMMAND, function (access
 	const folderPicks = folders.map(folder => {
 		return {
 			label: folder.name,
-			description: getPathLabel(dirname(folder.uri.fsPath), void 0, environmentService),
+			description: getPathLabel(resources.dirname(folder.uri), void 0, environmentService),
 			folder,
 			resource: folder.uri,
 			fileKind: FileKind.ROOT_FOLDER

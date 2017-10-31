@@ -116,7 +116,6 @@ class RequestQueue {
 	}
 }
 
-
 export default class TypeScriptServiceClient implements ITypescriptServiceClient {
 	private static readonly WALK_THROUGH_SNIPPET_SCHEME = 'walkThroughSnippet';
 	private static readonly WALK_THROUGH_SNIPPET_SCHEME_COLON = `${TypeScriptServiceClient.WALK_THROUGH_SNIPPET_SCHEME}:`;
@@ -148,8 +147,15 @@ export default class TypeScriptServiceClient implements ITypescriptServiceClient
 	private readonly _onDidEndInstallTypings = new EventEmitter<Proto.EndInstallTypesEventBody>();
 	private readonly _onTypesInstallerInitializationFailed = new EventEmitter<Proto.TypesInstallerInitializationFailedEventBody>();
 
-	private _apiVersion: API;
 	private telemetryReporter: TelemetryReporter;
+	/**
+	 * API version obtained from the version picker after checking the corresponding path exists.
+	 */
+	private _apiVersion: API;
+	/**
+	 * Version reported by currently-running tsserver.
+	 */
+	private _tsserverVersion: string | undefined;
 
 	private readonly disposables: Disposable[] = [];
 
@@ -178,6 +184,7 @@ export default class TypeScriptServiceClient implements ITypescriptServiceClient
 		this.versionPicker = new TypeScriptVersionPicker(this.versionProvider, this.workspaceState);
 
 		this._apiVersion = API.defaultVersion;
+		this._tsserverVersion = undefined;
 		this.tracer = new Tracer(this.logger);
 
 		workspace.onDidChangeConfiguration(() => {
@@ -199,7 +206,7 @@ export default class TypeScriptServiceClient implements ITypescriptServiceClient
 				}
 			}
 		}, this, this.disposables);
-		this.telemetryReporter = new TelemetryReporter();
+		this.telemetryReporter = new TelemetryReporter(() => this._tsserverVersion || this._apiVersion.versionString);
 		this.disposables.push(this.telemetryReporter);
 		this.startService();
 	}
@@ -237,6 +244,7 @@ export default class TypeScriptServiceClient implements ITypescriptServiceClient
 					this.info('Killing TS Server');
 					this.isRestarting = true;
 					cp.kill();
+					this.resetClientVersion();
 				}
 			}).then(start);
 		} else {
@@ -337,6 +345,7 @@ export default class TypeScriptServiceClient implements ITypescriptServiceClient
 							}
 						*/
 						this.logTelemetry('error', { message: err.message });
+						this.resetClientVersion();
 						return;
 					}
 
@@ -497,7 +506,10 @@ export default class TypeScriptServiceClient implements ITypescriptServiceClient
 		this.tsServerLogFile = null;
 		this.callbacks.destroy(new Error('Service died.'));
 		this.callbacks = new CallbackMap();
-		if (restart) {
+		if (!restart) {
+			this.resetClientVersion();
+		}
+		else {
 			const diff = Date.now() - this.lastStart;
 			this.numberRestarts++;
 			let startService = true;
@@ -518,6 +530,7 @@ export default class TypeScriptServiceClient implements ITypescriptServiceClient
 						"serviceExited" : {}
 					*/
 					this.logTelemetry('serviceExited');
+					this.resetClientVersion();
 				} else if (diff < 60 * 1000 /* 1 Minutes */) {
 					this.lastStart = Date.now();
 					prompt = window.showWarningMessage<MyMessageItem>(
@@ -808,6 +821,10 @@ export default class TypeScriptServiceClient implements ITypescriptServiceClient
 				}
 				break;
 		}
+		if (telemetryData.telemetryEventName === 'projectInfo') {
+			this._tsserverVersion = properties['version'];
+		}
+
 		/* __GDPR__
 			"typingsInstalled" : {
 				"installedPackages" : { "classification": "PublicNonPersonalData", "purpose": "FeatureInsight" },
@@ -882,6 +899,11 @@ export default class TypeScriptServiceClient implements ITypescriptServiceClient
 			}
 		}
 		return args;
+	}
+
+	private resetClientVersion() {
+		this._apiVersion = API.defaultVersion;
+		this._tsserverVersion = undefined;
 	}
 }
 
