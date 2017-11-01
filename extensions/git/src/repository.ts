@@ -198,6 +198,7 @@ export class Resource implements SourceControlResourceState {
 			case Status.INDEX_MODIFIED:
 			case Status.MODIFIED:
 				return 'M';
+			case Status.ADDED:
 			case Status.INDEX_ADDED:
 				return 'A';
 			case Status.INDEX_DELETED:
@@ -209,6 +210,7 @@ export class Resource implements SourceControlResourceState {
 				return 'U';
 			case Status.IGNORED:
 				return 'I';
+			case Status.COPIED:
 			case Status.INDEX_COPIED:
 			case Status.BOTH_DELETED:
 			case Status.ADDED_BY_US:
@@ -231,12 +233,14 @@ export class Resource implements SourceControlResourceState {
 			case Status.INDEX_DELETED:
 			case Status.DELETED:
 				return new ThemeColor('git.deletedForeground');
+			case Status.ADDED:
 			case Status.INDEX_ADDED: // todo@joh - special color?
 			case Status.INDEX_RENAMED: // todo@joh - special color?
 			case Status.UNTRACKED:
 				return new ThemeColor('git.untrackedForeground');
 			case Status.IGNORED:
 				return new ThemeColor('git.ignoredForeground');
+			case Status.COPIED:
 			case Status.INDEX_COPIED:
 			case Status.BOTH_DELETED:
 			case Status.ADDED_BY_US:
@@ -258,6 +262,7 @@ export class Resource implements SourceControlResourceState {
 				return 2;
 			case Status.IGNORED:
 				return 3;
+			case Status.COPIED:
 			case Status.INDEX_COPIED:
 			case Status.BOTH_DELETED:
 			case Status.ADDED_BY_US:
