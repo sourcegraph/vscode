@@ -245,9 +245,9 @@ export class ExtHostSourceControlResourceGroup implements vscode.SourceControlRe
 					const strikeThrough = r.decorations && !!r.decorations.strikeThrough;
 					const faded = r.decorations && !!r.decorations.faded;
 
-					const source = r.decorations && r.decorations.source;
-					const letter = r.decorations && r.decorations.letter;
-					const color = r.decorations && r.decorations.color;
+					const source = r.decorations && r.decorations.source || undefined;
+					const letter = r.decorations && r.decorations.letter || undefined;
+					const color = r.decorations && r.decorations.color || undefined;
 
 					return [handle, sourceUri, icons, tooltip, strikeThrough, faded, source, letter, color] as SCMRawResource;
 				});
