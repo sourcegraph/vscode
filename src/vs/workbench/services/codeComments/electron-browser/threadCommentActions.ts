@@ -67,16 +67,21 @@ export class ShareContextConfigurationAction extends Action {
 	public async runAsync(): TPromise<any> {
 		const { remote } = this.configurationService.getConfiguration<IRemoteConfiguration>();
 		if (remote && remote.shareContext) {
+			// If the user has already enabled shareContext then we are good to go.
 			return true;
 		}
 
 		const { sharing } = this.configurationService.getConfiguration<ISharingConfiguration>();
-		if (sharing && sharing.stableBranches) {
+		if (!this.isShareLink && sharing && sharing.stableBranches) {
 			if (sharing.stableBranches.indexOf(this.branch) !== -1) {
+				// If this is a code comment, and if the user's current branch is configured to be a
+				// "stable" branch, then we use there current shareContext setting (and don't require it to be true).
 				return true;
 			}
 		}
 
+		// In all other cases, we require the user to enable remote.shareContext
+		// before continuing the comment or share action.
 		const message = this.isShareLink ?
 			localize('config.remote.shareContextLink', "Creating a shared snippet uploads the selected code (plus a few surrounding lines) to {0}, and you will be given a secret URL. Allow?", remote.endpoint) :
 			localize('config.remote.shareContextComment', "Commenting on branches requires uploading the selected code (plus a few surrounding lines) to preserve position. Allow sending this to {0}?", remote.endpoint);
