@@ -49,8 +49,9 @@ import { basename } from 'vs/base/common/paths';
 import { MenuId, IMenuService, IMenu, MenuItemAction } from 'vs/platform/actions/common/actions';
 import { fillInActions, MenuItemActionItem } from 'vs/platform/actions/browser/menuItemActionItem';
 import { IChange, ICommonCodeEditor, IEditorModel, ScrollType, IEditorContribution, OverviewRulerLane, IModel } from 'vs/editor/common/editorCommon';
-import { sortedDiff, Splice } from 'vs/base/common/arrays';
+import { sortedDiff, Splice, firstIndex } from 'vs/base/common/arrays';
 import { IMarginData } from 'vs/editor/browser/controller/mouseTarget';
+import { ICodeEditorService } from 'vs/editor/common/services/codeEditorService';
 
 // TODO@Joao
 // Need to subclass MenuItemActionItem in order to respect
@@ -99,18 +100,19 @@ function getChangeHeight(change: IChange): number {
 
 function getModifiedEndLineNumber(change: IChange): number {
 	if (change.modifiedEndLineNumber === 0) {
-		return change.modifiedStartLineNumber;
+		return change.modifiedStartLineNumber === 0 ? 1 : change.modifiedStartLineNumber;
 	} else {
 		return change.modifiedEndLineNumber;
 	}
 }
 
-function getModifiedMiddleLineNumber(change: IChange): number {
-	if (change.modifiedEndLineNumber === 0) {
-		return change.modifiedStartLineNumber;
-	} else {
-		return Math.round((change.modifiedEndLineNumber + change.modifiedStartLineNumber) / 2);
+function lineIntersectsChange(lineNumber: number, change: IChange): boolean {
+	// deletion at the beginning of the file
+	if (lineNumber === 1 && change.modifiedStartLineNumber === 0 && change.modifiedEndLineNumber === 0) {
+		return true;
 	}
+
+	return lineNumber >= change.modifiedStartLineNumber && lineNumber <= (change.modifiedEndLineNumber || change.modifiedStartLineNumber);
 }
 
 class UIEditorAction extends Action {
@@ -165,6 +167,18 @@ function getChangeTypeColor(theme: ITheme, changeType: ChangeType): Color {
 	}
 }
 
+function getOuterEditorFromDiffEditor(accessor: ServicesAccessor): ICommonCodeEditor {
+	const diffEditors = accessor.get(ICodeEditorService).listDiffEditors();
+
+	for (const diffEditor of diffEditors) {
+		if (diffEditor.isFocused() && diffEditor instanceof EmbeddedDiffEditorWidget) {
+			return diffEditor.getParentEditor();
+		}
+	}
+
+	return getOuterEditor(accessor);
+}
+
 class DirtyDiffWidget extends PeekViewWidget {
 
 	private diffEditor: EmbeddedDiffEditorWidget;
@@ -172,7 +186,7 @@ class DirtyDiffWidget extends PeekViewWidget {
 	private menu: IMenu;
 	private index: number;
 	private change: IChange;
-	private didLayout = false;
+	private height: number | undefined = undefined;
 	private contextKeyService: IContextKeyService;
 
 	constructor(
@@ -221,7 +235,11 @@ class DirtyDiffWidget extends PeekViewWidget {
 		this.diffEditor.setModel(this.model);
 
 		const position = new Position(getModifiedEndLineNumber(change), 1);
-		const height = getChangeHeight(change) + /* padding */ 8;
+
+		const lineHeight = this.editor.getConfiguration().lineHeight;
+		const editorHeight = this.editor.getLayoutInfo().height;
+		const editorHeightInLines = Math.floor(editorHeight / lineHeight);
+		const height = Math.min(getChangeHeight(change) + /* padding */ 8, Math.floor(editorHeightInLines / 3));
 
 		this.renderTitle();
 
@@ -231,6 +249,7 @@ class DirtyDiffWidget extends PeekViewWidget {
 
 		this._actionbarWidget.context = [this.model.modified.uri, this.model.changes, index];
 		this.show(position, height);
+		this.editor.focus();
 	}
 
 	private renderTitle(): void {
@@ -285,25 +304,47 @@ class DirtyDiffWidget extends PeekViewWidget {
 			overviewRulerLanes: 2,
 			fixedOverflowWidgets: true,
 			minimap: { enabled: false },
-			renderSideBySide: false
+			renderSideBySide: false,
+			readOnly: true
 		};
 
 		this.diffEditor = this.instantiationService.createInstance(EmbeddedDiffEditorWidget, container, options, this.editor);
 	}
 
-	protected _doLayoutBody(heightInPixel: number, widthInPixel: number): void {
-		super._doLayoutBody(heightInPixel, widthInPixel);
-		this.diffEditor.layout({ height: heightInPixel, width: widthInPixel });
-
-		if (!this.didLayout) {
-			this.revealChange(this.change);
-			this.didLayout = true;
+	_onWidth(width: number): void {
+		if (typeof this.height === 'undefined') {
+			return;
 		}
+
+		this.diffEditor.layout({ height: this.height, width });
+	}
+
+	protected _doLayoutBody(height: number, width: number): void {
+		super._doLayoutBody(height, width);
+		this.diffEditor.layout({ height, width });
+
+		if (typeof this.height === 'undefined') {
+			this.revealChange(this.change);
+		}
+
+		this.height = height;
 	}
 
 	private revealChange(change: IChange): void {
-		const position = new Position(getModifiedMiddleLineNumber(this.change), 1);
-		this.diffEditor.revealPositionInCenter(position, ScrollType.Immediate);
+		let start: number, end: number;
+
+		if (change.modifiedEndLineNumber === 0) { // deletion
+			start = change.modifiedStartLineNumber;
+			end = change.modifiedStartLineNumber + 1;
+		} else if (change.originalEndLineNumber > 0) { // modification
+			start = change.modifiedStartLineNumber - 1;
+			end = change.modifiedEndLineNumber + 1;
+		} else { // insertion
+			start = change.modifiedStartLineNumber;
+			end = change.modifiedEndLineNumber;
+		}
+
+		this.diffEditor.revealLinesInCenter(start, end, ScrollType.Immediate);
 	}
 
 	private _applyTheme(theme: ITheme) {
@@ -330,15 +371,25 @@ export class ShowPreviousChangeAction extends EditorAction {
 			id: 'editor.action.dirtydiff.previous',
 			label: nls.localize('show previous change', "Show Previous Change"),
 			alias: 'Show Previous Change',
-			precondition: ContextKeyExpr.and(EditorContextKeys.isInEmbeddedEditor.toNegated()),
-			kbOpts: { kbExpr: EditorContextKeys.textFocus, primary: KeyMod.Shift | KeyMod.Alt | KeyCode.KEY_S }
+			precondition: null,
+			kbOpts: { kbExpr: EditorContextKeys.textFocus, primary: KeyMod.Shift | KeyMod.Alt | KeyCode.F3 }
 		});
 	}
 
 	run(accessor: ServicesAccessor, editor: ICommonCodeEditor): void {
-		const controller = DirtyDiffController.get(editor);
+		const outerEditor = getOuterEditorFromDiffEditor(accessor);
+
+		if (!outerEditor) {
+			return;
+		}
+
+		const controller = DirtyDiffController.get(outerEditor);
 
 		if (!controller) {
+			return;
+		}
+
+		if (!controller.canNavigate()) {
 			return;
 		}
 
@@ -354,15 +405,25 @@ export class ShowNextChangeAction extends EditorAction {
 			id: 'editor.action.dirtydiff.next',
 			label: nls.localize('show next change', "Show Next Change"),
 			alias: 'Show Next Change',
-			precondition: ContextKeyExpr.and(EditorContextKeys.isInEmbeddedEditor.toNegated()),
-			kbOpts: { kbExpr: EditorContextKeys.textFocus, primary: KeyMod.Shift | KeyMod.Alt | KeyCode.KEY_F }
+			precondition: null,
+			kbOpts: { kbExpr: EditorContextKeys.textFocus, primary: KeyMod.Alt | KeyCode.F3 }
 		});
 	}
 
 	run(accessor: ServicesAccessor, editor: ICommonCodeEditor): void {
-		const controller = DirtyDiffController.get(editor);
+		const outerEditor = getOuterEditorFromDiffEditor(accessor);
+
+		if (!outerEditor) {
+			return;
+		}
+
+		const controller = DirtyDiffController.get(outerEditor);
 
 		if (!controller) {
+			return;
+		}
+
+		if (!controller.canNavigate()) {
 			return;
 		}
 
@@ -375,14 +436,15 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 	weight: CommonEditorRegistry.commandWeight(50),
 	primary: KeyCode.Escape,
 	secondary: [KeyMod.Shift | KeyCode.Escape],
-	when: ContextKeyExpr.and(isDirtyDiffVisible, ContextKeyExpr.not('config.editor.stablePeek')),
+	when: ContextKeyExpr.and(isDirtyDiffVisible),
 	handler: (accessor: ServicesAccessor) => {
-		const editor = getOuterEditor(accessor);
-		if (!editor) {
+		const outerEditor = getOuterEditorFromDiffEditor(accessor);
+
+		if (!outerEditor) {
 			return;
 		}
 
-		const controller = DirtyDiffController.get(editor);
+		const controller = DirtyDiffController.get(outerEditor);
 
 		if (!controller) {
 			return;
@@ -410,6 +472,7 @@ export class DirtyDiffController implements IEditorContribution {
 	private readonly isDirtyDiffVisible: IContextKey<boolean>;
 	private session: IDisposable = EmptyDisposable;
 	private mouseDownInfo: { lineNumber: number } | null = null;
+	private enabled = false;
 	private disposables: IDisposable[] = [];
 
 	constructor(
@@ -418,13 +481,22 @@ export class DirtyDiffController implements IEditorContribution {
 		@IThemeService private themeService: IThemeService,
 		@IInstantiationService private instantiationService: IInstantiationService
 	) {
-		this.isDirtyDiffVisible = isDirtyDiffVisible.bindTo(contextKeyService);
-		this.disposables.push(editor.onMouseDown(e => this.onEditorMouseDown(e)));
-		this.disposables.push(editor.onMouseUp(e => this.onEditorMouseUp(e)));
+		this.enabled = !contextKeyService.getContextKeyValue('isInDiffEditor');
+
+		if (this.enabled) {
+			this.isDirtyDiffVisible = isDirtyDiffVisible.bindTo(contextKeyService);
+			this.disposables.push(editor.onMouseDown(e => this.onEditorMouseDown(e)));
+			this.disposables.push(editor.onMouseUp(e => this.onEditorMouseUp(e)));
+			this.disposables.push(editor.onDidChangeModel(() => this.close()));
+		}
 	}
 
 	getId(): string {
 		return DirtyDiffController.ID;
+	}
+
+	canNavigate(): boolean {
+		return this.currentIndex === -1 || this.model.changes.length > 1;
 	}
 
 	next(lineNumber?: number): void {
@@ -464,9 +536,14 @@ export class DirtyDiffController implements IEditorContribution {
 	close(): void {
 		this.session.dispose();
 		this.session = EmptyDisposable;
+		this.editor.focus();
 	}
 
 	private assertWidget(): boolean {
+		if (!this.enabled) {
+			return false;
+		}
+
 		if (this.widget) {
 			if (this.model.changes.length === 0) {
 				this.close();
@@ -507,8 +584,12 @@ export class DirtyDiffController implements IEditorContribution {
 
 		disposables.push(
 			this.widget,
-			toDisposable(() => this.model = this.widget = null),
-			toDisposable(() => this.isDirtyDiffVisible.set(false))
+			toDisposable(() => {
+				this.model = null;
+				this.widget = null;
+				this.currentIndex = -1;
+				this.isDirtyDiffVisible.set(false);
+			})
 		);
 
 		this.session = combinedDisposable(disposables);
@@ -550,7 +631,7 @@ export class DirtyDiffController implements IEditorContribution {
 		const gutterOffsetX = data.offsetX - data.glyphMarginWidth - data.lineNumbersWidth;
 
 		// TODO@joao TODO@alex TODO@martin this is such that we don't collide with folding
-		if (gutterOffsetX > 12) {
+		if (gutterOffsetX > 10) {
 			return;
 		}
 
@@ -575,16 +656,40 @@ export class DirtyDiffController implements IEditorContribution {
 			return;
 		}
 
-		// const closestChangeIndex = this.findNextClosestChange(lineNumber);
-		// this.currentIndex = rot(closestChangeIndex - 1, this.model.changes.length);
-		this.next(lineNumber);
+		if (!this.modelRegistry) {
+			return;
+		}
+
+		const editorModel = this.editor.getModel();
+
+		if (!editorModel) {
+			return;
+		}
+
+		const model = this.modelRegistry.getModel(editorModel);
+
+		if (!model) {
+			return;
+		}
+
+		const index = firstIndex(model.changes, change => lineIntersectsChange(lineNumber, change));
+
+		if (index < 0) {
+			return;
+		}
+
+		if (index === this.currentIndex) {
+			this.close();
+		} else {
+			this.next(lineNumber);
+		}
 	}
 
 	private findNextClosestChange(lineNumber: number): number {
 		for (let i = 0; i < this.model.changes.length; i++) {
 			const change = this.model.changes[i];
 
-			if (getModifiedEndLineNumber(change) >= lineNumber) {
+			if (lineIntersectsChange(lineNumber, change)) {
 				return i;
 			}
 		}
@@ -723,6 +828,28 @@ class DirtyDiffDecorator {
 	}
 }
 
+function compareChanges(a: IChange, b: IChange): number {
+	let result = a.modifiedStartLineNumber - b.modifiedStartLineNumber;
+
+	if (result !== 0) {
+		return result;
+	}
+
+	result = a.modifiedEndLineNumber - b.modifiedEndLineNumber;
+
+	if (result !== 0) {
+		return result;
+	}
+
+	result = a.originalStartLineNumber - b.originalStartLineNumber;
+
+	if (result !== 0) {
+		return result;
+	}
+
+	return a.originalEndLineNumber - b.originalEndLineNumber;
+}
+
 export class DirtyDiffModel {
 
 	private _originalModel: IModel;
@@ -791,7 +918,7 @@ export class DirtyDiffModel {
 					changes = [];
 				}
 
-				const diff = sortedDiff(this._changes, changes, (a, b) => b.modifiedStartLineNumber - a.modifiedStartLineNumber);
+				const diff = sortedDiff(this._changes, changes, compareChanges);
 				this._changes = changes;
 
 				if (diff.length > 0) {

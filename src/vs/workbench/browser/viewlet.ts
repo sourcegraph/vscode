@@ -154,7 +154,7 @@ export class ViewletDescriptor extends CompositeDescriptor<Viewlet> {
 		order?: number,
 		protected _extensionId?: string
 	) {
-		super(ctor, id, name, cssClass, order);
+		super(ctor, id, name, cssClass, order, id);
 	}
 
 	public get extensionId(): string {
