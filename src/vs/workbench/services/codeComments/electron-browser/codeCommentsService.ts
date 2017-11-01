@@ -1002,6 +1002,7 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 			const lines = this.getShareContext();
 			let range = this.displayRange;
 			let rangeLength = this.model.getValueLengthInRange(this.displayRange);
+			let linesRevision = '';
 
 			if (blameRevision) {
 				const blameContent = (await this.instantiationService.invokeFunction(resolveContent, this.git, { repo, file }, blameRevision)).content;
@@ -1013,8 +1014,14 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 				// Compute reverse diff so we transform the display range to a valid range at the blame revision
 				// which is the revision we are attaching this comment to.
 				const diff = new Diff(modifiedLines, blameLines);
-				range = diff.transformRange(this.displayRange);
-				rangeLength = blameModel.getValueLengthInRange(range);
+				const transformedRange = diff.transformRange(this.displayRange);
+				// transformedRange will be undefined if the display range contains unsaved state.
+				// In this case, there is no meaningful line revision to attach to.
+				if (transformedRange) {
+					range = transformedRange;
+					rangeLength = blameModel.getValueLengthInRange(range);
+					linesRevision = blameRevision;
+				}
 			}
 
 			const response = await requestGraphQLMutation<{ createThread: GQL.IThread }>(this.remoteService, `mutation CreateThread {
@@ -1041,7 +1048,7 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 					file,
 					branch,
 					repoRevision,
-					linesRevision: blameRevision || '',
+					linesRevision,
 					startLine: range.startLineNumber,
 					endLine: range.endLineNumber,
 					startCharacter: range.startColumn,

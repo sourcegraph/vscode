@@ -110,15 +110,18 @@ export class ShareSnippetAction extends EditorAction {
 		const model = editor.getModel();
 		const fileComments = codeCommentsService.getFileComments(model.uri);
 		const draftThread = fileComments.createDraftThread(editor);
-		if (!draftThread) {
-			return;
-		}
-
-		const threadComments = await draftThread.submit(true);
-		return codeCommentsService.shareThread(threadComments.id).then(sharedURL => {
-			clipboardService.writeText(sharedURL);
+		try {
+			const threadComments = await draftThread.submit(true);
+			if (!threadComments) {
+				return;
+			}
+			const sharedUrl = await codeCommentsService.shareThread(threadComments.id);
+			clipboardService.writeText(sharedUrl);
 			const dismiss = messageService.show(Severity.Info, localize('shareSnippet.copied-to-clipboard', 'Sharable link copied to clipboard!'));
 			setTimeout(dismiss, 1500);
-		});
+		} catch (e) {
+			console.error(e);
+			draftThread.dispose();
+		}
 	}
 }
