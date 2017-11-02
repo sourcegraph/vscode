@@ -14,6 +14,7 @@ import { CommentInput } from 'vs/workbench/parts/codeComments/browser/commentInp
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { getCommentTelemetryData } from 'vs/workbench/parts/codeComments/common/codeComments';
 import { BaseThreadCommentsWidget } from 'vs/workbench/parts/codeComments/browser/baseThreadCommentsWidget';
+import { Range } from 'vs/editor/common/core/range';
 
 /**
  * Widget to create a new comment thread.
@@ -75,10 +76,13 @@ export class DraftThreadCommentsWidget extends BaseThreadCommentsWidget {
 	}
 
 	public expand(reveal: boolean): void {
-		// Render once so we can then measure actual height and then render again.
-		super.show(this.draftThread.displayRange.getEndPosition(), 0, reveal);
+		super.expand(reveal);
 		if (reveal) {
 			this.commentInput.focus();
 		}
+	}
+
+	protected getRange(): Range {
+		return this.draftThread.displayRange;
 	}
 }

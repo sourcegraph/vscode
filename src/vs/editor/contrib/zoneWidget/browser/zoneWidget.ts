@@ -275,13 +275,13 @@ export abstract class ZoneWidget implements IHorizontalSashLayoutProvider {
 
 	protected _isShowing: boolean = false;
 
-	public show(rangeOrPos: IRange | IPosition, heightInLines: number, reveal = true): void {
+	public show(rangeOrPos: IRange | IPosition, heightInLines: number): void {
 		const range = Range.isIRange(rangeOrPos)
 			? rangeOrPos
 			: new Range(rangeOrPos.lineNumber, rangeOrPos.column, rangeOrPos.lineNumber, rangeOrPos.column);
 
 		this._isShowing = true;
-		this._showImpl(range, heightInLines, reveal);
+		this._showImpl(range, heightInLines);
 		this._isShowing = false;
 		this._positionMarkerId = this.editor.deltaDecorations(this._positionMarkerId, [{ range, options: ModelDecorationOptions.EMPTY }]);
 	}
@@ -319,7 +319,7 @@ export abstract class ZoneWidget implements IHorizontalSashLayoutProvider {
 		return result;
 	}
 
-	private _showImpl(where: IRange, heightInLines: number, reveal: boolean): void {
+	private _showImpl(where: IRange, heightInLines: number): void {
 		const position = {
 			lineNumber: where.startLineNumber,
 			column: where.startColumn
@@ -392,13 +392,15 @@ export abstract class ZoneWidget implements IHorizontalSashLayoutProvider {
 
 		this._doLayout(containerHeight, width);
 
-		if (reveal) {
-			this.editor.setSelection(where);
+		this.editor.setSelection(where);
 
-			// Reveal the line above or below the zone widget, to get the zone widget in the viewport
-			const revealLineNumber = Math.min(this.editor.getModel().getLineCount(), Math.max(1, where.endLineNumber + 1));
-			this.editor.revealLineInCenterIfOutsideViewport(revealLineNumber, ScrollType.Smooth);
-		}
+		// Reveal the line above or below the zone widget, to get the zone widget in the viewport
+		const revealLineNumber = Math.min(this.editor.getModel().getLineCount(), Math.max(1, where.endLineNumber + 1));
+		this.revealLine(revealLineNumber);
+	}
+
+	protected revealLine(lineNumber: number) {
+		this.editor.revealLine(lineNumber, ScrollType.Smooth);
 	}
 
 	protected setCssClass(className: string, classToReplace?: string): void {

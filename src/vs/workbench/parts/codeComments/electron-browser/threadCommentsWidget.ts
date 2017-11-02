@@ -27,6 +27,7 @@ import { IRemoteService } from 'vs/platform/remote/node/remote';
 import { Button } from 'vs/base/browser/ui/button/button';
 import { attachButtonStyler } from 'vs/platform/theme/common/styler';
 import { editorBackground, editorActiveLinkForeground } from 'vs/platform/theme/common/colorRegistry';
+import { Range } from 'vs/editor/common/core/range';
 
 /**
  * Displays a comment thread inline in the editor.
@@ -191,11 +192,14 @@ export class ThreadCommentsWidget extends BaseThreadCommentsWidget {
 			// Lazily initialize so we don't prematurely listen to events.
 			this.create();
 		}
-		// Render once so we can then measure actual height and then render again.
-		super.show(this.threadComments.displayRange.getEndPosition(), 0, reveal);
+		super.expand(reveal);
 		if (reveal) {
 			this.commentInput.focus();
 		}
+	}
+
+	protected getRange(): Range {
+		return this.threadComments.displayRange;
 	}
 
 	public dispose() {

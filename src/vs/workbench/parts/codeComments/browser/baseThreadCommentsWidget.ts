@@ -14,11 +14,12 @@ import { peekViewBorder, peekViewResultsBackground, peekViewTitleBackground, pee
 import { Color } from 'vs/base/common/color';
 import { textLinkActiveForeground, textLinkForeground } from 'vs/platform/theme/common/colorRegistry';
 import { PeekViewWidget } from 'vs/editor/contrib/referenceSearch/browser/peekViewWidget';
+import { Range } from 'vs/editor/common/core/range';
 
 /**
  * Base class for thead widgets.
  */
-export class BaseThreadCommentsWidget extends PeekViewWidget {
+export abstract class BaseThreadCommentsWidget extends PeekViewWidget {
 
 	protected threadCommentsElement: HTMLElement;
 
@@ -73,6 +74,33 @@ export class BaseThreadCommentsWidget extends PeekViewWidget {
 		super._doLayoutHead(heightInPixel, widthInPixel);
 		this.headHeight = heightInPixel;
 	}
+
+	/**
+	 * True if this widget should be revealed after it is expanded.
+	 */
+	private reveal = false;
+
+	/**
+	 * Expands the widget. If reveal is true, then the widget is also scrolled into view after it is expanded.
+	 */
+	public expand(reveal: boolean): void {
+		// super.show() eventually calls this.revealLine().
+		// We save the reveal parameter here and read it in this.revealLine()
+		// instead of creating an upstream diff to pass a reveal parameter through super.show().
+		this.reveal = reveal;
+
+		// Render once with zero lines revealed so we can then measure actual height and then relayout with the correct height.
+		super.show(this.getRange().getEndPosition(), 0);
+	}
+
+	protected revealLine(lineNumber: number) {
+		if (this.reveal) {
+			this.editor.revealLine(this.getRange().startLineNumber);
+			super.revealLine(lineNumber);
+		}
+	}
+
+	protected abstract getRange(): Range;
 }
 
 registerThemingParticipant((theme, collector) => {
