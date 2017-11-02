@@ -34,7 +34,8 @@ export class Git {
 						// Uncomitted change
 						return undefined;
 					}
-					revisions.push(sha);
+					// Trim leading '^' which blame prepends for boundary commits (e.g. initial commit in repo).
+					revisions.push(sha.replace(/^\^/, ''));
 				}
 				return this.spawnPromiseTrim(['rev-list', '--max-count', '1'].concat(distinct(revisions)));
 			});
