@@ -1189,10 +1189,10 @@ export class Repository {
 
 	async getRefs(): Promise<Ref[]> {
 		// %09 is a tab character
-		const result = await this.run(['for-each-ref', '--format', '%(refname)%09%(objectname)%09%(committername)%09%(committerdate:unix)']);
+		const result = await this.run(['for-each-ref', '--format', '%(refname)%09%(objectname)%09%(committername)%09%(committerdate:raw)']);
 
 		const fn = (line: string): Ref | null => {
-			const [fullName, commit, committerName, committerDateTs]: (string | undefined)[] = line.trim().split('\t');
+			const [fullName, commit, committerName, committerDateRaw]: (string | undefined)[] = line.trim().split('\t');
 			if (!fullName) {
 				return null;
 			}
@@ -1210,6 +1210,8 @@ export class Repository {
 				default: return null;
 			}
 			const name: string | undefined = remoteName.join('/') || undefined;
+			// The :raw format produces a date string that looks like '[EPOCH_TIME] [UTC_OFFSET]'.
+			const committerDateTs = committerDateRaw && committerDateRaw.split(' ')[0];
 			const committerDate = committerDateTs && new Date(~~committerDateTs * 1000) || undefined;
 			return { fullName, name, commit, type, remote, committerName, committerDate };
 		};
