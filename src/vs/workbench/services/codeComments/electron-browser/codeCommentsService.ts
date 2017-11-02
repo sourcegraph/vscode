@@ -1083,7 +1083,7 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 		// intersects.
 		const contextLines = 3;
 		const linesBeforeRange = new Range(
-			this.lineInRange(this.displayRange.startLineNumber - contextLines, this.model),
+			this.displayRange.startLineNumber - contextLines,
 			0, // start character
 			this.displayRange.startLineNumber - 1,
 			this.model.getLineMaxColumn(this.lineInRange(this.displayRange.startLineNumber - 1, this.model)), // end character / end of line
@@ -1095,7 +1095,7 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 			this.model.getLineMaxColumn(this.lineInRange(this.displayRange.endLineNumber, this.model)), // end character / end of line
 		);
 		const linesAfterRange = new Range(
-			this.lineInRange(this.displayRange.endLineNumber + 1, this.model),
+			this.displayRange.endLineNumber + 1,
 			0, // start character
 			this.displayRange.endLineNumber + contextLines,
 			this.model.getLineMaxColumn(this.lineInRange(this.displayRange.endLineNumber + contextLines, this.model)), // end character / end of line
