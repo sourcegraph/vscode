@@ -626,11 +626,7 @@ export class WorkspaceService extends Disposable implements IWorkspaceConfigurat
 			return ConfigurationTarget.WORKSPACE;
 		}
 
-		if (inspect.user !== void 0) {
-			return ConfigurationTarget.USER;
-		}
-
-		return ConfigurationTarget.ORGANIZATION;
+		return ConfigurationTarget.USER;
 	}
 
 	private triggerConfigurationChange(configurationEvent: ConfigurationChangeEvent, target: ConfigurationTarget): void {
