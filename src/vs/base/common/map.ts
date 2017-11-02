@@ -371,54 +371,68 @@ export class TernarySearchTree<E> {
 	}
 
 	set(key: string, element: E): void {
-		this._root = this._set(this._root, this._iter.reset(key), element);
-	}
+		let iter = this._iter.reset(key);
+		let node: TernarySearchTreeNode<E>;
 
-	private _set(node: TernarySearchTreeNode<E>, iter: IKeyIterator, element: E): TernarySearchTreeNode<E> {
-
-		if (!node) {
-			node = new TernarySearchTreeNode<E>();
-			node.str = iter.value();
+		if (!this._root) {
+			this._root = new TernarySearchTreeNode<E>();
+			this._root.str = iter.value();
 		}
 
-		const cmp = iter.cmp(node.str);
-		if (cmp > 0) {
-			// left
-			node.left = this._set(node.left, iter, element);
-		} else if (cmp < 0) {
-			// right
-			node.right = this._set(node.right, iter, element);
-		} else if (iter.hasNext()) {
-			// mid
-			node.mid = this._set(node.mid, iter.next(), element);
-		} else {
-			node.element = element;
-		}
+		node = this._root;
+		while (true) {
+			let val = iter.cmp(node.str);
+			if (val > 0) {
+				// left
+				if (!node.left) {
+					node.left = new TernarySearchTreeNode<E>();
+					node.left.str = iter.value();
+				}
+				node = node.left;
 
-		return node;
+			} else if (val < 0) {
+				// right
+				if (!node.right) {
+					node.right = new TernarySearchTreeNode<E>();
+					node.right.str = iter.value();
+				}
+				node = node.right;
+
+			} else if (iter.hasNext()) {
+				// mid
+				iter.next();
+				if (!node.mid) {
+					node.mid = new TernarySearchTreeNode<E>();
+					node.mid.str = iter.value();
+				}
+				node = node.mid;
+			} else {
+				break;
+			}
+		}
+		node.element = element;
 	}
 
 	get(key: string): E {
-		return this._get(this._root, this._iter.reset(key));
-	}
-
-	private _get(node: TernarySearchTreeNode<E>, iter: IKeyIterator): E {
-		if (!node) {
-			return undefined;
+		let iter = this._iter.reset(key);
+		let node = this._root;
+		while (node) {
+			let val = iter.cmp(node.str);
+			if (val > 0) {
+				// left
+				node = node.left;
+			} else if (val < 0) {
+				// right
+				node = node.right;
+			} else if (iter.hasNext()) {
+				// mid
+				iter.next();
+				node = node.mid;
+			} else {
+				break;
+			}
 		}
-		const cmp = iter.cmp(node.str);
-		if (cmp > 0) {
-			// left
-			return this._get(node.left, iter);
-		} else if (cmp < 0) {
-			// right
-			return this._get(node.right, iter);
-		} else if (iter.hasNext()) {
-			// mid
-			return this._get(node.mid, iter.next());
-		} else {
-			return node.element;
-		}
+		return node ? node.element : undefined;
 	}
 
 	delete(key: string): void {
@@ -448,55 +462,55 @@ export class TernarySearchTree<E> {
 	}
 
 	findSubstr(key: string): E {
-		return this._findSubstr(this._root, this._iter.reset(key), undefined);
-	}
-
-	private _findSubstr(node: TernarySearchTreeNode<E>, iter: IKeyIterator, candidate: E): E {
-		if (!node) {
-			return candidate;
+		let iter = this._iter.reset(key);
+		let node = this._root;
+		let candidate: E;
+		while (node) {
+			let val = iter.cmp(node.str);
+			if (val > 0) {
+				// left
+				node = node.left;
+			} else if (val < 0) {
+				// right
+				node = node.right;
+			} else if (iter.hasNext()) {
+				// mid
+				iter.next();
+				candidate = node.element || candidate;
+				node = node.mid;
+			} else {
+				break;
+			}
 		}
-		const cmp = iter.cmp(node.str);
-		if (cmp > 0) {
-			// left
-			return this._findSubstr(node.left, iter, candidate);
-		} else if (cmp < 0) {
-			// right
-			return this._findSubstr(node.right, iter, candidate);
-		} else if (iter.hasNext()) {
-			// mid
-			return this._findSubstr(node.mid, iter.next(), node.element || candidate);
-		} else {
-			return node.element || candidate;
-		}
+		return node && node.element || candidate;
 	}
 
 	findSuperstr(key: string): TernarySearchTree<E> {
-		return this._findSuperstr(this._root, this._iter.reset(key));
-	}
-
-	private _findSuperstr(node: TernarySearchTreeNode<E>, iter: IKeyIterator): TernarySearchTree<E> {
-		if (!node) {
-			return undefined;
-		}
-		const cmp = iter.cmp(node.str);
-		if (cmp > 0) {
-			// left
-			return this._findSuperstr(node.left, iter);
-		} else if (cmp < 0) {
-			// right
-			return this._findSuperstr(node.right, iter);
-		} else if (iter.hasNext()) {
-			// mid
-			return this._findSuperstr(node.mid, iter.next());
-		} else {
-			// collect
-			if (!node.mid) {
-				return undefined;
+		let iter = this._iter.reset(key);
+		let node = this._root;
+		while (node) {
+			let val = iter.cmp(node.str);
+			if (val > 0) {
+				// left
+				node = node.left;
+			} else if (val < 0) {
+				// right
+				node = node.right;
+			} else if (iter.hasNext()) {
+				// mid
+				iter.next();
+				node = node.mid;
+			} else {
+				// collect
+				if (!node.mid) {
+					return undefined;
+				}
+				let ret = new TernarySearchTree<E>(this._iter);
+				ret._root = node.mid;
+				return ret;
 			}
-			let ret = new TernarySearchTree<E>(this._iter);
-			ret._root = node.mid;
-			return ret;
 		}
+		return undefined;
 	}
 
 	forEach(callback: (value: E, index: string) => any) {
