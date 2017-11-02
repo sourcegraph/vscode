@@ -60,7 +60,7 @@ import { WindowLevel } from 'vs/platform/telemetry/common/analyticsConstants';
 
 export class CodeApplication {
 
-	private static APP_ICON_REFRESH_KEY = 'macOSAppIconRefresh2';
+	private static APP_ICON_REFRESH_KEY = 'macOSAppIconRefresh3';
 
 	private toDispose: IDisposable[];
 	private windowsMainService: IWindowsMainService;

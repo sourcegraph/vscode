@@ -16,6 +16,7 @@ import { IThemeService, ITheme } from 'vs/platform/theme/common/themeService';
 import { IdGenerator } from 'vs/base/common/idGenerator';
 import { IIterator } from 'vs/base/common/iterator';
 import { isFalsyOrWhitespace } from 'vs/base/common/strings';
+import { localize } from 'vs/nls';
 
 class DecorationRule {
 
@@ -72,7 +73,11 @@ class DecorationRule {
 		}
 
 		// bubble badge
-		createCSSRule(`.${this.bubbleBadgeClassName}::after`, `content: "●"; color: ${theme.getColor(color) || 'inherit'}; font-size: 75%; padding-right: 13px`, element);
+		createCSSRule(
+			`.${this.bubbleBadgeClassName}::after`,
+			`content: "\uf052"; color: ${theme.getColor(color) || 'inherit'}; font-family: octicons; font-size: 14px; padding-right: 14px; opacity: 0.4;`,
+			element
+		);
 	}
 
 	removeCSSRules(element: HTMLStyleElement): void {
@@ -127,7 +132,7 @@ class DecorationStyles {
 		if (onlyChildren) {
 			// show items from its children only
 			badgeClassName = rule.bubbleBadgeClassName;
-			tooltip = '';
+			tooltip = localize('bubbleTitle', "contains emphasized items");
 		}
 
 		return {
