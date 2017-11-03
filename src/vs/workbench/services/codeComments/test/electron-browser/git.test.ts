@@ -6,7 +6,7 @@
 
 import { ISCMService, ISCMProvider, ISCMRepository } from 'vs/workbench/services/scm/common/scm';
 import { TPromise } from 'vs/base/common/winjs.base';
-import { Git } from 'vs/workbench/services/codeComments/browser/git';
+import { Git } from 'vs/workbench/services/codeComments/electron-browser/git';
 
 /**
  * ISCMProvider that allows tests to mock the output of executeCommand.

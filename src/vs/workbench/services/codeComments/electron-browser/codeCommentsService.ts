@@ -11,7 +11,7 @@ import Event, { Emitter, anyEvent } from 'vs/base/common/event';
 import { VSDiff as Diff } from 'vs/workbench/services/codeComments/common/vsdiff';
 import { Disposable } from 'vs/workbench/services/codeComments/common/disposable';
 import { ISCMService, ISCMRepository } from 'vs/workbench/services/scm/common/scm';
-import { Git } from 'vs/workbench/services/codeComments/browser/git';
+import { Git } from 'vs/workbench/services/codeComments/electron-browser/git';
 import URI from 'vs/base/common/uri';
 import { Schemas } from 'vs/base/common/network';
 import { startsWith } from 'vs/base/common/strings';
