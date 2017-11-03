@@ -212,21 +212,6 @@ let workbenchProperties: { [path: string]: IJSONSchema; } = {
 		'description': nls.localize('navBarVisible', "Controls the visibility of the navigation bar in the workbench."),
 		'default': true
 	},
-	'workbench.settings.experimentalFuzzySearchEndpoint': {
-		'type': 'string',
-		'description': nls.localize('experimentalFuzzySearchEndpoint', "Indicates the endpoint to use for the experimental settings search."),
-		'default': ''
-	},
-	'workbench.settings.experimentalFuzzySearchKey': {
-		'type': 'string',
-		'description': nls.localize('experimentalFuzzySearchKey', "Indicates the key to use for the experimental settings search."),
-		'default': ''
-	},
-	'workbench.settings.experimentalFuzzySearchBoost': {
-		'type': 'number',
-		'description': 'Indicates the amount to boost the "literal" component of the query. Temporary.',
-		'default': 10
-	},
 	'workbench.sideBar.location': {
 		'type': 'string',
 		'enum': ['left', 'right'],
@@ -260,6 +245,26 @@ let workbenchProperties: { [path: string]: IJSONSchema; } = {
 		'default': true
 	}
 };
+
+if (product.quality !== 'stable') {
+	workbenchProperties['workbench.settings.experimentalFuzzySearchEndpoint'] = {
+		'type': 'string',
+		'description': nls.localize('experimentalFuzzySearchEndpoint', "Indicates the endpoint to use for the experimental settings search."),
+		'default': ''
+	};
+
+	workbenchProperties['workbench.settings.experimentalFuzzySearchKey'] = {
+		'type': 'string',
+		'description': nls.localize('experimentalFuzzySearchKey', "Indicates the key to use for the experimental settings search."),
+		'default': ''
+	};
+
+	workbenchProperties['workbench.settings.experimentalFuzzySearchBoost'] = {
+		'type': 'number',
+		'description': 'Indicates the amount to boost the "literal" component of the query. Temporary.',
+		'default': 10
+	};
+}
 
 if (isMacintosh) {
 	workbenchProperties['workbench.fontAliasing'] = {
