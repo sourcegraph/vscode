@@ -7,7 +7,7 @@
 import { ISCMService, ISCMProvider } from 'vs/workbench/services/scm/common/scm';
 import URI from 'vs/base/common/uri';
 import { TPromise } from 'vs/base/common/winjs.base';
-import { distinct } from 'vs/base/common/arrays';
+import { keys } from 'vs/base/common/map';
 
 /**
  * Interface to intract with Git in the current workspace.
@@ -23,20 +23,22 @@ export class Git {
 	/**
 	 * Returns the oldest revision (topologically) that contains the exact same content for the inclusive range [startLine, endLine].
 	 */
-	public async getBlameRevision(file: string, startLine: number, endLine: number): Promise<string | undefined> {
-		const blame = await this.spawnPromiseTrim(['blame', '-s', '-l', '-L', `${startLine},${endLine}`, file]);
+	public async getBlame(file: string, startLine: number, endLine: number): Promise<{ commitId: string, file: string } | undefined> {
+		const blame = await this.spawnPromiseTrim(['blame', '-s', '-l', '--show-name', '-L', `${startLine},${endLine}`, file]);
 		const lines = blame.split('\n');
-		const revisions: string[] = [];
+		const revisions = new Map<string, { commitId: string, file: string }>();
 		for (const line of lines) {
-			const [sha] = line.split(' ', 1);
+			const [sha, file] = line.split(' ', 2);
 			if (sha === '0000000000000000000000000000000000000000') {
 				// Uncomitted change
 				return undefined;
 			}
 			// Trim leading '^' which blame prepends for boundary commits (e.g. initial commit in repo).
-			revisions.push(sha.replace(/^\^/, ''));
+			const commitId = sha.replace(/^\^/, '');
+			revisions.set(commitId, { commitId, file });
 		}
-		return await this.spawnPromiseTrim(['rev-list', '--max-count', '1'].concat(distinct(revisions)));
+		const commitId = await this.spawnPromiseTrim(['rev-list', '--max-count', '1'].concat(keys(revisions)));
+		return commitId && { commitId, file: revisions.get(commitId).file };
 	}
 
 	/**

@@ -994,9 +994,9 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 				return undefined;
 			}
 
-			const [repo, blameRevision] = await Promise.all([
+			const [repo, blame] = await Promise.all([
 				this.git.getRemoteRepo(),
-				this.git.getBlameRevision(file, this.displayRange.startLineNumber, this.displayRange.endLineNumber),
+				this.git.getBlame(file, this.displayRange.startLineNumber, this.displayRange.endLineNumber),
 			]);
 
 			const lines = this.getShareContext();
@@ -1004,8 +1004,8 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 			let rangeLength = this.model.getValueLengthInRange(this.displayRange);
 			let linesRevision = '';
 
-			if (blameRevision) {
-				const blameContent = (await this.instantiationService.invokeFunction(resolveContent, this.git, { repo, file }, blameRevision)).content;
+			if (blame) {
+				const blameContent = (await this.instantiationService.invokeFunction(resolveContent, this.git, { repo, file: blame.file }, blame.commitId)).content;
 
 				const blameModel = TextModel.createFromString(blameContent);
 				const blameLines = blameModel.getLinesContent();
@@ -1020,7 +1020,7 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 				if (transformedRange) {
 					range = transformedRange;
 					rangeLength = blameModel.getValueLengthInRange(range);
-					linesRevision = blameRevision;
+					linesRevision = blame.commitId;
 				}
 			}
 
@@ -1045,6 +1045,7 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 		}`, {
 					orgId: this.authService.currentUser.currentOrgMember.org.id,
 					remoteURI: repo,
+					// TODO(nick): probably need to store/use the file name at the blame revision too
 					file,
 					branch,
 					repoRevision,
