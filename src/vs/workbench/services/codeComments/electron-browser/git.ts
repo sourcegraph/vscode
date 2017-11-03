@@ -23,22 +23,20 @@ export class Git {
 	/**
 	 * Returns the oldest revision (topologically) that contains the exact same content for the inclusive range [startLine, endLine].
 	 */
-	public getBlameRevision(file: string, startLine: number, endLine: number): TPromise<string | undefined> {
-		return this.spawnPromiseTrim(['blame', '-s', '-l', '-L', `${startLine},${endLine}`, file])
-			.then(blame => {
-				const lines = blame.split('\n');
-				const revisions: string[] = [];
-				for (const line of lines) {
-					const [sha] = line.split(' ', 1);
-					if (sha === '0000000000000000000000000000000000000000') {
-						// Uncomitted change
-						return undefined;
-					}
-					// Trim leading '^' which blame prepends for boundary commits (e.g. initial commit in repo).
-					revisions.push(sha.replace(/^\^/, ''));
-				}
-				return this.spawnPromiseTrim(['rev-list', '--max-count', '1'].concat(distinct(revisions)));
-			});
+	public async getBlameRevision(file: string, startLine: number, endLine: number): Promise<string | undefined> {
+		const blame = await this.spawnPromiseTrim(['blame', '-s', '-l', '-L', `${startLine},${endLine}`, file]);
+		const lines = blame.split('\n');
+		const revisions: string[] = [];
+		for (const line of lines) {
+			const [sha] = line.split(' ', 1);
+			if (sha === '0000000000000000000000000000000000000000') {
+				// Uncomitted change
+				return undefined;
+			}
+			// Trim leading '^' which blame prepends for boundary commits (e.g. initial commit in repo).
+			revisions.push(sha.replace(/^\^/, ''));
+		}
+		return await this.spawnPromiseTrim(['rev-list', '--max-count', '1'].concat(distinct(revisions)));
 	}
 
 	/**
