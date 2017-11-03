@@ -243,8 +243,12 @@ export class ExploreWorkspaceFolderAction extends Action {
 		return this.viewletService.openViewlet(EXPLORER_VIEWLET_ID, true).then((viewlet: ExplorerViewlet) => {
 			const explorerView = viewlet.getExplorerView();
 			if (explorerView) {
-				explorerView.select(this.catalogService.getWorkspaceFolderForCatalogFolder(this.folder), true);
-				explorerView.setExpanded(true);
+				return explorerView.select(this.catalogService.getWorkspaceFolderForCatalogFolder(this.folder), true)
+					.then(() => {
+						if (!explorerView.isExpanded()) {
+							explorerView.setExpanded(true);
+						}
+					});
 			}
 			return void 0;
 		});
