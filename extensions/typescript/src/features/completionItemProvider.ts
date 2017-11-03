@@ -195,7 +195,7 @@ export default class TypeScriptCompletionItemProvider implements CompletionItemP
 
 			// make sure we are in something that looks like an import path
 			const line = document.lineAt(position.line).text.slice(0, position.character);
-			if (!line.match(/\bfrom\s*["'][^'"]*$/) && !line.match(/\b(import|require)\(['"][^'"]*$/)) {
+			if (!line.match(/\b(from|import)\s*["'][^'"]*$/) && !line.match(/\b(import|require)\(['"][^'"]*$/)) {
 				return [];
 			}
 		}
@@ -209,7 +209,10 @@ export default class TypeScriptCompletionItemProvider implements CompletionItemP
 		}
 
 		try {
-			const args: CompletionsRequestArgs = vsPositionToTsFileLocation(file, position);
+			const args = {
+				...vsPositionToTsFileLocation(file, position),
+				includeExternalModuleExports: config.autoImportSuggestions
+			} as CompletionsRequestArgs;
 			const msg = await this.client.execute('completions', args, token);
 			// This info has to come from the tsserver. See https://github.com/Microsoft/TypeScript/issues/2831
 			// let isMemberCompletion = false;
