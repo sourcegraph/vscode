@@ -91,6 +91,16 @@ suite('diffWorker', function () {
 					modifiedLines: ['foo', 'bar', 'baz'],
 					expectedRange: new Range(2, 3, 2, 4),
 				},
+				{
+					rangeContent: '\t\thello\n\t\t}',
+					modifiedLines: ['import { something } from'],
+					expectedRange: undefined,
+				},
+				{
+					rangeContent: '\t\t{\nhello',
+					modifiedLines: ['import { something } from'],
+					expectedRange: undefined,
+				},
 			];
 
 		tests.forEach((testCase, idx) => {

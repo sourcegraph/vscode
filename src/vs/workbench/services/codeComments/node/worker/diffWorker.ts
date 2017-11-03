@@ -8,6 +8,7 @@ import { VSDiff as Diff } from 'vs/workbench/services/codeComments/common/vsdiff
 import { TPromise } from 'vs/base/common/winjs.base';
 import { Range, IRange } from 'vs/editor/common/core/range';
 import { IDiffWorker, IDiffArgs, IDiffResult } from './diffWorkerIpc';
+import { startsWith, endsWith } from 'vs/base/common/strings';
 
 /**
  * A worker that transforms ranges based on diffs.
@@ -117,11 +118,12 @@ function longestCommonLines(haystack: string[], needle: string[]): Range[] {
 						characterCount: previousMatch.characterCount + characterCount,
 					});
 				}
-				const matchingRange = new Range(i - matches[i][j].lineCount + 2, matchedLine.startColumn, i + 1, matchedLine.endColumn);
-				if (matches[i][j].characterCount > longestMatch.characterCount) {
-					longestMatch = matches[i][j];
+				const match = matches[i][j];
+				const matchingRange = new Range(i - match.lineCount + 2, matchedLine.startColumn, i + 1, matchedLine.endColumn);
+				if (match.characterCount > longestMatch.characterCount) {
+					longestMatch = match;
 					longestMatchingRanges = [matchingRange];
-				} else if (matches[i][j].characterCount === longestMatch.characterCount) {
+				} else if (match.characterCount === longestMatch.characterCount) {
 					longestMatchingRanges.push(matchingRange);
 				}
 			} else {
@@ -145,29 +147,44 @@ function longestCommonLines(haystack: string[], needle: string[]): Range[] {
  * If the line didn't match, it returns undefined.
  */
 function matchLines(haystackLine: string, needle: string[], needleIdx: number): { startColumn: number, endColumn: number } | undefined {
-	const trimmedNeedleLine = needle[needleIdx].trim();
+	const needleLine = needle[needleIdx];
+	const trimmedNeedleLine = needleLine.trim();
+	// If needle is a single line, then check if trimmedNeedleLine is in haystackLine.
+	if (needle.length === 1) {
+		const matchIdx = haystackLine.indexOf(trimmedNeedleLine);
+		if (matchIdx === -1) {
+			return undefined;
+		}
+		const startColumn = matchIdx + 1;
+		return { startColumn, endColumn: startColumn + trimmedNeedleLine.length };
+	}
 	if (needleIdx > 0 && needleIdx < needle.length - 1 && trimmedNeedleLine !== haystackLine.trim()) {
+		// For a multi-line needle, lines in the middle of needle need to match exactly (ignoring whitespace).
 		return undefined;
 	}
 	const leftTrimmedHaystackLine = haystackLine.replace(/^\s+/gm, '');
 	const rightTrimmedHaystackLine = haystackLine.replace(/\s+$/gm, '');
+	// Initialize the match with the values for the needle's middle lines.
 	const matched = {
 		startColumn: haystackLine.length - leftTrimmedHaystackLine.length + 1,
 		endColumn: rightTrimmedHaystackLine.length + 1,
 	};
+	// The first line of the needle can match any haystack line
+	// that ends with the needle (ignoring whitespace).
 	if (needleIdx === 0) {
-		const matchIdx = rightTrimmedHaystackLine.lastIndexOf(trimmedNeedleLine);
-		if (matchIdx === -1) {
+		if (!endsWith(rightTrimmedHaystackLine, trimmedNeedleLine)) {
 			return undefined;
 		}
-		matched.startColumn = matchIdx + 1;
+		matched.startColumn = rightTrimmedHaystackLine.length - trimmedNeedleLine.length + 1;
 	}
+	// The last line of the needle can match any haystack line
+	// that begins with the needle (ignoring whitespace).
 	if (needleIdx === needle.length - 1) {
-		const matchIdx = leftTrimmedHaystackLine.indexOf(trimmedNeedleLine);
-		if (matchIdx === -1) {
+		if (!startsWith(leftTrimmedHaystackLine, trimmedNeedleLine)) {
 			return undefined;
 		}
-		matched.endColumn = matchIdx + trimmedNeedleLine.length + haystackLine.length - leftTrimmedHaystackLine.length + 1;
+		const leftPadding = haystackLine.length - leftTrimmedHaystackLine.length;
+		matched.endColumn = leftPadding + trimmedNeedleLine.length + 1;
 	}
 	return matched;
 }
