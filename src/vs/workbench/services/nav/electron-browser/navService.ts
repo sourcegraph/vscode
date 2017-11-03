@@ -143,6 +143,7 @@ export class NavService extends Disposable implements INavService {
 		// If a VCS is specified that is not Git we do not support it. If no VCS
 		// is specified it is likely a github:// or bitbucket:// resource URI.
 		if (query.vcs && query.vcs !== 'git') {
+			this.messageService.show(Severity.Error, nls.localize('invalidVCS', "Deep Link: Invalid VCS Parameter: '{0}'", query.vcs));
 			return Promise.resolve(void 0);
 		}
 
