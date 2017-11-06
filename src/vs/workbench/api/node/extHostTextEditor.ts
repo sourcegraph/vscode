@@ -13,10 +13,12 @@ import { ExtHostDocumentData } from 'vs/workbench/api/node/extHostDocumentData';
 import { Selection, Range, Position, EndOfLine, TextEditorRevealType, TextEditorLineNumbersStyle, SnippetString } from './extHostTypes';
 import { ISingleEditOperation } from 'vs/editor/common/editorCommon';
 import * as TypeConverters from './extHostTypeConverters';
-import { MainThreadEditorsShape, IResolvedTextEditorConfiguration, ITextEditorConfigurationUpdate } from './extHost.protocol';
+import { MainThreadEditorsShape, IResolvedTextEditorConfiguration, ITextEditorConfigurationUpdate, IViewZoneEvent } from './extHost.protocol';
 import * as vscode from 'vscode';
 import { TextEditorCursorStyle } from 'vs/editor/common/config/editorOptions';
 import { IRange } from 'vs/editor/common/core/range';
+import Event, { Emitter } from 'vs/base/common/event';
+import { isUndefined } from 'vs/base/common/types';
 
 export class TextEditorDecorationType implements vscode.TextEditorDecorationType {
 
@@ -33,6 +35,84 @@ export class TextEditorDecorationType implements vscode.TextEditorDecorationType
 
 	public dispose(): void {
 		this._proxy.$removeTextEditorDecorationType(this.key);
+	}
+}
+
+class TextEditorViewZone implements vscode.TextEditorViewZone {
+
+	private static _ZoneKeys = new IdGenerator('TextEditorViewZone');
+
+	private _proxy: MainThreadEditorsShape;
+	public key: string;
+
+	private _header: vscode.ViewZoneHeader | undefined;
+	get header(): vscode.ViewZoneHeader | undefined { return this._header; }
+	set header(header: vscode.ViewZoneHeader | undefined) {
+		this._header = header;
+		this._proxy.$onViewZoneEvent(this.id, this.key, { header });
+	}
+
+	private _onMessage = new Emitter<string>();
+	public get onMessage(): Event<string> { return this._onMessage.event; }
+
+	private _onDidClose = new Emitter<void>();
+	public get onDidClose(): Event<void> { return this._onDidClose.event; }
+
+	constructor(
+		proxy: MainThreadEditorsShape,
+		private id: string,
+		zoneId: string,
+		contents: vscode.ViewZoneContents,
+	) {
+		this.key = TextEditorViewZone._ZoneKeys.nextId();
+		this._proxy = proxy;
+		this._proxy.$tryCreateViewZone(this.id, this.key, zoneId, contents);
+	}
+
+	/**
+	 * Handles an event received from the main workbench thread.
+	 */
+	public handleEvent(event: IViewZoneEvent): void {
+		if (!isUndefined(event.message)) {
+			this._onMessage.fire(event.message);
+		}
+
+		// No need to handle event.{show,hide} because the main workbench thread
+		// cannot show or hide this view zone; only the extension that created it can
+		// show it. (The main workbench thread can dispose it, but that's handled
+		// through the $tryRemoveViewZone method.)
+	}
+
+	public postMessage(message: string): void {
+		this._proxy.$onViewZoneEvent(this.id, this.key, { message });
+	}
+
+	public show(positionOrRange: vscode.Range | vscode.Position): void {
+		this._proxy.$onViewZoneEvent(this.id, this.key, {
+			show: {
+				positionOrRange: Position.isPosition(positionOrRange) ?
+					TypeConverters.fromPosition(positionOrRange) :
+					TypeConverters.fromRange(positionOrRange as vscode.Range),
+			}
+		});
+	}
+
+	public hide(): void {
+		this._proxy.$onViewZoneEvent(this.id, this.key, { hide: true });
+	}
+
+	public dispose(): void {
+		this._proxy.$tryRemoveViewZone(this.id, this.key);
+		this._onDidClose.fire();
+	}
+
+	/**
+	 * Called when this view zone was disposed by the main workbench thread.
+	 */
+	public onDidDispose(): void {
+		// Don't call $tryRemoveViewZone on main because this view zone was
+		// already disposed and no longer exists in the main workbench thread.
+		this._onDidClose.fire();
 	}
 }
 
@@ -317,6 +397,8 @@ export class ExtHostTextEditor implements vscode.TextEditor {
 	private readonly _id: string;
 	private readonly _documentData: ExtHostDocumentData;
 
+	private readonly _viewZones = new Map<string, TextEditorViewZone>();
+
 	private _selections: Selection[];
 	private _options: ExtHostTextEditorOptions;
 	private _viewColumn: vscode.ViewColumn;
@@ -336,6 +418,7 @@ export class ExtHostTextEditor implements vscode.TextEditor {
 	dispose() {
 		ok(!this._disposed);
 		this._disposed = true;
+		this._viewZones.forEach(viewZone => viewZone.onDidDispose());
 	}
 
 	@deprecated('TextEditor.show') show(column: vscode.ViewColumn) {
@@ -550,6 +633,30 @@ export class ExtHostTextEditor implements vscode.TextEditor {
 		}
 
 		return this._proxy.$tryInsertSnippet(this._id, snippet.value, ranges, options);
+	}
+
+	// ---- view zones
+
+	createViewZone(zoneId: string, contents: vscode.ViewZoneContents): vscode.TextEditorViewZone {
+		const viewZone = new TextEditorViewZone(this._proxy, this._id, zoneId, contents);
+		this._viewZones.set(viewZone.key, viewZone);
+		return viewZone;
+	}
+
+	getViewZone(key: string): vscode.TextEditorViewZone {
+		return this._viewZones.get(key);
+	}
+
+	_onViewZoneEvent(key: string, event: IViewZoneEvent): void {
+		ok(!this._disposed);
+
+		const viewZone = this._viewZones.get(key);
+		if (!viewZone) {
+			console.warn(`no TextEditorViewZone with key: ${key}`);
+			return;
+		}
+
+		viewZone.handleEvent(event);
 	}
 
 	// ---- util

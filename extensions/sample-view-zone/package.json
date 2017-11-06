@@ -1,0 +1,117 @@
+{
+  "name": "sample-view-zone",
+  "displayName": "View Zone Sample",
+  "description": "Demonstrates the proposed vscode.TextEditor#createViewZone extension API",
+  "categories": [
+    "Other"
+  ],
+  "main": "./out/extension/main",
+  "version": "0.0.1",
+  "publisher": "sourcegraph",
+  "engines": {
+    "vscode": "*"
+  },
+  "activationEvents": [
+    "*"
+  ],
+  "enableProposedApi": true,
+  "contributes": {
+    "commands": [
+      {
+        "command": "sampleViewZone.cityList.create",
+        "title": "City List",
+        "category": "View Zone Sample: City List"
+      },
+      {
+        "command": "sampleViewZone.cityList.reset",
+        "title": "Reset",
+        "category": "View Zone Sample: City List",
+        "icon": {
+          "light": "resources/icons/light/reset.svg",
+          "dark": "resources/icons/dark/reset.svg"
+        }
+      },
+      {
+        "command": "sampleViewZone.loremIpsum.create",
+        "title": "Lorem Ipsum",
+        "category": "View Zone Sample"
+      },
+      {
+        "command": "sampleViewZone.loremIpsum.addParagraph",
+        "title": "Add Paragraph",
+        "category": "View Zone Sample: Lorem Ipsum",
+        "icon": {
+          "light": "resources/icons/light/add.svg",
+          "dark": "resources/icons/dark/add.svg"
+        }
+      },
+      {
+        "command": "sampleViewZone.loremIpsum.removeParagraph",
+        "title": "Remove Paragraph",
+        "category": "View Zone Sample: Lorem Ipsum",
+        "icon": {
+          "light": "resources/icons/light/remove.svg",
+          "dark": "resources/icons/dark/remove.svg"
+        }
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "sampleViewZone.cityList.create",
+          "when": "config.sampleViewZone.enabled"
+        },
+        {
+          "command": "sampleViewZone.loremIpsum.create",
+          "when": "config.sampleViewZone.enabled"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "sampleViewZone.cityList.create",
+          "when": "config.sampleViewZone.enabled",
+          "group": "navigation"
+        },
+        {
+          "command": "sampleViewZone.loremIpsum.create",
+          "when": "config.sampleViewZone.enabled",
+          "group": "navigation"
+        }
+      ],
+      "viewZone/title": [
+        {
+          "command": "sampleViewZone.cityList.reset",
+          "when": "config.sampleViewZone.enabled && viewZone == cityList"
+        },
+        {
+          "command": "sampleViewZone.loremIpsum.addParagraph",
+          "when": "config.sampleViewZone.enabled && viewZone == loremIpsum"
+        },
+        {
+          "command": "sampleViewZone.loremIpsum.removeParagraph",
+          "when": "config.sampleViewZone.enabled && viewZone == loremIpsum"
+        }
+      ]
+    },
+    "configuration": {
+      "type": "object",
+      "title": "View Zone Sample",
+      "properties": {
+        "sampleViewZone.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Controls whether the View Zone Sample extension is enabled"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "gulp compile-extension:sample-view-zone",
+    "watch": "gulp watch-extension:sample-view-zone"
+  },
+  "devDependencies": {
+    "@types/mocha": "^2.2.38",
+    "@types/node": "^7.0.12",
+    "vscode": "1.0.1"
+  }
+}

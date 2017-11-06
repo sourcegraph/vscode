@@ -145,6 +145,17 @@
 				newDocument.head.appendChild(defaultStyles);
 			}
 
+			// View zones: define helper for communication with the extension that
+			// created this view zone.
+			const helperScripts = newDocument.createElement('script');
+			helperScripts.type = 'application/javascript';
+			helperScripts.innerHTML = `
+				function postMessageToExtension(message) { window.parent.postMessage({ command: 'extension-view-message', data: message }, 'file://'); }
+				function onMessageFromExtension(callback) { const handler = function(e) { callback(e.data, e.origin); }; window.addEventListener('message', handler); return function() { window.removeEventListener('message', handler); }; }
+				function requestLayout(height) { window.parent.postMessage({ command: 'extension-view-request-layout', data: height }, 'file://'); }
+			`;
+			newDocument.head.appendChild(helperScripts);
+
 			styleBody(newDocument.body);
 
 			const frame = getActiveFrame();
@@ -211,7 +222,7 @@
 					newFrame.style.visibility = 'visible';
 					contentWindow.addEventListener('scroll', handleInnerScroll);
 
-					pendingMessages.forEach(function(data) {
+					pendingMessages.forEach(function (data) {
 						contentWindow.postMessage(data, document.location.origin);
 					});
 					pendingMessages = [];

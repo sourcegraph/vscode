@@ -463,4 +463,106 @@ declare module 'vscode' {
 		 */
 		export let console: DebugConsole;
 	}
+
+	/**
+	 * The contents of the view zone.
+	 */
+	export interface ViewZoneContents {
+		type: 'html';
+		value: string;
+	}
+
+	/**
+	 * Options for creating a [view zone](#TextEditorViewZone).
+	 */
+	export interface ViewZoneOptions {
+
+		/**
+		 * The content of the view zone.
+		 */
+		contents: ViewZoneContents;
+	}
+
+	/**
+	 * Represents the header of a [view zone](#TextEditorViewZone).
+	 */
+	export interface ViewZoneHeader {
+		readonly primaryHeading: string;
+		readonly secondaryHeading?: string;
+		readonly metaHeading?: string;
+	}
+
+	/**
+	 * Represents a view zone in a text editor.
+	 *
+	 * A view zone is a full horizontal rectangle that 'pushes' text down. The editor reserves
+	 * space for zones when rendering.
+	 *
+	 * A view zone is rendered in an isolated webview. The extension can send and receive messages
+	 * to the webview using TextEditorViewZone's postMessage method and onMessage event. The webview
+	 * can send and receive messages to the extension using the following functions, which are
+	 * defined in the webview's context:
+	 *
+	 *     declare function postMessageToExtension(message: string): void;
+	 *     declare function onMessageFromExtension(callback: (message: string, origin: string) => void): void;
+	 *
+	 * The view zone is responsible for managing its own height (to avoid scrolling or extraneous
+	 * empty space). To request a new height, it uses the following function that is defined in its
+	 * context:
+	 *
+	 *     declare function requestLayout(height: number): void;
+	 */
+	export interface TextEditorViewZone extends Disposable {
+
+		/**
+		 * Show the [view zone](#TextEditorViewZone) at the specified position;
+		 */
+		show(position: Position): void;
+
+		/**
+		 * Show the [view zone](#TextEditorViewZone) at the specified range.
+		 */
+		show(range: Range): void;
+
+		/**
+		 * Hide the [view zone](#TextEditorViewZone).
+		 */
+		hide(): void;
+
+		/**
+		 * The [view zone's](#TextEditorViewZone) header.
+		 */
+		header?: ViewZoneHeader;
+
+		/**
+		 * Sends a message to the [view zone's](#TextEditorViewZone) web frame.
+		 */
+		postMessage(message: string): void;
+
+		/**
+		 * An [event](#Event) that is fired when a message is received from the
+		 * [view zone's](#TextEditorViewZone) web frame.
+		 */
+		onMessage: Event<string>;
+
+		/**
+		 * An [event](#Event) that is fired when the [view zone](#TextEditorViewZone) is closed. It
+		 * is closed when its editor is no longer visible, when it's disposed, or by explicit action.
+		 */
+		onDidClose: Event<void>;
+	}
+
+	export interface TextEditor {
+		/**
+		 * Creates a [view zone](#TextEditorViewZone) in the text editor.
+		 *
+		 * A view zone is a full horizontal rectangle that 'pushes' text down. The editor reserves
+		 * space for zones when rendering.
+		 *
+		 * @param id An `id` for the view zone. Multiple view zones with the same `id` are allowed.
+		 * @param contents The contents of the view zone.
+		 * @return The view zone.
+		 */
+		createViewZone(id: string, contents: ViewZoneContents): TextEditorViewZone;
+	}
 }

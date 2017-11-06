@@ -67,6 +67,9 @@ suite('ExtHostTextEditorOptions', () => {
 			$tryApplyEdits: undefined,
 			$tryApplyWorkspaceEdit: undefined,
 			$tryInsertSnippet: undefined,
+			$tryCreateViewZone: undefined,
+			$onViewZoneEvent: undefined,
+			$tryRemoveViewZone: undefined,
 			$getDiffInformation: undefined
 		};
 		opts = new ExtHostTextEditorOptions(mockProxy, '1', {

@@ -34,6 +34,7 @@ const extensions = [
 	'css',
 	'html',
 	'git',
+	'sample-view-zone',
 	'service-bitbucket-cloud',
 	'service-github',
 	'service-gitlab',

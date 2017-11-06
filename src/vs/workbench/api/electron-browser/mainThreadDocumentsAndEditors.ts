@@ -23,6 +23,7 @@ import { ITextModelService } from 'vs/editor/common/services/resolverService';
 import { IUntitledEditorService } from 'vs/workbench/services/untitled/common/untitledEditorService';
 import { IEditorGroupService } from 'vs/workbench/services/group/common/groupService';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
+import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 
 namespace mapset {
 
@@ -308,6 +309,7 @@ export class MainThreadDocumentsAndEditors {
 		@IModelService private _modelService: IModelService,
 		@ITextFileService private _textFileService: ITextFileService,
 		@IWorkbenchEditorService private _workbenchEditorService: IWorkbenchEditorService,
+		@IInstantiationService private _instantiationService: IInstantiationService,
 		@ICodeEditorService codeEditorService: ICodeEditorService,
 		@IModeService modeService: IModeService,
 		@IFileService fileService: IFileService,
@@ -354,7 +356,7 @@ export class MainThreadDocumentsAndEditors {
 		// added editors
 		for (const apiEditor of delta.addedEditors) {
 			const mainThreadEditor = new MainThreadTextEditor(apiEditor.id, apiEditor.editor.getModel(),
-				apiEditor.editor, { onGainedFocus() { }, onLostFocus() { } }, this._modelService);
+				apiEditor.editor, { onGainedFocus() { }, onLostFocus() { } }, this._instantiationService, this._modelService);
 
 			this._editors[apiEditor.id] = mainThreadEditor;
 			addedEditors.push(mainThreadEditor);

@@ -13,6 +13,10 @@ import { mock } from 'vs/workbench/test/electron-browser/api/mock';
 import { ExtHostDocumentsAndEditors } from 'vs/workbench/api/node/extHostDocumentsAndEditors';
 import { OneGetThreadService, TestThreadService } from 'vs/workbench/test/electron-browser/api/testThreadService';
 import { ExtHostEditors } from 'vs/workbench/api/node/extHostTextEditors';
+import { ExtHostCommands } from 'vs/workbench/api/node/extHostCommands';
+import { ExtHostHeapService } from 'vs/workbench/api/node/extHostHeapService';
+import { MainThreadCommands } from 'vs/workbench/api/electron-browser/mainThreadCommands';
+import { TestInstantiationService } from 'vs/platform/instantiation/test/common/instantiationServiceMock';
 
 suite('ExtHostTextEditors.applyWorkspaceEdit', () => {
 
@@ -30,6 +34,8 @@ suite('ExtHostTextEditors.applyWorkspaceEdit', () => {
 				return TPromise.as(true);
 			}
 		});
+		let instantiationService = new TestInstantiationService();
+		threadService.setTestInstance(MainContext.MainThreadCommands, instantiationService.createInstance(MainThreadCommands, threadService));
 		const documentsAndEditors = new ExtHostDocumentsAndEditors(OneGetThreadService(null));
 		documentsAndEditors.$acceptDocumentsAndEditorsDelta({
 			addedDocuments: [{
@@ -41,7 +47,7 @@ suite('ExtHostTextEditors.applyWorkspaceEdit', () => {
 				EOL: '\n',
 			}]
 		});
-		editors = new ExtHostEditors(threadService, documentsAndEditors);
+		editors = new ExtHostEditors(threadService, documentsAndEditors, new ExtHostCommands(threadService, new ExtHostHeapService()));
 	});
 
 	test('uses version id if document available', () => {

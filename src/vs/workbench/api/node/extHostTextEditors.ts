@@ -12,8 +12,9 @@ import * as TypeConverters from './extHostTypeConverters';
 import { TextEditorDecorationType, ExtHostTextEditor } from './extHostTextEditor';
 import { ExtHostDocumentsAndEditors } from './extHostDocumentsAndEditors';
 import { Position as EditorPosition } from 'vs/platform/editor/common/editor';
-import { MainContext, MainThreadEditorsShape, ExtHostEditorsShape, ITextDocumentShowOptions, ITextEditorPositionData, IResolvedTextEditorConfiguration, ISelectionChangeEvent, IMainContext, IWorkspaceResourceEdit } from './extHost.protocol';
+import { MainContext, MainThreadEditorsShape, ExtHostEditorsShape, ITextDocumentShowOptions, ITextEditorPositionData, IResolvedTextEditorConfiguration, ISelectionChangeEvent, IMainContext, IWorkspaceResourceEdit, IViewZoneEvent } from './extHost.protocol';
 import * as vscode from 'vscode';
+import { ExtHostCommands } from 'vs/workbench/api/node/extHostCommands';
 
 export class ExtHostEditors implements ExtHostEditorsShape {
 
@@ -36,12 +37,31 @@ export class ExtHostEditors implements ExtHostEditorsShape {
 	constructor(
 		mainContext: IMainContext,
 		extHostDocumentsAndEditors: ExtHostDocumentsAndEditors,
+		private _commands: ExtHostCommands,
 	) {
 		this._proxy = mainContext.get(MainContext.MainThreadEditors);
 		this._extHostDocumentsAndEditors = extHostDocumentsAndEditors;
 
 		this._extHostDocumentsAndEditors.onDidChangeVisibleTextEditors(e => this._onDidChangeVisibleTextEditors.fire(e));
 		this._extHostDocumentsAndEditors.onDidChangeActiveTextEditor(e => this._onDidChangeActiveTextEditor.fire(e));
+
+		_commands.registerArgumentProcessor({
+			processArgument: arg => {
+				if (arg && arg.$mid === 4001) {
+					const editor = this._extHostDocumentsAndEditors.getEditor(arg.editorId);
+					if (!editor) {
+						return arg;
+					}
+
+					const viewZone = editor.getViewZone(arg.viewZoneKey);
+					if (!viewZone) {
+						return arg;
+					}
+					return viewZone;
+				}
+				return arg;
+			}
+		});
 	}
 
 	getActiveTextEditor(): ExtHostTextEditor {
@@ -156,6 +176,11 @@ export class ExtHostEditors implements ExtHostEditorsShape {
 				this._onDidChangeTextEditorViewColumn.fire({ textEditor, viewColumn });
 			}
 		}
+	}
+
+	$onViewZoneEvent(id: string, key: string, event: IViewZoneEvent): void {
+		const editor = this._extHostDocumentsAndEditors.getEditor(id);
+		editor._onViewZoneEvent(key, event);
 	}
 
 	getDiffInformation(id: string): Thenable<vscode.LineChange[]> {

@@ -219,6 +219,25 @@ export interface IWorkspaceResourceEdit {
 	}[];
 }
 
+export interface IViewZoneOptions {
+	range: IRange;
+	contents: vscode.ViewZoneContents;
+	header?: {
+		primaryHeading: string;
+		secondaryHeading?: string;
+		metaHeading?: string;
+	};
+}
+
+export interface IViewZoneEvent {
+	message?: string;
+	show?: {
+		positionOrRange: IPosition | IRange;
+	};
+	hide?: boolean;
+	header?: vscode.ViewZoneHeader;
+}
+
 export interface MainThreadEditorsShape extends IDisposable {
 	$tryShowTextDocument(resource: URI, options: ITextDocumentShowOptions): TPromise<string>;
 	$registerTextEditorDecorationType(key: string, options: editorCommon.IDecorationRenderOptions): void;
@@ -233,6 +252,9 @@ export interface MainThreadEditorsShape extends IDisposable {
 	$tryApplyEdits(id: string, modelVersionId: number, edits: editorCommon.ISingleEditOperation[], opts: IApplyEditsOptions): TPromise<boolean>;
 	$tryApplyWorkspaceEdit(workspaceResourceEdits: IWorkspaceResourceEdit[]): TPromise<boolean>;
 	$tryInsertSnippet(id: string, template: string, selections: IRange[], opts: IUndoStopOptions): TPromise<any>;
+	$tryCreateViewZone(id: string, key: string, zoneId: string, contents: vscode.ViewZoneContents): TPromise<boolean>;
+	$onViewZoneEvent(id: string, key: string, event: IViewZoneEvent): TPromise<void>;
+	$tryRemoveViewZone(id: string, key: string): TPromise<void>;
 	$getDiffInformation(id: string): TPromise<editorCommon.ILineChange[]>;
 }
 
@@ -517,6 +539,7 @@ export interface ExtHostEditorsShape {
 	$acceptOptionsChanged(id: string, opts: IResolvedTextEditorConfiguration): void;
 	$acceptSelectionsChanged(id: string, event: ISelectionChangeEvent): void;
 	$acceptEditorPositionData(data: ITextEditorPositionData): void;
+	$onViewZoneEvent(id: string, key: string, data: IViewZoneEvent): void;
 }
 
 export interface IDocumentsAndEditorsDelta {

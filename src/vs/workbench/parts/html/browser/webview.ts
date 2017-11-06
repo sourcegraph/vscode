@@ -53,6 +53,7 @@ export interface WebviewOptions {
 	allowScripts?: boolean;
 	allowSvgs?: boolean;
 	svgWhiteList?: string[];
+	insertCss?: string;
 }
 
 export default class Webview {
@@ -202,6 +203,9 @@ export default class Webview {
 		}
 	}
 
+	get ready(): TPromise<this> { return this._ready; }
+	get domNode(): WebviewElement { return this._webview; }
+
 	public notifyFindWidgetFocusChanged(isFocused: boolean) {
 		this._contextKey.set(isFocused || document.activeElement === this._webview);
 	}
@@ -310,6 +314,10 @@ export default class Webview {
 			height: 10px;
 		}`;
 
+		if (this._options.insertCss) {
+			value += '\n' + this._options.insertCss;
+		}
+
 
 		let activeTheme: ApiThemeClassName;
 
@@ -361,29 +369,33 @@ export default class Webview {
 		this._webviewFindWidget.updateTheme(theme);
 	}
 
-	public layout(): void {
+	public layout(): TPromise<void> {
 		const contents = (this._webview as any).getWebContents();
 		if (!contents || contents.isDestroyed()) {
-			return;
+			return TPromise.as(null);
 		}
 		const window = contents.getOwnerBrowserWindow();
 		if (!window || !window.webContents || window.webContents.isDestroyed()) {
-			return;
+			return TPromise.as(null);
 		}
-		window.webContents.getZoomFactor(factor => {
-			if (contents.isDestroyed()) {
-				return;
-			}
-
-			contents.setZoomFactor(factor);
-
-			const width = this.parent.clientWidth;
-			const height = this.parent.clientHeight;
-			contents.setSize({
-				normal: {
-					width: Math.floor(width * factor),
-					height: Math.floor(height * factor)
+		return new TPromise(resolve => {
+			window.webContents.getZoomFactor(factor => {
+				if (contents.isDestroyed()) {
+					resolve(null);
+					return;
 				}
+
+				contents.setZoomFactor(factor);
+
+				const width = this.parent.clientWidth;
+				const height = this.parent.clientHeight;
+				contents.setSize({
+					normal: {
+						width: Math.floor(width * factor),
+						height: Math.floor(height * factor)
+					}
+				});
+				resolve(null);
 			});
 		});
 	}

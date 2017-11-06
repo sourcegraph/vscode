@@ -14,7 +14,7 @@ import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/edi
 import { IEditorGroupService } from 'vs/workbench/services/group/common/groupService';
 import { Position as EditorPosition, ITextEditorOptions } from 'vs/platform/editor/common/editor';
 import { MainThreadTextEditor } from './mainThreadEditor';
-import { ITextEditorConfigurationUpdate, TextEditorRevealType, IApplyEditsOptions, IUndoStopOptions } from 'vs/workbench/api/node/extHost.protocol';
+import { ITextEditorConfigurationUpdate, TextEditorRevealType, IApplyEditsOptions, IUndoStopOptions, IViewZoneEvent } from 'vs/workbench/api/node/extHost.protocol';
 import { MainThreadDocumentsAndEditors } from './mainThreadDocumentsAndEditors';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { equals as objectEquals } from 'vs/base/common/objects';
@@ -25,6 +25,7 @@ import { ITextModelService } from 'vs/editor/common/services/resolverService';
 import { IFileService } from 'vs/platform/files/common/files';
 import { bulkEdit, IResourceEdit } from 'vs/editor/common/services/bulkEdit';
 import { IModelService } from 'vs/editor/common/services/modelService';
+import * as vscode from 'vscode';
 
 export class MainThreadEditors implements MainThreadEditorsShape {
 
@@ -287,6 +288,30 @@ export class MainThreadEditors implements MainThreadEditorsShape {
 	$removeTextEditorDecorationType(key: string): void {
 		delete this._registeredDecorationTypes[key];
 		this._codeEditorService.removeDecorationType(key);
+	}
+
+	$tryCreateViewZone(id: string, key: string, zoneId: string, contents: vscode.ViewZoneContents): TPromise<boolean> {
+		if (!this._documentsAndEditors.getEditor(id)) {
+			return TPromise.wrapError(disposed(`TextEditor(${id})`));
+		}
+		this._documentsAndEditors.getEditor(id).createViewZone(this._proxy, key, zoneId, contents);
+		return TPromise.as(null);
+	}
+
+	$onViewZoneEvent(id: string, key: string, event: IViewZoneEvent): TPromise<void> {
+		if (!this._documentsAndEditors.getEditor(id)) {
+			return TPromise.wrapError(disposed(`TextEditor(${id})`));
+		}
+		this._documentsAndEditors.getEditor(id).handleViewZoneEvent(this._proxy, key, event);
+		return TPromise.as(null);
+	}
+
+	$tryRemoveViewZone(id: string, key: string): TPromise<void> {
+		if (!this._documentsAndEditors.getEditor(id)) {
+			return TPromise.wrapError(disposed(`TextEditor(${id})`));
+		}
+		this._documentsAndEditors.getEditor(id).removeViewZone(key);
+		return TPromise.as(null);
 	}
 
 	$getDiffInformation(id: string): TPromise<ILineChange[]> {

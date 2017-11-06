@@ -67,6 +67,7 @@ suite('MainThreadEditors', () => {
 			modelService,
 			textFileService,
 			workbenchEditorService,
+			null,
 			codeEditorService,
 			null,
 			null,

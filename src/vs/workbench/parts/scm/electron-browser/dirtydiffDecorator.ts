@@ -115,7 +115,7 @@ function lineIntersectsChange(lineNumber: number, change: IChange): boolean {
 	return lineNumber >= change.modifiedStartLineNumber && lineNumber <= (change.modifiedEndLineNumber || change.modifiedStartLineNumber);
 }
 
-class UIEditorAction extends Action {
+export class UIEditorAction extends Action {
 
 	private editor: ICommonCodeEditor;
 	private action: EditorAction;

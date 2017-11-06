@@ -43,6 +43,7 @@ namespace schema {
 			case 'scm/change/title': return MenuId.SCMChangeContext;
 			case 'view/title': return MenuId.ViewTitle;
 			case 'view/item/context': return MenuId.ViewItemContext;
+			case 'viewZone/title': return MenuId.ViewZoneTitle;
 		}
 
 		return void 0;
@@ -164,6 +165,11 @@ namespace schema {
 			},
 			'view/item/context': {
 				description: localize('view.itemContext', "The contributed view item context menu"),
+				type: 'array',
+				items: menuItem
+			},
+			'viewZone/title': {
+				description: localize('menus.viewZoneTitle', "A view zone's title menu"),
 				type: 'array',
 				items: menuItem
 			}

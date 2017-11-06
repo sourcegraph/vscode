@@ -8,14 +8,18 @@ import EditorCommon = require('vs/editor/common/editorCommon');
 import Event, { Emitter } from 'vs/base/common/event';
 import { IEditor } from 'vs/platform/editor/common/editor';
 import { IModelService } from 'vs/editor/common/services/modelService';
-import { IDisposable, dispose } from 'vs/base/common/lifecycle';
+import { IDisposable, dispose, combinedDisposable } from 'vs/base/common/lifecycle';
 import { Range, IRange } from 'vs/editor/common/core/range';
 import { Selection, ISelection } from 'vs/editor/common/core/selection';
 import { SnippetController2 } from 'vs/editor/contrib/snippet/browser/snippetController2';
 import { EndOfLine, TextEditorLineNumbersStyle } from 'vs/workbench/api/node/extHostTypes';
 import { TextEditorCursorStyle, cursorStyleToString } from 'vs/editor/common/config/editorOptions';
 import { ICursorSelectionChangedEvent } from 'vs/editor/common/controller/cursorEvents';
-import { IResolvedTextEditorConfiguration, ISelectionChangeEvent, ITextEditorConfigurationUpdate, TextEditorRevealType, IApplyEditsOptions, IUndoStopOptions } from 'vs/workbench/api/node/extHost.protocol';
+import { IResolvedTextEditorConfiguration, ISelectionChangeEvent, ITextEditorConfigurationUpdate, TextEditorRevealType, IApplyEditsOptions, IUndoStopOptions, IViewZoneEvent, ExtHostEditorsShape } from 'vs/workbench/api/node/extHost.protocol';
+import { ICodeEditor } from 'vs/editor/browser/editorBrowser';
+import { MainThreadViewZone } from 'vs/workbench/api/electron-browser/mainThreadViewZone';
+import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
+import * as vscode from 'vscode';
 
 function configurationsEqual(a: IResolvedTextEditorConfiguration, b: IResolvedTextEditorConfiguration) {
 	if (a && !b || !a && b) {
@@ -55,11 +59,14 @@ export class MainThreadTextEditor {
 	private _onSelectionChanged: Emitter<ISelectionChangeEvent>;
 	private _onConfigurationChanged: Emitter<IResolvedTextEditorConfiguration>;
 
+	private _viewZones = new Map<string, { viewZone: MainThreadViewZone, listenerDisposable: IDisposable }>();
+
 	constructor(
 		id: string,
 		model: EditorCommon.IModel,
 		codeEditor: EditorCommon.ICommonCodeEditor,
 		focusTracker: IFocusTracker,
+		private instantiationService: IInstantiationService,
 		modelService: IModelService
 	) {
 		this._id = id;
@@ -87,6 +94,10 @@ export class MainThreadTextEditor {
 		this._modelListeners = dispose(this._modelListeners);
 		this._codeEditor = null;
 		this._codeEditorListeners = dispose(this._codeEditorListeners);
+		this._viewZones.forEach(({ viewZone, listenerDisposable }) => {
+			viewZone.dispose();
+			listenerDisposable.dispose();
+		});
 	}
 
 	public getId(): string {
@@ -386,5 +397,61 @@ export class MainThreadTextEditor {
 		snippetController.insert(template, 0, 0, opts.undoStopBefore, opts.undoStopAfter);
 
 		return true;
+	}
+
+	createViewZone(proxy: ExtHostEditorsShape, key: string, id: string, contents: vscode.ViewZoneContents): boolean {
+
+		if (!this._codeEditor) {
+			return false;
+		}
+
+		if (this._viewZones.has(key)) {
+			throw new Error(`view zone already exists with key: ${key}`);
+		}
+
+		const viewZone = this.instantiationService.createInstance(
+			MainThreadViewZone,
+			this._codeEditor as ICodeEditor,
+			id,
+			contents,
+			{
+				$mid: 4001,
+				editorId: this._id,
+				viewZoneKey: key,
+			}
+		);
+
+		const listenerDisposables: IDisposable[] = [];
+		viewZone.onMessage(message => proxy.$onViewZoneEvent(this._id, key, { message }), null, listenerDisposables);
+		viewZone.onDidClose(() => proxy.$onViewZoneEvent(this._id, key, { hide: true }), null, listenerDisposables);
+
+		this._viewZones.set(key, {
+			viewZone,
+			listenerDisposable: combinedDisposable(listenerDisposables),
+		});
+
+		return true;
+	}
+
+	handleViewZoneEvent(proxy: ExtHostEditorsShape, key: string, event: IViewZoneEvent): void {
+		if (!this._viewZones.has(key)) {
+			console.warn(`no view zone with key: ${key}`);
+			return;
+		}
+
+		const { viewZone } = this._viewZones.get(key);
+		viewZone.handleEvent(event);
+	}
+
+	removeViewZone(key: string): void {
+		if (!this._viewZones.has(key)) {
+			console.warn(`no view zone to dispose with key: ${key}`);
+			return;
+		}
+
+		const { viewZone, listenerDisposable } = this._viewZones.get(key);
+		viewZone.dispose();
+		listenerDisposable.dispose();
+		this._viewZones.delete(key);
 	}
 }

@@ -247,7 +247,7 @@ export abstract class ZoneWidget implements IHorizontalSashLayoutProvider {
 		}
 	}
 
-	private _getWidth(info: EditorLayoutInfo = this.editor.getLayoutInfo()): number {
+	protected _getWidth(info: EditorLayoutInfo = this.editor.getLayoutInfo()): number {
 		return info.width - info.minimapWidth - info.verticalScrollbarWidth;
 	}
 
