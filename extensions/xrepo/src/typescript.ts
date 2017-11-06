@@ -6,9 +6,9 @@
 
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { readFile } from './nodeutil';
 import { walk } from './util';
 import { PackageData } from './types';
+import { readFile } from 'mz/fs';
 
 /**
  * Pacakge descriptor

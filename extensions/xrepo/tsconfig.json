@@ -1,6 +1,7 @@
 {
-"compilerOptions": {
-	"module": "commonjs",
+	"extends": "./node_modules/@sourcegraph/tsconfig/tsconfig.json",
+	"compilerOptions": {
+		"module": "commonjs",
 		"moduleResolution": "node",
 		"target": "ES6",
 		"outDir": "out",
@@ -9,7 +10,9 @@
 			"es2016"
 		],
 		"sourceMap": true,
-		"strict": true
+		"typeRoots": [
+			"../../node_modules/@types"
+		]
 	},
 	"exclude": [
 		"node_modules",

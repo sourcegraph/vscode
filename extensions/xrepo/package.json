@@ -31,6 +31,11 @@
     "vscode:prepublish": "tsc -p ./"
   },
   "dependencies": {
+    "mz": "^2.7.0",
     "vscode-nls": "^2.0.2"
+  },
+  "devDependencies": {
+    "@sourcegraph/tsconfig": "^1.0.1",
+    "@types/mz": "0.0.32"
   }
 }

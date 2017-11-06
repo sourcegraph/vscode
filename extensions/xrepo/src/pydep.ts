@@ -4,7 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 'use strict';
 
-import { execFile, pathExists } from './nodeutil';
+import { execFile } from 'mz/child_process';
+import * as fs from 'mz/fs';
 import * as path from 'path';
 import * as os from 'os';
 
@@ -83,7 +84,7 @@ function getPython(): Promise<string> {
  */
 async function ensurePython(): Promise<string> {
 	const pythonPath = path.join(pythonEnvDir, 'bin', 'python');
-	if (!await pathExists(pythonPath)) {
+	if (!await fs.exists(pythonPath)) {
 		await execFile('virtualenv', [pythonEnvDir]);
 	}
 	return pythonPath;

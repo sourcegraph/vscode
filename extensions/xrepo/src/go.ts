@@ -7,7 +7,7 @@ import * as vscode from 'vscode';
 import path = require('path');
 import { PackageData } from './types';
 import { getCurrentGoPath, getPackage, getGoRuntimePath, getToolsEnvVars } from './goenv';
-import { execFile } from './nodeutil';
+import { execFile } from 'mz/child_process';
 
 /**
  * Package descriptor
@@ -72,10 +72,12 @@ async function definitionInfo(resource: vscode.Uri, selection: vscode.Selection)
  */
 function workspaceFolderContainsPackage(workspaceFolder: vscode.WorkspaceFolder, pkgInfo: PackageInfo): string | null {
 	const goPath = getCurrentGoPath();
-	for (const goPathRoot of goPath.split(path.delimiter)) {
-		const possibleCanonicalPkgDir = path.join(goPathRoot, 'src', pkgInfo.pkg);
-		if ((possibleCanonicalPkgDir + path.sep).startsWith(workspaceFolder.uri.fsPath + path.sep)) {
-			return possibleCanonicalPkgDir;
+	if (goPath) {
+		for (const goPathRoot of goPath.split(path.delimiter)) {
+			const possibleCanonicalPkgDir = path.join(goPathRoot, 'src', pkgInfo.pkg);
+			if ((possibleCanonicalPkgDir + path.sep).startsWith(workspaceFolder.uri.fsPath + path.sep)) {
+				return possibleCanonicalPkgDir;
+			}
 		}
 	}
 	return null;
