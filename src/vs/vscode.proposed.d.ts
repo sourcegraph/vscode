@@ -465,6 +465,134 @@ declare module 'vscode' {
 	}
 
 	/**
+	 * The theme-aware decorations for a [checklist item](#ChecklistItem).
+	 */
+	export interface ChecklistItemThemableDecorations extends SourceControlResourceThemableDecorations { }
+
+	/**
+	 * The decorations for a [checklist item](#ChecklistItem).
+	 * Can be independently specified for light and dark themes.
+	 */
+	export interface ChecklistItemDecorations extends ChecklistItemThemableDecorations, SourceControlResourceDecorations { }
+
+	/**
+	 * A checklist item represents the state of an underlying
+	 * item within a certain [checklist group](#ChecklistItemGroup).
+	 */
+	export interface ChecklistItem {
+
+		/**
+		 * The name of the item.
+		 */
+		readonly name?: string;
+
+		/**
+		 * The description of the item.
+		 */
+		readonly description?: string;
+
+		/**
+		 * The [command](#Command) which should be run when the item
+		 * is opened in the Checklist viewlet.
+		 */
+		readonly command?: Command;
+
+		/**
+		 * The [decorations](#ChecklistItemDecorations) for this checklist provider
+		 * item state.
+		 */
+		readonly decorations?: ChecklistItemDecorations;
+	}
+
+	/**
+	 * A checklist item group is a collection of
+	 * [checklist items](#ChecklistItem).
+	 */
+	export interface ChecklistItemGroup {
+
+		/**
+		 * The id of this checklist item group.
+		 */
+		readonly id: string;
+
+		/**
+		 * The label of this checklist item group.
+		 */
+		label: string;
+
+		/**
+		 * Whether this checklist item group is hidden when it contains
+		 * no [checklist items](#ChecklistItem).
+		 */
+		hideWhenEmpty?: boolean;
+
+		/**
+		 * This group's collection of [checklist items](#ChecklistItem).
+		 */
+		itemStates: ChecklistItem[];
+
+		/**
+		 * Dispose this checklist item group.
+		 */
+		dispose(): void;
+	}
+
+	/**
+	 * A checklist provider is able to provide [checklist items](#ChecklistItem)
+	 * to the editor and interact with the editor in several related ways.
+	 */
+	export interface ChecklistProvider {
+
+		/**
+		 * The id of this checklist provider.
+		 */
+		readonly id: string;
+
+		/**
+		 * The human-readable label of this checklist provider.
+		 */
+		readonly label: string;
+
+		/**
+		 * The UI-visible count of [checklist items](#ChecklistItem) of
+		 * this checklist provider.
+		 *
+		 * Equals to the total number of [checklist items](#ChecklistItem)
+		 * of this checklist provider, if undefined.
+		 */
+		count?: number;
+
+		/**
+		 * Optional status bar commands.
+		 *
+		 * These commands will be displayed in the editor's status bar. TODO(sqs)
+		 */
+		statusBarCommands?: Command[];
+
+		/**
+		 * Create a new [item group](#ChecklistItemGroup).
+		 */
+		createItemGroup(id: string, label: string): ChecklistItemGroup;
+
+		/**
+		 * Dispose this checklist provider.
+		 */
+		dispose(): void;
+	}
+
+	export namespace checklist {
+
+		/**
+		 * Creates a new [checklist provider](#ChecklistProvider) instance.
+		 *
+		 * @param id An `id` for the checklist provider. Something short, eg: `my checklist provider`.
+		 * @param label A human-readable string for the checklist provider. Eg: `My Checklist Provider`.
+		 * @return An instance of [checklist provider](#ChecklistProvider).
+		 */
+		export function createChecklistProvider(id: string, label: string): ChecklistProvider;
+	}
+
+	/**
 	 * The contents of the view zone.
 	 */
 	export interface ViewZoneContents {

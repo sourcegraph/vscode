@@ -35,6 +35,10 @@
 			"project": "vscode-workbench"
 		},
 		{
+			"name": "vs/workbench/parts/checklist",
+			"project": "vscode-workbench"
+		},
+		{
 			"name": "vs/workbench/parts/cli",
 			"project": "vscode-workbench"
 		},

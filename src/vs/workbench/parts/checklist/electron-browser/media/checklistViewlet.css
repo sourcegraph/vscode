@@ -1,0 +1,155 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Sourcegraph. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.monaco-workbench > .activitybar > .content .monaco-action-bar .action-label.checklist {
+	-webkit-mask: url('icon-dark.svg') no-repeat 50% 50%;
+	-webkit-mask-size: 24px;
+}
+
+.monaco-workbench .viewlet.checklist-viewlet .collapsible.header .actions {
+	width: initial;
+	flex: 1;
+}
+
+.checklist-viewlet .empty-message {
+	padding: 10px 22px 0 22px;
+	opacity: 0.5;
+}
+
+.checklist-viewlet:not(.empty) .empty-message,
+.checklist-viewlet.empty .monaco-panel-view {
+	display: none;
+}
+
+.checklist-viewlet .checklist-status {
+	height: 100%;
+}
+
+.checklist-viewlet .monaco-list-row > .checklist-provider {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+}
+
+.checklist-viewlet .panel-header {
+	display: flex;
+}
+
+.checklist-viewlet .panel-header .actions {
+	flex: 1;
+	text-align: right;
+	margin-right: 12px;
+}
+
+.checklist-viewlet .panel-header .actions .action-label {
+	width: 16px;
+	height: 16px;
+	margin: 2px 0 0 5px;
+}
+
+.checklist-viewlet .checklist-provider:not(.dirty) .badge {
+	display: none;
+}
+
+.checklist-viewlet .checklist-provider .badge {
+	margin-left: 4px;
+}
+
+.checklist-viewlet .monaco-list-row > .checklist-provider > input {
+	flex-shrink: 0;
+}
+
+.checklist-viewlet .checklist-provider > .count {
+	margin: 0 0.5em;
+}
+
+.checklist-viewlet .checklist-provider > .count.hidden {
+	display: none;
+}
+
+.checklist-viewlet .checklist-provider > .name > .type {
+	opacity: 0.7;
+	margin-left: 0.5em;
+	font-size: 0.9em;
+}
+
+.checklist-viewlet .monaco-list-row {
+	padding: 0 12px 0 20px;
+	line-height: 22px;
+}
+
+.checklist-viewlet .monaco-list-row > .item-group {
+	display: flex;
+	height: 100%;
+}
+
+.checklist-viewlet .monaco-list-row > .item-group > .name {
+	flex: 1;
+	font-size: 11px;
+	font-weight: bold;
+	text-transform: uppercase;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.checklist-viewlet .monaco-list-row > .item {
+	display: flex;
+	height: 100%;
+}
+
+.checklist-viewlet .monaco-list-row > .item.faded {
+	opacity: 0.7;
+}
+
+.checklist-viewlet .monaco-list-row > .item > .name {
+	flex: 1;
+	overflow: hidden;
+}
+
+.checklist-viewlet .monaco-list-row > .item > .name > .monaco-icon-label {
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.checklist-viewlet .monaco-list-row > .item > .name.strike-through > .monaco-icon-label > .label-name {
+	text-decoration: line-through;
+}
+
+.checklist-viewlet .monaco-list-row > .item > .decoration-icon {
+	width: 16px;
+	height: 100%;
+	background-repeat: no-repeat;
+	background-position: 50% 50%;
+}
+
+
+.checklist-viewlet .monaco-list .monaco-list-row > .item-group > .actions,
+.checklist-viewlet .monaco-list .monaco-list-row > .item > .actions {
+	display: none;
+}
+
+.checklist-viewlet .monaco-list .monaco-list-row:hover > .item-group > .actions,
+.checklist-viewlet .monaco-list .monaco-list-row:hover > .item > .actions,
+.checklist-viewlet .monaco-list .monaco-list-row.selected > .item-group > .actions,
+.checklist-viewlet .monaco-list .monaco-list-row.focused > .item-group > .actions,
+.checklist-viewlet .monaco-list .monaco-list-row.selected > .item > .actions,
+.checklist-viewlet .monaco-list .monaco-list-row.focused > .item > .actions,
+.checklist-viewlet .monaco-list:not(.selection-multiple) .monaco-list-row > .item:hover > .actions {
+	display: block;
+}
+
+.checklist-viewlet .monaco-list-row > .item > .actions .action-label,
+.checklist-viewlet .monaco-list-row > .item-group > .actions .action-label {
+	width: 16px;
+	height: 100%;
+	background-position: 50% 50%;
+	background-repeat: no-repeat;
+}
+
+.checklist-viewlet .spacer {
+	flex: 1;
+}

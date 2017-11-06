@@ -5,7 +5,6 @@
 
 'use strict';
 
-import { localize } from 'vs/nls';
 import URI from 'vs/base/common/uri';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { EditorInput } from 'vs/workbench/common/editor';
@@ -36,7 +35,8 @@ export class WebBrowserInput extends EditorInput {
 	}
 
 	public getName(): string {
-		return localize('webBrowserInputName', "Web Browser: {0}", this._url.toString());
+		// Show only host and path similar to how Safari does it
+		return this._url.authority + this._url.path;
 	}
 
 	public matches(other: any): boolean {

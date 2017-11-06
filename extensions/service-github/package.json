@@ -55,13 +55,19 @@
             "ssh"
           ],
           "description": "%config.cloneProtocol%"
+        },
+        "github.debug": {
+          "type": "boolean",
+          "default": false,
+          "description": "%config.debug%"
         }
       }
     }
   },
   "scripts": {
     "compile": "gulp compile-extension:service-github",
-    "watch": "gulp watch-extension:service-github"
+    "watch": "gulp watch-extension:service-github",
+    "graphql": "get-graphql-schema -j -h \"Authorization=Bearer $GH_TOKEN\" https://api.github.com/graphql | gql2ts -n GitHubGQL -o src/typings/graphqlschema.d.ts"
   },
   "dependencies": {
     "isomorphic-fetch": "^2.2.1",
@@ -70,6 +76,8 @@
   "devDependencies": {
     "@types/mocha": "^2.2.38",
     "@types/node": "^7.0.12",
+    "get-graphql-schema": "^2.1.1",
+    "gql2ts": "^1.3.0",
     "vscode": "1.0.1"
   }
 }

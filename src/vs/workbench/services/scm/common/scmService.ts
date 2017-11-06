@@ -28,7 +28,7 @@ class SCMInput implements ISCMInput {
 	get onDidChange(): Event<string> { return this._onDidChange.event; }
 }
 
-export class SCMRepository implements ISCMRepository {
+class SCMRepository implements ISCMRepository {
 
 	private _onDidFocus = new Emitter<void>();
 	readonly onDidFocus: Event<void> = this._onDidFocus.event;

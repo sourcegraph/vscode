@@ -16,6 +16,7 @@ export class ViewLocation {
 	static readonly Debug = new ViewLocation('debug');
 	static readonly Extensions = new ViewLocation('extensions');
 	static readonly SCM = new ViewLocation('scm');
+	static readonly Checklist = new ViewLocation('checklist');
 
 	constructor(private _id: string) {
 	}

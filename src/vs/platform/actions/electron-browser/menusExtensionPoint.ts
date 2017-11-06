@@ -41,6 +41,9 @@ namespace schema {
 			case 'scm/resourceGroup/context': return MenuId.SCMResourceGroupContext;
 			case 'scm/resourceState/context': return MenuId.SCMResourceContext;
 			case 'scm/change/title': return MenuId.SCMChangeContext;
+			case 'checklist/title': return MenuId.ChecklistTitle;
+			case 'checklist/itemGroup/context': return MenuId.ChecklistItemGroupContext;
+			case 'checklist/itemState/context': return MenuId.ChecklistItemContext;
 			case 'view/title': return MenuId.ViewTitle;
 			case 'view/item/context': return MenuId.ViewItemContext;
 			case 'viewZone/title': return MenuId.ViewZoneTitle;

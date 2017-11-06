@@ -114,6 +114,8 @@ import { IFoldersWorkbenchService } from 'vs/workbench/services/folders/common/f
 import { FoldersWorkbenchService } from 'vs/workbench/services/folders/node/foldersWorkbenchService';
 import { IAuthService } from 'vs/platform/auth/common/auth';
 import { AuthService } from 'vs/platform/auth/node/authService';
+import { IChecklistService } from 'vs/workbench/services/checklist/common/checklist';
+import { ChecklistService } from 'vs/workbench/services/checklist/common/checklistService';
 
 export const MessagesVisibleContext = new RawContextKey<boolean>('globalMessageVisible', false);
 export const EditorsVisibleContext = new RawContextKey<boolean>('editorIsOpen', false);
@@ -651,6 +653,9 @@ export class Workbench implements IPartService {
 
 		// Review Service
 		serviceCollection.set(IReviewService, new SyncDescriptor(ReviewService));
+
+		// Checklist Service
+		serviceCollection.set(IChecklistService, new SyncDescriptor(ChecklistService));
 
 		// Text Model Resolver Service
 		serviceCollection.set(ITextModelService, new SyncDescriptor(TextModelResolverService));

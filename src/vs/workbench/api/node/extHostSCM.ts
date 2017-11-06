@@ -142,7 +142,7 @@ export class ExtHostSCMInputBox {
 	}
 }
 
-export class ExtHostSourceControlResourceGroup implements vscode.SourceControlResourceGroup {
+class ExtHostSourceControlResourceGroup implements vscode.SourceControlResourceGroup {
 
 	private static _handlePool: number = 0;
 	private _resourceHandlePool: number = 0;
@@ -630,3 +630,5 @@ export class ExtHostSCM {
 		}
 	}
 }
+
+export { ProviderHandle, GroupHandle, ResourceStateHandle, getIconPath, compareResourceThemableDecorations, compareResourceStatesDecorations, ExtHostSourceControlResourceGroup };

@@ -67,8 +67,9 @@ declare var global: any;
 declare var console: Console;
 
 // Don't use these!! :)
+// ^ I don't see a reason why not
 // declare var __filename: string;
-// declare var __dirname: string;
+declare var __dirname: string;
 
 // declare function setTimeout(callback: (...args: any[]) => void, ms: number, ...args: any[]): NodeJS.Timer;
 // declare function clearTimeout(timeoutId: NodeJS.Timer): void;

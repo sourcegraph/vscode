@@ -64,6 +64,10 @@ export class MenuId {
 	static readonly TouchBarContext = new MenuId();
 	static readonly ViewZoneTitle = new MenuId();
 
+	static readonly ChecklistTitle = new MenuId();
+	static readonly ChecklistItemGroupContext = new MenuId();
+	static readonly ChecklistItemContext = new MenuId();
+
 	readonly id: string = String(MenuId.ID++);
 }
 

@@ -10,7 +10,8 @@
 			"dom"
 		],
 		"sourceMap": true,
-		"strict": true
+		"strict": true,
+		"experimentalDecorators": true
 	},
 	"exclude": [
 		"node_modules"

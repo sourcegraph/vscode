@@ -467,6 +467,49 @@ export interface MainThreadReviewShape extends IDisposable {
 	$spliceResourceStates(reviewControlHandle: number, splices: SCMRawResourceSplices[]): void;
 }
 
+export interface ChecklistProviderFeatures {
+	count?: number;
+	statusBarCommands?: modes.Command[];
+}
+
+export interface ChecklistItemGroupFeatures {
+	hideWhenEmpty?: boolean;
+}
+
+export type ChecklistRawItem = [
+	number /*handle*/,
+	string /*name*/,
+	string /*description*/,
+	string[] /*icons: light, dark*/,
+	string /*tooltip*/,
+	boolean /*strike through*/,
+	boolean /*faded*/
+];
+
+export type ChecklistRawItemSplice = [
+	number /* start */,
+	number /* delete count */,
+	ChecklistRawItem[]
+];
+
+export type ChecklistRawItemSplices = [
+	number, /*handle*/
+	ChecklistRawItemSplice[]
+];
+
+export interface MainThreadChecklistShape extends IDisposable {
+	$registerChecklistProvider(handle: number, id: string, label: string): void;
+	$updateChecklistProvider(handle: number, features: ChecklistProviderFeatures): void;
+	$unregisterChecklistProvider(handle: number): void;
+
+	$registerGroup(providerHandle: number, handle: number, id: string, label: string): void;
+	$updateGroup(providerHandle: number, handle: number, features: ChecklistItemGroupFeatures): void;
+	$updateGroupLabel(providerHandle: number, handle: number, label: string): void;
+	$unregisterGroup(providerHandle: number, handle: number): void;
+
+	$spliceItemStates(providerHandle: number, splices: ChecklistRawItemSplices[]): void;
+}
+
 export type DebugSessionUUID = string;
 
 export interface MainThreadDebugServiceShape extends IDisposable {
@@ -692,6 +735,10 @@ export interface ExtHostReviewShape {
 	$setActive(reviewControlHandle: number, active: boolean): void;
 }
 
+export interface ExtHostChecklistShape {
+	$executeItemCommand(providerHandle: number, groupHandle: number, handle: number): TPromise<void>;
+}
+
 export interface ExtHostTaskShape {
 	$provideTasks(handle: number): TPromise<TaskSet>;
 }
@@ -722,6 +769,7 @@ export interface ExtHostWindowShape {
 // --- proxy identifiers
 
 export const MainContext = {
+	MainThreadChecklist: createMainId<MainThreadChecklistShape>('MainThreadChecklist'),
 	MainThreadCommands: createMainId<MainThreadCommandsShape>('MainThreadCommands'),
 	MainThreadConfiguration: createMainId<MainThreadConfigurationShape>('MainThreadConfiguration'),
 	MainThreadDebugService: createMainId<MainThreadDebugServiceShape>('MainThreadDebugService'),
@@ -754,6 +802,7 @@ export const MainContext = {
 };
 
 export const ExtHostContext = {
+	ExtHostChecklist: createExtId<ExtHostChecklistShape>('ExtHostChecklist'),
 	ExtHostCommands: createExtId<ExtHostCommandsShape>('ExtHostCommands'),
 	ExtHostConfiguration: createExtId<ExtHostConfigurationShape>('ExtHostConfiguration'),
 	ExtHostDiagnostics: createExtId<ExtHostDiagnosticsShape>('ExtHostDiagnostics'),

@@ -24,6 +24,7 @@ import { ExtHostQuickOpen } from 'vs/workbench/api/node/extHostQuickOpen';
 import { ExtHostProgress } from 'vs/workbench/api/node/extHostProgress';
 import { ExtHostSCM } from 'vs/workbench/api/node/extHostSCM';
 import { ExtHostReview } from 'vs/workbench/api/node/extHostReview';
+import { ExtHostChecklist } from 'vs/workbench/api/node/extHostChecklist';
 import { ExtHostHeapService } from 'vs/workbench/api/node/extHostHeapService';
 import { ExtHostStatusBar } from 'vs/workbench/api/node/extHostStatusBar';
 import { ExtHostCommands } from 'vs/workbench/api/node/extHostCommands';
@@ -104,6 +105,7 @@ export function createApiFactory(
 	const extHostTerminalService = threadService.set(ExtHostContext.ExtHostTerminalService, new ExtHostTerminalService(threadService));
 	const extHostSCM = threadService.set(ExtHostContext.ExtHostSCM, new ExtHostSCM(threadService, extHostCommands));
 	const extHostReview = threadService.set(ExtHostContext.ExtHostReview, new ExtHostReview(threadService, extHostCommands));
+	const extHostCheck = threadService.set(ExtHostContext.ExtHostChecklist, new ExtHostChecklist(threadService, extHostCommands));
 	const extHostTask = threadService.set(ExtHostContext.ExtHostTask, new ExtHostTask(threadService, extHostWorkspace));
 	const extHostCredentials = threadService.set(ExtHostContext.ExtHostCredentials, new ExtHostCredentials(threadService));
 	const extHostWindow = threadService.set(ExtHostContext.ExtHostWindow, new ExtHostWindow(threadService));
@@ -509,6 +511,12 @@ export function createApiFactory(
 			},
 		};
 
+		// namespace: checklist
+		const checklist: typeof vscode.checklist = {
+			createChecklistProvider(id: string, label: string) {
+				return extHostCheck.createChecklistProvider(extension, id, label);
+			},
+		};
 
 		// namespace: debug
 		const debug: typeof vscode.debug = {
@@ -563,6 +571,7 @@ export function createApiFactory(
 			workspace,
 			scm,
 			review,
+			checklist,
 			debug,
 			// types
 			CancellationTokenSource: CancellationTokenSource,

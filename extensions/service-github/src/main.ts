@@ -5,9 +5,12 @@
 'use strict';
 
 import * as vscode from 'vscode';
-import { requestGraphQL, distinct } from './util';
+import { queryGraphQL, distinct } from './util';
 import * as nls from 'vscode-nls';
 import * as cp from 'child_process';
+import { Model } from './model';
+import { ChecklistController } from './checklist';
+import { initialize as initializeLogger } from './log';
 
 const localize = nls.loadMessageBundle();
 
@@ -33,8 +36,16 @@ const repoFields = [
 ].join('\n');
 
 export function activate(context: vscode.ExtensionContext): void {
+	context.subscriptions.push(initializeLogger());
+
 	const viewer = new Viewer();
 	const github = new GitHub(viewer);
+
+	const model = new Model();
+	context.subscriptions.push(model);
+
+	const checklistController = new ChecklistController(model);
+	context.subscriptions.push(checklistController);
 
 	context.subscriptions.push(vscode.workspace.registerResourceResolutionProvider(GITHUB_SCHEME, {
 		async resolveResource(resource: vscode.Uri): Promise<vscode.Uri> {
@@ -52,18 +63,22 @@ export function activate(context: vscode.ExtensionContext): void {
 
 	context.subscriptions.push(vscode.workspace.registerFolderCatalogProvider(vscode.Uri.parse('github://github.com'), {
 		resolveFolder(resource: vscode.Uri): Thenable<vscode.CatalogFolder> {
-			return requestGraphQL(`
-query($owner: String!, $name: String!) {
-	repository(owner: $owner, name: $name) {
-		${repoFields}
-	}
-}`,
+			return queryGraphQL(`
+				query($owner: String!, $name: String!) {
+					repository(owner: $owner, name: $name) {
+						${repoFields}
+					}
+				}
+			`,
 				resourceToNameAndOwner(resource),
-			).then(({ repository }) => {
-				if (!repository) {
+			).then(({ data, errors = [] }) => {
+				if (!data) {
+					throw Object.assign(new Error(localize('apiError', "Error from GitHub: {0}", errors.map(e => e.message).join('\n'))), { errors });
+				}
+				if (!data.repository) {
 					return showErrorImmediately(localize('notFound', "GitHub repository not found: {0}", resource.toString()));
 				}
-				return toCatalogFolder(repository);
+				return toCatalogFolder(data.repository);
 			});
 		},
 		resolveLocalFolderResource(path: string): Thenable<vscode.Uri | null> {
@@ -89,7 +104,7 @@ query($owner: String!, $name: String!) {
 
 			let request: Thenable<any>;
 			if (query) {
-				request = requestGraphQL(`
+				request = queryGraphQL(`
 query($query: String!) {
 	search(type: REPOSITORY, query: $query, first: 30) {
 		nodes {
@@ -161,7 +176,7 @@ query($query: String!) {
 			return;
 		}
 
-		const pullRequests = Promise.all(gitHubRemotes.map(parts => requestGraphQL(`
+		const pullRequests = Promise.all(gitHubRemotes.map(parts => queryGraphQL(`
 query($owner: String!, $name: String!) {
 	repository(owner: $owner, name: $name) {
 		nameWithOwner
@@ -271,24 +286,22 @@ class Viewer {
 		if (this.contributedRequest !== null) {
 			return this.contributedRequest;
 		}
-		const request = requestGraphQL(`
-		{
-			viewer {
-				contributedRepositories(first: 10, orderBy: {field: PUSHED_AT, direction: DESC}) {
-					nodes {
-						...repoFields
+		const request = queryGraphQL(`
+			{
+				viewer {
+					contributedRepositories(first: 10, orderBy: {field: PUSHED_AT, direction: DESC}) {
+						nodes {
+							...repoFields
+						}
 					}
 				}
 			}
-		}
-		fragment repoFields on Repository {
-			${repoFields}
-		}
-			`, {}).then<vscode.CatalogFolder[]>((data: any) => {
-				return [].concat(
-					data.viewer.contributedRepositories.nodes,
-				).map(toCatalogFolder);
-			}, (reason) => {
+			fragment repoFields on Repository {
+				${repoFields}
+			}
+		`, {})
+			.then<vscode.CatalogFolder[]>((data: any) => data.viewer.contributedRepositories.nodes.map(toCatalogFolder))
+			.catch((reason): vscode.CatalogFolder[] => {
 				// try again, but don't fail other requests if this fails
 				console.error(reason);
 				this.contributedRequest = null;
@@ -307,7 +320,7 @@ class Viewer {
 		if (this.repoRequest !== null) {
 			return this.repoRequest;
 		}
-		const request = requestGraphQL(`
+		const request = queryGraphQL(`
 		{
 			viewer {
 				pinnedRepositories(first: 100, orderBy: {field: PUSHED_AT, direction: DESC}) {
@@ -345,15 +358,17 @@ class Viewer {
 		fragment repoFields on Repository {
 			${repoFields}
 		}
-		  `, {}).then<vscode.CatalogFolder[]>((data: any) => {
-				return [].concat(
+		  `, {})
+			.then<vscode.CatalogFolder[]>((data: any) =>
+				[].concat(
 					data.viewer.pinnedRepositories.nodes,
 					data.viewer.contributedRepositories.nodes,
 					data.viewer.starredRepositories.nodes,
 					data.viewer.repositories.nodes,
 					...data.viewer.organizations.nodes.map((org: any) => org.repositories.nodes),
-				).map(toCatalogFolder);
-			}, (reason) => {
+				).map(toCatalogFolder)
+			)
+			.catch((reason): vscode.CatalogFolder[] => {
 				// try again, but don't fail other requests if this fails
 				console.error(reason);
 				this.repoRequest = null;
@@ -372,15 +387,15 @@ class Viewer {
 		if (this.usernameRequest !== null) {
 			return this.usernameRequest;
 		}
-		const request = requestGraphQL(`
+		const request = queryGraphQL(`
 		{
 			viewer {
 				login
 			}
 		}
-		`, {}).then<string | null>((data: any) => {
-				return data.viewer.login;
-			}, (reason) => {
+		`, {})
+			.then<string | null>((data: any) => data.viewer.login)
+			.catch((reason) => {
 				// try again, but don't fail other requests if this fails
 				console.error(reason);
 				this.usernameRequest = null;
@@ -539,33 +554,15 @@ function checkGitHubToken(): boolean {
 	return !!vscode.workspace.getConfiguration('github').get<string>('token');
 }
 
-function toCatalogFolder(repo: {
-	name: string,
-	nameWithOwner: string,
-	description?: string,
-	isPrivate: boolean,
-	isFork: boolean,
-	isMirror: boolean,
-	stargazers: { totalCount: number },
-	forks: { totalCount: number },
-	watchers: { totalCount: number },
-	primaryLanguage?: { name: string },
-	createdAt: string,
-	updatedAt?: string,
-	pushedAt?: string,
-	viewerHasStarred: boolean,
-	viewerCanAdminister: boolean,
-	diskUsage: number, // kb (approximateByteSize is in bytes)
-}): vscode.CatalogFolder {
+function toCatalogFolder(repo: GitHubGQL.IRepository): vscode.CatalogFolder {
 	return {
 		// These URIs are resolved by the resource resolver we register above.
 		resource: vscode.Uri.parse('').with({ scheme: GITHUB_SCHEME, authority: 'github.com', path: `/repository/${repo.nameWithOwner}` }),
-
 		displayPath: repo.nameWithOwner,
 		displayName: repo.name,
 		genericIconClass: iconForRepo(repo),
 		cloneUrl: vscode.Uri.parse('').with({ scheme: 'https', authority: 'github.com', path: `/${repo.nameWithOwner}.git` }),
-		description: repo.description,
+		description: repo.description || undefined,
 		isPrivate: repo.isPrivate,
 		isFork: repo.isFork,
 		isMirror: repo.isMirror,
@@ -578,7 +575,7 @@ function toCatalogFolder(repo: {
 		pushedAt: repo.pushedAt ? new Date(Date.parse(repo.pushedAt)) : undefined,
 		viewerHasStarred: repo.viewerHasStarred,
 		viewerCanAdminister: repo.viewerCanAdminister,
-		approximateByteSize: repo.diskUsage >= 0 ? repo.diskUsage * 1024 : undefined,
+		approximateByteSize: repo.diskUsage && repo.diskUsage >= 0 ? repo.diskUsage * 1024 : undefined,
 	};
 }
 

@@ -65,6 +65,8 @@ import 'vs/workbench/parts/invite/electron-browser/invite.contribution';
 
 import 'vs/workbench/parts/review/electron-browser/review.contribution';
 
+import 'vs/workbench/parts/checklist/electron-browser/checklist.contribution';
+
 import 'vs/workbench/parts/debug/electron-browser/debug.contribution';
 import 'vs/workbench/parts/debug/browser/debugQuickOpen';
 import 'vs/workbench/parts/debug/electron-browser/repl';

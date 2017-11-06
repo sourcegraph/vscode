@@ -15,6 +15,7 @@ import { ColorExtensionPoint } from 'vs/platform/theme/common/colorExtensionPoin
 import { LanguageConfigurationFileHandler } from 'vs/workbench/parts/codeEditor/electron-browser/languageConfiguration/languageConfigurationExtensionPoint';
 
 // --- mainThread participants
+import './mainThreadChecklist';
 import './mainThreadCommands';
 import './mainThreadConfiguration';
 import './mainThreadCredentials';

@@ -181,6 +181,16 @@ export class ExtHostApiCommands {
 				]
 			});
 
+		this._register('vscode.openWebBrowser', (resource: URI, sideBySide: boolean) => {
+			return this._commands.executeCommand('workbench.webBrowser.open', [resource, sideBySide]);
+		}, {
+				description: 'Opens the provided URL in the embedded web browser.',
+				args: [
+					{ name: 'url', description: 'URL to open', constraint: URI },
+					{ name: 'sideBySide', description: '(optional) Open in a different column', constraint: v => v === void 0 || typeof v === 'boolean' }
+				]
+			});
+
 		this._register('vscode.openFolder', (uri?: URI, forceNewWindow?: boolean) => {
 			if (!uri) {
 				return this._commands.executeCommand('_files.pickFolderAndOpen', forceNewWindow);

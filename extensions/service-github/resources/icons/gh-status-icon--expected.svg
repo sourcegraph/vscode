@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="16" height="16" version="1.1" viewBox="0 0 16 16">
+    <title>
+        gh-status-icons
+    </title>
+    <desc>
+        Created using Figma
+    </desc>
+    <g id="Canvas" transform="translate(-30789 4126)">
+        <g id="gh-status-icons">
+            <g id="Shape 1.2">
+                <use fill="#B08800" transform="translate(30793 -4122)" xlink:href="#path0_fill"/>
+            </g>
+        </g>
+    </g>
+    <defs>
+        <path id="path0_fill" d="M 0 4C 0 1.8 1.8 0 4 0C 6.2 0 8 1.8 8 4C 8 6.2 6.2 8 4 8C 1.8 8 0 6.2 0 4Z"/>
+    </defs>
+</svg>
