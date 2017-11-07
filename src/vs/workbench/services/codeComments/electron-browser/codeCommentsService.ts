@@ -273,7 +273,7 @@ export class Threads extends Disposable implements IThreads {
 				}
 			}
 		}`, this.query);
-		const threads = response.org.threads2.nodes.map(thread => {
+		const threads = response.org.threads.nodes.map(thread => {
 			const memento = gqlThreadToMemento(thread);
 			this.commentService.didUpdateThread.fire(memento);
 			return memento;
