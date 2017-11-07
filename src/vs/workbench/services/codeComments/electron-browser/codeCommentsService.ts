@@ -267,7 +267,7 @@ export class Threads extends Disposable implements IThreads {
 		) {
 			root {
 				org(id: $orgId) {
-					threads2(repoRemoteURI: $remoteURI, branch: $branch, file: $file) {
+					threads(repoRemoteURI: $remoteURI, branch: $branch, file: $file) {
 						${threadConnectionGraphql}
 					}
 				}
