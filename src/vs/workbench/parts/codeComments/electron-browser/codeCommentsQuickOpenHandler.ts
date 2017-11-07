@@ -60,7 +60,7 @@ class CommentEntry extends QuickOpenEntry {
 
 		const thread = this.threadComments;
 		const revision = thread.branch || thread.repoRevision;
-		const query = `src:open?path=${thread.file}&revision=${revision}&thread=${thread.id}&vcs=git&repo=https://${thread.repo}`;
+		const query = `src:open?path=${thread.file}&revision=${revision}&thread=${thread.id}&vcs=git&repo=https://${thread.canonicalRemoteId}`;
 		this.navService.handle(URI.parse(query));
 		return true;
 	}

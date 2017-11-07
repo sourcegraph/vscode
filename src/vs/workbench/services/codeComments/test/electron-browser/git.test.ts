@@ -95,8 +95,11 @@ suite('git', function () {
 			test(`accepts ${accept.in}`, function () {
 				scmService.fakeProvider.executeCommandOutput = accept.in;
 				return git.getRemoteRepo().then(actual => {
-					if (actual !== accept.out) {
-						throw new Error(`${accept.in} expected ${accept.out} got ${actual}`);
+					if (actual.cloneUrl !== accept.in) {
+						throw new Error(`got clone url ${actual.cloneUrl}; expected ${accept.in}`);
+					}
+					if (actual.canonicalRemoteId !== accept.out) {
+						throw new Error(`${accept.in} expected ${accept.out} got ${actual.canonicalRemoteId}`);
 					}
 				});
 			});

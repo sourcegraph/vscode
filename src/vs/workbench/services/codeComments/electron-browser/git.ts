@@ -53,22 +53,23 @@ export class Git {
 	/**
 	 * Returns the primary upstream URL of the repository.
 	 */
-	public getRemoteRepo(): TPromise<string> {
+	public getRemoteRepo(): TPromise<{ canonicalRemoteId: string, cloneUrl: string }> {
 		return this.spawnPromiseTrim(['ls-remote', '--get-url'])
-			.then(url => url.replace(/\.git$/, '').replace(/\/$/, ''))
-			.then(url => {
-				url = decodeURIComponent(url);
+			.then(cloneUrl => {
+				const url = decodeURIComponent(cloneUrl.replace(/\.git$/, '').replace(/\/$/, ''));
 				// Parse ssh protocol (e.g. user@company.com:foo/bar)
 				const sshMatch = url.match(/^(?:[^/@:]+@)?([^:/]+):([^/].*)$/);
 				if (sshMatch) {
-					return sshMatch[1] + '/' + sshMatch[2];
+					const canonicalRemoteId = sshMatch[1] + '/' + sshMatch[2];
+					return { canonicalRemoteId, cloneUrl };
 				}
 				// We can just remove a prefix for these protocols.
 				const prefix = /^((https?)|(git)|(ssh)):\/\/([^/@]+@)?/;
 				if (!prefix.test(url)) {
 					throw new Error('unsupported remote url format: ' + url);
 				}
-				return url.replace(prefix, '');
+				const canonicalRemoteId = url.replace(prefix, '');
+				return { canonicalRemoteId, cloneUrl };
 			});
 	}
 

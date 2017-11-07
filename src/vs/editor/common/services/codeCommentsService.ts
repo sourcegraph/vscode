@@ -198,9 +198,10 @@ export interface IThreadComments extends IEventDisposable {
 	readonly range: Range;
 
 	/**
-	 * The repository that the thread was created on.
+	 * The canonical identifier for the remote repository that the thread was created on.
+	 * (e.g. 'github.com/sourcegraph/src')
 	 */
-	readonly repo: string;
+	readonly canonicalRemoteId: string;
 
 	/**
 	 * The date the thread was created.

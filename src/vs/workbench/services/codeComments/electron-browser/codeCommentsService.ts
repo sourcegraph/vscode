@@ -50,9 +50,9 @@ export { Event }
  */
 interface DocumentId {
 	/**
-	 * The repo identifier (e.g. github.com/sourcegraph/sourcegraph).
+	 * The repo identifier (e.g. github.com/sourcegraph/src).
 	 */
-	repo: string;
+	canonicalRemoteId: string;
 
 	/**
 	 * The file identifier (e.g. dev/start.sh).
@@ -99,7 +99,7 @@ lines {
 	textSelectionRangeLength
 }
 repo {
-	remoteUri
+	canonicalRemoteID
 }
 ${commentsGraphql}`;
 
@@ -182,7 +182,7 @@ export class CodeCommentsService implements ICodeCommentsService {
  */
 export interface IThreadQueryParams {
 	readonly orgId: number;
-	readonly remoteURI: string | undefined;
+	readonly canonicalRemoteId: string | undefined;
 	readonly branch: string | undefined;
 	readonly file: string | undefined;
 }
@@ -248,17 +248,17 @@ export class Threads extends Disposable implements IThreads {
 
 	private query: IThreadQueryParams;
 	private async refreshNow(): Promise<void> {
-		const repoFile = await this.getRepoFile();
+		const repoFile = await this.getCanonicalFileId();
 		if (!repoFile) {
 			return;
 		}
-		const { repo, file } = repoFile;
+		const { canonicalRemoteId, file } = repoFile;
 		if (!this.authService.currentUser || !this.authService.currentUser.currentOrgMember) {
 			return;
 		}
 		this.query = {
 			orgId: this.authService.currentUser.currentOrgMember.org.id,
-			remoteURI: repo,
+			canonicalRemoteId,
 			branch: this.filter.branch,
 			file,
 		};
@@ -267,7 +267,7 @@ export class Threads extends Disposable implements IThreads {
 		) {
 			root {
 				org(id: $orgId) {
-					threads(repoRemoteURI: $remoteURI, branch: $branch, file: $file) {
+					threads(repoCanonicalRemoteID: $canonicalRemoteId, branch: $branch, file: $file) {
 						${threadConnectionGraphql}
 					}
 				}
@@ -282,16 +282,16 @@ export class Threads extends Disposable implements IThreads {
 		this.commentService.didFetchThreads.fire({ query: this.query, threads });
 	}
 
-	private async getRepoFile(): Promise<{ repo?: string, file?: string }> {
+	private async getCanonicalFileId(): Promise<{ canonicalRemoteId?: string, file?: string }> {
 		if (!this.filter.resource) {
 			return {};
 		}
 		try {
-			const [repo, file] = await Promise.all([
+			const [{ canonicalRemoteId }, file] = await Promise.all([
 				this.git.getRemoteRepo(),
 				this.instantiationService.invokeFunction(getPathRelativeToResource, this.filter.resource),
 			]);
-			return { repo, file };
+			return { canonicalRemoteId, file };
 		} catch (err) {
 			// These errors happen a lot on startup because the source control providers
 			// arent registered yet. It isn't a problem on startup because we just retry later
@@ -351,7 +351,7 @@ export class Threads extends Disposable implements IThreads {
 			// We are not initialized yet.
 			return false;
 		}
-		if (!this.matchesFilterValue(this.query.remoteURI, thread.repo)) {
+		if (!this.matchesFilterValue(this.query.canonicalRemoteId, thread.canonicalRemoteId)) {
 			return false;
 		}
 		if (!this.matchesFilterValue(this.query.branch, thread.branch)) {
@@ -399,7 +399,7 @@ function gqlThreadToMemento(thread: GQL.IThread): IThreadCommentsMemento {
 		createdAt: new Date(thread.createdAt),
 		archived: !!thread.archivedAt,
 		comments,
-		repo: thread.repo.remoteUri,
+		canonicalRemoteId: thread.repo.canonicalRemoteID,
 		displayRange: false,
 		draftReply: undefined,
 		rangeContent,
@@ -673,6 +673,7 @@ class ModelWatcher extends Disposable {
 export interface IThreadCommentsMemento {
 	readonly id: number;
 	readonly title: string;
+	readonly canonicalRemoteId: string;
 	readonly file: string;
 	readonly branch: string;
 	readonly repoRevision: string;
@@ -693,7 +694,6 @@ export interface IThreadCommentsMemento {
 	 */
 	readonly displayRange: Range | undefined | false;
 
-	readonly repo: string;
 	readonly rangeContent: string | undefined;
 }
 
@@ -706,7 +706,7 @@ export class ThreadComments extends Disposable implements IThreadComments {
 	public readonly linesRevision: string;
 	public readonly range: Range;
 	public readonly createdAt: Date;
-	public readonly repo: string;
+	public readonly canonicalRemoteId: string;
 	public readonly rangeContent: string | undefined;
 
 	private _pendingOperation = false;
@@ -790,7 +790,7 @@ export class ThreadComments extends Disposable implements IThreadComments {
 		this.createdAt = thread.createdAt;
 		this.archived = thread.archived;
 		this._comments = thread.comments;
-		this.repo = thread.repo;
+		this.canonicalRemoteId = thread.canonicalRemoteId;
 		this.rangeContent = thread.rangeContent;
 		commentsService.onDidUpdateThread(this.onDidUpdateThread, this, this.disposables);
 	}
@@ -994,7 +994,7 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 				return undefined;
 			}
 
-			const [repo, blame] = await Promise.all([
+			const [{ canonicalRemoteId, cloneUrl }, blame] = await Promise.all([
 				this.git.getRemoteRepo(),
 				this.git.getBlame(file, this.displayRange.startLineNumber, this.displayRange.endLineNumber),
 			]);
@@ -1005,7 +1005,7 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 			let linesRevision = '';
 
 			if (blame) {
-				const blameContent = (await this.instantiationService.invokeFunction(resolveContent, this.git, { repo, file: blame.file }, blame.commitId)).content;
+				const blameContent = (await this.instantiationService.invokeFunction(resolveContent, this.git, { canonicalRemoteId, file: blame.file }, blame.commitId)).content;
 
 				const blameModel = TextModel.createFromString(blameContent);
 				const blameLines = blameModel.getLinesContent();
@@ -1027,7 +1027,8 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 			const response = await requestGraphQLMutation<{ createThread: GQL.IThread }>(this.remoteService, `mutation CreateThread {
 			createThread(
 				orgID: $orgId,
-				remoteURI: $remoteURI,
+				canonicalRemoteID: $canonicalRemoteId,
+				cloneURL: $cloneUrl,
 				file: $file,
 				branch: $branch,
 				repoRevision: $repoRevision,
@@ -1044,7 +1045,8 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 			}
 		}`, {
 					orgId: this.authService.currentUser.currentOrgMember.org.id,
-					remoteURI: repo,
+					canonicalRemoteId,
+					cloneUrl,
 					// TODO(nick): probably need to store/use the file name at the blame revision too
 					file,
 					branch,

@@ -393,9 +393,8 @@ class WelcomePage {
 			const threadDiv = document.createElement('li');
 			threadDiv.className = 'repo-row flex';
 			threadDiv.addEventListener('click', () => {
-				const remoteUri = thread.repo;
 				const revision = thread.branch || thread.repoRevision;
-				const url = `src:open?path=${thread.file}&revision=${revision}&thread=${thread.id}&vcs=git&repo=https://${remoteUri}`;
+				const url = `src:open?path=${thread.file}&revision=${revision}&thread=${thread.id}&vcs=git&repo=https://${thread.canonicalRemoteId}`;
 				this.navService.handle(URI.parse(url));
 			});
 			commentList.appendChild(threadDiv);
