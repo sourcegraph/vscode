@@ -26,7 +26,7 @@ export class Git {
 	public async getBlame(file: string, startLine: number, endLine: number): Promise<{ commitId: string, file: string } | undefined> {
 		const blame = await this.spawnPromiseTrim(['blame', '-s', '-l', '--show-name', '-L', `${startLine},${endLine}`, file]);
 		const lines = blame.split('\n');
-		const revisions = new Map<string, { commitId: string, file: string }>();
+		const filesByCommit = new Map<string, string>();
 		for (const line of lines) {
 			const [sha, file] = line.split(' ', 2);
 			if (sha === '0000000000000000000000000000000000000000') {
@@ -34,11 +34,12 @@ export class Git {
 				return undefined;
 			}
 			// Trim leading '^' which blame prepends for boundary commits (e.g. initial commit in repo).
-			const commitId = sha.replace(/^\^/, '');
-			revisions.set(commitId, { commitId, file });
+			const commitId = sha[0] === '^' ? sha.substr(1) : sha.substr(0, 39);
+			filesByCommit.set(commitId, file);
 		}
-		const commitId = await this.spawnPromiseTrim(['rev-list', '--max-count', '1'].concat(keys(revisions)));
-		return commitId && { commitId, file: revisions.get(commitId).file };
+		const commitId = await this.spawnPromiseTrim(['rev-list', '--max-count', '1'].concat(keys(filesByCommit)));
+		const fileAtCommit = filesByCommit.get(commitId.substr(0, 39));
+		return commitId && { commitId, file: fileAtCommit };
 	}
 
 	/**
