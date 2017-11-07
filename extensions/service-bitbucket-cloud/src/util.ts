@@ -17,10 +17,10 @@ export function fetchFromBitbucket<T>(url: string): Thenable<T> {
 	const appPassword = config.get<string>('appPassword');
 	const authDigest = new Buffer(`${username}:${appPassword}`).toString('base64');
 
-	const headers: { [name: string]: string } = {
+	const headers = new Headers({
 		'Content-Type': 'application/json; charset=utf-8',
 		'Authorization': `Basic ${authDigest}`,
-	};
+	});
 
 	return fetch(`https://api.bitbucket.org/2.0${url}`, {
 		method: 'GET',

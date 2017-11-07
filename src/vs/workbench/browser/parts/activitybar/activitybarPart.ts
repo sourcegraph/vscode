@@ -197,7 +197,7 @@ export class ActivitybarPart extends Part {
 		});
 	}
 	public getPinned(): string[] {
-		return this.viewletService.getViewlets().map(v => v.id).filter(id => this.compositeBar.isPinned(id));;
+		return this.viewletService.getViewlets().map(v => v.id).filter(id => this.compositeBar.isPinned(id));
 	}
 
 	/**

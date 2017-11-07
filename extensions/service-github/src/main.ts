@@ -71,12 +71,14 @@ export function activate(context: vscode.ExtensionContext): void {
 				}
 			`,
 				resourceToNameAndOwner(resource),
-			).then(({ data, errors = [] }) => {
+			).then(async ({ data, errors = [] }) => {
 				if (!data) {
 					throw Object.assign(new Error(localize('apiError', "Error from GitHub: {0}", errors.map(e => e.message).join('\n'))), { errors });
 				}
 				if (!data.repository) {
-					return showErrorImmediately(localize('notFound', "GitHub repository not found: {0}", resource.toString()));
+					const errorMessage = localize('notFound', "GitHub repository not found: {0}", resource.toString());
+					await showErrorAndPromptReset(errorMessage);
+					throw new Error(errorMessage);
 				}
 				return toCatalogFolder(data.repository);
 			});
@@ -114,7 +116,11 @@ query($query: String!) {
 		}
 	}
 }`,
-					{ query: `${query} fork:true` }).then((data: any) => data.search.nodes, showErrorImmediately);
+					{ query: `${query} fork:true` }).then((data: any) => data.search.nodes, async (error: any) => {
+						const errorMessage = error.toString();
+						await showErrorAndPromptReset(errorMessage);
+						throw new Error(errorMessage);
+					});
 			} else {
 				// viewer.repositories already includes the repos we want
 				request = Promise.resolve([]);
@@ -209,7 +215,11 @@ fragment refFields on Ref {
 `,
 			{ owner: parts.owner, name: parts.name }))).then<PullRequest[]>((data: any[]) => {
 				return data.reduce((r, d) => r.concat(d.repository.pullRequests.nodes), []);
-			}, showErrorImmediately);
+			}, async (error: any) => {
+				const errorMessage = error.toString();
+				await showErrorAndPromptReset(errorMessage);
+				throw new Error(errorMessage);
+			});
 
 		interface PullRequestItem extends vscode.QuickPickItem {
 			pullRequest: PullRequest;
@@ -489,25 +499,23 @@ function nameAndOwnerToResource(owner: string, name: string): vscode.Uri {
  * of only when they close the quickopen (which probably isn't showing any results because of
  * the error).
  */
-function showErrorImmediately<T>(error: string): T | Thenable<T> {
-	return vscode.commands.executeCommand('workbench.action.closeQuickOpen').then(() => vscode.commands.executeCommand('workbench.action.closeMessages').then(() => {
-		const resetTokenItem: vscode.MessageItem = { title: localize('resetToken', "Reset Token") };
-		const cancelItem: vscode.MessageItem = { title: localize('cancel', "Cancel"), isCloseAffordance: true };
-		vscode.window.showErrorMessage(error, resetTokenItem, cancelItem)
-			.then(async (value) => {
-				if (value === resetTokenItem) {
-					const hasToken = vscode.workspace.getConfiguration('github').get<string>('token');
-					if (hasToken) {
-						await vscode.workspace.getConfiguration('github').update('token', undefined, vscode.ConfigurationTarget.Global);
-					}
-					if (checkGitHubToken()) {
-						showCreateGitHubTokenWalkthrough(); // will walk the user through recreating the token
-					}
-				}
-			});
+async function showErrorAndPromptReset(error: string): Promise<void> {
+	await vscode.commands.executeCommand('workbench.action.closeQuickOpen');
+	await vscode.commands.executeCommand('workbench.action.closeMessages');
 
-		return Promise.reject(error);
-	}));
+	const resetTokenItem: vscode.MessageItem = { title: localize('resetToken', "Reset Token") };
+	const cancelItem: vscode.MessageItem = { title: localize('cancel', "Cancel"), isCloseAffordance: true };
+
+	const chosenItem = await vscode.window.showErrorMessage(error, resetTokenItem, cancelItem);
+	if (chosenItem === resetTokenItem) {
+		const hasToken = vscode.workspace.getConfiguration('github').get<string>('token');
+		if (hasToken) {
+			await vscode.workspace.getConfiguration('github').update('token', undefined, vscode.ConfigurationTarget.Global);
+		}
+		if (checkGitHubToken()) {
+			await showCreateGitHubTokenWalkthrough(); // will walk the user through recreating the token
+		}
+	}
 }
 
 /**

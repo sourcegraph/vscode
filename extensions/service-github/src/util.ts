@@ -22,11 +22,11 @@ export interface GraphQLQueryResponseRoot {
 }
 
 export async function queryGraphQL(query: string, variables: { [name: string]: any }): Promise<GraphQLQueryResponseRoot> {
-	const headers: { [name: string]: string } = {
+	const headers = new Headers({
 		'Content-Type': 'application/json; charset=utf-8',
 		'Authorization': `Bearer ${vscode.workspace.getConfiguration('github').get<string>('token')}`,
 		'User-Agent': 'GitHub GraphQL Client',
-	};
+	});
 
 	const resp = await fetch(`https://api.github.com/graphql`, {
 		method: 'POST',
