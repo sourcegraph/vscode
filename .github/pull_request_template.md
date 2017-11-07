@@ -1,6 +1,5 @@
-<!-- Run the `Git: Share Diff` command to generate the link. -->
-
 Share Diff Link:
+<!-- Run the `Git: Share Diff` command to generate the link. -->
 
 👁🚨⬇️👁🚨⬇️👁🚨⬇️
 
