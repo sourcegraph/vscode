@@ -60,6 +60,7 @@ import { ITextResourceConfigurationService } from 'vs/editor/common/services/res
 import { IPosition } from 'vs/editor/common/core/position';
 import { ICommandAction } from 'vs/platform/actions/common/actions';
 import { IHashService } from 'vs/workbench/services/hash/common/hashService';
+import { notImplemented } from 'vs/base/common/errors';
 
 export function createFileInput(instantiationService: IInstantiationService, resource: URI): FileEditorInput {
 	return instantiationService.createInstance(FileEditorInput, resource, void 0);
@@ -896,7 +897,7 @@ export class TestBackupFileService implements IBackupFileService {
 	public discardAllWorkspaceBackups(): TPromise<void> {
 		return TPromise.as(void 0);
 	}
-};
+}
 
 export class TestWindowService implements IWindowService {
 
@@ -1024,10 +1025,12 @@ export class TestLifecycleService implements ILifecycleService {
 	public phase: LifecyclePhase;
 	public startupKind: StartupKind;
 
-	private _onDidChangePhase = new Emitter<LifecyclePhase>();
 	private _onWillShutdown = new Emitter<ShutdownEvent>();
 	private _onShutdown = new Emitter<ShutdownReason>();
 
+	when(): Thenable<void> {
+		throw notImplemented();
+	};
 
 	public fireShutdown(reason = ShutdownReason.QUIT): void {
 		this._onShutdown.fire(reason);
@@ -1035,10 +1038,6 @@ export class TestLifecycleService implements ILifecycleService {
 
 	public fireWillShutdown(event: ShutdownEvent): void {
 		this._onWillShutdown.fire(event);
-	}
-
-	public get onDidChangePhase(): Event<LifecyclePhase> {
-		return this._onDidChangePhase.event;
 	}
 
 	public get onWillShutdown(): Event<ShutdownEvent> {

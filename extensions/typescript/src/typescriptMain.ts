@@ -22,7 +22,7 @@ import * as Proto from './protocol';
 import * as PConst from './protocol.const';
 
 import TypeScriptServiceClient from './typescriptServiceClient';
-import { ITypescriptServiceClientHost } from './typescriptService';
+import { ITypeScriptServiceClientHost } from './typescriptService';
 
 import BufferSyncSupport from './features/bufferSyncSupport';
 import { JsDocCompletionProvider, TryCompleteJsDocCommand } from './features/jsDocCompletionProvider';
@@ -81,7 +81,7 @@ export function activate(context: ExtensionContext): void {
 
 				const host = clientHost;
 				clientHost.serviceClient.onReady().then(() => {
-					context.subscriptions.push(ProjectStatus.create(host.serviceClient,
+					context.subscriptions.push(ProjectStatus.create(host.serviceClient, host.serviceClient.telemetryReporter,
 						path => new Promise<boolean>(resolve => setTimeout(() => resolve(host.handles(path)), 750)),
 						context.workspaceState));
 				}, () => {
@@ -154,7 +154,7 @@ export function activate(context: ExtensionContext): void {
 			return true;
 		}
 		return false;
-	};
+	}
 	const openListener = workspace.onDidOpenTextDocument(didOpenTextDocument);
 	for (let textDocument of workspace.textDocuments) {
 		if (didOpenTextDocument(textDocument)) {
@@ -422,7 +422,17 @@ class LanguageProvider {
 	}
 }
 
-class TypeScriptServiceClientHost implements ITypescriptServiceClientHost {
+// Style check diagnostics that can be reported as warnings
+const styleCheckDiagnostics = [
+	6133, 	// variable is declared but never used
+	6138, 	// property is declared but its value is never read
+	7027,	// unreachable code detected
+	7028,	// unused label
+	7029,	// fall through case in switch
+	7030	// not all code paths return a value
+];
+
+class TypeScriptServiceClientHost implements ITypeScriptServiceClientHost {
 	private client: TypeScriptServiceClient;
 	private languages: LanguageProvider[] = [];
 	private languagePerId: Map<string, LanguageProvider>;
@@ -701,6 +711,11 @@ class TypeScriptServiceClientHost implements ITypescriptServiceClientHost {
 	}
 
 	private getDiagnosticSeverity(diagnostic: Proto.Diagnostic): DiagnosticSeverity {
+
+		if (this.reportStyleCheckAsWarnings() && this.isStyleCheckDiagnostic(diagnostic.code)) {
+			return DiagnosticSeverity.Warning;
+		}
+
 		switch (diagnostic.category) {
 			case PConst.DiagnosticCategory.error:
 				return DiagnosticSeverity.Error;
@@ -711,5 +726,14 @@ class TypeScriptServiceClientHost implements ITypescriptServiceClientHost {
 			default:
 				return DiagnosticSeverity.Error;
 		}
+	}
+
+	private isStyleCheckDiagnostic(code: number | undefined): boolean {
+		return code ? styleCheckDiagnostics.indexOf(code) !== -1 : false;
+	}
+
+	private reportStyleCheckAsWarnings() {
+		const config = workspace.getConfiguration('typescript');
+		return config.get('reportStyleChecksAsWarnings', true);
 	}
 }

@@ -65,7 +65,7 @@ namespace delta {
 			}
 		});
 		return { removed, added };
-	};
+	}
 
 	export function ofMaps<K, V>(before: Map<K, V>, after: Map<K, V>): { removed: V[], added: V[] } {
 		const removed: V[] = [];
@@ -81,7 +81,7 @@ namespace delta {
 			}
 		});
 		return { removed, added };
-	};
+	}
 }
 
 class EditorSnapshot {

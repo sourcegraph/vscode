@@ -55,7 +55,7 @@ import { IWindowService } from 'vs/platform/windows/common/windows';
 import { IWorkspaceEditingService } from 'vs/workbench/services/workspace/common/workspaceEditing';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 import { getPathLabel } from 'vs/base/common/labels';
-import { extractResources } from 'vs/base/browser/dnd';
+import { extractResources } from 'vs/workbench/browser/editor';
 import { ActionBar, ActionItem } from 'vs/base/browser/ui/actionbar/actionbar';
 import { EventType } from 'vs/base/common/events';
 import { RemoveWorkspaceFolderExplorerAction } from 'vs/workbench/parts/workspace/browser/folderActions';
@@ -1029,7 +1029,7 @@ export class FileDragAndDrop extends SimpleFileResourceDragAndDrop {
 			this.windowService.focusWindow();
 
 			// Handle folders by adding to workspace if we are in workspace context
-			const folders = result.filter(result => result.stat.isDirectory).map(result => ({ uri: result.stat.resource }));
+			const folders = result.filter(r => r.success && r.stat.isDirectory).map(result => ({ uri: result.stat.resource }));
 			if (folders.length > 0) {
 
 				// If we are in no-workspace context, ask for confirmation to create a workspace

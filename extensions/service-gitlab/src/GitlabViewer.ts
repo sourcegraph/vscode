@@ -262,7 +262,7 @@ export class GitLab {
 
 		const response = await fetch(`${url}/api/v4${endpoint}`, {
 			method: 'GET',
-			headers: { 'PRIVATE-TOKEN': token }
+			headers: new Headers({ 'PRIVATE-TOKEN': token })
 		});
 
 		if (response.status < 200 || response.status > 299) {

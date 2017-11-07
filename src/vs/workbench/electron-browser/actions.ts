@@ -21,7 +21,7 @@ import { IMessageService, Severity } from 'vs/platform/message/common/message';
 import { IWorkspaceContextService, WorkbenchState } from 'vs/platform/workspace/common/workspace';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 import { IConfigurationService, ConfigurationTarget } from 'vs/platform/configuration/common/configuration';
-import { IExtensionManagementService, LocalExtensionType, ILocalExtension } from 'vs/platform/extensionManagement/common/extensionManagement';
+import { IExtensionManagementService, LocalExtensionType, ILocalExtension, IExtensionEnablementService } from 'vs/platform/extensionManagement/common/extensionManagement';
 import { IWorkspaceConfigurationService } from 'vs/workbench/services/configuration/common/configuration';
 import paths = require('vs/base/common/paths');
 import { isMacintosh, isLinux } from 'vs/base/common/platform';
@@ -45,7 +45,7 @@ import { IWorkspaceIdentifier, getWorkspaceLabel, ISingleFolderWorkspaceIdentifi
 import { FileKind } from 'vs/platform/files/common/files';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { IExtensionService } from 'vs/platform/extensions/common/extensions';
-import { ticks } from 'vs/base/node/startupTimers';
+import { getEntries } from 'vs/base/common/performance';
 
 // --- actions
 
@@ -367,9 +367,10 @@ export class ShowStartupPerformance extends Action {
 
 			(<any>console).group('Raw Startup Timers (CSV)');
 			let value = `Name\tStart\tDuration\n`;
-			let offset = ticks()[0].started;
-			for (const tick of ticks()) {
-				value += `${tick.name}\t${tick.started - offset}\t${tick.duration}\n`;
+			const entries = getEntries('measure');
+			let offset = entries[0].startTime;
+			for (const entry of entries) {
+				value += `${entry.name}\t${entry.startTime - offset}\t${entry.duration}\n`;
 			}
 			console.log(value);
 			(<any>console).groupEnd();
@@ -886,6 +887,7 @@ export class ReportIssueAction extends Action {
 		label: string,
 		@IIntegrityService private integrityService: IIntegrityService,
 		@IExtensionManagementService private extensionManagementService: IExtensionManagementService,
+		@IExtensionEnablementService private extensionEnablementService: IExtensionEnablementService,
 		@IEnvironmentService private environmentService: IEnvironmentService
 	) {
 		super(id, label);
@@ -905,6 +907,7 @@ export class ReportIssueAction extends Action {
 	public run(): TPromise<boolean> {
 		return this._optimisticIsPure().then(isPure => {
 			return this.extensionManagementService.getInstalled(LocalExtensionType.User).then(extensions => {
+				extensions = extensions.filter(extension => this.extensionEnablementService.isEnabled(extension.identifier));
 				const issueUrl = this.generateNewIssueUrl(product.reportIssueUrl, pkg.name, pkg.version, product.commit, product.date, isPure, extensions, this.environmentService.disableExtensions);
 
 				window.open(issueUrl);
