@@ -191,7 +191,7 @@ export class ExtensionsListView extends ViewsViewletPanel {
 		if (idMatch) {
 			const name = idMatch[1];
 
-			return this.extensionsWorkbenchService.queryGallery({ names: [name] })
+			return this.extensionsWorkbenchService.queryGallery({ names: [name], source: 'queryById' })
 				.then(pager => new PagedModel(pager));
 		}
 
@@ -273,7 +273,7 @@ export class ExtensionsListView extends ViewsViewletPanel {
 		}
 
 		if (text) {
-			options = assign(options, { text: text.substr(0, 350) });
+			options = assign(options, { text: text.substr(0, 350), source: 'searchText' });
 		} else {
 			options.source = 'viewlet';
 		}
@@ -417,19 +417,10 @@ export class ExtensionsListView extends ViewsViewletPanel {
 
 	// Sorts the firsPage of the pager in the same order as given array of extension ids
 	private sortFirstPage(pager: IPager<IExtension>, ids: string[]) {
-		if (ids.length !== pager.pageSize) {
-			return;
-		}
 		ids = ids.map(x => x.toLowerCase());
-		let newFirstPage = new Array(pager.pageSize);
-		for (let i = 0; i < pager.pageSize; i++) {
-			let index = ids.indexOf(pager.firstPage[i].id.toLowerCase());
-			if (index === -1) {
-				return; // Something went wrong, Abort! Abort!
-			}
-			newFirstPage[index] = pager.firstPage[i];
-		}
-		pager.firstPage = newFirstPage;
+		pager.firstPage.sort((a, b) => {
+			return ids.indexOf(a.id.toLowerCase()) < ids.indexOf(b.id.toLowerCase()) ? -1 : 1;
+		});
 	}
 
 	private setModel(model: IPagedModel<IExtension>) {
