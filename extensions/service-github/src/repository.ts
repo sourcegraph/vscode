@@ -180,7 +180,7 @@ export class Repository implements vscode.Disposable {
 			return;
 		}
 
-		const { data } = await queryGraphQL(`
+		const { data, errors } = await queryGraphQL(`
 			query($owner: String!, $name: String!, $oid: GitObjectID) {
 				repository(owner: $owner, name: $name) {
 					object(oid: $oid) {
@@ -203,6 +203,8 @@ export class Repository implements vscode.Disposable {
 				name: this.currentGitHubRemote.name,
 				oid: this.state.commit,
 			});
+
+		console.error(...errors || []);
 
 		const commit = data && data.repository && data.repository.object && (data.repository.object as GitHubGQL.ICommit);
 		this.state.status = commit && commit.status || undefined;

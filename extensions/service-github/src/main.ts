@@ -71,9 +71,9 @@ export function activate(context: vscode.ExtensionContext): void {
 				}
 			`,
 				resourceToNameAndOwner(resource),
-			).then(async ({ data, errors = [] }) => {
+			).then(async ({ data, errors }) => {
 				if (!data) {
-					throw Object.assign(new Error(localize('apiError', "Error from GitHub: {0}", errors.map(e => e.message).join('\n'))), { errors });
+					throw Object.assign(new Error((errors || []).map(e => e.message).join('\n')), { errors });
 				}
 				if (!data.repository) {
 					const errorMessage = localize('notFound', "GitHub repository not found: {0}", resource.toString());
@@ -107,19 +107,25 @@ export function activate(context: vscode.ExtensionContext): void {
 			let request: Thenable<any>;
 			if (query) {
 				request = queryGraphQL(`
-query($query: String!) {
-	search(type: REPOSITORY, query: $query, first: 30) {
-		nodes {
-			... on Repository {
-				${repoFields}
-			}
-		}
-	}
-}`,
-					{ query: `${query} fork:true` }).then((data: any) => data.search.nodes, async (error: any) => {
-						const errorMessage = error.toString();
-						await showErrorAndPromptReset(errorMessage);
-						throw new Error(errorMessage);
+					query($query: String!) {
+						search(type: REPOSITORY, query: $query, first: 30) {
+							nodes {
+								... on Repository {
+									${repoFields}
+								}
+							}
+						}
+					}`,
+					{ query: `${query} fork:true` })
+					.then(({ data, errors }) => {
+						if (!data) {
+							throw Object.assign(new Error((errors || []).map(e => e.message).join('\n')), { errors });
+						}
+						return data.search.nodes;
+					})
+					.catch(async (error: any) => {
+						await showErrorAndPromptReset(error.message);
+						throw error;
 					});
 			} else {
 				// viewer.repositories already includes the repos we want
@@ -183,42 +189,44 @@ query($query: String!) {
 		}
 
 		const pullRequests = Promise.all(gitHubRemotes.map(parts => queryGraphQL(`
-query($owner: String!, $name: String!) {
-	repository(owner: $owner, name: $name) {
-		nameWithOwner
-		url
-		pushedAt
-		pullRequests(first: 50, orderBy: { field: UPDATED_AT, direction: DESC }, states: [OPEN]) {
-			nodes {
-				... on PullRequest {
-					number
-					title
-					author { login }
-					updatedAt
-					baseRef { ...refFields }
-					headRef { ...refFields }
+			query($owner: String!, $name: String!) {
+				repository(owner: $owner, name: $name) {
+					nameWithOwner
+					url
+					pushedAt
+					pullRequests(first: 50, orderBy: { field: UPDATED_AT, direction: DESC }, states: [OPEN]) {
+						nodes {
+							... on PullRequest {
+								number
+								title
+								author { login }
+								updatedAt
+								baseRef { ...refFields }
+								headRef { ...refFields }
+							}
+						}
+					}
 				}
 			}
-		}
-	}
-}
 
-fragment refFields on Ref {
-	name
-	repository {
-		nameWithOwner
-	}
-	target {
-		oid
-	}
-}
-`,
-			{ owner: parts.owner, name: parts.name }))).then<PullRequest[]>((data: any[]) => {
-				return data.reduce((r, d) => r.concat(d.repository.pullRequests.nodes), []);
-			}, async (error: any) => {
-				const errorMessage = error.toString();
-				await showErrorAndPromptReset(errorMessage);
-				throw new Error(errorMessage);
+			fragment refFields on Ref {
+				name
+				repository {
+					nameWithOwner
+				}
+				target {
+					oid
+				}
+			}
+			`,
+			{ owner: parts.owner, name: parts.name })))
+			.then(responses => responses.reduce<GitHubGQL.IPullRequest[]>((prs, response) => {
+				console.error(...response.errors || []);
+				return prs.concat(response.data && response.data.repository && response.data.repository.pullRequests.nodes || []);
+			}, []))
+			.catch(async error => {
+				await showErrorAndPromptReset(error.message);
+				throw error;
 			});
 
 		interface PullRequestItem extends vscode.QuickPickItem {
@@ -230,7 +238,7 @@ fragment refFields on Ref {
 				return {
 					label: `$(git-pull-request) ${pullRequest.title}`,
 					description: `#${pullRequest.number}`,
-					detail: `${pullRequest.headRef.name} — @${pullRequest.author.login}`,
+					detail: `${pullRequest.headRef && pullRequest.headRef.name} — @${pullRequest.author && pullRequest.author.login}`,
 					pullRequest,
 				} as PullRequestItem;
 			})));
@@ -310,10 +318,15 @@ class Viewer {
 				${repoFields}
 			}
 		`, {})
-			.then<vscode.CatalogFolder[]>((data: any) => data.viewer.contributedRepositories.nodes.map(toCatalogFolder))
-			.catch((reason): vscode.CatalogFolder[] => {
+			.then(({ data, errors }) => {
+				if (!data || !data.viewer.contributedRepositories.nodes) {
+					throw Object.assign(new Error((errors || []).map(e => e.message).join('\n')), { errors });
+				}
+				return data.viewer.contributedRepositories.nodes.map(toCatalogFolder);
+			})
+			.catch((error): vscode.CatalogFolder[] => {
 				// try again, but don't fail other requests if this fails
-				console.error(reason);
+				console.error(error);
 				this.contributedRequest = null;
 				return [];
 			});
@@ -331,56 +344,60 @@ class Viewer {
 			return this.repoRequest;
 		}
 		const request = queryGraphQL(`
-		{
-			viewer {
-				pinnedRepositories(first: 100, orderBy: {field: PUSHED_AT, direction: DESC}) {
-					nodes {
-						...repoFields
+			query {
+				viewer {
+					pinnedRepositories(first: 100, orderBy: {field: PUSHED_AT, direction: DESC}) {
+						nodes {
+							...repoFields
+						}
 					}
-				}
-				contributedRepositories(first: 100, orderBy: {field: PUSHED_AT, direction: DESC}) {
-					nodes {
-						...repoFields
+					contributedRepositories(first: 100, orderBy: {field: PUSHED_AT, direction: DESC}) {
+						nodes {
+							...repoFields
+						}
 					}
-				}
-				starredRepositories(first: 100, orderBy: {field: STARRED_AT, direction: DESC}) {
-					nodes {
-						...repoFields
+					starredRepositories(first: 100, orderBy: {field: STARRED_AT, direction: DESC}) {
+						nodes {
+							...repoFields
+						}
 					}
-				}
-				repositories(first: 100, orderBy: {field: PUSHED_AT, direction: DESC}) {
-					nodes {
-						...repoFields
+					repositories(first: 100, orderBy: {field: PUSHED_AT, direction: DESC}) {
+						nodes {
+							...repoFields
+						}
 					}
-				}
-				organizations(first: 100) {
-					nodes {
-						repositories(first: 100, orderBy: {field: PUSHED_AT, direction: DESC}) {
-							nodes {
-								...repoFields
+					organizations(first: 100) {
+						nodes {
+							repositories(first: 100, orderBy: {field: PUSHED_AT, direction: DESC}) {
+								nodes {
+									...repoFields
+								}
 							}
 						}
 					}
 				}
 			}
-		}
 
-		fragment repoFields on Repository {
-			${repoFields}
-		}
-		  `, {})
-			.then<vscode.CatalogFolder[]>((data: any) =>
-				[].concat(
-					data.viewer.pinnedRepositories.nodes,
-					data.viewer.contributedRepositories.nodes,
-					data.viewer.starredRepositories.nodes,
-					data.viewer.repositories.nodes,
-					...data.viewer.organizations.nodes.map((org: any) => org.repositories.nodes),
-				).map(toCatalogFolder)
-			)
-			.catch((reason): vscode.CatalogFolder[] => {
+			fragment repoFields on Repository {
+				${repoFields}
+			}
+		`, {})
+			.then(({ data, errors }) => {
+				console.error(...errors || []);
+				if (!data) {
+					return [];
+				}
+				return [
+					...data.viewer.pinnedRepositories.nodes || [],
+					...data.viewer.contributedRepositories.nodes || [],
+					...data.viewer.starredRepositories.nodes || [],
+					...data.viewer.repositories.nodes || [],
+					...([] as GitHubGQL.IRepository[]).concat(...(data.viewer.organizations.nodes || []).map(org => org.repositories.nodes || [])),
+				].map(toCatalogFolder);
+			})
+			.catch((error): vscode.CatalogFolder[] => {
 				// try again, but don't fail other requests if this fails
-				console.error(reason);
+				console.error(error);
 				this.repoRequest = null;
 				return [];
 			});
@@ -398,16 +415,21 @@ class Viewer {
 			return this.usernameRequest;
 		}
 		const request = queryGraphQL(`
-		{
-			viewer {
-				login
+			query {
+				viewer {
+					login
+				}
 			}
-		}
 		`, {})
-			.then<string | null>((data: any) => data.viewer.login)
-			.catch((reason) => {
+			.then(({ data, errors }) => {
+				if (!data) {
+					throw Object.assign(new Error((errors || []).map(e => e.message).join('\n')), { errors });
+				}
+				return data!.viewer.login;
+			})
+			.catch((error) => {
 				// try again, but don't fail other requests if this fails
-				console.error(reason);
+				console.error(error);
 				this.usernameRequest = null;
 				return null;
 			});
