@@ -220,9 +220,11 @@ export function activate(context: vscode.ExtensionContext): void {
 			}
 			`,
 			{ owner: parts.owner, name: parts.name })))
-			.then(responses => responses.reduce<GitHubGQL.IPullRequest[]>((prs, response) => {
-				console.error(...response.errors || []);
-				return prs.concat(response.data && response.data.repository && response.data.repository.pullRequests.nodes || []);
+			.then(responses => responses.reduce<GitHubGQL.IPullRequest[]>((prs, { data, errors }) => {
+				if (errors) {
+					console.error(...errors);
+				}
+				return prs.concat(data && data.repository && data.repository.pullRequests.nodes || []);
 			}, []))
 			.catch(async error => {
 				await showErrorAndPromptReset(error.message);
@@ -230,27 +232,34 @@ export function activate(context: vscode.ExtensionContext): void {
 			});
 
 		interface PullRequestItem extends vscode.QuickPickItem {
-			pullRequest: PullRequest;
+			pullRequest: GitHubGQL.IPullRequest;
 		}
 		const choice = await vscode.window.showQuickPick(pullRequests.then(pullRequests => pullRequests
 			.filter(pullRequest => !!pullRequest.headRef) // The head repo can be deleted for a PR
-			.map(pullRequest => {
-				return {
-					label: `$(git-pull-request) ${pullRequest.title}`,
-					description: `#${pullRequest.number}`,
-					detail: `${pullRequest.headRef && pullRequest.headRef.name} — @${pullRequest.author && pullRequest.author.login}`,
-					pullRequest,
-				} as PullRequestItem;
-			})));
+			.map(pullRequest => ({
+				label: `$(git-pull-request) ${pullRequest.title}`,
+				description: `#${pullRequest.number}`,
+				detail: `${pullRequest.headRef && pullRequest.headRef.name} — @${pullRequest.author && pullRequest.author.login}`,
+				pullRequest,
+			}))
+		));
 
 		if (!choice) {
 			return;
 		}
 
+		if (!choice.pullRequest.headRef) {
+			throw new Error('No headRef');
+		}
+
+		if (!choice.pullRequest.baseRef) {
+			throw new Error('No headRef');
+		}
+
 		await Promise.all([choice.pullRequest.baseRef, choice.pullRequest.headRef].map(async ref => {
 			const [name, owner] = ref.repository.nameWithOwner.split('/');
 			const cloneURL = await github.cloneURL(nameAndOwnerToResource(name, owner));
-			return vscode.commands.executeCommand('git.fetchCommitFromRemoteRef', sourceControl, cloneURL, ref.name, ref.target.oid);
+			await vscode.commands.executeCommand('git.fetchCommitFromRemoteRef', sourceControl, cloneURL, ref.name, ref.target.oid);
 		}));
 
 		// Set head revision
@@ -283,7 +292,9 @@ export function activate(context: vscode.ExtensionContext): void {
 	});
 }
 
-// Fetches and caches the github information associated to the current user.
+/**
+ * Fetches and caches the github information associated to the current user.
+ */
 class Viewer {
 	private token: string;
 	private repoRequest: Thenable<vscode.CatalogFolder[]> | null;
@@ -383,7 +394,9 @@ class Viewer {
 			}
 		`, {})
 			.then(({ data, errors }) => {
-				console.error(...errors || []);
+				if (errors) {
+					console.error(...errors);
+				}
 				if (!data) {
 					return [];
 				}

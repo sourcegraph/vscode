@@ -50,23 +50,11 @@ export interface RepositoryState {
 	// -- GitHub data --
 
 	status?: GitHubGQL.IStatus;
-}
 
-export enum GitHubStatusState {
-	Pending = 'PENDING',
-	Error = 'ERROR',
-	Failure = 'FAILURE',
-	Success = 'SUCCESS',
-}
-
-export interface GitHubStatus {
-	state: GitHubStatusState;
-	contexts: {
-		state: GitHubStatusState;
-		targetUrl?: string;
-		description?: string;
-		context: string;
-	}[];
+	/**
+	 * The pull request for this branch if exists
+	 */
+	pullRequests?: GitHubGQL.IPullRequest[];
 }
 
 /**
@@ -147,10 +135,90 @@ export class Repository implements vscode.Disposable {
 	private async update(): Promise<void> {
 		await this.updateRemotes();
 
-		const commit = await this.exec(['rev-parse', 'HEAD']);
-		if (this.state.commit !== commit) {
-			this.state.commit = commit;
-			await this.updateStatuses();
+		const [commitID, branchName] = await Promise.all([
+			this.exec(['rev-parse', 'HEAD']),
+			this.exec(['symbolic-ref', '--short', 'HEAD'])
+		]);
+		if (this.state.commit !== commitID) {
+			this.state.commit = commitID;
+			if (!this.currentGitHubRemote) {
+				return;
+			}
+			const { data, errors } = await queryGraphQL(`
+				query($owner: String!, $name: String!, $oid: GitObjectID, $branchName: String) {
+					repository(owner: $owner, name: $name) {
+						object(oid: $oid) {
+							... on Commit {
+								status {
+									state
+									contexts {
+										state
+										targetUrl
+										description
+										context
+									}
+								}
+							}
+						}
+						pullRequests(first: 1, headRefName: $branchName) {
+							nodes {
+								number
+								title
+								url
+								...CommentFields
+								comments(first: 100) {
+									totalCount
+									nodes {
+										id
+										...CommentFields
+									}
+								}
+								reviews(first: 100) {
+									totalCount
+									nodes {
+										...CommentFields
+										state
+										url
+										comments(first: 100) {
+											totalCount
+											nodes {
+												...CommentFields
+												position
+												url
+												replyTo {
+													id
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+				fragment CommentFields on Comment {
+					body
+					author {
+						avatarUrl
+						login
+						url
+					}
+				}
+			`, {
+					owner: this.currentGitHubRemote.owner,
+					name: this.currentGitHubRemote.name,
+					oid: this.state.commit,
+					branchName,
+				});
+
+			if (!data) {
+				throw Object.assign(new Error((errors || []).map(e => e.message).join('\n')), { errors });
+			}
+
+			const repository = data && data.repository;
+			const commit = repository && repository.object && (repository.object as GitHubGQL.ICommit);
+			this.state.status = commit && commit.status || undefined;
+			this.state.pullRequests = repository && repository.pullRequests && repository.pullRequests.nodes || undefined;
 		}
 
 		this._onDidUpdate.fire();
@@ -173,41 +241,6 @@ export class Repository implements vscode.Disposable {
 		} else {
 			this.state.githubRemotes = [];
 		}
-	}
-
-	private async updateStatuses(): Promise<void> {
-		if (!this.currentGitHubRemote) {
-			return;
-		}
-
-		const { data, errors } = await queryGraphQL(`
-			query($owner: String!, $name: String!, $oid: GitObjectID) {
-				repository(owner: $owner, name: $name) {
-					object(oid: $oid) {
-						... on Commit {
-							status {
-								state
-								contexts {
-									state
-									targetUrl
-									description
-									context
-								}
-							}
-						}
-					}
-				}
-			}
-		`, {
-				owner: this.currentGitHubRemote.owner,
-				name: this.currentGitHubRemote.name,
-				oid: this.state.commit,
-			});
-
-		console.error(...errors || []);
-
-		const commit = data && data.repository && data.repository.object && (data.repository.object as GitHubGQL.ICommit);
-		this.state.status = commit && commit.status || undefined;
 	}
 
 	dispose(): void {
