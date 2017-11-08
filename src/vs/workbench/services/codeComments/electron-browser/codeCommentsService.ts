@@ -553,69 +553,62 @@ export class FileComments extends Disposable implements IFileComments {
 
 	private updateDisplayRanges(): TPromise<void> {
 		return this.updateDisplayRangeDelayer.trigger(() => {
-			return this.updateDisplayRangesNow();
+			return TPromise.wrap(this.updateDisplayRangesNow());
 		});
 	}
 
-	private updateDisplayRangesNow(): TPromise<void> {
-		return this.getDocumentId()
-			.then<{ revision: string, content: string }[]>(documentId => {
-				if (!documentId) {
-					return TPromise.wrap(undefined);
+	private async updateDisplayRangesNow(): Promise<void> {
+		const documentId = await this.getDocumentId();
+		if (!documentId) {
+			return;
+		}
+		const contents = this.threads
+			// TODO(nick): ideally we don't want to compute display ranges for archived threads
+			// unless the user actually clicks on it. For now, we compute them up front because
+			// we don't have lazy computation yet.
+			// .filter(thread => !thread.archived)
+			.filter(uniqueFilter(thread => thread.linesRevision))
+			.filter(thread => thread.linesRevision)
+			.map(async thread => {
+				try {
+					return await this.instantiationService.invokeFunction(resolveContent, this.git, documentId, thread.linesRevision);
+				} catch (err) {
+					this.outputService.getChannel(CommentsChannelId).append(err.message);
+					return undefined;
 				}
-				return TPromise.join(
-					this.threads
-						// TODO(nick): ideally we don't want to compute display ranges for archived threads
-						// unless the user actually clicks on it. For now, we compute them up front because
-						// we don't have lazy computation yet.
-						// .filter(thread => !thread.archived)
-						.filter(uniqueFilter(thread => thread.linesRevision))
-						.filter(thread => thread.linesRevision)
-						.map(thread => this.instantiationService.invokeFunction(resolveContent, this.git, documentId, thread.linesRevision)
-							.then(content => content, err => {
-								this.outputService.getChannel(CommentsChannelId).append(err.message);
-								return undefined;
-							})
-						)
-				);
-			})
-			.then(revContents => {
-				if (!revContents || !this.modelWatcher.model) {
-					return TPromise.as(undefined);
-				}
-				const revLines = revContents
-					// Filter out revisions that failed to resolve
-					.filter(revContent => revContent)
-					.map(revContent => {
-						const lines = RawTextSource.fromString(revContent.content).lines;
-						return { revision: revContent.revision, lines };
-					});
-				const revRanges = this.threads.map(thread => {
-					return {
-						revision: thread.linesRevision,
-						range: thread.range,
-						rangeContent: thread.rangeContent,
-					};
-				});
-				const modifiedLines = this.modelWatcher.model.getLinesContent();
-				return this.diffWorker.diff({
-					revLines,
-					revRanges,
-					modifiedLines,
-				});
-			})
-			.then(result => {
-				if (!result) {
-					return;
-				}
-				for (const thread of this.threads) {
-					const transforms = result[thread.linesRevision];
-					if (transforms) {
-						thread.displayRange = Range.lift(transforms[thread.range.toString()]);
-					}
-				}
-				this.didChangeThreads.fire();
 			});
+		const revContents = await Promise.all(contents);
+		if (!revContents || !this.modelWatcher.model) {
+			return;
+		}
+		const revLines = revContents
+			// Filter out revisions that failed to resolve
+			.filter(revContent => revContent)
+			.map(revContent => {
+				const lines = RawTextSource.fromString(revContent.content).lines;
+				return { revision: revContent.revision, lines };
+			});
+		const revRanges = this.threads.map(thread => ({
+			revision: thread.linesRevision,
+			range: thread.range,
+			rangeContent: thread.rangeContent,
+		}));
+		const modifiedLines = this.modelWatcher.model.getLinesContent();
+		const result = await this.diffWorker.diff({
+			revLines,
+			revRanges,
+			modifiedLines,
+		});
+		if (!result) {
+			return;
+		}
+		for (const thread of this.threads) {
+			const transforms = result[thread.linesRevision];
+			if (transforms) {
+				thread.displayRange = Range.lift(transforms[thread.range.toString()]);
+			}
+		}
+		this.didChangeThreads.fire();
 	}
 }
 
