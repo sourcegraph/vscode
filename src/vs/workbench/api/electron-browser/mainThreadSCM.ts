@@ -413,7 +413,8 @@ class CommentsSCMProvider extends MainThreadSCMProvider {
 					// find the one we just opened.
 					const diffEditors = this.codeEditorService.listDiffEditors();
 					for (const diffEditor of diffEditors) {
-						if (resourceString === diffEditor.getModifiedEditor().getModel().uri.toString()) {
+						const model = diffEditor.getModifiedEditor().getModel();
+						if (model && resourceString === model.uri.toString()) {
 							return diffEditor.getModifiedEditor();
 						}
 					}
