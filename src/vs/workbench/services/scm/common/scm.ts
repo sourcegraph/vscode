@@ -108,6 +108,11 @@ export interface ISCMRevision {
  */
 export interface ICommandOptions {
 	stdin?: string;
+
+	/**
+	 * Indicates whether or not this command changes the local state of the SCM provider.
+	 */
+	mutatesLocalState?: boolean;
 }
 
 export interface ISCMProvider extends IDisposable {

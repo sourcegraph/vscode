@@ -354,6 +354,11 @@ declare module 'vscode' {
 	 */
 	export interface CommandOptions {
 		stdin?: string;
+
+		/**
+		 * Indicates whether or not this command changes the local state of the SCM provider.
+		 */
+		mutatesLocalState?: boolean;
 	}
 
 	export interface CommandExecutor {

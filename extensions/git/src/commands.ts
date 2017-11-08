@@ -1273,7 +1273,7 @@ export class CommandCenter {
 		} catch (e) {
 			// We failed to get the commit, so fetch it.
 			const remote = cloneURL.with({ scheme: cloneURL.scheme.replace(/^git\+/, '') }).toString();
-			await repository.executeCommand(['fetch', remote, refName]);
+			await repository.executeCommand(['fetch', remote, refName], { mutatesLocalState: true });
 		}
 	}
 

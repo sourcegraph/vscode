@@ -320,6 +320,7 @@ export enum Operation {
 	MergeBase = 'MergeBase',
 	RevParse = 'RevParse',
 	ExecuteCommand = 'ExecuteCommand',
+	ExecuteCommandReadOnly = 'ExecuteCommandReadOnly',
 	AddWorktree = 'AddWorktree',
 	WorktreePrune = 'WorktreePrune',
 	WorktreeList = 'WorktreeList'
@@ -333,6 +334,7 @@ function isReadOnly(operation: Operation): boolean {
 		case Operation.MergeBase:
 		case Operation.RevParse:
 		case Operation.CheckIgnore:
+		case Operation.ExecuteCommandReadOnly:
 			return true;
 		default:
 			return false;
@@ -570,7 +572,8 @@ export class Repository implements Disposable {
 	// }
 
 	async executeCommand(args: string[], options?: CommandOptions): Promise<string> {
-		return await this.run(Operation.ExecuteCommand, () => {
+		const op = (options && options.mutatesLocalState) ? Operation.ExecuteCommand : Operation.ExecuteCommandReadOnly;
+		return await this.run(op, () => {
 			let runOptions: any;
 			if (options) {
 				if (typeof options.stdin === 'string') {
