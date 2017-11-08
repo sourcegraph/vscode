@@ -165,6 +165,7 @@ export class Repository implements vscode.Disposable {
 								number
 								title
 								url
+								closed
 								...CommentFields
 								comments(first: 100) {
 									totalCount

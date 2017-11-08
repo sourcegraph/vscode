@@ -23,6 +23,7 @@ const getIconForPullRequestReviewState = (state: GitHubGQL.IPullRequestReviewSta
 		case 'APPROVED': return vscode.Uri.file(path.join(ICONS_ROOT_PATH, `gh-status-icon--success.svg`));
 		case 'CHANGES_REQUESTED': return vscode.Uri.file(path.join(ICONS_ROOT_PATH, `gh-status-icon--failure.svg`));
 		case 'PENDING': return vscode.Uri.file(path.join(ICONS_ROOT_PATH, `gh-status-icon--pending.svg`));
+		case 'COMMENTED': return vscode.Uri.file(path.join(ICONS_ROOT_PATH, `gh-comment-icon.svg`));
 	}
 };
 
@@ -50,7 +51,7 @@ export class ChecklistController implements vscode.Disposable {
 	private statusGroup: vscode.ChecklistItemGroup;
 
 	/**
-	 * Map from GitHub PR ID (e.g. MDExOlB1bGxSZXF1ZXN0MTQ5MzA3MzI3, NOT the PR _number_) to ChecklistItemGroup.
+	 * Map from GitHub PR URL to ChecklistItemGroup.
 	 * We have one ChecklistItemGroup per PR
 	 */
 	private prChecklistItemGroups = new Map<string, vscode.ChecklistItemGroup>();
@@ -72,8 +73,12 @@ export class ChecklistController implements vscode.Disposable {
 	}
 
 	private update(): void {
+
 		const statusItems: vscode.ChecklistItem[] = [];
+		const nextPrUrls = new Set<string>();
+
 		for (const repo of this.model.repositories) {
+
 			// Update the checklist item group for commit statuses
 			if (repo.state.status) {
 				for (const context of repo.state.status.contexts) {
@@ -94,12 +99,26 @@ export class ChecklistController implements vscode.Disposable {
 					});
 				}
 			}
+
 			// Update the checklist item groups for pull requests
 			for (const pr of repo.state.pullRequests || []) {
-				const prChecklistItemGroup = this.prChecklistItemGroups.get(pr.id) || this.provider.createItemGroup('githubPR', `GitHub PR #${pr.number} ${pr.title}`);
-				this.prChecklistItemGroups.set(pr.id, prChecklistItemGroup);
+
+				// Don't show closed or merged PRs
+				if (pr.closed) {
+					continue;
+				}
+
+				nextPrUrls.add(pr.url);
+				let prChecklistItemGroup = this.prChecklistItemGroups.get(pr.url);
+				if (!prChecklistItemGroup) {
+					prChecklistItemGroup = this.provider.createItemGroup('githubPR', `GitHub PR #${pr.number} ${pr.title}`);
+					this.disposables.push(prChecklistItemGroup);
+					this.prChecklistItemGroups.set(pr.url, prChecklistItemGroup);
+				}
+
 				const reviewItems: vscode.ChecklistItem[] = [];
 				const commentItems: vscode.ChecklistItem[] = [];
+
 				for (const comment of pr.comments.nodes || []) {
 					// Comments don't have a url field, but the ID contains the reference needed to construct the URL
 					// Example ID (decoded): 012:IssueComment342274114
@@ -117,6 +136,7 @@ export class ChecklistController implements vscode.Disposable {
 						command: createWebBrowserCommandReference(url),
 					});
 				}
+
 				for (const review of pr.reviews && pr.reviews.nodes || []) {
 					// Add each review as a checklist item
 					// Neutral reviews without a body are not worth showing as a checklist item
@@ -144,6 +164,7 @@ export class ChecklistController implements vscode.Disposable {
 						});
 					}
 				}
+
 				prChecklistItemGroup.itemStates = [
 					{
 						name: `${pr.author && pr.author.login}`,
@@ -156,6 +177,16 @@ export class ChecklistController implements vscode.Disposable {
 				];
 			}
 		}
+
+		// Remove check list item groups for PRs that are not in the new set of PRs to display
+		// (because the branch changed, the PR was closed etc.)
+		for (const [prUrl, group] of this.prChecklistItemGroups) {
+			if (!nextPrUrls.has(prUrl)) {
+				group.dispose();
+				this.prChecklistItemGroups.delete(prUrl);
+			}
+		}
+
 		this.statusGroup.itemStates = statusItems;
 	}
 

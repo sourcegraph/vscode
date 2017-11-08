@@ -94,8 +94,8 @@ class MainThreadChecklistProvider implements IChecklistProvider {
 			.filter(g => g.itemCollection.items.length > 0 || !g.features.hideWhenEmpty);
 	}
 
-	private _onDidChangeResources = new Emitter<void>();
-	get onDidChangeItems(): Event<void> { return this._onDidChangeResources.event; }
+	private _didChangeItems = new Emitter<void>();
+	get onDidChangeItems(): Event<void> { return this._didChangeItems.event; }
 
 	private features: ChecklistProviderFeatures = {};
 
@@ -199,7 +199,7 @@ class MainThreadChecklistProvider implements IChecklistProvider {
 			}
 		}
 
-		this._onDidChangeResources.fire();
+		this._didChangeItems.fire();
 	}
 
 	$unregisterGroup(handle: number): void {
@@ -211,6 +211,8 @@ class MainThreadChecklistProvider implements IChecklistProvider {
 
 		delete this._groupsByHandle[handle];
 		this._groups.splice(this._groups.indexOf(group), 1);
+
+		this._didChangeItems.fire();
 	}
 
 	toJSON(): any {
