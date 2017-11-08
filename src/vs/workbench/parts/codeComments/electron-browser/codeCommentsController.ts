@@ -243,7 +243,7 @@ export class CodeCommentsController extends Disposable implements IEditorContrib
 			dispose(disposables);
 			this.renderCurrentModelDecorations();
 			this.editor.focus();
-			if (!draftThread.content.trim()) {
+			if (draftThread.isDefaultContent || !draftThread.content.trim()) {
 				draftThread.dispose();
 			}
 		});

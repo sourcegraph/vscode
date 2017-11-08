@@ -146,6 +146,11 @@ export interface IDraftThreadComments extends IEventDisposable {
 	readonly onDidSubmit: Event<IThreadComments>;
 
 	/**
+	 * True if the content of the draft is the default initial state.
+	 */
+	readonly isDefaultContent: boolean;
+
+	/**
 	 * Submit the draft. Returns the created IThreadComments or undefined if
 	 * the draft cannot be created due to incorrect configuration settings.
 	 * See ShareContextConfigurationAction.

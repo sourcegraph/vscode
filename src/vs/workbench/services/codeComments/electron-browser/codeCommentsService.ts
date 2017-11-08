@@ -946,6 +946,7 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 		@ISCMService private scmService: ISCMService,
 	) {
 		super();
+		this.content = this.defaultContent;
 		this.displayRange = this.getNonEmptySelection(editor);
 		this.model = editor.getModel();
 
@@ -957,6 +958,18 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 		this.disposable(this.model.onDidChangeContent(() => {
 			this.displayRange = this.model.getDecorationRange(rangeDecorationId);
 		}));
+	}
+
+	public get isDefaultContent(): boolean {
+		return this.content.trim() === this.defaultContent.trim();
+	}
+
+	private get defaultContent(): string {
+		// Mention the org by default.
+		// TODO(nick): Check blame for range and search for matching org members.
+		// If found, mention them by default.
+		// If none found, fallback to mentioning org.
+		return '@' + this.authService.currentUser.currentOrgMember.org.name + ' ';
 	}
 
 	private _submitting = false;
