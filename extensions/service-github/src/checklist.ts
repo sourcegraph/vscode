@@ -90,7 +90,7 @@ export class ChecklistController implements vscode.Disposable {
 						name,
 						description: context.description || undefined,
 						decorations: decorationsForStatusState(context.state),
-						command: createWebBrowserCommandReference(context.targetUrl),
+						command: createWebBrowserCommandReference(vscode.Uri.parse(context.targetUrl)),
 					});
 				}
 			}
