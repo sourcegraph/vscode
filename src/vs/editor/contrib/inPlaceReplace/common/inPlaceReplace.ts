@@ -11,7 +11,7 @@ import { Range } from 'vs/editor/common/core/range';
 import { Selection } from 'vs/editor/common/core/selection';
 import { IEditorContribution, ICommonCodeEditor, IModelDecorationsChangeAccessor } from 'vs/editor/common/editorCommon';
 import { EditorContextKeys } from 'vs/editor/common/editorContextKeys';
-import { editorAction, ServicesAccessor, EditorAction, commonEditorContribution } from 'vs/editor/common/editorCommonExtensions';
+import { registerEditorAction, ServicesAccessor, EditorAction, registerCommonEditorContribution } from 'vs/editor/common/editorCommonExtensions';
 import { IInplaceReplaceSupportResult } from 'vs/editor/common/modes';
 import { IEditorWorkerService } from 'vs/editor/common/services/editorWorkerService';
 import { InPlaceReplaceCommand } from './inPlaceReplaceCommand';
@@ -20,7 +20,6 @@ import { registerThemingParticipant } from 'vs/platform/theme/common/themeServic
 import { editorBracketMatchBorder } from 'vs/editor/common/view/editorColorRegistry';
 import { ModelDecorationOptions } from 'vs/editor/common/model/textModelWithDecorations';
 
-@commonEditorContribution
 class InPlaceReplaceController implements IEditorContribution {
 
 	private static ID = 'editor.contrib.inPlaceReplaceController';
@@ -34,7 +33,6 @@ class InPlaceReplaceController implements IEditorContribution {
 	});
 
 	private editor: ICommonCodeEditor;
-	private requestIdPool: number;
 	private currentRequest: TPromise<IInplaceReplaceSupportResult>;
 	private decorationRemover: TPromise<void>;
 	private decorationIds: string[];
@@ -46,7 +44,6 @@ class InPlaceReplaceController implements IEditorContribution {
 	) {
 		this.editor = editor;
 		this.editorWorkerService = editorWorkerService;
-		this.requestIdPool = 0;
 		this.currentRequest = TPromise.as(<IInplaceReplaceSupportResult>null);
 		this.decorationRemover = TPromise.as(<void>null);
 		this.decorationIds = [];
@@ -140,7 +137,6 @@ class InPlaceReplaceController implements IEditorContribution {
 	}
 }
 
-@editorAction
 class InPlaceReplaceUp extends EditorAction {
 
 	constructor() {
@@ -165,7 +161,6 @@ class InPlaceReplaceUp extends EditorAction {
 	}
 }
 
-@editorAction
 class InPlaceReplaceDown extends EditorAction {
 
 	constructor() {
@@ -189,6 +184,10 @@ class InPlaceReplaceDown extends EditorAction {
 		return controller.run(this.id, false);
 	}
 }
+
+registerCommonEditorContribution(InPlaceReplaceController);
+registerEditorAction(InPlaceReplaceUp);
+registerEditorAction(InPlaceReplaceDown);
 
 registerThemingParticipant((theme, collector) => {
 	let border = theme.getColor(editorBracketMatchBorder);

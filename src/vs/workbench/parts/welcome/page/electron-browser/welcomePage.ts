@@ -10,12 +10,11 @@ import URI from 'vs/base/common/uri';
 import * as arrays from 'vs/base/common/arrays';
 import { WalkThroughInput } from 'vs/workbench/parts/welcome/walkThrough/node/walkThroughInput';
 import { IWorkbenchContribution } from 'vs/workbench/common/contributions';
-import { IPartService } from 'vs/workbench/services/part/common/partService';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { Position } from 'vs/platform/editor/common/editor';
 import { onUnexpectedError, isPromiseCanceledError } from 'vs/base/common/errors';
-import { IWindowService, IWindowsService } from 'vs/platform/windows/common/windows';
+import { IWindowService } from 'vs/platform/windows/common/windows';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
@@ -23,14 +22,13 @@ import { localize } from 'vs/nls';
 import { Action } from 'vs/base/common/actions';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IExperimentService } from 'vs/platform/telemetry/common/experiments';
-import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 import { Schemas } from 'vs/base/common/network';
 import { IBackupFileService } from 'vs/workbench/services/backup/common/backup';
 import { IMessageService, Severity, CloseAction } from 'vs/platform/message/common/message';
 import { getInstalledExtensions, IExtensionStatus, onExtensionChanged, isKeymapExtension } from 'vs/workbench/parts/extensions/electron-browser/extensionsUtils';
 import { IExtensionEnablementService, IExtensionManagementService, IExtensionGalleryService, IExtensionTipsService } from 'vs/platform/extensionManagement/common/extensionManagement';
 import { used } from 'vs/workbench/parts/welcome/page/electron-browser/sg_welcome_page';
-import { ILifecycleService, StartupKind } from 'vs/platform/lifecycle/common/lifecycle';
+import { ILifecycleService, StartupKind, LifecyclePhase } from 'vs/platform/lifecycle/common/lifecycle';
 import { IDisposable, dispose } from 'vs/base/common/lifecycle';
 import { IThemeService, registerThemingParticipant } from 'vs/platform/theme/common/themeService';
 import { registerColor, focusBorder, textLinkForeground, textLinkActiveForeground, foreground, descriptionForeground, contrastBorder, activeContrastBorder, welcomeButtonBackground, inputBackground, inputBorder, inputForeground, buttonBackground as editorButtonBackground, buttonHoverBackground as editorButtonHoverBackground } from 'vs/platform/theme/common/colorRegistry';
@@ -44,7 +42,6 @@ import { ISCMService } from 'vs/workbench/services/scm/common/scm';
 import { IAuthService } from 'vs/platform/auth/common/auth';
 import { ICodeCommentsService, IThreads } from 'vs/editor/common/services/codeCommentsService';
 import { INavService } from 'vs/workbench/services/nav/common/nav';
-import { IContextViewService } from 'vs/platform/contextview/browser/contextView';
 import { SIDE_BAR_BACKGROUND, SIDE_BAR_BORDER, SIDE_BAR_SECTION_HEADER_BACKGROUND, SIDE_BAR_TITLE_FOREGROUND } from 'vs/workbench/common/theme';
 import { ICommandService } from 'vs/platform/commands/common/commands';
 import { IReviewService } from 'vs/workbench/services/review/common/review';
@@ -66,7 +63,6 @@ const telemetryFrom = 'welcomePage';
 export class WelcomePageContribution implements IWorkbenchContribution {
 
 	constructor(
-		@IPartService partService: IPartService,
 		@IInstantiationService instantiationService: IInstantiationService,
 		@IConfigurationService configurationService: IConfigurationService,
 		@IWorkbenchEditorService editorService: IWorkbenchEditorService,
@@ -79,7 +75,7 @@ export class WelcomePageContribution implements IWorkbenchContribution {
 		if (enabled && lifecycleService.startupKind !== StartupKind.ReloadedWindow) {
 			TPromise.join([
 				backupFileService.hasBackups(),
-				partService.joinCreation()
+				lifecycleService.when(LifecyclePhase.Running)
 			]).then(([hasBackups]) => {
 				const activeInput = editorService.getActiveEditorInput();
 				if (!activeInput && !hasBackups) {
@@ -261,10 +257,8 @@ class WelcomePage {
 		@IWorkbenchEditorService private editorService: IWorkbenchEditorService,
 		@IInstantiationService private instantiationService: IInstantiationService,
 		@IWindowService private windowService: IWindowService,
-		@IWindowsService private windowsService: IWindowsService,
 		@IWorkspaceContextService private contextService: IWorkspaceContextService,
 		@IConfigurationService private configurationService: IConfigurationService,
-		@IEnvironmentService private environmentService: IEnvironmentService,
 		@IMessageService private messageService: IMessageService,
 		@IExtensionEnablementService private extensionEnablementService: IExtensionEnablementService,
 		@IExtensionGalleryService private extensionGalleryService: IExtensionGalleryService,
@@ -272,7 +266,9 @@ class WelcomePage {
 		@IExtensionTipsService private tipsService: IExtensionTipsService,
 		@IExtensionsWorkbenchService private extensionsWorkbenchService: IExtensionsWorkbenchService,
 		@ILifecycleService lifecycleService: ILifecycleService,
+		// @ts-ignore unused injected service
 		@IThemeService private themeService: IThemeService,
+		// @ts-ignore unused injected service
 		@IExperimentService private experimentService: IExperimentService,
 		@IFoldersWorkbenchService private foldersWorkbenchService: IFoldersWorkbenchService,
 		@ITelemetryService private telemetryService: ITelemetryService,
@@ -280,7 +276,6 @@ class WelcomePage {
 		@IAuthService private authService: IAuthService,
 		@ICodeCommentsService private codeCommentsService: ICodeCommentsService,
 		@INavService private navService: INavService,
-		@IContextViewService private contextViewService: IContextViewService,
 		@ICommandService private commandService: ICommandService,
 		@IReviewService private reviewService: IReviewService,
 		@IOpenerService private openerService: IOpenerService,
@@ -706,11 +701,6 @@ class WelcomePage {
 		const reviewItems = this.reviewService.reviewItems;
 
 		reviewItems.slice(0, Math.min(reviewItems.length, 10)).forEach(reviewItem => {
-			const description = reviewItem.provider.rootUri.toString().split(/[\\/]/);
-			let repo = reviewItem.provider.rootUri.toString();
-			if (description.length >= 3) {
-				repo = description.slice(description.length - 3).join('/');
-			}
 			let branchList = document.getElementById(`branch-list`);
 			if (!branchList) {
 				const subcontainer = document.createElement('li');

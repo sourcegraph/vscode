@@ -18,21 +18,18 @@ import { CountBadge } from 'vs/base/browser/ui/countBadge/countBadge';
 import { IChecklistService, IChecklistProvider, IChecklistItemGroup, IChecklistItem } from 'vs/workbench/services/checklist/common/checklist';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
-import { ICommandService } from 'vs/platform/commands/common/commands';
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { IMessageService } from 'vs/platform/message/common/message';
 import { IListService } from 'vs/platform/list/browser/listService';
 import { MenuItemAction } from 'vs/platform/actions/common/actions';
-import { IAction, Action, IActionItem, ActionRunner } from 'vs/base/common/actions';
+import { IAction, IActionItem, ActionRunner } from 'vs/base/common/actions';
 import { MenuItemActionItem } from 'vs/platform/actions/browser/menuItemActionItem';
 import { ChecklistMenus } from './checklistMenus';
-import { ActionBar, IActionItemProvider, ActionItem } from 'vs/base/browser/ui/actionbar/actionbar';
+import { ActionBar, IActionItemProvider } from 'vs/base/browser/ui/actionbar/actionbar';
 import { IThemeService, LIGHT } from 'vs/platform/theme/common/themeService';
 import { isChecklistItem } from './checklistUtil';
 import { attachListStyler, attachBadgeStyler } from 'vs/platform/theme/common/styler';
 import Severity from 'vs/base/common/severity';
-import { Command } from 'vs/editor/common/modes';
-import { render as renderOcticons } from 'vs/base/browser/ui/octiconLabel/octiconLabel';
 import { Widget } from 'vs/base/browser/ui/widget';
 
 // TODO@Joao
@@ -61,45 +58,6 @@ export interface IViewModel {
 	readonly selectedRepositories: IChecklistProvider[];
 	readonly onDidSplice: Event<ISpliceEvent<IChecklistProvider>>;
 	hide(provider: IChecklistProvider): void;
-}
-
-class ProvidersListDelegate implements IDelegate<IChecklistProvider> {
-
-	getHeight(element: IChecklistProvider): number {
-		return 22;
-	}
-
-	getTemplateId(element: IChecklistProvider): string {
-		return 'provider';
-	}
-}
-
-class StatusBarAction extends Action {
-
-	constructor(
-		private command: Command,
-		private commandService: ICommandService
-	) {
-		super(`statusbaraction{${command.id}}`, command.title, '', true);
-		this.tooltip = command.tooltip;
-	}
-
-	run(): TPromise<void> {
-		return this.commandService.executeCommand(this.command.id, ...this.command.arguments);
-	}
-}
-
-class StatusBarActionItem extends ActionItem {
-
-	constructor(action: StatusBarAction) {
-		super(null, action, {});
-	}
-
-	_updateLabel(): void {
-		if (this.options.label) {
-			this.$e.innerHtml(renderOcticons(this.getAction().label));
-		}
-	}
 }
 
 interface ItemGroupTemplate {

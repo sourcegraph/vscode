@@ -45,7 +45,7 @@ export class ExtHostEditors implements ExtHostEditorsShape {
 		this._extHostDocumentsAndEditors.onDidChangeVisibleTextEditors(e => this._onDidChangeVisibleTextEditors.fire(e));
 		this._extHostDocumentsAndEditors.onDidChangeActiveTextEditor(e => this._onDidChangeActiveTextEditor.fire(e));
 
-		_commands.registerArgumentProcessor({
+		this._commands.registerArgumentProcessor({
 			processArgument: arg => {
 				if (arg && arg.$mid === 4001) {
 					const editor = this._extHostDocumentsAndEditors.getEditor(arg.editorId);

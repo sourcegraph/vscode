@@ -9,13 +9,12 @@ import nls = require('vs/nls');
 
 import { TPromise } from 'vs/base/common/winjs.base';
 import { ICommonCodeEditor } from 'vs/editor/common/editorCommon';
-import { editorAction, EditorAction, ServicesAccessor } from 'vs/editor/common/editorCommonExtensions';
+import { registerEditorAction, EditorAction, ServicesAccessor } from 'vs/editor/common/editorCommonExtensions';
 import { IQuickOpenService } from 'vs/platform/quickOpen/common/quickOpen';
 import { EditorContextKeys } from 'vs/editor/common/editorContextKeys';
 
 const EMMET_COMMANDS_PREFIX = '>Emmet: ';
 
-@editorAction
 class ShowEmmetCommandsAction extends EditorAction {
 
 	constructor() {
@@ -33,3 +32,5 @@ class ShowEmmetCommandsAction extends EditorAction {
 		return TPromise.as(null);
 	}
 }
+
+registerEditorAction(ShowEmmetCommandsAction);

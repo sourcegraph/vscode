@@ -23,7 +23,6 @@ import { getCommentTelemetryData } from 'vs/workbench/parts/codeComments/common/
 import { dispose, IDisposable } from 'vs/base/common/lifecycle';
 import { BaseThreadCommentsWidget } from 'vs/workbench/parts/codeComments/browser/baseThreadCommentsWidget';
 import { IClipboardService } from 'vs/platform/clipboard/common/clipboardService';
-import { IRemoteService } from 'vs/platform/remote/node/remote';
 import { Button } from 'vs/base/browser/ui/button/button';
 import { attachButtonStyler } from 'vs/platform/theme/common/styler';
 import { editorBackground, editorActiveLinkForeground } from 'vs/platform/theme/common/colorRegistry';
@@ -45,7 +44,6 @@ export class ThreadCommentsWidget extends BaseThreadCommentsWidget {
 		@IContextMenuService private contextMenuService: IContextMenuService,
 		@ITelemetryService private telemetryService: ITelemetryService,
 		@IClipboardService private _clipboardService: IClipboardService,
-		@IRemoteService private remoteService: IRemoteService,
 		@ICodeCommentsService private codeCommentsService: ICodeCommentsService,
 	) {
 		super(editor, themeService);

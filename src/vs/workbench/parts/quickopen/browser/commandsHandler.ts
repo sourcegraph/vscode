@@ -14,7 +14,7 @@ import { Action } from 'vs/base/common/actions';
 import { toErrorMessage } from 'vs/base/common/errorMessage';
 import { Mode, IEntryRunContext, IAutoFocus, IModel, IQuickNavigateConfiguration } from 'vs/base/parts/quickopen/common/quickOpen';
 import { QuickOpenEntryGroup, IHighlight, QuickOpenModel, QuickOpenEntry } from 'vs/base/parts/quickopen/browser/quickOpenModel';
-import { SyncActionDescriptor, IMenuService, MenuId, MenuItemAction } from 'vs/platform/actions/common/actions';
+import { IMenuService, MenuId, MenuItemAction } from 'vs/platform/actions/common/actions';
 import { IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
 import { QuickOpenHandler, IWorkbenchQuickOpenConfiguration } from 'vs/workbench/browser/quickopen';
 import { IEditorAction, IEditor, ICommonCodeEditor } from 'vs/editor/common/editorCommon';
@@ -25,7 +25,7 @@ import { IMessageService, Severity, IMessageWithAction } from 'vs/platform/messa
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { IQuickOpenService } from 'vs/platform/quickOpen/common/quickOpen';
-import { editorAction, EditorAction } from 'vs/editor/common/editorCommonExtensions';
+import { registerEditorAction, EditorAction } from 'vs/editor/common/editorCommonExtensions';
 import { IStorageService } from 'vs/platform/storage/common/storage';
 import { ILifecycleService } from 'vs/platform/lifecycle/common/lifecycle';
 import { once } from 'vs/base/common/event';
@@ -157,7 +157,6 @@ export class ClearCommandHistoryAction extends Action {
 	constructor(
 		id: string,
 		label: string,
-		@IStorageService private storageService: IStorageService,
 		@IConfigurationService private configurationService: IConfigurationService
 	) {
 		super(id, label);
@@ -174,7 +173,6 @@ export class ClearCommandHistoryAction extends Action {
 	}
 }
 
-@editorAction
 class CommandPaletteEditorAction extends EditorAction {
 
 	constructor() {
@@ -322,28 +320,6 @@ abstract class BaseCommandEntry extends QuickOpenEntryGroup {
 	}
 }
 
-class CommandEntry extends BaseCommandEntry {
-
-	constructor(
-		commandId: string,
-		keybinding: ResolvedKeybinding,
-		label: string,
-		meta: string,
-		highlights: { label: IHighlight[], alias: IHighlight[] },
-		private actionDescriptor: SyncActionDescriptor,
-		onBeforeRun: (commandId: string) => void,
-		@IInstantiationService private instantiationService: IInstantiationService,
-		@IMessageService messageService: IMessageService,
-		@ITelemetryService telemetryService: ITelemetryService
-	) {
-		super(commandId, keybinding, label, meta, highlights, onBeforeRun, messageService, telemetryService);
-	}
-
-	protected getAction(): Action | IEditorAction {
-		return <Action>this.instantiationService.createInstance(this.actionDescriptor.syncDescriptor);
-	}
-}
-
 class EditorActionCommandEntry extends BaseCommandEntry {
 
 	constructor(
@@ -402,7 +378,6 @@ export class CommandsHandler extends QuickOpenHandler {
 		@IInstantiationService private instantiationService: IInstantiationService,
 		@IKeybindingService private keybindingService: IKeybindingService,
 		@IMenuService private menuService: IMenuService,
-		@IContextKeyService private contextKeyService: IContextKeyService,
 		@IConfigurationService private configurationService: IConfigurationService
 	) {
 		super();
@@ -591,3 +566,5 @@ export class CommandsHandler extends QuickOpenHandler {
 		}
 	}
 }
+
+registerEditorAction(CommandPaletteEditorAction);

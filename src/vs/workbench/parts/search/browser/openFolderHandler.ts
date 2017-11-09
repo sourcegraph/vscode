@@ -14,7 +14,6 @@ import filters = require('vs/base/common/filters');
 import { defaultGenerator } from 'vs/base/common/idGenerator';
 import URI from 'vs/base/common/uri';
 import { IIconLabelOptions } from 'vs/base/browser/ui/iconLabel/iconLabel';
-import { IWorkbenchThemeService } from 'vs/workbench/services/themes/common/workbenchThemeService';
 import { Mode, IEntryRunContext, IAutoFocus } from 'vs/base/parts/quickopen/common/quickOpen';
 import { QuickOpenEntry, QuickOpenModel, QuickOpenEntryGroup } from 'vs/base/parts/quickopen/browser/quickOpenModel';
 import { QuickOpenHandler } from 'vs/workbench/browser/quickopen';
@@ -286,17 +285,14 @@ export class OpenAnyFolderHandler extends QuickOpenHandler {
 
 	constructor(
 		@IInstantiationService private instantiationService: IInstantiationService,
-		@IWorkbenchThemeService private themeService: IWorkbenchThemeService,
-		@IWorkspaceContextService private contextService: IWorkspaceContextService,
-		@IFoldersWorkbenchService private foldersWorkbenchService: IFoldersWorkbenchService,
 		@IMessageService private messageService: IMessageService
 	) {
 		super();
 
 		this.scorerCache = Object.create(null);
 
-		this.openFolderHandler = instantiationService.createInstance(OpenFolderHandler);
-		this.openRecentFolderHandler = instantiationService.createInstance(OpenRecentFolderHandler);
+		this.openFolderHandler = this.instantiationService.createInstance(OpenFolderHandler);
+		this.openRecentFolderHandler = this.instantiationService.createInstance(OpenRecentFolderHandler);
 
 		this.updateHandlers();
 	}
@@ -540,8 +536,6 @@ export abstract class AbstractOpenFolderHandler extends QuickOpenHandler {
 
 	constructor(
 		@IInstantiationService private instantiationService: IInstantiationService,
-		@IWorkbenchThemeService private themeService: IWorkbenchThemeService,
-		@IWorkspaceContextService private contextService: IWorkspaceContextService,
 		@IFoldersWorkbenchService private foldersWorkbenchService: IFoldersWorkbenchService,
 		@IMessageService private messageService: IMessageService,
 	) {

@@ -13,7 +13,7 @@ import { Schemas } from 'vs/base/common/network';
 import * as colors from 'vs/platform/theme/common/colorRegistry';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { ICodeEditor, MouseTargetType } from 'vs/editor/browser/editorBrowser';
-import { editorContribution } from 'vs/editor/browser/editorBrowserExtensions';
+import { registerEditorContribution } from 'vs/editor/browser/editorBrowserExtensions';
 import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { ThreadCommentsWidget } from 'vs/workbench/parts/codeComments/electron-browser/threadCommentsWidget';
@@ -47,7 +47,6 @@ const GUTTER_ICON_DECORATION_OPTIONS = ModelDecorationOptions.register({
  * Responsible for decorating the editor with indications of comments
  * and rendering comment thread widgets inside of editors.
  */
-@editorContribution
 export class CodeCommentsController extends Disposable implements IEditorContribution {
 
 	public static get(editor: ICommonCodeEditor): CodeCommentsController {
@@ -512,6 +511,7 @@ export class CodeCommentsController extends Disposable implements IEditorContrib
 		return shown;
 	}
 }
+registerEditorContribution(CodeCommentsController);
 
 const hasOpenWidgets = new RawContextKey<boolean>('hasOpenWidgets', false);
 

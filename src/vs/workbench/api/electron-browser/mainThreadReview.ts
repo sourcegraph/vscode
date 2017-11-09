@@ -11,8 +11,6 @@ import Event, { Emitter } from 'vs/base/common/event';
 import { assign } from 'vs/base/common/objects';
 import { IDisposable, dispose } from 'vs/base/common/lifecycle';
 import { IReviewService, IReviewItem, IReviewProvider, IReviewResource, IReviewResourceGroup, IReviewResourceDecorations, IReviewResourceCollection, IReviewResourceSplice } from 'vs/workbench/services/review/common/review';
-import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
-import { ICommandService } from 'vs/platform/commands/common/commands';
 import { ExtHostContext, MainThreadReviewShape, ExtHostReviewShape, ReviewProviderFeatures, SCMRawResourceSplices, ReviewGroupFeatures, MainContext, IExtHostContext } from '../node/extHost.protocol';
 import { Command } from 'vs/editor/common/modes';
 import { extHostNamedCustomer } from 'vs/workbench/api/electron-browser/extHostCustomers';
@@ -130,7 +128,6 @@ class MainThreadReviewProvider implements IReviewProvider {
 		private _icon: string,
 		private _rootUri: URI,
 		@IReviewService reviewService: IReviewService,
-		@ICommandService private commandService: ICommandService
 	) { }
 
 	$updateReviewControl(features: ReviewProviderFeatures): void {
@@ -248,9 +245,7 @@ export class MainThreadReview implements MainThreadReviewShape {
 
 	constructor(
 		extHostContext: IExtHostContext,
-		@IInstantiationService private instantiationService: IInstantiationService,
 		@IReviewService private reviewService: IReviewService,
-		@ICommandService private commandService: ICommandService
 	) {
 		this._proxy = extHostContext.get(ExtHostContext.ExtHostReview);
 	}
@@ -263,7 +258,7 @@ export class MainThreadReview implements MainThreadReviewShape {
 	}
 
 	$registerReviewControl(handle: number, id: string, label: string, description: string, icon: string, rootUri: string): void {
-		const provider = new MainThreadReviewProvider(this._proxy, handle, id, label, description, icon, URI.parse(rootUri), this.reviewService, this.commandService);
+		const provider = new MainThreadReviewProvider(this._proxy, handle, id, label, description, icon, URI.parse(rootUri), this.reviewService);
 		const reviewItem = this.reviewService.registerReviewProvider(provider);
 		this._reviewItems[handle] = reviewItem;
 	}

@@ -35,8 +35,8 @@ export class ChecklistMenus implements IDisposable {
 		this.contextKeyService = contextKeyService.createScoped();
 		const checklistProviderKey = this.contextKeyService.createKey<string | undefined>('checklistProvider', void 0);
 
-		if (provider) {
-			checklistProviderKey.set(provider.contextValue);
+		if (this.provider) {
+			checklistProviderKey.set(this.provider.contextValue);
 		} else {
 			checklistProviderKey.set('');
 		}

@@ -14,7 +14,6 @@ import { assign } from 'vs/base/common/objects';
 import { IDisposable, dispose } from 'vs/base/common/lifecycle';
 import { ISCMService, ISCMRepository, ISCMRevision, ICommandOptions, ISCMProvider, ISCMResource, ISCMResourceGroup, ISCMResourceDecorations, ISCMResourceCollection, ISCMResourceSplice } from 'vs/workbench/services/scm/common/scm';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
-import { ICommandService } from 'vs/platform/commands/common/commands';
 import { ExtHostContext, MainThreadSCMShape, ExtHostSCMShape, SCMProviderFeatures, SCMRawResourceSplices, SCMGroupFeatures, MainContext, IExtHostContext } from '../node/extHost.protocol';
 import { Command } from 'vs/editor/common/modes';
 import { extHostNamedCustomer } from 'vs/workbench/api/electron-browser/extHostCustomers';
@@ -138,8 +137,7 @@ class MainThreadSCMProvider implements ISCMProvider {
 		private _contextValue: string,
 		private _label: string,
 		private _rootUri: URI | undefined,
-		@ISCMService scmService: ISCMService,
-		@ICommandService private commandService: ICommandService
+		@ISCMService scmService: ISCMService
 	) { }
 
 	$updateSourceControl(features: SCMProviderFeatures): void {
@@ -296,12 +294,11 @@ class CommentsSCMProvider extends MainThreadSCMProvider {
 		_label: string,
 		_rootUri: URI | undefined,
 		@ISCMService scmService: ISCMService,
-		@ICommandService commandService: ICommandService,
 		@ICodeCommentsService private commentsService: ICodeCommentsService,
 		@IEditorService private editorService: IEditorService,
 		@ICodeEditorService private codeEditorService: ICodeEditorService,
 	) {
-		super(proxy, _handle, _contextValue, _label, _rootUri, scmService, commandService);
+		super(proxy, _handle, _contextValue, _label, _rootUri, scmService);
 		if (_contextValue === 'gitcomparison') {
 			this.trimmedRootUri = this.rootUri.with({ path: rtrim(this.rootUri.path, MAGIC_COMPARISON_ROOT_SUFFIX) });
 			this.commentsGroup = new MainThreadSCMResourceGroup(
@@ -446,7 +443,6 @@ export class MainThreadSCM implements MainThreadSCMShape {
 		@IViewletService private viewletService: IViewletService,
 		@IInstantiationService private instantiationService: IInstantiationService,
 		@ISCMService private scmService: ISCMService,
-		@ICommandService private commandService: ICommandService
 	) {
 		this._proxy = extHostContext.get(ExtHostContext.ExtHostSCM);
 	}
@@ -560,6 +556,16 @@ export class MainThreadSCM implements MainThreadSCMShape {
 		}
 
 		repository.input.value = value;
+	}
+
+	$setInputBoxPlaceholder(sourceControlHandle: number, placeholder: string): void {
+		const repository = this._repositories[sourceControlHandle];
+
+		if (!repository) {
+			return;
+		}
+
+		repository.input.placeholder = placeholder;
 	}
 
 	async $select(sourceControlHandle: number): Promise<void> {

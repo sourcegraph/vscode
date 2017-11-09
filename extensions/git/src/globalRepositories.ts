@@ -236,7 +236,7 @@ function extractCanonicalRemotes(stdout: string): string[] {
 	return stdout.trim().split(os.EOL)
 		.filter(b => !!b)
 		.map(line => regex.exec(line))
-		.filter(g => !!g)
+		.filter((g: RegExpExecArray | null): g is RegExpExecArray => !!g)
 		.map((groups: RegExpExecArray) => {
 			const r = canonicalRemote(groups[1]);
 			return r || '';

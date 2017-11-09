@@ -46,7 +46,7 @@ import { IEnvironmentService } from 'vs/platform/environment/common/environment'
 import { join } from 'vs/base/common/paths';
 import { isCommonCodeEditor } from 'vs/editor/common/editorCommon';
 import { IEditorDescriptor, IEditorRegistry, Extensions as EditorExtensions } from 'vs/workbench/browser/editor';
-import { always } from 'vs/base/common/async';
+import { ThrottledEmitter } from 'vs/base/common/async';
 
 class ProgressMonitor {
 
@@ -71,41 +71,6 @@ interface IEditorReplacement extends EditorIdentifier {
 	editor: EditorInput;
 	replaceWith: EditorInput;
 	options?: EditorOptions;
-}
-
-class ThrottledEmitter<T> extends Emitter<T> {
-	private suspended: boolean;
-
-	private lastEvent: T;
-	private hasLastEvent: boolean;
-
-	public throttle<C>(promise: TPromise<C>): TPromise<C> {
-		this.suspended = true;
-
-		return always(promise, () => this.resume());
-	}
-
-	public fire(event?: T): any {
-		if (this.suspended) {
-			this.lastEvent = event;
-			this.hasLastEvent = true;
-
-			return;
-		}
-
-		return super.fire(event);
-	}
-
-	private resume(): void {
-		this.suspended = false;
-
-		if (this.hasLastEvent) {
-			this.fire(this.lastEvent);
-		}
-
-		this.hasLastEvent = false;
-		this.lastEvent = void 0;
-	}
 }
 
 /**
@@ -371,7 +336,7 @@ export class EditorPart extends Part implements IEditorPart, IEditorGroupService
 			!this.editorGroupsControl ||			// too early
 			this.editorGroupsControl.isDragging()	// pending editor DND
 		) {
-			return TPromise.as<BaseEditor>(null);
+			return TPromise.wrap<BaseEditor>(null);
 		}
 
 		// Editor opening event (can be prevented and overridden)
@@ -419,7 +384,7 @@ export class EditorPart extends Part implements IEditorPart, IEditorGroupService
 
 		// Return early if the editor is to be open inactive and there are other editors in this group to show
 		if (!active) {
-			return TPromise.as<BaseEditor>(null);
+			return TPromise.wrap<BaseEditor>(null);
 		}
 
 		// Progress Monitor & Ref Counting
@@ -436,7 +401,7 @@ export class EditorPart extends Part implements IEditorPart, IEditorGroupService
 		// Show editor
 		const editor = this.doShowEditor(group, descriptor, input, options, ratio, monitor);
 		if (!editor) {
-			return TPromise.as<BaseEditor>(null); // canceled or other error
+			return TPromise.wrap<BaseEditor>(null); // canceled or other error
 		}
 
 		// Set input to editor
@@ -617,7 +582,7 @@ export class EditorPart extends Part implements IEditorPart, IEditorGroupService
 	public closeEditor(position: Position, input: EditorInput): TPromise<void> {
 		const group = this.stacks.groupAt(position);
 		if (!group) {
-			return TPromise.as<void>(null);
+			return TPromise.wrap<void>(null);
 		}
 
 		// Check for dirty and veto
@@ -754,7 +719,7 @@ export class EditorPart extends Part implements IEditorPart, IEditorGroupService
 	public closeEditors(position: Position, filter: { except?: EditorInput, direction?: Direction, unmodifiedOnly?: boolean } = Object.create(null)): TPromise<void> {
 		const group = this.stacks.groupAt(position);
 		if (!group) {
-			return TPromise.as<void>(null);
+			return TPromise.wrap<void>(null);
 		}
 
 		let editors = group.getEditors();

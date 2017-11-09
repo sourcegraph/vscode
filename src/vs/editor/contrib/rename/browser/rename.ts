@@ -6,7 +6,7 @@
 'use strict';
 
 import * as nls from 'vs/nls';
-import { isPromiseCanceledError, onUnexpectedExternalError, illegalArgument } from 'vs/base/common/errors';
+import { isPromiseCanceledError, illegalArgument } from 'vs/base/common/errors';
 import { KeyMod, KeyCode } from 'vs/base/common/keyCodes';
 import Severity from 'vs/base/common/severity';
 import { TPromise } from 'vs/base/common/winjs.base';
@@ -14,8 +14,8 @@ import { IFileService } from 'vs/platform/files/common/files';
 import { RawContextKey, IContextKey, IContextKeyService, ContextKeyExpr } from 'vs/platform/contextkey/common/contextkey';
 import { IMessageService } from 'vs/platform/message/common/message';
 import { IProgressService } from 'vs/platform/progress/common/progress';
-import { editorAction, ServicesAccessor, EditorAction, EditorCommand, CommonEditorRegistry } from 'vs/editor/common/editorCommonExtensions';
-import { editorContribution } from 'vs/editor/browser/editorBrowserExtensions';
+import { registerEditorAction, ServicesAccessor, EditorAction, EditorCommand, CommonEditorRegistry } from 'vs/editor/common/editorCommonExtensions';
+import { registerEditorContribution } from 'vs/editor/browser/editorBrowserExtensions';
 import { ICommonCodeEditor, IEditorContribution, IReadOnlyModel } from 'vs/editor/common/editorCommon';
 import { EditorContextKeys } from 'vs/editor/common/editorContextKeys';
 import { createBulkEdit } from 'vs/editor/common/services/bulkEdit';
@@ -29,6 +29,8 @@ import { WorkspaceEdit, RenameProviderRegistry } from 'vs/editor/common/modes';
 import { Position } from 'vs/editor/common/core/position';
 import { alert } from 'vs/base/browser/ui/aria/aria';
 import { Range } from 'vs/editor/common/core/range';
+import { MessageController } from 'vs/editor/contrib/message/messageController';
+import { EditorState, CodeEditorStateFlag } from 'vs/editor/common/core/editorState';
 
 
 export function rename(model: IReadOnlyModel, position: Position, newName: string): TPromise<WorkspaceEdit> {
@@ -52,9 +54,6 @@ export function rename(model: IReadOnlyModel, position: Position, newName: strin
 						rejects.push(result.rejectReason);
 					}
 					return undefined;
-				}, err => {
-					onUnexpectedExternalError(err);
-					return TPromise.wrapError<WorkspaceEdit>(new Error('provider failed'));
 				});
 			}
 			return undefined;
@@ -84,7 +83,6 @@ export function rename(model: IReadOnlyModel, position: Position, newName: strin
 
 const CONTEXT_RENAME_INPUT_VISIBLE = new RawContextKey<boolean>('renameInputVisible', false);
 
-@editorContribution
 class RenameController implements IEditorContribution {
 
 	private static ID = 'editor.contrib.renameController';
@@ -150,11 +148,16 @@ class RenameController implements IEditorContribution {
 
 			// start recording of file changes so that we can figure out if a file that
 			// is to be renamed conflicts with another (concurrent) modification
-			let edit = createBulkEdit(this._textModelResolverService, <ICodeEditor>this.editor, this._fileService);
+			const edit = createBulkEdit(this._textModelResolverService, <ICodeEditor>this.editor, this._fileService);
+			const state = new EditorState(this.editor, CodeEditorStateFlag.Position | CodeEditorStateFlag.Value | CodeEditorStateFlag.Selection | CodeEditorStateFlag.Scroll);
 
 			const renameOperation = rename(this.editor.getModel(), this.editor.getPosition(), newName).then(result => {
 				if (result.rejectReason) {
-					this._messageService.show(Severity.Error, result.rejectReason);
+					if (state.validate(this.editor)) {
+						MessageController.get(this.editor).showMessage(result.rejectReason, this.editor.getPosition());
+					} else {
+						this._messageService.show(Severity.Info, result.rejectReason);
+					}
 					return undefined;
 				}
 				edit.add(result.edits);
@@ -197,7 +200,6 @@ class RenameController implements IEditorContribution {
 
 // ---- action implementation
 
-@editorAction
 export class RenameAction extends EditorAction {
 
 	constructor() {
@@ -225,6 +227,9 @@ export class RenameAction extends EditorAction {
 		return undefined;
 	}
 }
+
+registerEditorContribution(RenameController);
+registerEditorAction(RenameAction);
 
 const RenameCommand = EditorCommand.bindToContribution<RenameController>(RenameController.get);
 

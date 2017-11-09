@@ -114,11 +114,6 @@ interface IConfigurationEditOperation extends IConfigurationValue {
 
 }
 
-interface IValidationResult {
-	error?: ConfigurationEditingErrorCode;
-	exists?: boolean;
-}
-
 interface ConfigurationEditingOptions extends IConfigurationEditingOptions {
 	force?: boolean;
 }

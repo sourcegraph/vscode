@@ -41,7 +41,7 @@ export class OpenerService implements IOpenerService {
 		this._telemetryService.publicLog('openerService', { scheme: resource.scheme });
 
 		const { scheme, path, query, fragment } = resource;
-		let promise: TPromise<any>;
+		let promise: TPromise<any> = TPromise.wrap(void 0);
 
 		if (scheme === Schemas.http || scheme === Schemas.https || scheme === Schemas.mailto) {
 			// open http or default mail application
@@ -87,6 +87,6 @@ export class OpenerService implements IOpenerService {
 				.then(resource => this._editorService.openEditor({ resource, options: { selection } }, options && options.openToSide));
 		}
 
-		return TPromise.as(promise);
+		return promise;
 	}
 }

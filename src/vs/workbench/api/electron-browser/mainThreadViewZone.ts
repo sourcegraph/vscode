@@ -19,8 +19,8 @@ import { IViewZoneEvent } from 'vs/workbench/api/node/extHost.protocol';
 import { CommonEditorRegistry } from 'vs/editor/common/editorCommonExtensions';
 import { KeybindingsRegistry } from 'vs/platform/keybinding/common/keybindingsRegistry';
 import { KeyCode, KeyMod } from 'vs/base/common/keyCodes';
-import { ServicesAccessor, IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
-import { editorContribution } from 'vs/editor/browser/editorBrowserExtensions';
+import { ServicesAccessor } from 'vs/platform/instantiation/common/instantiation';
+import { registerEditorContribution } from 'vs/editor/browser/editorBrowserExtensions';
 import { IEditorContribution, ICommonCodeEditor } from 'vs/editor/common/editorCommon';
 import { ICodeEditorService } from 'vs/editor/common/services/codeEditorService';
 import { IOpenerService } from 'vs/platform/opener/common/opener';
@@ -94,7 +94,6 @@ export class MainThreadViewZone extends PeekViewWidget {
 		@IThemeService private themeService: IThemeService,
 		@IOpenerService private openerService: IOpenerService,
 		@IMenuService private menuService: IMenuService,
-		@IInstantiationService private instantiationService: IInstantiationService,
 		@IKeybindingService private keybindingService: IKeybindingService,
 		@IMessageService private messageService: IMessageService,
 	) {
@@ -110,7 +109,7 @@ export class MainThreadViewZone extends PeekViewWidget {
 
 		this.contextKeyService = contextKeyService.createScoped();
 		this.contextKeyService.createKey('viewZone', id);
-		this.menu = menuService.createMenu(MenuId.ViewZoneTitle, this.contextKeyService);
+		this.menu = this.menuService.createMenu(MenuId.ViewZoneTitle, this.contextKeyService);
 
 		this.controller = TextEditorViewZoneController.get(editor);
 		this.controller.register(this);
@@ -282,7 +281,6 @@ export class MainThreadViewZone extends PeekViewWidget {
 /**
  * Manage all active view zones so that we can bind a hotkey (Escape) to close all view zones.
  */
-@editorContribution
 class TextEditorViewZoneController extends Disposable implements IEditorContribution {
 
 	private static ID = 'editor.contrib.textEditorViewZone';
@@ -295,13 +293,10 @@ class TextEditorViewZoneController extends Disposable implements IEditorContribu
 	private viewZones = new Set<MainThreadViewZone>();
 
 	constructor(
-		private editor: ICodeEditor,
+		editor: ICodeEditor,
 		@IContextKeyService contextKeyService: IContextKeyService,
-		@IThemeService private themeService: IThemeService,
-		@IInstantiationService private instantiationService: IInstantiationService
 	) {
 		super();
-
 		this.viewZoneVisibleContextKey = viewZoneVisibleContextKey.bindTo(contextKeyService);
 	}
 
@@ -327,6 +322,8 @@ class TextEditorViewZoneController extends Disposable implements IEditorContribu
 		this.viewZoneVisibleContextKey.set(false);
 	}
 }
+
+registerEditorContribution(TextEditorViewZoneController);
 
 KeybindingsRegistry.registerCommandAndKeybindingRule({
 	id: 'closeTextEditorViewZone',

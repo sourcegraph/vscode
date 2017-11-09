@@ -11,8 +11,6 @@ import Event, { Emitter } from 'vs/base/common/event';
 import { assign } from 'vs/base/common/objects';
 import { IDisposable, dispose } from 'vs/base/common/lifecycle';
 import { IChecklistService, IChecklistProvider, IChecklistItem, IChecklistItemGroup, IChecklistItemDecorations, IChecklistItemCollection, IChecklistItemSplice } from 'vs/workbench/services/checklist/common/checklist';
-import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
-import { ICommandService } from 'vs/platform/commands/common/commands';
 import { ExtHostContext, MainThreadChecklistShape, ExtHostChecklistShape, ChecklistProviderFeatures, ChecklistRawItemSplices, ChecklistItemGroupFeatures, MainContext, IExtHostContext } from '../node/extHost.protocol';
 import { Command } from 'vs/editor/common/modes';
 import { extHostNamedCustomer } from 'vs/workbench/api/electron-browser/extHostCustomers';
@@ -115,7 +113,6 @@ class MainThreadChecklistProvider implements IChecklistProvider {
 		private _contextValue: string,
 		private _label: string,
 		@IChecklistService scmService: IChecklistService,
-		@ICommandService private commandService: ICommandService
 	) { }
 
 	$updateProvider(features: ChecklistProviderFeatures): void {
@@ -234,9 +231,7 @@ export class MainThreadChecklist implements MainThreadChecklistShape {
 
 	constructor(
 		extHostContext: IExtHostContext,
-		@IInstantiationService private instantiationService: IInstantiationService,
 		@IChecklistService private checkService: IChecklistService,
-		@ICommandService private commandService: ICommandService
 	) {
 		this._proxy = extHostContext.get(ExtHostContext.ExtHostChecklist);
 	}
@@ -250,7 +245,7 @@ export class MainThreadChecklist implements MainThreadChecklistShape {
 	}
 
 	$registerChecklistProvider(handle: number, id: string, label: string): void {
-		const provider = new MainThreadChecklistProvider(this._proxy, handle, id, label, this.checkService, this.commandService);
+		const provider = new MainThreadChecklistProvider(this._proxy, handle, id, label, this.checkService);
 		const disposable = this.checkService.registerChecklistProvider(provider);
 		this._providerDisposables[handle] = { provider, disposable };
 	}

@@ -230,8 +230,7 @@ export class CommandCenter {
 		}
 
 		if (!left) {
-			const document = await workspace.openTextDocument(right);
-			await window.showTextDocument(document, opts);
+			await commands.executeCommand<void>('vscode.open', right, opts);
 			return;
 		}
 
@@ -511,8 +510,7 @@ export class CommandCenter {
 				opts.selection = activeTextEditor.selection;
 			}
 
-			const document = await workspace.openTextDocument(uri);
-			await window.showTextDocument(document, opts);
+			await commands.executeCommand<void>('vscode.open', uri, opts);
 		}
 	}
 
@@ -1411,8 +1409,7 @@ export class CommandCenter {
 		repository.pushTo(pick.label, branchName);
 	}
 
-	@command('git.sync', { repository: true })
-	async sync(repository: Repository): Promise<void> {
+	private async _sync(repository: Repository, rebase: boolean): Promise<void> {
 		const HEAD = repository.HEAD;
 
 		if (!HEAD || !HEAD.upstream) {
@@ -1435,7 +1432,16 @@ export class CommandCenter {
 			}
 		}
 
-		await repository.sync();
+		if (rebase) {
+			await repository.syncRebase();
+		} else {
+			await repository.sync();
+		}
+	}
+
+	@command('git.sync', { repository: true })
+	sync(repository: Repository): Promise<void> {
+		return this._sync(repository, false);
 	}
 
 	@command('git._syncAll')
@@ -1449,6 +1455,11 @@ export class CommandCenter {
 
 			await repository.sync();
 		}));
+	}
+
+	@command('git.syncRebase', { repository: true })
+	syncRebase(repository: Repository): Promise<void> {
+		return this._sync(repository, true);
 	}
 
 	@command('git.publish', { repository: true })
@@ -1707,7 +1718,7 @@ export class CommandCenter {
 	}
 
 	private createCommand(id: string, key: string, method: Function, options: CommandOptions): (...args: any[]) => any {
-		const result = (...args) => {
+		const result = (...args: any[]) => {
 			let result: Promise<any>;
 
 			if (!options.repository) {
@@ -1757,7 +1768,7 @@ export class CommandCenter {
 							.replace(/^error: /mi, '')
 							.replace(/^> husky.*$/mi, '')
 							.split(/[\r\n]/)
-							.filter(line => !!line)
+							.filter((line: string) => !!line)
 						[0];
 
 						message = hint
@@ -1783,7 +1794,7 @@ export class CommandCenter {
 		};
 
 		// patch this object, so people can call methods directly
-		this[key] = result;
+		(this as any)[key] = result;
 
 		return result;
 	}

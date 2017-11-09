@@ -12,7 +12,7 @@ import { onUnexpectedError, canceled } from 'vs/base/common/errors';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { IDisposable, dispose } from 'vs/base/common/lifecycle';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
-import { IExtensionManagementService, ILocalExtension, IExtensionEnablementService, IExtensionTipsService, LocalExtensionType, IExtensionIdentifier, IExtensionGalleryService } from 'vs/platform/extensionManagement/common/extensionManagement';
+import { IExtensionManagementService, ILocalExtension, IExtensionEnablementService, IExtensionTipsService, LocalExtensionType, IExtensionIdentifier } from 'vs/platform/extensionManagement/common/extensionManagement';
 import { IExtensionService } from 'vs/platform/extensions/common/extensions';
 import { ILifecycleService } from 'vs/platform/lifecycle/common/lifecycle';
 import { IWorkbenchContribution } from 'vs/workbench/common/contributions';
@@ -21,7 +21,6 @@ import { IStorageService, StorageScope } from 'vs/platform/storage/common/storag
 import { IMessageService, Severity, IChoiceService } from 'vs/platform/message/common/message';
 import { Action } from 'vs/base/common/actions';
 import { BetterMergeDisabledNowKey, BetterMergeId, getIdAndVersionFromLocalExtensionId, areSameExtensions, adoptToGalleryExtensionId } from 'vs/platform/extensionManagement/common/extensionManagementUtil';
-import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
 import { IWindowService } from 'vs/platform/windows/common/windows';
 
 export interface IExtensionStatus {
@@ -235,9 +234,6 @@ export class EnablePublishedTSLintExtension implements IWorkbenchContribution {
 		@IExtensionService extensionService: IExtensionService,
 		@IExtensionEnablementService extensionEnablementService: IExtensionEnablementService,
 		@IExtensionManagementService private extensionManagementService: IExtensionManagementService,
-		@IExtensionGalleryService private extensionGalleryService: IExtensionGalleryService,
-		@ITelemetryService private telemetryService: ITelemetryService,
-		@IViewletService private viewletService: IViewletService,
 		@IWindowService private windowService: IWindowService,
 	) {
 		extensionService.onReady()

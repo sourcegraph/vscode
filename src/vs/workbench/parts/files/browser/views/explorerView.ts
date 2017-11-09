@@ -44,7 +44,6 @@ import { IContextKeyService, IContextKey } from 'vs/platform/contextkey/common/c
 import { ResourceContextKey, ResourceGlobMatcher } from 'vs/workbench/common/resources';
 import { IWorkbenchThemeService, IFileIconTheme } from 'vs/workbench/services/themes/common/workbenchThemeService';
 import { isLinux } from 'vs/base/common/platform';
-import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 import { attachListStyler } from 'vs/platform/theme/common/styler';
 import { AddRootFolderAction } from 'vs/workbench/browser/actions/workspaceActions';
 import { OpenRepoAction, OPEN_REPO_ACTION_ID, OPEN_REPO_ACTION_LABEL } from 'vs/workbench/parts/search/browser/search.contribution';
@@ -59,7 +58,6 @@ export class ExplorerView extends ViewsViewletPanel {
 	public static ID: string = 'workbench.explorer.fileView';
 	private static EXPLORER_FILE_CHANGES_REACT_DELAY = 500; // delay in ms to react to file changes to give our internal events a chance to react first
 	private static EXPLORER_FILE_CHANGES_REFRESH_DELAY = 100; // delay in ms to refresh the explorer from disk file changes
-	private static EXPLORER_IMPORT_REFRESH_DELAY = 300; // delay in ms to refresh the explorer from imports
 
 	private static MEMENTO_LAST_ACTIVE_FILE_RESOURCE = 'explorer.memento.lastActiveFileResource';
 	private static MEMENTO_EXPANDED_FOLDER_RESOURCES = 'explorer.memento.expandedFolderResources';
@@ -71,7 +69,6 @@ export class ExplorerView extends ViewsViewletPanel {
 	private viewletState: FileViewletState;
 
 	private explorerRefreshDelayer: ThrottledDelayer<void>;
-	private explorerImportDelayer: ThrottledDelayer<void>;
 
 	private resourceContext: ResourceContextKey;
 	private folderContext: IContextKey<boolean>;
@@ -102,7 +99,6 @@ export class ExplorerView extends ViewsViewletPanel {
 		@IContextKeyService contextKeyService: IContextKeyService,
 		@IConfigurationService private configurationService: IConfigurationService,
 		@IWorkbenchThemeService private themeService: IWorkbenchThemeService,
-		@IEnvironmentService private environmentService: IEnvironmentService,
 		@IDecorationsService decorationService: IDecorationsService
 	) {
 		super({ ...(options as IViewOptions), ariaHeaderLabel: nls.localize('explorerSection', "Files Explorer Section") }, keybindingService, contextMenuService);
@@ -112,7 +108,6 @@ export class ExplorerView extends ViewsViewletPanel {
 		this.autoReveal = true;
 
 		this.explorerRefreshDelayer = new ThrottledDelayer<void>(ExplorerView.EXPLORER_FILE_CHANGES_REFRESH_DELAY);
-		this.explorerImportDelayer = new ThrottledDelayer<void>(ExplorerView.EXPLORER_IMPORT_REFRESH_DELAY);
 
 		this.resourceContext = instantiationService.createInstance(ResourceContextKey);
 		this.folderContext = ExplorerFolderContext.bindTo(contextKeyService);
@@ -371,7 +366,7 @@ export class ExplorerView extends ViewsViewletPanel {
 
 				// Return now if the workbench has not yet been created - in this case the workbench takes care of restoring last used editors
 				if (!this.partService.isCreated()) {
-					return TPromise.as(null);
+					return TPromise.wrap(null);
 				}
 
 				// Otherwise restore last used file: By lastActiveFileResource

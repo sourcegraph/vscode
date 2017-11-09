@@ -11,7 +11,6 @@ import { TPromise } from 'vs/base/common/winjs.base';
 import { Button } from 'vs/base/browser/ui/button/button';
 import { Builder, $ } from 'vs/base/browser/builder';
 import { ViewsViewletPanel, IViewletViewOptions, IViewOptions } from 'vs/workbench/browser/parts/views/viewsViewlet';
-import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { attachButtonStyler } from 'vs/platform/theme/common/styler';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
@@ -37,7 +36,6 @@ export class CodeHostView extends ViewsViewletPanel {
 		options: IViewletViewOptions,
 		@ITelemetryService private telemetryService: ITelemetryService,
 		@IThemeService private themeService: IThemeService,
-		@IInstantiationService private instantiationService: IInstantiationService,
 		@IKeybindingService keybindingService: IKeybindingService,
 		@IContextMenuService contextMenuService: IContextMenuService,
 		@ICommandService private commandService: ICommandService,

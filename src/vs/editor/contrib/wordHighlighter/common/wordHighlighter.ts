@@ -11,7 +11,7 @@ import { onUnexpectedExternalError } from 'vs/base/common/errors';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { Range } from 'vs/editor/common/core/range';
 import * as editorCommon from 'vs/editor/common/editorCommon';
-import { CommonEditorRegistry, commonEditorContribution, EditorAction, IActionOptions, editorAction } from 'vs/editor/common/editorCommonExtensions';
+import { CommonEditorRegistry, registerCommonEditorContribution, EditorAction, IActionOptions, registerEditorAction } from 'vs/editor/common/editorCommonExtensions';
 import { DocumentHighlight, DocumentHighlightKind, DocumentHighlightProviderRegistry } from 'vs/editor/common/modes';
 import { IDisposable, dispose } from 'vs/base/common/lifecycle';
 import { Position } from 'vs/editor/common/core/position';
@@ -397,9 +397,6 @@ class WordHighlighter {
 	}
 }
 
-
-
-@commonEditorContribution
 class WordHighlighterContribution implements editorCommon.IEditorContribution {
 
 	private static ID = 'editor.contrib.wordHighlighter';
@@ -444,28 +441,6 @@ class WordHighlighterContribution implements editorCommon.IEditorContribution {
 	}
 }
 
-registerThemingParticipant((theme, collector) => {
-	let selectionHighlight = theme.getColor(editorSelectionHighlight);
-	if (selectionHighlight) {
-		collector.addRule(`.monaco-editor .focused .selectionHighlight { background-color: ${selectionHighlight}; }`);
-		collector.addRule(`.monaco-editor .selectionHighlight { background-color: ${selectionHighlight.transparent(0.5)}; }`);
-	}
-	let wordHighlight = theme.getColor(editorWordHighlight);
-	if (wordHighlight) {
-		collector.addRule(`.monaco-editor .wordHighlight { background-color: ${wordHighlight}; }`);
-	}
-	let wordHighlightStrong = theme.getColor(editorWordHighlightStrong);
-	if (wordHighlightStrong) {
-		collector.addRule(`.monaco-editor .wordHighlightStrong { background-color: ${wordHighlightStrong}; }`);
-	}
-	let hcOutline = theme.getColor(activeContrastBorder);
-	if (hcOutline) {
-		collector.addRule(`.monaco-editor .selectionHighlight { border: 1px dotted ${hcOutline}; box-sizing: border-box; }`);
-		collector.addRule(`.monaco-editor .wordHighlight { border: 1px dashed ${hcOutline}; box-sizing: border-box; }`);
-		collector.addRule(`.monaco-editor .wordHighlightStrong { border: 1px dashed ${hcOutline}; box-sizing: border-box; }`);
-	}
-
-});
 
 class WordHighlightNavigationAction extends EditorAction {
 
@@ -490,7 +465,6 @@ class WordHighlightNavigationAction extends EditorAction {
 	}
 }
 
-@editorAction
 class NextWordHighlightAction extends WordHighlightNavigationAction {
 	constructor() {
 		super(true, {
@@ -506,7 +480,6 @@ class NextWordHighlightAction extends WordHighlightNavigationAction {
 	}
 }
 
-@editorAction
 class PrevWordHighlightAction extends WordHighlightNavigationAction {
 	constructor() {
 		super(false, {
@@ -521,3 +494,30 @@ class PrevWordHighlightAction extends WordHighlightNavigationAction {
 		});
 	}
 }
+
+registerCommonEditorContribution(WordHighlighterContribution);
+registerEditorAction(NextWordHighlightAction);
+registerEditorAction(PrevWordHighlightAction);
+
+registerThemingParticipant((theme, collector) => {
+	let selectionHighlight = theme.getColor(editorSelectionHighlight);
+	if (selectionHighlight) {
+		collector.addRule(`.monaco-editor .focused .selectionHighlight { background-color: ${selectionHighlight}; }`);
+		collector.addRule(`.monaco-editor .selectionHighlight { background-color: ${selectionHighlight.transparent(0.5)}; }`);
+	}
+	let wordHighlight = theme.getColor(editorWordHighlight);
+	if (wordHighlight) {
+		collector.addRule(`.monaco-editor .wordHighlight { background-color: ${wordHighlight}; }`);
+	}
+	let wordHighlightStrong = theme.getColor(editorWordHighlightStrong);
+	if (wordHighlightStrong) {
+		collector.addRule(`.monaco-editor .wordHighlightStrong { background-color: ${wordHighlightStrong}; }`);
+	}
+	let hcOutline = theme.getColor(activeContrastBorder);
+	if (hcOutline) {
+		collector.addRule(`.monaco-editor .selectionHighlight { border: 1px dotted ${hcOutline}; box-sizing: border-box; }`);
+		collector.addRule(`.monaco-editor .wordHighlight { border: 1px dashed ${hcOutline}; box-sizing: border-box; }`);
+		collector.addRule(`.monaco-editor .wordHighlightStrong { border: 1px dashed ${hcOutline}; box-sizing: border-box; }`);
+	}
+
+});

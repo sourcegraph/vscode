@@ -15,7 +15,7 @@ import { KeybindingsRegistry } from 'vs/platform/keybinding/common/keybindingsRe
 import { Position, IPosition } from 'vs/editor/common/core/position';
 import { Range } from 'vs/editor/common/core/range';
 import * as editorCommon from 'vs/editor/common/editorCommon';
-import { editorAction, ServicesAccessor, EditorAction, CommonEditorRegistry, commonEditorContribution } from 'vs/editor/common/editorCommonExtensions';
+import { registerEditorAction, ServicesAccessor, EditorAction, CommonEditorRegistry, registerCommonEditorContribution } from 'vs/editor/common/editorCommonExtensions';
 import { Location, ReferenceProviderRegistry } from 'vs/editor/common/modes';
 import { PeekContext, getOuterEditor } from './peekViewWidget';
 import { ReferencesController, RequestOptions, ctxReferenceSearchVisible } from './referencesController';
@@ -31,7 +31,6 @@ const defaultReferenceSearchOptions: RequestOptions = {
 	}
 };
 
-@commonEditorContribution
 export class ReferenceController implements editorCommon.IEditorContribution {
 
 	private static ID = 'editor.contrib.referenceController';
@@ -53,7 +52,6 @@ export class ReferenceController implements editorCommon.IEditorContribution {
 	}
 }
 
-@editorAction
 export class ReferenceAction extends EditorAction {
 
 	constructor() {
@@ -87,6 +85,10 @@ export class ReferenceAction extends EditorAction {
 		controller.toggleWidget(range, references, defaultReferenceSearchOptions);
 	}
 }
+
+registerCommonEditorContribution(ReferenceController);
+
+registerEditorAction(ReferenceAction);
 
 let findReferencesCommand: ICommandHandler = (accessor: ServicesAccessor, resource: URI, position: IPosition) => {
 

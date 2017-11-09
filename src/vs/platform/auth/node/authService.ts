@@ -82,7 +82,7 @@ export class AuthService extends Disposable implements IAuthService {
 	) {
 		super();
 		this.globalState = new Memento(AuthService.MEMENTO_KEY);
-		this.memento = this.globalState.getMemento(storageService);
+		this.memento = this.globalState.getMemento(this.storageService);
 		if (this.memento[AuthService.CURRENT_USER_KEY]) {
 			// Restore the signed in state.
 			this.setCurrentUser(this.memento[AuthService.CURRENT_USER_KEY]);

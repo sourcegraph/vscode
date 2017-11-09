@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import 'mocha';
 import * as assert from 'assert';
 import { Selection, workspace } from 'vscode';
 import { withRandomFileEditor, closeAllEditors } from './testUtils';
@@ -223,7 +224,7 @@ m10
 			.hoo {
 				background:
 			}
-		}		
+		}
 		`
 
 		return withRandomFileEditor(scssContentsNoExpand, 'scss', (editor, doc) => {
@@ -346,7 +347,7 @@ suite('Tests for Wrap with Abbreviations', () => {
 
 suite('Tests for jsx, xml and xsl', () => {
 	teardown(closeAllEditors);
-	
+
 		test('Expand abbreviation with className instead of class in jsx', () => {
 			return withRandomFileEditor('ul.nav', 'javascriptreact', (editor, doc) => {
 				editor.selection = new Selection(0, 6, 0, 6);

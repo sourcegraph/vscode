@@ -23,7 +23,7 @@ import { IReadOnlyModel, ICommonCodeEditor } from 'vs/editor/common/editorCommon
 import { EditorContextKeys } from 'vs/editor/common/editorContextKeys';
 import { Position } from 'vs/editor/common/core/position';
 import * as modes from 'vs/editor/common/modes';
-import { editorAction, ServicesAccessor, EditorAction, EditorCommand, CommonEditorRegistry } from 'vs/editor/common/editorCommonExtensions';
+import { registerEditorAction, ServicesAccessor, EditorAction, EditorCommand, CommonEditorRegistry } from 'vs/editor/common/editorCommonExtensions';
 import { IModelService } from 'vs/editor/common/services/modelService';
 import { MenuId } from 'vs/platform/actions/common/actions';
 import { ServiceCollection } from 'vs/platform/instantiation/common/serviceCollection';
@@ -312,7 +312,6 @@ export class Repl extends Panel implements IPrivateReplService {
 	}
 }
 
-@editorAction
 class ReplHistoryPreviousAction extends EditorAction {
 
 	constructor() {
@@ -337,7 +336,6 @@ class ReplHistoryPreviousAction extends EditorAction {
 	}
 }
 
-@editorAction
 class ReplHistoryNextAction extends EditorAction {
 
 	constructor() {
@@ -362,7 +360,6 @@ class ReplHistoryNextAction extends EditorAction {
 	}
 }
 
-@editorAction
 class AcceptReplInputAction extends EditorAction {
 
 	constructor() {
@@ -384,19 +381,6 @@ class AcceptReplInputAction extends EditorAction {
 	}
 }
 
-const SuggestCommand = EditorCommand.bindToContribution<SuggestController>(SuggestController.get);
-CommonEditorRegistry.registerEditorCommand(new SuggestCommand({
-	id: 'repl.action.acceptSuggestion',
-	precondition: ContextKeyExpr.and(debug.CONTEXT_IN_DEBUG_REPL, SuggestContext.Visible),
-	handler: x => x.acceptSelectedSuggestion(),
-	kbOpts: {
-		weight: 50,
-		kbExpr: EditorContextKeys.textFocus,
-		primary: KeyCode.RightArrow
-	}
-}));
-
-@editorAction
 export class ReplCopyAllAction extends EditorAction {
 
 	constructor() {
@@ -412,3 +396,20 @@ export class ReplCopyAllAction extends EditorAction {
 		clipboard.writeText(accessor.get(IPrivateReplService).getVisibleContent());
 	}
 }
+
+registerEditorAction(ReplHistoryPreviousAction);
+registerEditorAction(ReplHistoryNextAction);
+registerEditorAction(AcceptReplInputAction);
+registerEditorAction(ReplCopyAllAction);
+
+const SuggestCommand = EditorCommand.bindToContribution<SuggestController>(SuggestController.get);
+CommonEditorRegistry.registerEditorCommand(new SuggestCommand({
+	id: 'repl.action.acceptSuggestion',
+	precondition: ContextKeyExpr.and(debug.CONTEXT_IN_DEBUG_REPL, SuggestContext.Visible),
+	handler: x => x.acceptSelectedSuggestion(),
+	kbOpts: {
+		weight: 50,
+		kbExpr: EditorContextKeys.textFocus,
+		primary: KeyCode.RightArrow
+	}
+}));

@@ -9,9 +9,6 @@ import { ITelemetryAppender } from 'vs/platform/telemetry/common/telemetryUtils'
 import * as AnalyticsConstants from 'vs/platform/telemetry/common/analyticsConstants';
 import { TelligentWrapper } from 'vs/platform/telemetry/common/externalServices/telligentWrapper';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
-import { IStorageService } from 'vs/platform/storage/common/storage';
-import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
-import { optional } from 'vs/platform/instantiation/common/instantiation';
 
 export interface INativeMetadata {
 	[key: string]: string;
@@ -27,9 +24,7 @@ export class SourcegraphEventLogger implements ITelemetryAppender {
 
 	constructor(
 		private loggerLevel: string,
-		@IStorageService private storageService: IStorageService,
 		@IEnvironmentService private environmentService: IEnvironmentService,
-		@optional(IConfigurationService) private configurationService: IConfigurationService
 	) {
 		this.telligent = new TelligentWrapper(environmentService);
 	}

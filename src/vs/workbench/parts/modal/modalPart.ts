@@ -9,10 +9,7 @@ import { Builder, $ } from 'vs/base/browser/builder';
 import { Part } from 'vs/workbench/browser/part';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { SignInModal } from 'vs/workbench/parts/modal/signIn/signInModal';
-import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IModal, Modal, ModalIdentifiers } from 'vs/workbench/parts/modal/modal';
-import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
-import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { IPartService } from 'vs/workbench/services/part/common/partService';
 
@@ -33,10 +30,7 @@ export class ModalPart extends Part {
 
 	constructor(
 		id: string,
-		@ITelemetryService private telemetryService: ITelemetryService,
 		@IThemeService themeService: IThemeService,
-		@IKeybindingService private keybindingService: IKeybindingService,
-		@IEnvironmentService private environmentService: IEnvironmentService,
 		@IInstantiationService private instantiationService: IInstantiationService,
 		@IPartService private partService: IPartService
 	) {

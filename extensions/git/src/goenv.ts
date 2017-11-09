@@ -25,8 +25,9 @@ let runtimePathCache: string = '';
 export function getGoRuntimePath(): string {
 	if (runtimePathCache) { return runtimePathCache; }
 	let correctBinNameGo = correctBinname('go');
-	if (process.env['GOROOT']) {
-		let runtimePathFromGoRoot = path.join(process.env['GOROOT'], 'bin', correctBinNameGo);
+	const goRoot = process.env['GOROOT'];
+	if (goRoot) {
+		let runtimePathFromGoRoot = path.join(goRoot, 'bin', correctBinNameGo);
 		if (fileExists(runtimePathFromGoRoot)) {
 			runtimePathCache = runtimePathFromGoRoot;
 			return runtimePathCache;
@@ -75,7 +76,7 @@ export function getToolsEnvVars(): any {
 	return Object.assign(envVars, toolsEnvVars);
 }
 
-export function getCurrentGoPath(resource?: vscode.Uri): string {
+export function getCurrentGoPath(resource?: vscode.Uri): string | undefined {
 	let inferredGopath = getInferredGopath();
 	let configGopath = vscode.workspace.getConfiguration('go', resource)['gopath'];
 	return inferredGopath ? inferredGopath : (configGopath ? resolvePath(configGopath, vscode.workspace.rootPath) : process.env['GOPATH']);

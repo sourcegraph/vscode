@@ -483,7 +483,7 @@ export class FileService implements IFileService {
 			}
 
 			// 2.) make sure target is deleted before we move/copy unless this is a case rename of the same file
-			let deleteTargetPromise = TPromise.as<void>(void 0);
+			let deleteTargetPromise = TPromise.wrap<void>(void 0);
 			if (exists && !isCaseRename) {
 				if (isEqualOrParent(sourcePath, targetPath, !isLinux /* ignorecase */)) {
 					return TPromise.wrapError<boolean>(new Error(nls.localize('unableToMoveCopyError', "Unable to move/copy. File would replace folder it is contained in."))); // catch this corner case!
@@ -499,7 +499,7 @@ export class FileService implements IFileService {
 
 					// 4.) copy/move
 					if (isSameFile) {
-						return TPromise.as(null);
+						return TPromise.wrap(null);
 					} else if (keepCopy) {
 						return nfcall(extfs.copy, sourcePath, targetPath);
 					} else {
@@ -919,11 +919,11 @@ export class StatResolver {
 						clb(null, null); // return - we might not have permissions to read the folder or stat the file
 					},
 
-					function stat(): void {
+					function stat(this: any): void {
 						fs.stat(fileResource.fsPath, this);
 					},
 
-					function countChildren(fsstat: fs.Stats): void {
+					function countChildren(this: any, fsstat: fs.Stats): void {
 						fileStat = fsstat;
 
 						if (fileStat.isDirectory()) {

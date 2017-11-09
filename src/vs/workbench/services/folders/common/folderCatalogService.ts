@@ -50,7 +50,7 @@ export class FolderCatalogService implements IFolderCatalogService {
 		});
 	}
 
-	public resolveFolder(resource: URI): TPromise<ICatalogFolder> {
+	public resolveFolder(resource: URI): TPromise<ICatalogFolder | null> {
 		const provider = this.getProviderForResource(resource);
 		if (!provider) {
 			return TPromise.wrapError(new Error(`no folder catalog provider registered for resource: ${resource.toString()}`));

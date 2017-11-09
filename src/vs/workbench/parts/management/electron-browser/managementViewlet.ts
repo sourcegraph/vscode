@@ -26,7 +26,6 @@ import { CodeHostView } from 'vs/workbench/parts/management/electron-browser/cod
 import { ProfileView } from 'vs/workbench/parts/management/electron-browser/profileView';
 import { IAction } from 'vs/base/common/actions';
 import { UpdateContribution } from 'vs/workbench/parts/update/electron-browser/update';
-import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { IAuthService } from 'vs/platform/auth/common/auth';
 import { UpdateView } from 'vs/workbench/parts/management/electron-browser/updateView';
 import { OrganizationView } from 'vs/workbench/parts/management/electron-browser/organizationView';
@@ -58,7 +57,6 @@ export class ManagementViewlet extends PersistentViewsViewlet implements IManage
 		@IContextKeyService contextKeyService: IContextKeyService,
 		@IContextMenuService contextMenuService: IContextMenuService,
 		@IExtensionService extensionService: IExtensionService,
-		@IConfigurationService private configurationService: IConfigurationService,
 		@IAuthService private authService: IAuthService,
 		@IUpdateService private updateService: IUpdateService,
 	) {

@@ -19,10 +19,7 @@ import { IEditorInput, IResourceInput } from 'vs/platform/editor/common/editor';
 import { IWorkbenchEditorService, IResourceInputType } from 'vs/workbench/services/editor/common/editorService';
 import { IConfigurationService, ConfigurationTarget } from 'vs/platform/configuration/common/configuration';
 import { IEditorGroupService } from 'vs/workbench/services/group/common/groupService';
-import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
-import { IResourceResolverService } from 'vs/platform/resourceResolver/common/resourceResolver';
 import { IFoldersWorkbenchService } from 'vs/workbench/services/folders/common/folders';
-import { IExtensionService } from 'vs/platform/extensions/common/extensions';
 import { IHistoryService } from 'vs/workbench/services/history/common/history';
 import { toResource } from 'vs/workbench/common/editor';
 import { ISCMService } from 'vs/workbench/services/scm/common/scm';
@@ -37,7 +34,6 @@ import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
 // tslint:disable-next-line:import-patterns
 import { VIEWLET_ID as EXPLORER_VIEWLET_ID } from 'vs/workbench/parts/files/common/files';
 import { parseGitURL } from 'vs/workbench/services/workspace/node/workspaceSharingService';
-import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
 // tslint:disable-next-line:import-patterns
 import { VIEWLET_ID as SCM_VIEWLET_ID } from 'vs/workbench/parts/scm/common/scm';
 import { first } from 'vs/base/common/arrays';
@@ -78,11 +74,7 @@ export class NavService extends Disposable implements INavService {
 		@IEditorGroupService private editorGroupService: IEditorGroupService,
 		@IHistoryService private historyService: IHistoryService,
 		@ISCMService private scmService: ISCMService,
-		@ITelemetryService private telemetryService: ITelemetryService,
-		@IExtensionService private extensionService: IExtensionService,
-		@IResourceResolverService private resourceResolverService: IResourceResolverService,
 		@IFoldersWorkbenchService private foldersWorkbenchService: IFoldersWorkbenchService,
-		@IWorkspaceContextService private workspaceContextService: IWorkspaceContextService,
 		@IConfigurationService private configurationService: IConfigurationService,
 	) {
 		super();

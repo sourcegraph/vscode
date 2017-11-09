@@ -18,7 +18,6 @@ import { IMessageService, Severity, CloseAction } from 'vs/platform/message/comm
 import URI from 'vs/base/common/uri';
 import { IFolder, ISearchQuery, ISearchComplete, ISearchStats, WorkspaceFolderState, FolderOperation, IFoldersWorkbenchService, IFolderConfiguration, FoldersConfigurationKey } from 'vs/workbench/services/folders/common/folders';
 import { IWorkspaceContextService, WorkbenchState, IWorkspaceFoldersChangeEvent, IWorkspaceFolder } from 'vs/platform/workspace/common/workspace';
-import { IEditorGroupService } from 'vs/workbench/services/group/common/groupService';
 import { IFolderCatalogService, ICatalogFolder, FolderGenericIconClass } from 'vs/platform/folders/common/folderCatalog';
 import { ISCMService, ISCMRepository } from 'vs/workbench/services/scm/common/scm';
 import { IProgressService2, IProgressOptions, ProgressLocation } from 'vs/platform/progress/common/progress';
@@ -37,7 +36,6 @@ interface IWorkspaceFolderStateProvider {
 class Folder implements IFolder {
 
 	constructor(
-		private catalogService: IFoldersWorkbenchService,
 		private stateProvider: IWorkspaceFolderStateProvider,
 		public resource: URI,
 		public catalog: ICatalogFolder = null
@@ -205,7 +203,6 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 		@ITelemetryService private telemetryService: ITelemetryService,
 		@IMessageService private messageService: IMessageService,
 		@IWorkspaceContextService private contextService: IWorkspaceContextService,
-		@IEditorGroupService private editorGroupService: IEditorGroupService,
 		@IFolderCatalogService private folderCatalogService: IFolderCatalogService,
 		@ISCMService private scmService: ISCMService,
 		@IProgressService2 private progressService: IProgressService2,
@@ -250,7 +247,7 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 
 	public getCurrentWorkspaceFolders(): TPromise<IFolder[]> {
 		const folders = (this.contextService.getWorkbenchState() === WorkbenchState.WORKSPACE ? this.contextService.getWorkspace().folders : []);
-		return TPromise.as(this.populateCatalogInfo(folders.map(folder => new Folder(this, this.stateProvider, folder.uri))));
+		return this.populateCatalogInfo(folders.map(folder => new Folder(this.stateProvider, folder.uri)));
 	}
 
 	/**
@@ -306,7 +303,7 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 	private doSearch(query: ISearchQuery): TPromise<ISearchComplete> {
 		return this.folderCatalogService.search(query.value).then(results => {
 			return {
-				results: results.map(result => new Folder(this, this.stateProvider, result.resource, result)),
+				results: results.map(result => new Folder(this.stateProvider, result.resource, result)),
 				stats: {} as ISearchStats,
 			};
 		});
