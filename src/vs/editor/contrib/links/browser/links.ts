@@ -14,13 +14,12 @@ import { TPromise } from 'vs/base/common/winjs.base';
 import { IMessageService } from 'vs/platform/message/common/message';
 import { IOpenerService } from 'vs/platform/opener/common/opener';
 import * as editorCommon from 'vs/editor/common/editorCommon';
-import { editorAction, ServicesAccessor, EditorAction } from 'vs/editor/common/editorCommonExtensions';
+import { registerEditorAction, ServicesAccessor, EditorAction } from 'vs/editor/common/editorCommonExtensions';
 import { LinkProviderRegistry } from 'vs/editor/common/modes';
-import { IEditorWorkerService } from 'vs/editor/common/services/editorWorkerService';
 import { ICodeEditor, MouseTargetType } from 'vs/editor/browser/editorBrowser';
 import { getLinks, Link } from 'vs/editor/contrib/links/common/links';
 import { IDisposable, dispose } from 'vs/base/common/lifecycle';
-import { editorContribution } from 'vs/editor/browser/editorBrowserExtensions';
+import { registerEditorContribution } from 'vs/editor/browser/editorBrowserExtensions';
 import { registerThemingParticipant } from 'vs/platform/theme/common/themeService';
 import { editorActiveLinkForeground } from 'vs/platform/theme/common/colorRegistry';
 import { Position } from 'vs/editor/common/core/position';
@@ -129,7 +128,6 @@ class LinkOccurrence {
 	}
 }
 
-@editorContribution
 class LinkDetector implements editorCommon.IEditorContribution {
 
 	private static ID: string = 'editor.linkDetector';
@@ -148,19 +146,16 @@ class LinkDetector implements editorCommon.IEditorContribution {
 	private activeLinkDecorationId: string;
 	private openerService: IOpenerService;
 	private messageService: IMessageService;
-	private editorWorkerService: IEditorWorkerService;
 	private currentOccurrences: { [decorationId: string]: LinkOccurrence; };
 
 	constructor(
 		editor: ICodeEditor,
 		@IOpenerService openerService: IOpenerService,
-		@IMessageService messageService: IMessageService,
-		@IEditorWorkerService editorWorkerService: IEditorWorkerService
+		@IMessageService messageService: IMessageService
 	) {
 		this.editor = editor;
 		this.openerService = openerService;
 		this.messageService = messageService;
-		this.editorWorkerService = editorWorkerService;
 		this.listenersToRemove = [];
 
 		let clickLinkGesture = new ClickLinkGesture(editor);
@@ -388,7 +383,6 @@ class LinkDetector implements editorCommon.IEditorContribution {
 	}
 }
 
-@editorAction
 class OpenLinkAction extends EditorAction {
 
 	constructor() {
@@ -412,6 +406,9 @@ class OpenLinkAction extends EditorAction {
 		}
 	}
 }
+
+registerEditorContribution(LinkDetector);
+registerEditorAction(OpenLinkAction);
 
 registerThemingParticipant((theme, collector) => {
 	let activeLinkForeground = theme.getColor(editorActiveLinkForeground);

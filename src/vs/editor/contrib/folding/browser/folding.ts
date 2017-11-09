@@ -14,9 +14,9 @@ import { KeyCode, KeyMod, KeyChord } from 'vs/base/common/keyCodes';
 import { IDisposable, dispose } from 'vs/base/common/lifecycle';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { ICommonCodeEditor, ScrollType, IModel } from 'vs/editor/common/editorCommon';
-import { editorAction, ServicesAccessor, EditorAction, CommonEditorRegistry } from 'vs/editor/common/editorCommonExtensions';
+import { registerEditorAction, ServicesAccessor, EditorAction, CommonEditorRegistry } from 'vs/editor/common/editorCommonExtensions';
 import { ICodeEditor, IEditorMouseEvent, MouseTargetType } from 'vs/editor/browser/editorBrowser';
-import { editorContribution } from 'vs/editor/browser/editorBrowserExtensions';
+import { registerEditorContribution } from 'vs/editor/browser/editorBrowserExtensions';
 import { FoldingModel, setCollapseStateAtLevel, CollapseMemento, setCollapseStateLevelsDown, setCollapseStateLevelsUp } from 'vs/editor/contrib/folding/common/foldingModel';
 import { FoldingDecorationProvider } from './foldingDecorations';
 import { EditorContextKeys } from 'vs/editor/common/editorContextKeys';
@@ -27,7 +27,6 @@ import { IRange } from 'vs/editor/common/core/range';
 
 export const ID = 'editor.contrib.folding';
 
-@editorContribution
 export class FoldingController {
 
 	static MAX_FOLDING_REGIONS = 5000;
@@ -362,7 +361,6 @@ function foldingArgumentsConstraint(args: any) {
 	return true;
 }
 
-@editorAction
 class UnfoldAction extends FoldingAction<FoldingArguments> {
 
 	constructor() {
@@ -406,7 +404,6 @@ class UnfoldAction extends FoldingAction<FoldingArguments> {
 	}
 }
 
-@editorAction
 class UnFoldRecursivelyAction extends FoldingAction<void> {
 
 	constructor() {
@@ -427,7 +424,6 @@ class UnFoldRecursivelyAction extends FoldingAction<void> {
 	}
 }
 
-@editorAction
 class FoldAction extends FoldingAction<FoldingArguments> {
 
 	constructor() {
@@ -471,7 +467,6 @@ class FoldAction extends FoldingAction<FoldingArguments> {
 	}
 }
 
-@editorAction
 class FoldRecursivelyAction extends FoldingAction<void> {
 
 	constructor() {
@@ -497,7 +492,6 @@ class FoldRecursivelyAction extends FoldingAction<void> {
 	}
 }
 
-@editorAction
 class FoldAllAction extends FoldingAction<void> {
 
 	constructor() {
@@ -518,7 +512,6 @@ class FoldAllAction extends FoldingAction<void> {
 	}
 }
 
-@editorAction
 class UnfoldAllAction extends FoldingAction<void> {
 
 	constructor() {
@@ -551,6 +544,14 @@ class FoldLevelAction extends FoldingAction<void> {
 		setCollapseStateAtLevel(foldingModel, this.getFoldingLevel(), true, this.getSelectedLines(editor));
 	}
 }
+
+registerEditorContribution(FoldingController);
+registerEditorAction(UnfoldAction);
+registerEditorAction(UnFoldRecursivelyAction);
+registerEditorAction(FoldAction);
+registerEditorAction(FoldRecursivelyAction);
+registerEditorAction(FoldAllAction);
+registerEditorAction(UnfoldAllAction);
 
 for (let i = 1; i <= 9; i++) {
 	CommonEditorRegistry.registerEditorAction(

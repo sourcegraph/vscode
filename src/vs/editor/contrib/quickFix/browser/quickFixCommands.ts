@@ -14,14 +14,13 @@ import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { IMarkerService } from 'vs/platform/markers/common/markers';
 import { ICommonCodeEditor, IEditorContribution } from 'vs/editor/common/editorCommon';
 import { EditorContextKeys } from 'vs/editor/common/editorContextKeys';
-import { editorAction, ServicesAccessor, EditorAction } from 'vs/editor/common/editorCommonExtensions';
+import { registerEditorAction, ServicesAccessor, EditorAction } from 'vs/editor/common/editorCommonExtensions';
 import { ICodeEditor } from 'vs/editor/browser/editorBrowser';
-import { editorContribution } from 'vs/editor/browser/editorBrowserExtensions';
+import { registerEditorContribution } from 'vs/editor/browser/editorBrowserExtensions';
 import { QuickFixContextMenu } from './quickFixWidget';
 import { LightBulbWidget } from './lightBulbWidget';
 import { QuickFixModel, QuickFixComputeEvent } from './quickFixModel';
 
-@editorContribution
 export class QuickFixController implements IEditorContribution {
 
 	private static ID = 'editor.contrib.quickFixController';
@@ -105,7 +104,6 @@ export class QuickFixController implements IEditorContribution {
 	}
 }
 
-@editorAction
 export class QuickFixAction extends EditorAction {
 
 	static Id = 'editor.action.quickFix';
@@ -130,3 +128,6 @@ export class QuickFixAction extends EditorAction {
 		}
 	}
 }
+
+registerEditorContribution(QuickFixController);
+registerEditorAction(QuickFixAction);

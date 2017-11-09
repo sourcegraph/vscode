@@ -212,12 +212,8 @@ export abstract class EditorAction extends EditorCommand {
 
 // --- Registration of commands and actions
 
-export function editorAction(ctor: { new(): EditorAction; }): void {
+export function registerEditorAction(ctor: { new(): EditorAction; }): void {
 	CommonEditorRegistry.registerEditorAction(new ctor());
-}
-
-export function editorCommand(ctor: { new(): EditorCommand }): void {
-	registerEditorCommand(new ctor());
 }
 
 export function registerEditorCommand<T extends EditorCommand>(editorCommand: T): T {
@@ -225,7 +221,7 @@ export function registerEditorCommand<T extends EditorCommand>(editorCommand: T)
 	return editorCommand;
 }
 
-export function commonEditorContribution(ctor: ICommonEditorContributionCtor): void {
+export function registerCommonEditorContribution(ctor: ICommonEditorContributionCtor): void {
 	EditorContributionRegistry.INSTANCE.registerEditorContribution(ctor);
 }
 

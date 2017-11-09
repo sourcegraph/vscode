@@ -13,7 +13,6 @@ import { IStoredWorkspace } from 'vs/platform/workspaces/common/workspaces';
 import { nfcall } from 'vs/base/common/async';
 import * as cp from 'child_process';
 import { Schemas } from 'vs/base/common/network';
-import { IWorkspaceEditingService } from 'vs/workbench/services/workspace/common/workspaceEditing';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 import { isLinux } from 'vs/base/common/platform';
 import * as json from 'vs/base/common/json';
@@ -32,7 +31,6 @@ export class WorkspaceSharingService implements IWorkspaceSharingService {
 	constructor(
 		@IWorkspaceContextService private contextService: IWorkspaceContextService,
 		@IFileService private fileService: IFileService,
-		@IWorkspaceEditingService private workspaceEditingService: IWorkspaceEditingService,
 		@IEnvironmentService private environmentService: IEnvironmentService,
 		@IJSONEditingService private jsonEditingService: IJSONEditingService,
 		@IExtensionService private extensionService: IExtensionService,

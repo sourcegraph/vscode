@@ -121,8 +121,8 @@ export class LocationHistoryActionItem extends ActionItem {
 		private action: NavigateBackwardsAction | NavigateForwardAction,
 		@IContextMenuService private contextMenuService: IContextMenuService,
 		@IHistoryService private historyService: IHistoryService,
-		@IKeybindingService private keybindingService: IKeybindingService,
 		@IWorkbenchEditorService private editorService: IWorkbenchEditorService,
+		@IKeybindingService keybindingService: IKeybindingService,
 		@IInstantiationService instantiationService: IInstantiationService,
 		@IThemeService themeService: IThemeService
 	) {

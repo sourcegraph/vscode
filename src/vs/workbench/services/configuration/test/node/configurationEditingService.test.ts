@@ -38,7 +38,7 @@ import { IWindowConfiguration } from 'vs/platform/windows/common/windows';
 
 class SettingsTestEnvironmentService extends EnvironmentService {
 
-	constructor(args: ParsedArgs, _execPath: string, private customAppSettingsHome, private customOrganizationSettingsHome) {
+	constructor(args: ParsedArgs, _execPath: string, private customAppSettingsHome: string, private customOrganizationSettingsHome: string) {
 		super(args, _execPath);
 	}
 
@@ -51,10 +51,10 @@ suite('ConfigurationEditingService', () => {
 
 	let instantiationService: TestInstantiationService;
 	let testObject: ConfigurationEditingService;
-	let parentDir;
-	let workspaceDir;
-	let globalSettingsFile;
-	let orgSettingsPath;
+	let parentDir: string;
+	let workspaceDir: string;
+	let globalSettingsFile: string;
+	let orgSettingsPath: string;
 	let workspaceSettingsDir;
 
 	suiteSetup(() => {

@@ -18,7 +18,6 @@ import { cloneAndChange } from 'vs/base/common/objects';
 import { Registry } from 'vs/platform/registry/common/platform';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 import { CommandsRegistry } from 'vs/platform/commands/common/commands';
-import { IAuthService } from 'vs/platform/auth/common/auth';
 
 export interface ITelemetryServiceConfig {
 	appender: ITelemetryAppender;
@@ -48,7 +47,6 @@ export class TelemetryService implements ITelemetryService {
 		config: ITelemetryServiceConfig,
 		@optional(IConfigurationService) protected _configurationService?: IConfigurationService,
 		@optional(IEnvironmentService) protected _environmentService?: IEnvironmentService,
-		@optional(IAuthService) private _authService?: IAuthService,
 	) {
 		this._appender = config.appender;
 		this._commonProperties = config.commonProperties || TPromise.as({});

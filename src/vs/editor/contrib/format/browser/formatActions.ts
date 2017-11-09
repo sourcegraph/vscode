@@ -11,7 +11,7 @@ import { IDisposable, dispose } from 'vs/base/common/lifecycle';
 import { TPromise } from 'vs/base/common/winjs.base';
 import * as editorCommon from 'vs/editor/common/editorCommon';
 import { ContextKeyExpr } from 'vs/platform/contextkey/common/contextkey';
-import { editorAction, ServicesAccessor, EditorAction, commonEditorContribution } from 'vs/editor/common/editorCommonExtensions';
+import { registerEditorAction, ServicesAccessor, EditorAction, registerCommonEditorContribution, IActionOptions } from 'vs/editor/common/editorCommonExtensions';
 import { OnTypeFormattingEditProviderRegistry, DocumentRangeFormattingEditProviderRegistry } from 'vs/editor/common/modes';
 import { getOnTypeFormattingEdits, getDocumentFormattingEdits, getDocumentRangeFormattingEdits, NoProviderError } from '../common/format';
 import { EditOperationsCommand } from '../common/formatCommand';
@@ -53,7 +53,6 @@ function alertFormattingEdits(edits: editorCommon.ISingleEditOperation[]): void 
 	}
 }
 
-@commonEditorContribution
 class FormatOnType implements editorCommon.IEditorContribution {
 
 	private static ID = 'editor.contrib.autoFormat';
@@ -179,7 +178,6 @@ class FormatOnType implements editorCommon.IEditorContribution {
 	}
 }
 
-@commonEditorContribution
 class FormatOnPaste implements editorCommon.IEditorContribution {
 
 	private static ID = 'editor.contrib.formatOnPaste';
@@ -298,8 +296,6 @@ export abstract class AbstractFormatAction extends EditorAction {
 	protected abstract _getFormattingEdits(editor: editorCommon.ICommonCodeEditor): TPromise<editorCommon.ISingleEditOperation[]>;
 }
 
-
-@editorAction
 export class FormatDocumentAction extends AbstractFormatAction {
 
 	constructor() {
@@ -329,7 +325,6 @@ export class FormatDocumentAction extends AbstractFormatAction {
 	}
 }
 
-@editorAction
 export class FormatSelectionAction extends AbstractFormatAction {
 
 	constructor() {
@@ -357,6 +352,11 @@ export class FormatSelectionAction extends AbstractFormatAction {
 	}
 }
 
+registerCommonEditorContribution(FormatOnType);
+registerCommonEditorContribution(FormatOnPaste);
+registerEditorAction(FormatDocumentAction);
+registerEditorAction(FormatSelectionAction);
+
 // this is the old format action that does both (format document OR format selection)
 // and we keep it here such that existing keybinding configurations etc will still work
 CommandsRegistry.registerCommand('editor.action.format', accessor => {
@@ -364,7 +364,7 @@ CommandsRegistry.registerCommand('editor.action.format', accessor => {
 	if (editor) {
 		return new class extends AbstractFormatAction {
 			constructor() {
-				super(<any>{});
+				super({} as IActionOptions);
 			}
 			_getFormattingEdits(editor: editorCommon.ICommonCodeEditor): TPromise<editorCommon.ISingleEditOperation[]> {
 				const model = editor.getModel();

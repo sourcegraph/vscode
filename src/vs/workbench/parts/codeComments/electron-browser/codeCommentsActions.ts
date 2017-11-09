@@ -11,7 +11,7 @@ import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
 import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { ICommonCodeEditor } from 'vs/editor/common/editorCommon';
-import { ServicesAccessor, editorAction, EditorAction } from 'vs/editor/common/editorCommonExtensions';
+import { ServicesAccessor, registerEditorAction, EditorAction } from 'vs/editor/common/editorCommonExtensions';
 import { ICodeCommentsService } from 'vs/editor/common/services/codeCommentsService';
 import { CodeCommentsController } from 'vs/workbench/parts/codeComments/electron-browser/codeCommentsController';
 import { KeyCode, KeyMod } from 'vs/base/common/keyCodes';
@@ -41,7 +41,6 @@ export class OpenCodeCommentsViewletAction extends ToggleViewletAction {
  * Editor action that opens the code comments viewlet
  * to create a new comment for the current text selection or line.
  */
-@editorAction
 export class CreateCodeCommentAction extends EditorAction {
 
 	private static ID = 'workbench.action.createCodeComment';
@@ -72,11 +71,11 @@ export class CreateCodeCommentAction extends EditorAction {
 		return TPromise.wrap(true);
 	}
 }
+registerEditorAction(CreateCodeCommentAction);
 
 /**
  * Editor action that shares the current text selection.
  */
-@editorAction
 export class ShareSnippetAction extends EditorAction {
 
 	private static ID = 'workbench.action.shareSnippet';
@@ -125,3 +124,4 @@ export class ShareSnippetAction extends EditorAction {
 		}
 	}
 }
+registerEditorAction(ShareSnippetAction);

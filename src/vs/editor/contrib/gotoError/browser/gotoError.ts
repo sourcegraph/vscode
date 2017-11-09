@@ -19,9 +19,9 @@ import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { Position } from 'vs/editor/common/core/position';
 import { Range } from 'vs/editor/common/core/range';
 import * as editorCommon from 'vs/editor/common/editorCommon';
-import { editorAction, ServicesAccessor, IActionOptions, EditorAction, EditorCommand, CommonEditorRegistry } from 'vs/editor/common/editorCommonExtensions';
+import { registerEditorAction, ServicesAccessor, IActionOptions, EditorAction, EditorCommand, CommonEditorRegistry } from 'vs/editor/common/editorCommonExtensions';
 import { ICodeEditor } from 'vs/editor/browser/editorBrowser';
-import { editorContribution } from 'vs/editor/browser/editorBrowserExtensions';
+import { registerEditorContribution } from 'vs/editor/browser/editorBrowserExtensions';
 import { ZoneWidget } from 'vs/editor/contrib/zoneWidget/browser/zoneWidget';
 import { registerColor, oneOf } from 'vs/platform/theme/common/colorRegistry';
 import { IThemeService, ITheme } from 'vs/platform/theme/common/themeService';
@@ -426,7 +426,6 @@ class MarkerNavigationAction extends EditorAction {
 	}
 }
 
-@editorContribution
 class MarkerController implements editorCommon.IEditorContribution {
 
 	private static ID = 'editor.contrib.markerController';
@@ -503,7 +502,6 @@ class MarkerController implements editorCommon.IEditorContribution {
 	}
 }
 
-@editorAction
 class NextMarkerAction extends MarkerNavigationAction {
 	constructor() {
 		super(true, {
@@ -519,7 +517,6 @@ class NextMarkerAction extends MarkerNavigationAction {
 	}
 }
 
-@editorAction
 class PrevMarkerAction extends MarkerNavigationAction {
 	constructor() {
 		super(false, {
@@ -534,6 +531,10 @@ class PrevMarkerAction extends MarkerNavigationAction {
 		});
 	}
 }
+
+registerEditorContribution(MarkerController);
+registerEditorAction(NextMarkerAction);
+registerEditorAction(PrevMarkerAction);
 
 const CONTEXT_MARKERS_NAVIGATION_VISIBLE = new RawContextKey<boolean>('markersNavigationVisible', false);
 

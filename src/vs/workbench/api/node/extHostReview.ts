@@ -15,7 +15,6 @@ import * as vscode from 'vscode';
 
 type ProviderHandle = number;
 type GroupHandle = number;
-type ResourceStateHandle = number;
 
 class ExtHostReviewControl implements vscode.ReviewControl {
 
@@ -95,7 +94,7 @@ class ExtHostReviewControl implements vscode.ReviewControl {
 		private _icon: string,
 		private _rootUri: vscode.Uri,
 	) {
-		this._proxy.$registerReviewControl(this.handle, _id, _label, _description, _icon, _rootUri.toString());
+		this._proxy.$registerReviewControl(this.handle, _id, _label, _description, this._icon, _rootUri.toString());
 	}
 
 	private updatedResourceGroups = new Set<ExtHostSourceControlResourceGroup>();

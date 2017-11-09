@@ -9,8 +9,6 @@ import * as nls from 'vs/nls';
 import Event, { Emitter } from 'vs/base/common/event';
 import { IDisposable, dispose, Disposable } from 'vs/base/common/lifecycle';
 import { TPromise } from 'vs/base/common/winjs.base';
-import { ICommandService } from 'vs/platform/commands/common/commands';
-import { IMessageService } from 'vs/platform/message/common/message';
 import * as editorCommon from 'vs/editor/common/editorCommon';
 import { ContextProviderRegistry } from 'vs/editor/common/modes';
 import { Range } from 'vs/editor/common/core/range';
@@ -87,8 +85,6 @@ export class EditorContextController extends Disposable {
 
 	constructor(
 		private editor: editorCommon.ICommonCodeEditor,
-		@ICommandService private commandService: ICommandService,
-		@IMessageService private messageService: IMessageService
 	) {
 		super();
 

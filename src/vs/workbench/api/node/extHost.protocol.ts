@@ -450,6 +450,7 @@ export interface MainThreadSCMShape extends MainThreadSCMGroupShape, IDisposable
 	$spliceResourceStates(sourceControlHandle: number, splices: SCMRawResourceSplices[]): void;
 
 	$setInputBoxValue(sourceControlHandle: number, value: string): void;
+	$setInputBoxPlaceholder(sourceControlHandle: number, placeholder: string): void;
 
 	$select(sourceControlHandle: number): Promise<void>;
 }

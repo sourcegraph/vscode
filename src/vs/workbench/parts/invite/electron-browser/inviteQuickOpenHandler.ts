@@ -42,21 +42,11 @@ export class InviteQuickOpenHandler extends QuickOpenHandler {
 
 	private orgName: string;
 
-	private model?: QuickOpenModel;
-
 	constructor(
 		@IAuthService private authService: IAuthService,
 	) {
 		super();
 		this.orgName = this.authService.currentUser.currentOrgMember.org.name;
-	}
-
-	public onOpen(): void {
-		this.model = new QuickOpenModel([]);
-	}
-
-	public onClose(): void {
-		this.model = undefined;
 	}
 
 	public getResults(searchTerm: string): TPromise<QuickOpenModel> {

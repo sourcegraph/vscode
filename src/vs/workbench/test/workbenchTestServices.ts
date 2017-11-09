@@ -72,7 +72,6 @@ export class TestContextService implements IWorkspaceContextService {
 	public _serviceBrand: any;
 
 	private workspace: IWorkbenchWorkspace;
-	private id: string;
 	private options: any;
 
 	private _onDidChangeWorkspaceName: Emitter<void>;
@@ -81,7 +80,6 @@ export class TestContextService implements IWorkspaceContextService {
 
 	constructor(workspace: any = TestWorkspace, options: any = null) {
 		this.workspace = workspace;
-		this.id = generateUuid();
 		this.options = options || Object.create(null);
 		this._onDidChangeWorkspaceFolders = new Emitter<IWorkspaceFoldersChangeEvent>();
 		this._onDidChangeWorkbenchState = new Emitter<WorkbenchState>();
@@ -377,10 +375,6 @@ export class TestPartService implements IPartService {
 
 	public isCreated(): boolean {
 		return true;
-	}
-
-	public joinCreation(): Promise {
-		return TPromise.as(null);
 	}
 
 	public hasFocus(part): boolean {
@@ -1030,7 +1024,7 @@ export class TestLifecycleService implements ILifecycleService {
 
 	when(): Thenable<void> {
 		throw notImplemented();
-	};
+	}
 
 	public fireShutdown(reason = ShutdownReason.QUIT): void {
 		this._onShutdown.fire(reason);

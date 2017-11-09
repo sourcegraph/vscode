@@ -121,10 +121,7 @@ export class CodeCommentsService implements ICodeCommentsService {
 	constructor(
 		@IEnvironmentService environmentService: IEnvironmentService,
 		@IInstantiationService private instantiationService: IInstantiationService,
-		@IOutputService private outputService: IOutputService,
-		@IAuthService private authService: IAuthService,
 		@IRemoteService private remoteService: IRemoteService,
-		@ISCMService private scmService: ISCMService
 	) {
 		this.diffWorkerProvider = new DiffWorkerClient(environmentService.debugDiff);
 	}
@@ -225,7 +222,7 @@ export class Threads extends Disposable implements IThreads {
 		@IOutputService private outputService: IOutputService,
 	) {
 		super();
-		this.git = new Git(this.filter.resource, scmService);
+		this.git = new Git(this.filter.resource, this.scmService);
 		commentService.onDidFetchThreads(this.onDidFetchThreads, this, this.disposables);
 		commentService.onDidCreateThread(this.onDidCreateThread, this, this.disposables);
 		windowsService.onWindowFocus(this.refresh, this, this.disposables);
@@ -321,7 +318,7 @@ export class Threads extends Disposable implements IThreads {
 					threadsById.delete(thread.id);
 					return currentThread;
 				} else {
-					return this.instantiationService.createInstance(ThreadComments, this.commentService, this.git, thread);
+					return this.instantiationService.createInstance(ThreadComments, this.commentService, thread);
 				}
 			})
 			.sort((left: ThreadComments, right: ThreadComments) => {
@@ -341,7 +338,7 @@ export class Threads extends Disposable implements IThreads {
 		if (!this.matchesFilter(threadMemento)) {
 			return;
 		}
-		const thread = this.instantiationService.createInstance(ThreadComments, this.commentService, this.git, threadMemento);
+		const thread = this.instantiationService.createInstance(ThreadComments, this.commentService, threadMemento);
 		this._threads.unshift(thread);
 		this.didChangeThreads.fire();
 	}
@@ -441,9 +438,7 @@ export class FileComments extends Disposable implements IFileComments {
 		private diffWorker: DiffWorkerClient,
 		resource: URI,
 		@ISCMService scmService: ISCMService,
-		@IModelService private modelService: IModelService,
 		@IInstantiationService private instantiationService: IInstantiationService,
-		@IRemoteService private remoteService: IRemoteService,
 		@IAuthService private authService: IAuthService,
 		@IOutputService private outputService: IOutputService,
 	) {
@@ -766,11 +761,8 @@ export class ThreadComments extends Disposable implements IThreadComments {
 
 	constructor(
 		private commentsService: CodeCommentsService,
-		private git: Git,
 		thread: IThreadCommentsMemento,
 		@IRemoteService private remoteService: IRemoteService,
-		@IInstantiationService private instantiationService: IInstantiationService,
-		@IAuthService private authService: IAuthService,
 	) {
 		super();
 		this.id = thread.id;
@@ -1068,7 +1060,7 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 				});
 
 			const threadMemento = gqlThreadToMemento(response.createThread);
-			const thread = this.instantiationService.createInstance(ThreadComments, this.commentsService, this.git, threadMemento);
+			const thread = this.instantiationService.createInstance(ThreadComments, this.commentsService, threadMemento);
 			this.commentsService.didCreateThread.fire(threadMemento);
 			this.didSubmit.fire(thread);
 			return thread;

@@ -10,9 +10,9 @@ import { Disposable } from 'vs/base/common/lifecycle';
 import { escape } from 'vs/base/common/strings';
 import { Position } from 'vs/editor/common/core/position';
 import { ICommonCodeEditor, IEditorContribution, IModel } from 'vs/editor/common/editorCommon';
-import { editorAction, EditorAction, ServicesAccessor } from 'vs/editor/common/editorCommonExtensions';
+import { registerEditorAction, EditorAction, ServicesAccessor } from 'vs/editor/common/editorCommonExtensions';
 import { ICodeEditor, ContentWidgetPositionPreference, IContentWidget, IContentWidgetPosition } from 'vs/editor/browser/editorBrowser';
-import { editorContribution } from 'vs/editor/browser/editorBrowserExtensions';
+import { registerEditorContribution } from 'vs/editor/browser/editorBrowserExtensions';
 import { IModeService } from 'vs/editor/common/services/modeService';
 import { TokenMetadata } from 'vs/editor/common/model/tokensBinaryEncoding';
 import { TokenizationRegistry, LanguageIdentifier, FontStyle, StandardTokenType, ITokenizationSupport, IState } from 'vs/editor/common/modes';
@@ -25,7 +25,6 @@ import { registerThemingParticipant, HIGH_CONTRAST } from 'vs/platform/theme/com
 import { editorHoverBackground, editorHoverBorder } from 'vs/platform/theme/common/colorRegistry';
 
 
-@editorContribution
 class InspectTokensController extends Disposable implements IEditorContribution {
 
 	private static ID = 'editor.contrib.inspectTokens';
@@ -82,7 +81,6 @@ class InspectTokensController extends Disposable implements IEditorContribution 
 	}
 }
 
-@editorAction
 class InspectTokens extends EditorAction {
 
 	constructor() {
@@ -169,7 +167,6 @@ class InspectTokensWidget extends Disposable implements IContentWidget {
 	public allowEditorOverflow = true;
 
 	private _editor: ICodeEditor;
-	private _standaloneThemeService: IStandaloneThemeService;
 	private _modeService: IModeService;
 	private _tokenizationSupport: ITokenizationSupport;
 	private _model: IModel;
@@ -182,7 +179,6 @@ class InspectTokensWidget extends Disposable implements IContentWidget {
 	) {
 		super();
 		this._editor = editor;
-		this._standaloneThemeService = standaloneThemeService;
 		this._modeService = modeService;
 		this._model = this._editor.getModel();
 		this._domNode = document.createElement('div');
@@ -333,6 +329,9 @@ class InspectTokensWidget extends Disposable implements IContentWidget {
 		};
 	}
 }
+
+registerEditorContribution(InspectTokensController);
+registerEditorAction(InspectTokens);
 
 registerThemingParticipant((theme, collector) => {
 	let border = theme.getColor(editorHoverBorder);

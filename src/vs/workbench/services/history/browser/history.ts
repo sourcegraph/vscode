@@ -30,7 +30,6 @@ import { IExpression } from 'vs/base/common/glob';
 import { ICursorPositionChangedEvent } from 'vs/editor/common/controller/cursorEvents';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { ResourceGlobMatcher } from 'vs/workbench/common/resources';
-import { IEditorRegistry, Extensions } from 'vs/workbench/browser/editor';
 
 /**
  * Stores the selection & view state of an editor and allows to compare it to other selection states.
@@ -183,7 +182,6 @@ export class HistoryService extends BaseHistoryService implements IHistoryServic
 	private history: (IEditorInput | IResourceInput)[];
 	private recentlyClosedFiles: IRecentlyClosedFile[];
 	private loaded: boolean;
-	private registry: IEditorRegistry;
 	private resourceFilter: ResourceGlobMatcher;
 
 	private _onDidChange = new Emitter<void>();
@@ -207,7 +205,6 @@ export class HistoryService extends BaseHistoryService implements IHistoryServic
 		this.stack = [];
 		this.recentlyClosedFiles = [];
 		this.loaded = false;
-		this.registry = Registry.as<IEditorRegistry>(Extensions.Editors);
 		this.resourceFilter = instantiationService.createInstance(
 			ResourceGlobMatcher,
 			(root: URI) => this.getExcludes(root),

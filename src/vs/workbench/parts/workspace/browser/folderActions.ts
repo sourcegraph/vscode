@@ -363,7 +363,6 @@ export class ManageWorkspaceFolderAction extends Action {
 	set folder(folder: IFolder) { this._folder = folder; this._actionItem.folder = folder; this.update(); }
 
 	constructor(
-		@IWorkspaceContextService private workspaceContextService: IWorkspaceContextService,
 		@IFoldersWorkbenchService private catalogService: IFoldersWorkbenchService,
 		@IInstantiationService private instantiationService: IInstantiationService
 	) {
@@ -435,7 +434,6 @@ export class AddLocalWorkspaceFolderAction extends BaseWorkspacesAction {
 		@IWorkspaceContextService contextService: IWorkspaceContextService,
 		@IEnvironmentService environmentService: IEnvironmentService,
 		@IHistoryService historyService: IHistoryService,
-		@IInstantiationService private instantiationService: IInstantiationService,
 		@IWorkspaceEditingService private workspaceEditingService: IWorkspaceEditingService,
 		@IConfigurationService private configurationService: IConfigurationService,
 	) {

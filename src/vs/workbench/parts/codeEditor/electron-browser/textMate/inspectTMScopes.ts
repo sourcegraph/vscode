@@ -12,9 +12,9 @@ import { escape } from 'vs/base/common/strings';
 import { KeyCode } from 'vs/base/common/keyCodes';
 import { Position } from 'vs/editor/common/core/position';
 import { ICommonCodeEditor, IEditorContribution, IModel } from 'vs/editor/common/editorCommon';
-import { editorAction, EditorAction, ServicesAccessor } from 'vs/editor/common/editorCommonExtensions';
+import { registerEditorAction, EditorAction, ServicesAccessor } from 'vs/editor/common/editorCommonExtensions';
 import { ICodeEditor, ContentWidgetPositionPreference, IContentWidget, IContentWidgetPosition } from 'vs/editor/browser/editorBrowser';
-import { editorContribution } from 'vs/editor/browser/editorBrowserExtensions';
+import { registerEditorContribution } from 'vs/editor/browser/editorBrowserExtensions';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { IGrammar, StackElement, IToken } from 'vscode-textmate';
 import { ITextMateService } from 'vs/workbench/services/textMate/electron-browser/textMateService';
@@ -30,7 +30,6 @@ import Severity from 'vs/base/common/severity';
 import { registerThemingParticipant, HIGH_CONTRAST } from 'vs/platform/theme/common/themeService';
 import { editorHoverBackground, editorHoverBorder } from 'vs/platform/theme/common/colorRegistry';
 
-@editorContribution
 class InspectTMScopesController extends Disposable implements IEditorContribution {
 
 	private static ID = 'editor.contrib.inspectTMScopes';
@@ -101,7 +100,6 @@ class InspectTMScopesController extends Disposable implements IEditorContributio
 	}
 }
 
-@editorAction
 class InspectTMScopes extends EditorAction {
 
 	constructor() {
@@ -375,6 +373,9 @@ class InspectTMScopesWidget extends Disposable implements IContentWidget {
 		};
 	}
 }
+
+registerEditorContribution(InspectTMScopesController);
+registerEditorAction(InspectTMScopes);
 
 registerThemingParticipant((theme, collector) => {
 	let border = theme.getColor(editorHoverBorder);

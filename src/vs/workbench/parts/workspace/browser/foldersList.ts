@@ -19,7 +19,6 @@ import { domEvent } from 'vs/base/browser/event';
 import { IFolder, WorkspaceFolderState } from 'vs/workbench/services/folders/common/folders';
 import { AddWorkspaceFolderAction, RemoveWorkspaceFolderAction, ManageWorkspaceFolderAction } from 'vs/workbench/parts/workspace/browser/folderActions';
 import { EventType } from 'vs/base/common/events';
-import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
 import { Label, PathLabel, StarsWidget } from './foldersWidgets';
 // tslint:disable-next-line:import-patterns
@@ -49,7 +48,6 @@ export class Renderer implements IPagedRenderer<IFolder, ITemplateData> {
 
 	constructor(
 		@IInstantiationService private instantiationService: IInstantiationService,
-		@IContextMenuService private contextMenuService: IContextMenuService,
 		@IMessageService private messageService: IMessageService,
 		@IWorkspaceContextService protected contextService: IWorkspaceContextService,
 	) { }

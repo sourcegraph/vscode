@@ -73,10 +73,6 @@ suite('git', function () {
 	let git = new Git(undefined, scmService);
 
 	suite('getRemoteRepo', function () {
-		interface Test {
-			in: string;
-			out: string;
-		}
 		var accepts = [
 			{ in: 'http://github.com/Microsoft/vscode.git', out: 'github.com/Microsoft/vscode' },
 			{ in: 'https://github.com/Microsoft/vscode.git', out: 'github.com/Microsoft/vscode' },

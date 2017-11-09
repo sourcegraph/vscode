@@ -17,7 +17,7 @@ export class WorkbenchContextWidget extends ContextWidget {
 	) {
 		super(container, editor);
 
-		this._register(partService.onEditorLayout(() => this.updateMaxHeight()));
+		this._register(this.partService.onEditorLayout(() => this.updateMaxHeight()));
 	}
 
 	public layout(): void {

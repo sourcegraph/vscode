@@ -13,13 +13,9 @@ import { EditorOptions } from 'vs/workbench/common/editor';
 import { WebBrowserView } from 'vs/workbench/parts/webbrowser/electron-browser/webBrowserView';
 import { WebBrowserModel } from 'vs/workbench/parts/webbrowser/electron-browser/webBrowserModel';
 import { WebBrowserInput } from 'vs/workbench/parts/webbrowser/electron-browser/webBrowserInput';
-import { IOpenerService } from 'vs/platform/opener/common/opener';
-import { IModeService } from 'vs/editor/common/services/modeService';
-import { IPartService, Parts } from 'vs/workbench/services/part/common/partService';
 import { BaseEditor } from 'vs/workbench/browser/parts/editor/baseEditor';
 import { KEYBINDING_CONTEXT_WEBVIEWEDITOR_FIND_WIDGET_INPUT_FOCUSED, KEYBINDING_CONTEXT_WEBVIEWEDITOR_FOCUS } from 'vs/workbench/parts/html/browser/webviewEditor';
 import { IStorageService } from 'vs/platform/storage/common/storage';
-import { IContextViewService, IContextMenuService } from 'vs/platform/contextview/browser/contextView';
 import { IContextKey, IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
 import { KEYBINDING_CONTEXT_ATTR } from 'vs/platform/contextkey/browser/contextKeyService';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
@@ -43,14 +39,9 @@ export class WebBrowserEditor extends BaseEditor {
 	constructor(
 		@ITelemetryService telemetryService: ITelemetryService,
 		@IThemeService protected themeService: IThemeService,
-		@IOpenerService private openerService: IOpenerService,
-		@IModeService private modeService: IModeService,
-		@IPartService private partService: IPartService,
 		@IStorageService storageService: IStorageService,
-		@IContextViewService private contextViewService: IContextViewService,
 		@IInstantiationService private instantiationService: IInstantiationService,
 		@IContextKeyService contextKeyService: IContextKeyService,
-		@IContextMenuService private contextMenuService: IContextMenuService,
 	) {
 		super(WebBrowserEditor.ID, telemetryService, themeService);
 
@@ -81,7 +72,6 @@ export class WebBrowserEditor extends BaseEditor {
 
 			this._view = this.instantiationService.createInstance(WebBrowserView,
 				this.content, model,
-				this.partService.getContainer(Parts.EDITOR_PART),
 				this.contextKey, this.findInputFocusContextKey, {});
 
 			this.onThemeChange(this.themeService.getTheme());

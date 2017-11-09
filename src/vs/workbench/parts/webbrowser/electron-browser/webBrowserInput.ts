@@ -8,14 +8,12 @@
 import URI from 'vs/base/common/uri';
 import { WebBrowserInput as BaseWebBrowserInput } from 'vs/workbench/parts/webbrowser/common/webBrowser';
 import { WebBrowserModel } from 'vs/workbench/parts/webbrowser/electron-browser/webBrowserModel';
-import { IPartService } from 'vs/workbench/services/part/common/partService';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 
 export class WebBrowserInput extends BaseWebBrowserInput {
 
 	constructor(
 		url: URI,
-		@IPartService private partService: IPartService,
 		@IInstantiationService private instantiationService: IInstantiationService,
 	) {
 		super(url);

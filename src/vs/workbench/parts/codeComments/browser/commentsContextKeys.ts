@@ -5,7 +5,7 @@
 'use strict';
 
 import { IContextKey, IContextKeyService, RawContextKey } from 'vs/platform/contextkey/common/contextkey';
-import { editorContribution } from 'vs/editor/browser/editorBrowserExtensions';
+import { registerEditorContribution } from 'vs/editor/browser/editorBrowserExtensions';
 import { Disposable } from 'vs/base/common/lifecycle';
 import { IEditorContribution } from 'vs/editor/common/editorCommon';
 import { ICodeEditor } from 'vs/editor/browser/editorBrowser';
@@ -23,7 +23,6 @@ export namespace CommentsContextKeys {
 /**
  * Manages the state of code comments context keys.
  */
-@editorContribution
 export class CommentsContextKeyManager extends Disposable implements IEditorContribution {
 
 	public getId(): string {
@@ -69,3 +68,4 @@ export class CommentsContextKeyManager extends Disposable implements IEditorCont
 		return !!repository && !!repository.provider && repository.provider.contextValue === 'git';
 	}
 }
+registerEditorContribution(CommentsContextKeyManager);

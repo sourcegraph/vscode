@@ -18,7 +18,6 @@ import * as arrays from 'vs/base/common/arrays';
 import * as errors from 'vs/base/common/errors';
 import { IPreferencesService } from 'vs/workbench/parts/preferences/common/preferences';
 import { PreferencesEditor } from 'vs/workbench/parts/preferences/browser/preferencesEditor';
-import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 
 export class SearchProfilePickerWidget extends Widget {
 
@@ -38,7 +37,6 @@ export class SearchProfilePickerWidget extends Widget {
 		selected: string,
 		@IPreferencesService private preferencesService: IPreferencesService,
 		@ISearchProfileService private searchProfileService: ISearchProfileService,
-		@ITelemetryService private telemetryService: ITelemetryService,
 	) {
 		super();
 

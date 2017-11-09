@@ -14,7 +14,7 @@ import { MockCodeEditorService } from 'vs/editor/test/common/mocks/mockCodeEdito
 import { ITextFileService } from 'vs/workbench/services/textfile/common/textfiles';
 import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { ExtHostDocumentsAndEditorsShape, IDocumentsAndEditorsDelta } from 'vs/workbench/api/node/extHost.protocol';
-import { mockCodeEditor } from 'vs/editor/test/common/mocks/mockCodeEditor';
+import { createTestCodeEditor } from 'vs/editor/test/browser/testCodeEditor';
 import { mock } from 'vs/workbench/test/electron-browser/api/mock';
 import { IEditorGroupService } from 'vs/workbench/services/group/common/groupService';
 import Event from 'vs/base/common/event';
@@ -25,7 +25,6 @@ suite('MainThreadDocumentsAndEditors', () => {
 	let codeEditorService: MockCodeEditorService;
 	let textFileService: ITextFileService;
 	let workbenchEditorService: IWorkbenchEditorService;
-	let documentAndEditor: MainThreadDocumentsAndEditors;
 	let deltas: IDocumentsAndEditorsDelta[] = [];
 	const hugeModelString = new Array(2 + (50 * 1024 * 1024)).join('-');
 
@@ -52,7 +51,7 @@ suite('MainThreadDocumentsAndEditors', () => {
 			onEditorGroupMoved = Event.None;
 		};
 
-		documentAndEditor = new MainThreadDocumentsAndEditors(
+		new MainThreadDocumentsAndEditors(
 			OneGetThreadService(new class extends mock<ExtHostDocumentsAndEditorsShape>() {
 				$acceptDocumentsAndEditorsDelta(delta) { deltas.push(delta); }
 			}),
@@ -105,7 +104,7 @@ suite('MainThreadDocumentsAndEditors', () => {
 		this.timeout(1000 * 60); // increase timeout for this one test
 
 		const model = modelService.createModel(hugeModelString, null, null);
-		const editor = mockCodeEditor(null, { model, wordWrap: 'off', wordWrapMinified: false });
+		const editor = createTestCodeEditor(model);
 
 		assert.equal(deltas.length, 1);
 		deltas.length = 0;
@@ -114,7 +113,7 @@ suite('MainThreadDocumentsAndEditors', () => {
 	});
 
 	test('ignore editor w/o model', () => {
-		const editor = mockCodeEditor([], {});
+		const editor = createTestCodeEditor(null);
 		editor.setModel(null);
 		codeEditorService.addCodeEditor(editor);
 		assert.equal(deltas.length, 1);
@@ -130,7 +129,7 @@ suite('MainThreadDocumentsAndEditors', () => {
 		deltas.length = 0;
 
 		const model = modelService.createModel('farboo', null, null);
-		codeEditorService.addCodeEditor(mockCodeEditor(null, { model }));
+		codeEditorService.addCodeEditor(createTestCodeEditor(model));
 
 		assert.equal(deltas.length, 2);
 		const [first, second] = deltas;
@@ -150,7 +149,7 @@ suite('MainThreadDocumentsAndEditors', () => {
 	test('editor with dispos-ed/-ing model', () => {
 		modelService.createModel('foobar', null, null);
 		const model = modelService.createModel('farboo', null, null);
-		const editor = mockCodeEditor(null, { model });
+		const editor = createTestCodeEditor(model);
 		codeEditorService.addCodeEditor(editor);
 
 		// ignore things until now

@@ -89,7 +89,7 @@ export interface IFolderCatalogService {
 	 * URI must be the unique identifier originally retrieved from the folder catalog in
 	 * ICatalogFolder#resource (which is different from the clone URL in general).
 	 */
-	resolveFolder(resource: URI): TPromise<ICatalogFolder>;
+	resolveFolder(resource: URI): TPromise<ICatalogFolder | null>;
 
 	/**
 	 * Gets the FolderCatalog resource URIs for the local FS path (typically an on-disk clone).

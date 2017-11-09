@@ -12,9 +12,7 @@ import { $ } from 'vs/base/browser/builder';
 import { ViewsViewletPanel, IViewletViewOptions, IViewOptions } from 'vs/workbench/browser/parts/views/viewsViewlet';
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
-import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
-import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { IAuthService } from 'vs/platform/auth/common/auth';
 import { attachButtonStyler } from 'vs/platform/theme/common/styler';
 
@@ -29,11 +27,9 @@ export class ProfileView extends ViewsViewletPanel {
 
 	constructor(
 		options: IViewletViewOptions,
-		@ITelemetryService private telemetryService: ITelemetryService,
 		@IThemeService private themeService: IThemeService,
 		@IKeybindingService keybindingService: IKeybindingService,
 		@IContextMenuService contextMenuService: IContextMenuService,
-		@IConfigurationService private configurationService: IConfigurationService,
 		@IAuthService private authService: IAuthService
 	) {
 		super({ ...(options as IViewOptions), minimumBodySize: authService.currentUser ? 50 : 150 }, keybindingService, contextMenuService);

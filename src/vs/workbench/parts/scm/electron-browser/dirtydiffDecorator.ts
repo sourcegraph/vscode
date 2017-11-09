@@ -16,10 +16,8 @@ import * as ext from 'vs/workbench/common/contributions';
 import { CodeEditor } from 'vs/editor/browser/codeEditor';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { IMessageService, Severity } from 'vs/platform/message/common/message';
-import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
 import { ITextModelService } from 'vs/editor/common/services/resolverService';
 import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
-import { IModelService } from 'vs/editor/common/services/modelService';
 import { IEditorWorkerService } from 'vs/editor/common/services/editorWorkerService';
 import URI from 'vs/base/common/uri';
 import { IEditorGroupService } from 'vs/workbench/services/group/common/groupService';
@@ -30,8 +28,8 @@ import { registerColor } from 'vs/platform/theme/common/colorRegistry';
 import { localize } from 'vs/nls';
 import { Color, RGBA } from 'vs/base/common/color';
 import { ICodeEditor, IEditorMouseEvent, MouseTargetType } from 'vs/editor/browser/editorBrowser';
-import { editorContribution } from 'vs/editor/browser/editorBrowserExtensions';
-import { editorAction, ServicesAccessor, EditorAction, CommonEditorRegistry } from 'vs/editor/common/editorCommonExtensions';
+import { registerEditorContribution } from 'vs/editor/browser/editorBrowserExtensions';
+import { registerEditorAction, ServicesAccessor, EditorAction, CommonEditorRegistry } from 'vs/editor/common/editorCommonExtensions';
 import { PeekViewWidget, getOuterEditor } from 'vs/editor/contrib/referenceSearch/browser/peekViewWidget';
 import { IContextKeyService, IContextKey, ContextKeyExpr, RawContextKey } from 'vs/platform/contextkey/common/contextkey';
 import { EditorContextKeys } from 'vs/editor/common/editorContextKeys';
@@ -194,7 +192,7 @@ class DirtyDiffWidget extends PeekViewWidget {
 		private model: DirtyDiffModel,
 		@IThemeService private themeService: IThemeService,
 		@IInstantiationService private instantiationService: IInstantiationService,
-		@IMenuService private menuService: IMenuService,
+		@IMenuService menuService: IMenuService,
 		@IKeybindingService private keybindingService: IKeybindingService,
 		@IMessageService private messageService: IMessageService,
 		@IContextKeyService contextKeyService: IContextKeyService
@@ -363,7 +361,6 @@ class DirtyDiffWidget extends PeekViewWidget {
 	}
 }
 
-@editorAction
 export class ShowPreviousChangeAction extends EditorAction {
 
 	constructor() {
@@ -396,8 +393,8 @@ export class ShowPreviousChangeAction extends EditorAction {
 		controller.previous();
 	}
 }
+registerEditorAction(ShowPreviousChangeAction);
 
-@editorAction
 export class ShowNextChangeAction extends EditorAction {
 
 	constructor() {
@@ -430,6 +427,7 @@ export class ShowNextChangeAction extends EditorAction {
 		controller.next();
 	}
 }
+registerEditorAction(ShowNextChangeAction);
 
 KeybindingsRegistry.registerCommandAndKeybindingRule({
 	id: 'closeDirtyDiff',
@@ -454,7 +452,6 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 	}
 });
 
-@editorContribution
 export class DirtyDiffController implements IEditorContribution {
 
 	private static ID = 'editor.contrib.dirtydiff';
@@ -467,7 +464,6 @@ export class DirtyDiffController implements IEditorContribution {
 
 	private model: DirtyDiffModel | null = null;
 	private widget: DirtyDiffWidget | null = null;
-	private currentLineNumber: number = -1;
 	private currentIndex: number = -1;
 	private readonly isDirtyDiffVisible: IContextKey<boolean>;
 	private session: IDisposable = EmptyDisposable;
@@ -478,7 +474,6 @@ export class DirtyDiffController implements IEditorContribution {
 	constructor(
 		private editor: ICodeEditor,
 		@IContextKeyService contextKeyService: IContextKeyService,
-		@IThemeService private themeService: IThemeService,
 		@IInstantiationService private instantiationService: IInstantiationService
 	) {
 		this.enabled = !contextKeyService.getContextKeyValue('isInDiffEditor');
@@ -510,9 +505,6 @@ export class DirtyDiffController implements IEditorContribution {
 			this.currentIndex = rot(this.currentIndex + 1, this.model.changes.length);
 		}
 
-		const change = this.model.changes[this.currentIndex];
-		this.currentLineNumber = change.modifiedStartLineNumber;
-
 		this.widget.showChange(this.currentIndex);
 	}
 
@@ -526,9 +518,6 @@ export class DirtyDiffController implements IEditorContribution {
 		} else {
 			this.currentIndex = rot(this.currentIndex - 1, this.model.changes.length);
 		}
-
-		const change = this.model.changes[this.currentIndex];
-		this.currentLineNumber = change.modifiedStartLineNumber;
 
 		this.widget.showChange(this.currentIndex);
 	}
@@ -872,10 +861,7 @@ export class DirtyDiffModel {
 	constructor(
 		private _editorModel: IModel,
 		@ISCMService private scmService: ISCMService,
-		@IModelService private modelService: IModelService,
 		@IEditorWorkerService private editorWorkerService: IEditorWorkerService,
-		@IWorkbenchEditorService private editorService: IWorkbenchEditorService,
-		@IWorkspaceContextService private contextService: IWorkspaceContextService,
 		@ITextModelService private textModelResolverService: ITextModelService
 	) {
 		this.diffDelayer = new ThrottledDelayer<IChange[]>(200);
@@ -1018,10 +1004,8 @@ export class DirtyDiffWorkbenchController implements ext.IWorkbenchContribution,
 	private disposables: IDisposable[] = [];
 
 	constructor(
-		@IMessageService private messageService: IMessageService,
 		@IWorkbenchEditorService private editorService: IWorkbenchEditorService,
 		@IEditorGroupService editorGroupService: IEditorGroupService,
-		@IWorkspaceContextService private contextService: IWorkspaceContextService,
 		@IInstantiationService private instantiationService: IInstantiationService
 	) {
 		this.disposables.push(editorGroupService.onEditorsChanged(() => this.onEditorsChanged()));
@@ -1094,6 +1078,8 @@ export class DirtyDiffWorkbenchController implements ext.IWorkbenchContribution,
 		this.items = null;
 	}
 }
+
+registerEditorContribution(DirtyDiffController);
 
 registerThemingParticipant((theme: ITheme, collector: ICssStyleCollector) => {
 	const editorGutterModifiedBackgroundColor = theme.getColor(editorGutterModifiedBackground);
