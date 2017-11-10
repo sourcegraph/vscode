@@ -33,6 +33,7 @@ import { IUpdateService, State as UpdateState } from 'vs/platform/update/common/
 import * as semver from 'semver';
 import { OS, isLinux, isWindows } from 'vs/base/common/platform';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
+import { VIEWLET_ID } from 'vs/workbench/parts/management/common/management';
 
 class ApplyUpdateAction extends Action {
 	constructor( @IUpdateService private updateService: IUpdateService) {
@@ -368,7 +369,7 @@ export class UpdateContribution implements IGlobalActivity {
 
 		if (isUpdateAvailable) {
 			const badge = new NumberBadge(1, () => nls.localize('updateIsReady', "New {0} update available.", product.nameShort));
-			this.badgeDisposable = this.activityService.showActivity(this.id, badge);
+			this.badgeDisposable = this.activityService.showActivity(VIEWLET_ID, badge);
 		}
 	}
 

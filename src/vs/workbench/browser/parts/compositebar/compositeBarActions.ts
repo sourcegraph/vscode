@@ -203,6 +203,10 @@ export class ActivityActionItem extends BaseActionItem {
 	}
 
 	protected updateBadge(badge: IBadge): void {
+		if (!this.$badgeContent) {
+			return;
+		}
+
 		this.$badgeContent.empty();
 		this.$badge.hide();
 
