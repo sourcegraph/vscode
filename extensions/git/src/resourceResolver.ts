@@ -203,7 +203,7 @@ class Resolver {
 		// forwarded to revision.
 		const reposAtRevision = await this.filterReposAtRevision(resource, repos);
 		if (reposAtRevision.length > 0) {
-			const repo = await this.pick(resource, repos, { autoSelectWorkspaceRoots: true });
+			const repo = await this.pick(resource, reposAtRevision, { autoSelectWorkspaceRoots: true });
 			// TODO(keegan) What if the working copy is dirty?
 			await this.fastForward(repo, resource);
 			return repo.root;
