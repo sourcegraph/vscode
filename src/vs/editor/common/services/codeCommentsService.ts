@@ -96,13 +96,18 @@ export interface IFileComments extends IEventDisposable {
 	/**
 	 * Creates a new thread and comment on the file at the given range.
 	 */
-	createDraftThread(editor: ICommonCodeEditor): IDraftThreadComments;
+	createDraftThread(editor: ICommonCodeEditor, kind: DraftThreadKind): IDraftThreadComments;
 
 	/**
 	 * Refreshes threads from the network.
 	 * onDidChangeThreads will fire after the threads load.
 	 */
 	refreshThreads(): TPromise<void>;
+}
+
+export enum DraftThreadKind {
+	Comment,
+	ShareLink
 }
 
 /**
@@ -148,16 +153,14 @@ export interface IDraftThreadComments extends IEventDisposable {
 	/**
 	 * True if the content of the draft is the default initial state.
 	 */
-	readonly isDefaultContent: boolean;
+	readonly isDefaultContentOrEmpty: boolean;
 
 	/**
 	 * Submit the draft. Returns the created IThreadComments or undefined if
 	 * the draft cannot be created due to incorrect configuration settings.
 	 * See ShareContextConfigurationAction.
-	 * @param allowNoComment allows submitting the thread without a comment
-	 * (for creating code snippets).
 	 */
-	submit(allowNoComment?: boolean): TPromise<IThreadComments | undefined>;
+	submit(): TPromise<IThreadComments | undefined>;
 }
 
 /**

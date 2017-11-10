@@ -5,7 +5,7 @@
 'use strict';
 
 import { localize } from 'vs/nls';
-import { IThreads, ICodeCommentsService, Filter, IFileComments, IThreadComments, IComment, IDraftThreadComments } from 'vs/editor/common/services/codeCommentsService';
+import { IThreads, ICodeCommentsService, Filter, IFileComments, IThreadComments, IComment, IDraftThreadComments, DraftThreadKind } from 'vs/editor/common/services/codeCommentsService';
 import { Range } from 'vs/editor/common/core/range';
 import Event, { Emitter, anyEvent } from 'vs/base/common/event';
 import { VSDiff as Diff } from 'vs/workbench/services/codeComments/common/vsdiff';
@@ -477,8 +477,8 @@ export class FileComments extends Disposable implements IFileComments {
 	/**
 	 * See documentation on IFileComments.
 	 */
-	public createDraftThread(editor: ICommonCodeEditor): DraftThreadComments {
-		const draft = this.instantiationService.createInstance(DraftThreadComments, this.commentsService, this.git, editor);
+	public createDraftThread(editor: ICommonCodeEditor, kind: DraftThreadKind): DraftThreadComments {
+		const draft = this.instantiationService.createInstance(DraftThreadComments, this.commentsService, this.git, editor, kind);
 		draft.onDidSubmit(thread => {
 			draft.dispose();
 			this.updateDisplayRanges();
@@ -923,6 +923,7 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 		private commentsService: CodeCommentsService,
 		private git: Git,
 		private editor: ICommonCodeEditor,
+		private kind: DraftThreadKind,
 		@IMessageService messageService: IMessageService,
 		@IInstantiationService private instantiationService: IInstantiationService,
 		@IRemoteService private remoteService: IRemoteService,
@@ -931,7 +932,9 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 		@ISCMService private scmService: ISCMService,
 	) {
 		super();
-		this.content = this.defaultContent;
+		if (this.kind === DraftThreadKind.Comment) {
+			this.content = this.defaultContent;
+		}
 		this.displayRange = this.getNonEmptySelection(editor);
 		this.model = editor.getModel();
 
@@ -945,8 +948,9 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 		}));
 	}
 
-	public get isDefaultContent(): boolean {
-		return this.content.trim() === this.defaultContent.trim();
+	public get isDefaultContentOrEmpty(): boolean {
+		const trimmedContent = this.content.trim();
+		return !trimmedContent || trimmedContent === this.defaultContent.trim();
 	}
 
 	private get defaultContent(): string {
@@ -963,17 +967,16 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 		return this._submitting;
 	}
 
-	public submit(allowNoComment?: boolean): TPromise<IThreadComments | undefined> {
-		return TPromise.wrap(this.submitAsync(allowNoComment));
+	public submit(): TPromise<IThreadComments | undefined> {
+		return TPromise.wrap(this.submitAsync());
 	}
 
-	private async submitAsync(allowNoComment?: boolean): Promise<IThreadComments | undefined> {
+	private async submitAsync(): Promise<IThreadComments | undefined> {
 		if (this._submitting) {
 			throw new Error(localize('alreadySubmitting', "Comment is already being submitted."));
 		}
 
-		const contents = this.content;
-		if (!allowNoComment && !contents.length) {
+		if (this.kind === DraftThreadKind.Comment && this.isDefaultContentOrEmpty) {
 			throw new Error(localize('emptyCommentError', "Comment can not be empty."));
 		}
 
@@ -987,7 +990,7 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 			const root = endsWithSlash(repository.provider.rootUri.path);
 			const file = this.model.uri.path.substr(root.length);
 
-			const canComment = await this.instantiationService.createInstance(ShareContextConfigurationAction, ShareContextConfigurationAction.ID, ShareContextConfigurationAction.LABEL, branch, allowNoComment).run();
+			const canComment = await this.instantiationService.createInstance(ShareContextConfigurationAction, ShareContextConfigurationAction.ID, ShareContextConfigurationAction.LABEL, branch, this.kind === DraftThreadKind.ShareLink).run();
 			if (!canComment) {
 				return undefined;
 			}
@@ -1055,7 +1058,7 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 					startCharacter: range.startColumn,
 					endCharacter: range.endColumn,
 					rangeLength,
-					contents,
+					contents: this.content,
 					lines,
 				});
 
@@ -1068,7 +1071,7 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 			this._submitting = false;
 			this.didChangeSubmitting.fire();
 		}
-	};
+	}
 
 	private getShareContext(): GQL.IThreadLinesInput | undefined {
 		const { remote } = this.configurationService.getConfiguration<IRemoteConfiguration>();

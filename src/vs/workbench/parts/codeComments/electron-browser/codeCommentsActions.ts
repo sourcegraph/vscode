@@ -12,7 +12,7 @@ import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/edi
 import { TPromise } from 'vs/base/common/winjs.base';
 import { ICommonCodeEditor } from 'vs/editor/common/editorCommon';
 import { ServicesAccessor, registerEditorAction, EditorAction } from 'vs/editor/common/editorCommonExtensions';
-import { ICodeCommentsService } from 'vs/editor/common/services/codeCommentsService';
+import { ICodeCommentsService, DraftThreadKind } from 'vs/editor/common/services/codeCommentsService';
 import { CodeCommentsController } from 'vs/workbench/parts/codeComments/electron-browser/codeCommentsController';
 import { KeyCode, KeyMod } from 'vs/base/common/keyCodes';
 import { EditorContextKeys } from 'vs/editor/common/editorContextKeys';
@@ -66,7 +66,7 @@ export class CreateCodeCommentAction extends EditorAction {
 		const codeCommentsService = accessor.get(ICodeCommentsService);
 		const model = editor.getModel();
 		const fileComments = codeCommentsService.getFileComments(model.uri);
-		const draftThread = fileComments.createDraftThread(editor);
+		const draftThread = fileComments.createDraftThread(editor, DraftThreadKind.Comment);
 		CodeCommentsController.get(editor).showDraftThreadWidget(draftThread, true);
 		return TPromise.wrap(true);
 	}
@@ -108,9 +108,9 @@ export class ShareSnippetAction extends EditorAction {
 
 		const model = editor.getModel();
 		const fileComments = codeCommentsService.getFileComments(model.uri);
-		const draftThread = fileComments.createDraftThread(editor);
+		const draftThread = fileComments.createDraftThread(editor, DraftThreadKind.ShareLink);
 		try {
-			const threadComments = await draftThread.submit(true);
+			const threadComments = await draftThread.submit();
 			if (!threadComments) {
 				return;
 			}
