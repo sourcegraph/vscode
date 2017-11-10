@@ -62,7 +62,7 @@ export class SignInModal extends Modal {
 		$('div').text(localize('sg.signInForm.title', 'Sign in or sign up')).addClass('modal-title').appendTo($form);
 
 		const url = urlToSignIn(this.configurationService).toString(true);
-		const $link = $('a').text(url).href(url);
+		const $link = $('a').text(url).href(url).attr('target', '_blank');
 		$('div')
 			.append($('p')
 				.text(localize('sg.signInForm.instructions1', 'Your browser has been opened to '))
