@@ -26,16 +26,6 @@ export abstract class Diff {
 	protected deletedIndex = new Map<number, LineDiff>();
 
 	/**
-	 * An index on added lines by content.
-	 */
-	protected addedIndexExact = new Map<string, LineDiff | false>();
-
-	/**
-	 * An index on added lines by content with leading and trailing whitespace removed.
-	 */
-	protected addedIndexTrim = new Map<string, LineDiff | false>();
-
-	/**
 	 * Converts a pre-diff range to a post-diff range.
 	 * It returns undefined if the content at the pre-diff range
 	 * does not exist after the diff.

@@ -45,19 +45,6 @@ export class UnifiedDiff extends Diff {
 				case '+': {
 					const lineDiff: LineDiff = { beforeLine, afterLine, content, lineDelta: 1 };
 					this.lineDiffs.push(lineDiff);
-					// If there are duplicates, we don't allow comments to move to these lines.
-					// We would have to make an arbitrary decision or attach the thread to both ranges.
-					if (this.addedIndexExact.has(content)) {
-						this.addedIndexExact.set(content, false);
-					} else {
-						this.addedIndexExact.set(content, lineDiff);
-					}
-					const trimmedContent = content.trim();
-					if (this.addedIndexTrim.has(trimmedContent)) {
-						this.addedIndexTrim.set(trimmedContent, false);
-					} else {
-						this.addedIndexTrim.set(trimmedContent, lineDiff);
-					}
 					afterLine += 1;
 					break;
 				}
