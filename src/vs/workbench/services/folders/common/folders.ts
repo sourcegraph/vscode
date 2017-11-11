@@ -19,7 +19,7 @@ export interface IFolder extends ICatalogFolder {
 	readonly genericIconClass: FolderGenericIconClass;
 	readonly state: WorkspaceFolderState;
 	readonly telemetryData: any;
-};
+}
 
 export enum WorkspaceFolderState {
 	Adding,

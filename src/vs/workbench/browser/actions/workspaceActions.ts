@@ -274,6 +274,7 @@ export class RemoveRootFolderAction extends Action {
 		@IWorkspaceEditingService private workspaceEditingService: IWorkspaceEditingService
 	) {
 		super(id, label);
+		this.class = 'remove-action';
 	}
 
 	public run(): TPromise<any> {

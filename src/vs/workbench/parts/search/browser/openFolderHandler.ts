@@ -27,7 +27,7 @@ import { IWorkspacesService } from 'vs/platform/workspaces/common/workspaces';
 import { IResourceResolverService } from 'vs/platform/resourceResolver/common/resourceResolver';
 import { IFolder, IFoldersWorkbenchService, ISearchStats, ISearchQuery } from 'vs/workbench/services/folders/common/folders';
 import { IProgressService2, ProgressLocation } from 'vs/platform/progress/common/progress';
-import { AddAndExploreWorkspaceFolderAction } from 'vs/workbench/parts/workspace/browser/folderActions';
+import { AddAndShowRootFolderInExplorerAction } from 'vs/workbench/parts/workspace/browser/folderActions';
 import * as scorer from 'vs/base/common/scorer';
 
 /**
@@ -216,24 +216,25 @@ export class FolderEntry extends QuickOpenEntry {
 		const hideWidget = (mode === Mode.OPEN);
 
 		if (mode === Mode.OPEN) {
+			const resolvedResource = this.resourceResolverService.resolveResource(this.folder.resource);
+
 			if (this.contextService.getWorkbenchState() !== WorkbenchState.WORKSPACE) {
 				// Upgrade workspace to multi-root workspace.
-				const p = this.resourceResolverService.resolveResource(this.folder.resource)
+				resolvedResource
 					.then(resolvedResource => this.workspacesService.createWorkspace([{ uri: resolvedResource }]))
-					.then(({ configPath }) => this.windowsService.openWindow([configPath]));
-				p.done(null, errors.onUnexpectedError);
+					.then(({ configPath }) => this.windowsService.openWindow([configPath]))
+					.done(null, errors.onUnexpectedError);
 				this.progressService.withProgress({
 					location: ProgressLocation.Window,
 					title: nls.localize('fetchingFolder', "Fetching {0}...", this.folder.displayPath),
-				}, () => p);
+				}, () => resolvedResource);
 				return true;
 			}
 
-
 			// Add folder as a root folder in the workspace.
-			const addAndExploreAction = this.instantiationService.createInstance(AddAndExploreWorkspaceFolderAction);
-			addAndExploreAction.folder = this.folder;
-			addAndExploreAction.run().done(null, errors.onUnexpectedError);
+			resolvedResource
+				.then(resource => this.instantiationService.createInstance(AddAndShowRootFolderInExplorerAction, resource).run())
+				.done(null, errors.onUnexpectedError);
 		} else if (mode === Mode.OPEN_IN_BACKGROUND) {
 			// Opens a window for this workspace.
 			const p = this.resourceResolverService.resolveResource(this.folder.resource)
@@ -471,7 +472,7 @@ export class OpenAnyFolderHandler extends QuickOpenHandler {
 				return resource.authority + resource.path;
 			},
 		};
-	};
+	}
 
 	public getGroupLabel(): string {
 		return nls.localize('folderSearchResults', "folder results");
