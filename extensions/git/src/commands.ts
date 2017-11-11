@@ -145,6 +145,7 @@ class AddWorktreeRemoteHeadItem extends AddWorktreeItem {
 interface CommandOptions {
 	repository?: boolean;
 	diff?: boolean;
+	external?: boolean;
 }
 
 interface Command {
@@ -527,6 +528,21 @@ export class CommandCenter {
 	@command('git.close', { repository: true })
 	async close(repository: Repository): Promise<void> {
 		this.model.close(repository);
+	}
+
+	@command('git.openRemoteRepository')
+	async openRemoteRepository(remoteUrl: string | Uri, options: { HEAD?: string }): Promise<Uri> {
+		if (typeof remoteUrl === 'string') {
+			remoteUrl = Uri.parse(remoteUrl);
+		}
+
+		if (options && options.HEAD) {
+			remoteUrl = remoteUrl.with({ query: options.HEAD });
+		}
+
+		const resource = await this.resourceResolver.resolveResource(remoteUrl);
+		await commands.executeCommand('_workbench.addRoots', [resource]);
+		return resource;
 	}
 
 	@command('git.openFile')
