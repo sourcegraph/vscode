@@ -89,7 +89,7 @@ export class CopyLocationAction extends Action {
 export class ShareLocationAction extends Action {
 
 	public static ID = 'workbench.action.shareLocation';
-	public static LABEL = nls.localize('shareLocation', "Share Cursor Position or Selection in Current File");
+	public static LABEL = nls.localize('shareLocation', "Share Current Position or Selection");
 
 	constructor(
 		id: string,
