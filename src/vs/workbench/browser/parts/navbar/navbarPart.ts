@@ -87,7 +87,7 @@ export class NavbarPart extends Part implements INavBarService, INavBarPart {
 		this.navigateForwardAction = this.instantiationService.createInstance(NavigateForwardAction, NavigateForwardAction.ID, NavigateForwardAction.LABEL);
 		this.copyLocationAction = this.instantiationService.createInstance(CopyLocationAction, CopyLocationAction.ID, CopyLocationAction.LABEL);
 		this.shareLocationAction = this.instantiationService.createInstance(ShareLocationAction, ShareLocationAction.ID, nls.localize({ key: 'shareLocationShort', comment: ['This is a shorter form of the workbench.action.shareLocation string for use on a button.'] }, "Share"));
-		this.shareLocationAction.tooltip = nls.localize('shareLocationTooltip', "Copy a shareable link to the current file ({0})", this.getKeybindingLabel(ShareLocationAction.ID));
+		this.shareLocationAction.tooltip = ShareLocationAction.LABEL;
 		this.hideNavbarAction = this.instantiationService.createInstance(HideNavbarAction, HideNavbarAction.ID, HideNavbarAction.LABEL);
 
 		this.updateNavigationEnablement();

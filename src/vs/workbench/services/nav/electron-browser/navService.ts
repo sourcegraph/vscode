@@ -24,7 +24,7 @@ import { IHistoryService } from 'vs/workbench/services/history/common/history';
 import { toResource } from 'vs/workbench/common/editor';
 import { ISCMService } from 'vs/workbench/services/scm/common/scm';
 import * as querystring from 'querystring';
-import { parseSelection, formatSelection } from 'vs/base/common/urlRoutes';
+import { parseSelection } from 'vs/base/common/urlRoutes';
 import { getCodeEditor } from 'vs/editor/common/services/codeEditorService';
 import { ISelection } from 'vs/editor/common/core/selection';
 import { IMessageService } from 'vs/platform/message/common/message';
@@ -112,6 +112,9 @@ export class NavService extends Disposable implements INavService {
 		}
 
 		// Extract the non-shareable URI from a shareable about.sourcegraph.com URL.
+		//
+		// TODO(sqs): these static about.sourcegraph.com share URLs were removed, but we'll
+		// keep this in for a couple weeks for backcompat.
 		if (location.scheme === 'https' && location.authority === 'about.sourcegraph.com' && location.path.indexOf('/open') === 0) {
 			location = URI.parse(`${product.urlProtocol}:${decodeURIComponent(location.fragment)}`);
 		}
@@ -224,47 +227,6 @@ export class NavService extends Disposable implements INavService {
 
 	public getLocation(): URI {
 		return this.location;
-	}
-
-	public getShareableLocation(): TPromise<string> {
-		const { stack, index } = this.historyService.getStack();
-		const entry = stack[index];
-
-		// TODO(sqs): support diffs
-		const input = this.editorService.createInput(entry.input as (IEditorInput & IResourceInputType));
-		const resource = toResource(input, { filter: 'file', supportSideBySide: true });
-		if (!resource) {
-			throw new Error(nls.localize('noResource', "Unable to determine the file or resource."));
-		}
-
-		const repository = this.scmService.getRepositoryForResource(resource);
-		if (!repository || !repository.provider.remoteResources || repository.provider.remoteResources.length === 0) {
-			throw new Error(nls.localize('noRepository', "Unable to determine the repository, which is necessary to make a shareable URL."));
-		}
-
-		// We need to pick a remoteResource URI. We prefer the current branch's remote, so we try to get that first.
-		return repository.provider.executeCommand(['ls-remote', '--get-url']).then(stdout => {
-			return stdout.trim();
-		}, () => '').then(remote => {
-			const query: HandledURI = {
-				repo: remote || repository.provider.remoteResources[0].toString(),
-				vcs: 'git',
-				path: paths.relative(repository.provider.rootUri.fsPath, resource.fsPath),
-			};
-
-			// Get the selection directly from the editor because the history service only records
-			// positions, not selections.
-			const control = getCodeEditor(this.editorService.getActiveEditor());
-			if (control) {
-				query.selection = control.getSelections().map(formatSelection).filter(s => !!s).join(',') || undefined;
-			}
-			if (repository.provider.revision) {
-				query.revision = repository.provider.revision.id;
-			}
-
-			const queryParts = Object.keys(query).filter(k => !!query[k]).map(k => k + '=' + encodeURIComponent(query[k]));
-			return 'https://about.sourcegraph.com/open#open?' + queryParts.join('&');
-		});
 	}
 
 	private onHistoryChange(): void {

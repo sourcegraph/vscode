@@ -25,6 +25,11 @@ import { IClipboardService } from 'vs/platform/clipboard/common/clipboardService
 import { IConfigurationService, ConfigurationTarget } from 'vs/platform/configuration/common/configuration';
 import { IPartService, Parts } from 'vs/workbench/services/part/common/partService';
 import { NavbarPart } from 'vs/workbench/browser/parts/navbar/navbarPart';
+import { ICodeCommentsService, DraftThreadKind } from 'vs/editor/common/services/codeCommentsService';
+import { ICommonCodeEditor } from 'vs/editor/common/editorCommon';
+import { ICodeEditor } from 'vs/editor/browser/editorBrowser';
+import { IOpenerService } from 'vs/platform/opener/common/opener';
+import URI from 'vs/base/common/uri';
 
 export class FocusLocationBarAction extends Action {
 
@@ -84,22 +89,38 @@ export class CopyLocationAction extends Action {
 export class ShareLocationAction extends Action {
 
 	public static ID = 'workbench.action.shareLocation';
-	public static LABEL = nls.localize('shareLocation', "Copy Shareable URL to Current File");
+	public static LABEL = nls.localize('shareLocation', "Share Cursor Position or Selection in Current File");
 
 	constructor(
 		id: string,
 		label: string,
-		@INavService private navService: INavService,
 		@INavBarService private navBarService: INavBarService,
 		@IClipboardService private clipboardService: IClipboardService,
 		@IPartService private partService: IPartService,
+		@ICodeCommentsService private codeCommentsService: ICodeCommentsService,
+		@IWorkbenchEditorService private editorService: IWorkbenchEditorService,
+		@IOpenerService private openerService: IOpenerService,
 	) {
 		super(id, label, 'share-location-action');
 	}
 
-	public run(): TPromise<any> {
-		return this.navService.getShareableLocation().then(location => {
-			this.clipboardService.writeText(location);
+	public async run(): TPromise<any> {
+		const editor = this.editorService.getActiveEditor();
+		if (!editor) {
+			return;
+		}
+
+		const editorControl: ICommonCodeEditor = editor.getControl() as ICodeEditor;
+		const model = editorControl.getModel();
+		const fileComments = this.codeCommentsService.getFileComments(model.uri);
+		const draftThread = fileComments.createDraftThread(editorControl, DraftThreadKind.ShareLink);
+		try {
+			const threadComments = await draftThread.submit();
+			if (!threadComments) {
+				return;
+			}
+			const sharedUrl = await this.codeCommentsService.shareThread(threadComments.id);
+			this.clipboardService.writeText(sharedUrl);
 
 			if (this.partService.isVisible(Parts.NAVBAR_PART)) {
 				const navbarPart = this.navBarService as NavbarPart;
@@ -107,7 +128,12 @@ export class ShareLocationAction extends Action {
 					navbarPart.locationBarInput.showMessage(nls.localize('copiedShareableLocation', "Copied shareable link to current file and position."));
 				}
 			}
-		});
+
+			await this.openerService.open(URI.parse(sharedUrl));
+		} catch (e) {
+			draftThread.dispose();
+			throw e;
+		}
 	}
 }
 
