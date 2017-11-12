@@ -57,7 +57,7 @@ import { getPathLabel } from 'vs/base/common/labels';
 import { extractResources } from 'vs/workbench/browser/editor';
 import { ActionBar, ActionItem } from 'vs/base/browser/ui/actionbar/actionbar';
 import { EventType } from 'vs/base/common/events';
-import { RemoveWorkspaceFolderExplorerAction } from 'vs/workbench/parts/workspace/browser/folderActions';
+import { RemoveRootFolderAction } from 'vs/workbench/browser/actions/workspaceActions';
 import { ISCMService, ISCMRepository } from 'vs/workbench/services/scm/common/scm';
 import { ICommandService } from 'vs/platform/commands/common/commands';
 import { Command } from 'vs/editor/common/modes';
@@ -413,7 +413,7 @@ export class FileRenderer implements IRenderer {
 			}
 
 			if (stat.isRoot) {
-				const removeAction = this.instantiationService.createInstance(RemoveWorkspaceFolderExplorerAction, stat.resource);
+				const removeAction = this.instantiationService.createInstance(RemoveRootFolderAction, stat.resource, RemoveRootFolderAction.ID, RemoveRootFolderAction.LABEL);
 				newActions.push(removeAction);
 				templateData.actions.push([removeAction], { label: false, icon: true });
 			}

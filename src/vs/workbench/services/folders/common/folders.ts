@@ -6,7 +6,6 @@
 
 import URI from 'vs/base/common/uri';
 import { TPromise } from 'vs/base/common/winjs.base';
-import Event from 'vs/base/common/event';
 import { ICatalogFolder, FolderGenericIconClass } from 'vs/platform/folders/common/folderCatalog';
 import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
 
@@ -17,20 +16,7 @@ import { createDecorator } from 'vs/platform/instantiation/common/instantiation'
 export interface IFolder extends ICatalogFolder {
 	readonly id: string;
 	readonly genericIconClass: FolderGenericIconClass;
-	readonly state: WorkspaceFolderState;
 	readonly telemetryData: any;
-};
-
-export enum WorkspaceFolderState {
-	Adding,
-	Active,
-	Removing,
-	Inactive
-}
-
-export enum FolderOperation {
-	Adding,
-	Removing
 }
 
 /**
@@ -73,17 +59,6 @@ export interface IFoldersWorkbenchService {
 	_serviceBrand: any;
 
 	/**
-	 * Fired whenever any folder catalog data changes (e.g., a folder is added or removed).
-	 */
-	onChange: Event<void>;
-
-	/**
-	 * Returns an array of of the current workspace's folders, with additional catalog
-	 * information associated if available.
-	 */
-	getCurrentWorkspaceFolders(): TPromise<IFolder[]>;
-
-	/**
 	 * Searches the catalog and returns matching folders.
 	 */
 	search(query: ISearchQuery): TPromise<ISearchComplete>;
@@ -104,17 +79,6 @@ export interface IFoldersWorkbenchService {
 	 * The resolved URIs of the inputs are returned.
 	 */
 	addFoldersAsWorkspaceRootFolders(folders: (IFolder | URI)[]): TPromise<URI[]>;
-
-	/**
-	 * Removes the folders as workspace root folders.
-	 */
-	removeFoldersAsWorkspaceRootFolders(folders: IFolder[]): TPromise<void>;
-
-	/**
-	 * Returns the workspace root folder, if any, that is the local clone of
-	 * the remote catalog folder.
-	 */
-	getWorkspaceFolderForCatalogFolder(catalogFolder: IFolder): URI | undefined;
 }
 
 export const FoldersConfigurationKey = 'folders';

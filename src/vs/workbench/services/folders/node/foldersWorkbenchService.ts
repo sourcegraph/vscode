@@ -5,22 +5,17 @@
 
 'use strict';
 
-import Event, { Emitter, filterEvent } from 'vs/base/common/event';
+import Event, { Emitter } from 'vs/base/common/event';
 import * as paths from 'vs/base/common/paths';
-import * as arrays from 'vs/base/common/arrays';
 import { localize } from 'vs/nls';
 import { Schemas } from 'vs/base/common/network';
-import { assign } from 'vs/base/common/objects';
 import { TPromise } from 'vs/base/common/winjs.base';
-import { IDisposable, dispose, combinedDisposable } from 'vs/base/common/lifecycle';
-import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
+import { IDisposable, dispose } from 'vs/base/common/lifecycle';
 import { IMessageService, Severity, CloseAction } from 'vs/platform/message/common/message';
 import URI from 'vs/base/common/uri';
-import { IFolder, ISearchQuery, ISearchComplete, ISearchStats, WorkspaceFolderState, FolderOperation, IFoldersWorkbenchService, IFolderConfiguration, FoldersConfigurationKey } from 'vs/workbench/services/folders/common/folders';
+import { IFolder, ISearchQuery, ISearchComplete, ISearchStats, IFoldersWorkbenchService, IFolderConfiguration, FoldersConfigurationKey } from 'vs/workbench/services/folders/common/folders';
 import { IWorkspaceContextService, WorkbenchState, IWorkspaceFoldersChangeEvent, IWorkspaceFolder } from 'vs/platform/workspace/common/workspace';
 import { IFolderCatalogService, ICatalogFolder, FolderGenericIconClass } from 'vs/platform/folders/common/folderCatalog';
-import { ISCMService, ISCMRepository } from 'vs/workbench/services/scm/common/scm';
-import { IProgressService2, IProgressOptions, ProgressLocation } from 'vs/platform/progress/common/progress';
 import { IWorkspaceEditingService } from 'vs/workbench/services/workspace/common/workspaceEditing';
 import { IConfigurationService, ConfigurationTarget } from 'vs/platform/configuration/common/configuration';
 import { IResourceResolverService } from 'vs/platform/resourceResolver/common/resourceResolver';
@@ -29,24 +24,15 @@ import { IExtensionService } from 'vs/platform/extensions/common/extensions';
 import { ITaskService } from 'vs/workbench/parts/tasks/common/taskService';
 import { Action } from 'vs/base/common/actions';
 
-interface IWorkspaceFolderStateProvider {
-	(folder: Folder): WorkspaceFolderState;
-}
-
 class Folder implements IFolder {
 
 	constructor(
-		private stateProvider: IWorkspaceFolderStateProvider,
 		public resource: URI,
 		public catalog: ICatalogFolder = null
 	) { }
 
 	get id(): string {
 		return this.resource.toString();
-	}
-
-	get state(): WorkspaceFolderState {
-		return this.stateProvider(this);
 	}
 
 	get telemetryData(): any {
@@ -152,29 +138,6 @@ class Folder implements IFolder {
 	}
 }
 
-/**
- * An operation in progress on a folder.
- */
-interface IActiveFolderOperation {
-	operation: FolderOperation;
-
-	/**
-	 * The folder that this operation is affecting.
-	 */
-	folder: IFolder;
-
-	start: Date;
-}
-
-function toTelemetryEventName(operation: FolderOperation) {
-	switch (operation) {
-		case FolderOperation.Adding: return 'folderCatalog:add';
-		case FolderOperation.Removing: return 'folderCatalog:remove';
-	}
-
-	return '';
-}
-
 type ICacheEntry = {
 	stale: boolean;
 	result: TPromise<ISearchComplete> | ISearchComplete;
@@ -184,9 +147,6 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 
 	_serviceBrand: any;
 
-	private adding: IActiveFolderOperation[] = [];
-	private removing: IActiveFolderOperation[] = [];
-	private stateProvider: IWorkspaceFolderStateProvider;
 	private disposables: IDisposable[] = [];
 
 	private _onChange: Emitter<void> = new Emitter<void>();
@@ -200,54 +160,27 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 	private caches = new Map<string, Map<string, ICacheEntry>>();
 
 	constructor(
-		@ITelemetryService private telemetryService: ITelemetryService,
 		@IMessageService private messageService: IMessageService,
 		@IWorkspaceContextService private contextService: IWorkspaceContextService,
 		@IFolderCatalogService private folderCatalogService: IFolderCatalogService,
-		@ISCMService private scmService: ISCMService,
-		@IProgressService2 private progressService: IProgressService2,
 		@IWorkspaceEditingService private workspaceEditingService: IWorkspaceEditingService,
 		@IConfigurationService private configurationService: IConfigurationService,
 		@IResourceResolverService private resourceResolverService: IResourceResolverService,
 		@IExtensionService private extensionService: IExtensionService,
 		@ITaskService private taskService: ITaskService,
 	) {
-		this.stateProvider = folder => this.getFolderState(folder);
-
 		this.registerListeners();
 	}
 
 	private registerListeners(): void {
-		// Fire onChange even for folder operations that aren't monitored by
-		// monitorFolderOperation.
 		this.disposables.push(this.contextService.onDidChangeWorkspaceFolders(e => this.handleWorkspaceFoldersChanged(e)));
-		this.disposables.push(this.scmService.onDidAddRepository(repository => this.onDidAddRepository(repository)));
-		this.disposables.push(this.scmService.onDidChangeRepository(() => this._onChange.fire()));
-		for (const repository of this.scmService.repositories) {
-			this.onDidAddRepository(repository);
+		if (this.contextService.getWorkbenchState() !== WorkbenchState.EMPTY) {
+			this.handleWorkspaceFoldersChanged({
+				added: this.contextService.getWorkspace().folders,
+				removed: [],
+				changed: [],
+			});
 		}
-	}
-
-	private onDidAddRepository(repository: ISCMRepository): void {
-		this._onChange.fire();
-
-		const changeDisposable = repository.provider.onDidChange(() => {
-			this._onChange.fire();
-		});
-
-		const onDidRemove = filterEvent(this.scmService.onDidRemoveRepository, e => e === repository);
-		const removeDisposable = onDidRemove(() => {
-			disposable.dispose();
-			this.disposables = this.disposables.filter(d => d !== removeDisposable);
-		});
-
-		const disposable = combinedDisposable([changeDisposable, removeDisposable]);
-		this.disposables.push(disposable);
-	}
-
-	public getCurrentWorkspaceFolders(): TPromise<IFolder[]> {
-		const folders = (this.contextService.getWorkbenchState() === WorkbenchState.WORKSPACE ? this.contextService.getWorkspace().folders : []);
-		return this.populateCatalogInfo(folders.map(folder => new Folder(this.stateProvider, folder.uri)));
 	}
 
 	/**
@@ -303,7 +236,7 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 	private doSearch(query: ISearchQuery): TPromise<ISearchComplete> {
 		return this.folderCatalogService.search(query.value).then(results => {
 			return {
-				results: results.map(result => new Folder(this.stateProvider, result.resource, result)),
+				results: results.map(result => new Folder(result.resource, result)),
 				stats: {} as ISearchStats,
 			};
 		});
@@ -348,23 +281,6 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 		return TPromise.as(void 0);
 	}
 
-	private populateCatalogInfo(folders: Folder[]): TPromise<IFolder[]> {
-		return TPromise.join(folders.filter(folder => !folder.catalog).map(folder => {
-			return this.folderCatalogService.resolveFolder(folder.resource)
-				.then(result => {
-					if (!folder.catalog && result) {
-						folder.catalog = result;
-					}
-					return folder;
-				}, err => {
-					if (folder.resource.scheme === Schemas.file) {
-						return folder;
-					}
-					throw err;
-				});
-		}));
-	}
-
 	public async addFoldersAsWorkspaceRootFolders(anyFolders: (IFolder | URI)[]): TPromise<URI[]> {
 		// Caution: The order of operations here is important and changes may cause subtle errors.
 		// Any change to workspace configuration settings will cause the extension host
@@ -396,98 +312,6 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 		await this.workspaceEditingService.addFolders(uris.map(uri => ({ uri })));
 		await this.configurationService.reloadConfiguration();
 		return uris;
-	}
-
-	public removeFoldersAsWorkspaceRootFolders(folders: IFolder[]): TPromise<void> {
-		const rootsToRemove = arrays.coalesce(folders.map(folder => this.getWorkspaceFolderForCatalogFolder(folder)));
-
-		const promise = this.workspaceEditingService.removeFolders(rootsToRemove)
-			.then<void>(() => this.configurationService.reloadConfiguration());
-		for (const folder of folders) {
-			this.monitorFolderOperation(folder, FolderOperation.Removing, promise);
-		}
-
-		return promise;
-	}
-
-	private monitorFolderOperation(folder: IFolder, operation: FolderOperation, promise: TPromise<any>): void {
-		const op: IActiveFolderOperation = { operation, folder, start: new Date() };
-
-		let onDone: (success: boolean) => void;
-		switch (operation) {
-			case FolderOperation.Adding:
-				// Show progress while adding because it can take a while.
-				let options: IProgressOptions = {
-					location: ProgressLocation.Window,
-					title: localize('addingFolder', "Adding {0}...", folder.displayPath),
-				};
-				this.progressService.withProgress(options, () => promise);
-
-				this.adding.push(op);
-				onDone = (success: boolean) => {
-					this.adding = this.adding.filter(e => e !== op);
-					this._onChange.fire();
-					this.reportTelemetry(op, success);
-				};
-				break;
-
-			case FolderOperation.Removing:
-				this.removing.push(op);
-				onDone = (success: boolean) => {
-					this.removing = this.removing.filter(e => e !== op);
-					this._onChange.fire();
-					this.reportTelemetry(op, success);
-				};
-				break;
-		}
-
-		this._onChange.fire();
-		promise.done(onDone, onDone);
-	}
-
-	public getWorkspaceFolderForCatalogFolder(catalogFolder: IFolder): URI | undefined {
-		if (catalogFolder.resource.scheme === Schemas.file) {
-			return catalogFolder.resource;
-		}
-
-		if (this.contextService.getWorkbenchState() !== WorkbenchState.WORKSPACE) {
-			return undefined;
-		}
-
-		for (const folder of this.contextService.getWorkspace().folders) {
-			const repository = this.scmService.getRepositoryForResource(folder.uri);
-			if (repository && repository.provider && repository.provider.remoteResources) {
-				for (const remoteResource of repository.provider.remoteResources) {
-					if (catalogFolder.resource.toString() === remoteResource.toString() ||
-						remoteResourcesProbablyEquivalent(catalogFolder.cloneUrl, remoteResource)) {
-						return folder.uri;
-					}
-				}
-			}
-		}
-
-		return undefined;
-	}
-
-	private getFolderState(folder: Folder): WorkspaceFolderState {
-		if (this.adding.some(op => op.folder.id === folder.id)) {
-			return WorkspaceFolderState.Adding;
-		}
-
-		if (this.removing.some(op => op.folder.id === folder.id)) {
-			return WorkspaceFolderState.Removing;
-		}
-
-		const isActive = !!this.getWorkspaceFolderForCatalogFolder(folder);
-		return isActive ? WorkspaceFolderState.Active : WorkspaceFolderState.Inactive;
-	}
-
-	private reportTelemetry(active: IActiveFolderOperation, success: boolean): void {
-		const data = active.folder.telemetryData;
-		const duration = new Date().getTime() - active.start.getTime();
-		const eventName = toTelemetryEventName(active.operation);
-
-		this.telemetryService.publicLog(eventName, assign(data, { success, duration }));
 	}
 
 	private async handleWorkspaceFoldersChanged(e: IWorkspaceFoldersChangeEvent): Promise<void> {
@@ -541,25 +365,4 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 	dispose(): void {
 		this.disposables = dispose(this.disposables);
 	}
-}
-
-/**
- * Match two resources that probably represent the same repository clone URL. For example,
- * git://github.com/gorilla/mux and ssh://git@github.com/gorilla/mux.git are "probably equivalent".
- */
-function remoteResourcesProbablyEquivalent(a: URI, b: URI): boolean {
-	const stripUserinfo = (authority: string): string => {
-		const idx = authority.indexOf('@');
-		if (idx === -1) {
-			return authority;
-		}
-		return authority.slice(idx + 1);
-	};
-
-	const stripVCSPathSuffix = (path: string): string => {
-		return path.replace(/\.(git|hg|svn)$/i, '');
-	};
-
-	return stripUserinfo(a.authority).toLowerCase() === stripUserinfo(b.authority).toLowerCase() &&
-		stripVCSPathSuffix(a.path).toLowerCase() === stripVCSPathSuffix(b.path).toLowerCase();
 }
