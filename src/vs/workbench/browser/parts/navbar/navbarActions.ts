@@ -27,9 +27,9 @@ import { IPartService, Parts } from 'vs/workbench/services/part/common/partServi
 import { NavbarPart } from 'vs/workbench/browser/parts/navbar/navbarPart';
 import { ICodeCommentsService, DraftThreadKind } from 'vs/editor/common/services/codeCommentsService';
 import { ICommonCodeEditor } from 'vs/editor/common/editorCommon';
-import { ICodeEditor } from 'vs/editor/browser/editorBrowser';
 import { IOpenerService } from 'vs/platform/opener/common/opener';
 import URI from 'vs/base/common/uri';
+import { getCodeEditor } from 'vs/editor/common/services/codeEditorService';
 
 export class FocusLocationBarAction extends Action {
 
@@ -110,10 +110,13 @@ export class ShareLocationAction extends Action {
 			return;
 		}
 
-		const editorControl: ICommonCodeEditor = editor.getControl() as ICodeEditor;
-		const model = editorControl.getModel();
+		const codeEditor: ICommonCodeEditor = getCodeEditor(editor);
+		if (!codeEditor) {
+			return;
+		}
+		const model = codeEditor.getModel();
 		const fileComments = this.codeCommentsService.getFileComments(model.uri);
-		const draftThread = fileComments.createDraftThread(editorControl, DraftThreadKind.ShareLink);
+		const draftThread = fileComments.createDraftThread(codeEditor, DraftThreadKind.ShareLink);
 		try {
 			const threadComments = await draftThread.submit();
 			if (!threadComments) {
