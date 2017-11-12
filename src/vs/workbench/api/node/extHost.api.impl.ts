@@ -108,7 +108,7 @@ export function createApiFactory(
 	const extHostCheck = threadService.set(ExtHostContext.ExtHostChecklist, new ExtHostChecklist(threadService, extHostCommands));
 	const extHostTask = threadService.set(ExtHostContext.ExtHostTask, new ExtHostTask(threadService, extHostWorkspace));
 	const extHostCredentials = threadService.set(ExtHostContext.ExtHostCredentials, new ExtHostCredentials(threadService));
-	const extHostWindow = threadService.set(ExtHostContext.ExtHostWindow, new ExtHostWindow(threadService));
+	const extHostWindow = threadService.set(ExtHostContext.ExtHostWindow, new ExtHostWindow(threadService, initData.environment.windowId));
 	threadService.set(ExtHostContext.ExtHostExtensionService, extensionService);
 
 	// Check that no named customers are missing
@@ -382,6 +382,10 @@ export function createApiFactory(
 			sampleFunction: proposedApiFunction(extension, () => {
 				return extHostMessageService.showMessage(extension, Severity.Info, 'Hello Proposed Api!', {}, []);
 			}),
+			id: extHostWindow.id,
+			getWindows: (): Thenable<vscode.WorkbenchWindow[]> => {
+				return extHostWindow.getWindows();
+			},
 			registerDecorationProvider: proposedApiFunction(extension, (provider: vscode.DecorationProvider) => {
 				return extHostDecorations.registerDecorationProvider(provider, extension.id);
 			})

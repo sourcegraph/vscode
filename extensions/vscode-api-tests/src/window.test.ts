@@ -431,4 +431,10 @@ suite('window namespace tests', () => {
 	test('terminal, name should set terminal.name', () => {
 		assert.equal(window.createTerminal('foo').name, 'foo');
 	});
+
+	test('getWindows', async () => {
+		const windows = await window.getWindows();
+		assert.equal(windows.length, 1);
+		assert.equal(windows[0].id, window.id);
+	});
 });

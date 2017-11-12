@@ -63,6 +63,7 @@ export interface IEnvironment {
 	userExtensionsHome: string;
 	extensionDevelopmentPath: string;
 	extensionTestsPath: string;
+	windowId: number;
 }
 
 export interface IWorkspaceData {
@@ -527,8 +528,16 @@ export interface MainThreadCredentialsShape extends IDisposable {
 	$deleteSecret(service: string, account: string): Thenable<boolean>;
 }
 
+export interface WorkbenchWindowFeatures {
+	id: number;
+	title: string;
+	workspace?: vscode.WorkspaceData;
+}
+
 export interface MainThreadWindowShape extends IDisposable {
 	$getWindowVisibility(): TPromise<boolean>;
+	$getWindows(): TPromise<WorkbenchWindowFeatures[]>;
+	$showAndFocusWindow(windowId: number): TPromise<void>;
 }
 
 // -- extension host
@@ -765,6 +774,8 @@ export interface ExtHostCredentialsShape {
 
 export interface ExtHostWindowShape {
 	$onDidChangeWindowFocus(value: boolean): void;
+	id: number;
+	getWindows(): Thenable<vscode.WorkbenchWindow[]>;
 }
 
 // --- proxy identifiers
