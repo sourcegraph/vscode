@@ -44,11 +44,4 @@ export interface INavService {
 	 * state (typically the active editor's document's repository and file path).
 	 */
 	getLocation(): URI | undefined;
-
-	/**
-	 * Returns a web URL that either opens the application to the current location (from
-	 * getLocation) or guides the user through installing the application if it isn't yet
-	 * installed.
-	 */
-	getShareableLocation(): TPromise<string>;
 }
