@@ -434,6 +434,16 @@ export function registerCommands(): void {
 		});
 	});
 
+	CommandsRegistry.registerCommand('_workbench.removeRoots', function (accessor: ServicesAccessor, foldersToRemove: URI[]) {
+		const workspaceEditingService = accessor.get(IWorkspaceEditingService);
+		const configurationService = accessor.get(IConfigurationService);
+
+		return workspaceEditingService.removeFolders(foldersToRemove).then(() => {
+			// Wait for workspace configuration to reload.
+			return configurationService.reloadConfiguration();
+		});
+	});
+
 	CommandsRegistry.registerCommand('_workbench.getDependents', function (accessor: ServicesAccessor, lang: string, pkgData: { [k: string]: string }) {
 		const remoteService = accessor.get(IRemoteService);
 
