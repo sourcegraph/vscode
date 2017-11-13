@@ -248,7 +248,7 @@ export class Repository implements vscode.Disposable {
 		// TODO(sqs): get all remotes; currently only gets current remote
 		let url = await this.exec(['ls-remote', '--get-url']);
 		url = decodeURIComponent(url.trim()).replace(/\.git$/, '');
-		const host = vscode.Uri.parse(this.githubURL);
+		const host = vscode.Uri.parse(this.githubURL).authority;
 		const match = url.match(new RegExp(`${host}[\/:]([^/]+)\/([^/]+)`));
 		if (match) {
 			const [, owner, name] = match;
