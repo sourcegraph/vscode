@@ -342,7 +342,7 @@ export class FoldersWorkbenchService implements IFoldersWorkbenchService {
 			return;
 		}
 
-		const neverPromptInit = this.configurationService.getConfiguration<IFolderConfiguration>(FoldersConfigurationKey).neverPromptInit;
+		const neverPromptInit = this.configurationService.getValue<IFolderConfiguration>(FoldersConfigurationKey).neverPromptInit;
 		if (neverPromptInit) {
 			return;
 		}

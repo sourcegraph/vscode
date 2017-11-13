@@ -9,7 +9,7 @@ import 'vs/css!./media/fileactions';
 import { TPromise } from 'vs/base/common/winjs.base';
 import nls = require('vs/nls');
 import { isWindows, isLinux, isMacintosh } from 'vs/base/common/platform';
-import { sequence, ITask } from 'vs/base/common/async';
+import { sequence, ITask, always } from 'vs/base/common/async';
 import paths = require('vs/base/common/paths');
 import resources = require('vs/base/common/resources');
 import URI from 'vs/base/common/uri';
@@ -41,18 +41,21 @@ import { Position, IResourceInput, IUntitledResourceInput } from 'vs/platform/ed
 import { IInstantiationService, IConstructorSignature2, ServicesAccessor } from 'vs/platform/instantiation/common/instantiation';
 import { IMessageService, IMessageWithAction, IConfirmation, IConfirmationResult, Severity, CancelAction } from 'vs/platform/message/common/message';
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
-import { getCodeEditor } from 'vs/editor/common/services/codeEditorService';
-import { IEditorViewState } from 'vs/editor/common/editorCommon';
+import { getCodeEditor } from 'vs/editor/browser/services/codeEditorService';
+import { IEditorViewState, IModel } from 'vs/editor/common/editorCommon';
 import { IBackupFileService } from 'vs/workbench/services/backup/common/backup';
 import { IWindowsService } from 'vs/platform/windows/common/windows';
 import { withFocusedFilesExplorer, revealInOSCommand, revealInExplorerCommand, copyPathCommand } from 'vs/workbench/parts/files/browser/fileCommands';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
-import { ITextModelService } from 'vs/editor/common/services/resolverService';
 import * as arrays from 'vs/base/common/arrays';
 import { IStorageService, StorageScope } from 'vs/platform/storage/common/storage';
 import { IOpenerService } from 'vs/platform/opener/common/opener';
+import { ITextModelService, ITextModelContentProvider } from 'vs/editor/common/services/resolverService';
 import { IConfigurationService, ConfigurationTarget } from 'vs/platform/configuration/common/configuration';
 import { once } from 'vs/base/common/event';
+import { IClipboardService } from 'vs/platform/clipboard/common/clipboardService';
+import { IModeService } from 'vs/editor/common/services/modeService';
+import { IModelService } from 'vs/editor/common/services/modelService';
 
 export interface IEditableData {
 	action: IAction;
@@ -2132,6 +2135,70 @@ export class OpenResourceAction extends Action {
 
 				return this.openerService.open(URI.parse(value));
 			});
+	}
+}
+
+export class CompareWithClipboardAction extends Action {
+
+	public static ID = 'workbench.files.action.compareWithClipboard';
+	public static LABEL = nls.localize('compareWithClipboard', "Compare Active File with Clipboard");
+
+	private static SCHEME = 'clipboardCompare';
+
+	private registrationDisposal: IDisposable;
+
+	constructor(
+		id: string,
+		label: string,
+		@IWorkbenchEditorService private editorService: IWorkbenchEditorService,
+		@IInstantiationService private instantiationService: IInstantiationService,
+		@ITextModelService private textModelService: ITextModelService,
+	) {
+		super(id, label);
+
+		this.enabled = true;
+	}
+
+	public run(): TPromise<any> {
+		const resource: URI = toResource(this.editorService.getActiveEditorInput(), { supportSideBySide: true, filter: 'file' });
+		const provider = this.instantiationService.createInstance(ClipboardContentProvider);
+
+		if (resource) {
+			if (!this.registrationDisposal) {
+				this.registrationDisposal = this.textModelService.registerTextModelContentProvider(CompareWithClipboardAction.SCHEME, provider);
+			}
+
+			const name = paths.basename(resource.fsPath);
+			const editorLabel = nls.localize('clipboardComparisonLabel', "Clipboard ↔ {0}", name);
+
+			const cleanUp = () => {
+				this.registrationDisposal = dispose(this.registrationDisposal);
+			};
+
+			return always(this.editorService.openEditor({ leftResource: URI.from({ scheme: CompareWithClipboardAction.SCHEME, path: resource.fsPath }), rightResource: resource, label: editorLabel }), cleanUp);
+		}
+
+		return TPromise.as(true);
+	}
+
+	public dispose(): void {
+		super.dispose();
+
+		this.registrationDisposal = dispose(this.registrationDisposal);
+	}
+}
+
+class ClipboardContentProvider implements ITextModelContentProvider {
+	constructor(
+		@IClipboardService private clipboardService: IClipboardService,
+		@IModeService private modeService: IModeService,
+		@IModelService private modelService: IModelService
+	) { }
+
+	provideTextContent(resource: URI): TPromise<IModel> {
+		const model = this.modelService.createModel(this.clipboardService.readText(), this.modeService.getOrCreateMode('text/plain'), resource);
+
+		return TPromise.as(model);
 	}
 }
 

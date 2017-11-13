@@ -6,7 +6,7 @@
 
 import { TPromise } from 'vs/base/common/winjs.base';
 import { renderMarkdown } from 'vs/base/browser/htmlContentRenderer';
-import { IComment } from 'vs/editor/common/services/codeCommentsService';
+import { IComment } from 'vs/editor/browser/services/codeCommentsService';
 import { onUnexpectedError } from 'vs/base/common/errors';
 import URI from 'vs/base/common/uri';
 import { tokenizeToString } from 'vs/editor/common/modes/textToHtmlTokenizer';

@@ -17,14 +17,14 @@ import { IInstantiationService } from 'vs/platform/instantiation/common/instanti
 import { ExtHostContext, MainThreadSCMShape, ExtHostSCMShape, SCMProviderFeatures, SCMRawResourceSplices, SCMGroupFeatures, MainContext, IExtHostContext } from '../node/extHost.protocol';
 import { Command } from 'vs/editor/common/modes';
 import { extHostNamedCustomer } from 'vs/workbench/api/electron-browser/extHostCustomers';
-import { EDITOR_CONTRIBUTION_ID as CODE_COMMENTS_CONTRIBUTION_ID, ICodeCommentsService, IThreads } from 'vs/editor/common/services/codeCommentsService';
+import { EDITOR_CONTRIBUTION_ID as CODE_COMMENTS_CONTRIBUTION_ID, ICodeCommentsService, IThreads } from 'vs/editor/browser/services/codeCommentsService';
 import { rtrim } from 'vs/base/common/strings';
 import { IEditorService } from 'vs/platform/editor/common/editor';
-import { getCodeEditor, ICodeEditorService } from 'vs/editor/common/services/codeEditorService';
-import { ICommonCodeEditor } from 'vs/editor/common/editorCommon';
 import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
 import { VIEWLET_ID as SCM_VIEWLET_ID } from 'vs/workbench/parts/scm/common/scm';
 import { SCMViewlet } from 'vs/workbench/parts/scm/electron-browser/scmViewlet';
+import { ICodeEditorService, getCodeEditor } from 'vs/editor/browser/services/codeEditorService';
+import { ICodeEditor } from 'vs/editor/browser/editorBrowser';
 
 class MainThreadSCMResourceCollection implements ISCMResourceCollection {
 
@@ -394,7 +394,7 @@ class CommentsSCMProvider extends MainThreadSCMProvider {
 		super.$spliceGroupResourceStates([]);
 	}
 
-	private async openEditor(resource: URI): TPromise<ICommonCodeEditor> {
+	private async openEditor(resource: URI): TPromise<ICodeEditor> {
 		const resourceString = resource.toString();
 		// First try to find and open the relevant diff editor.
 		for (const group of this.groups) {

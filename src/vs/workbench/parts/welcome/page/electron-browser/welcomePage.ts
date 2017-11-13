@@ -21,7 +21,6 @@ import { IConfigurationService } from 'vs/platform/configuration/common/configur
 import { localize } from 'vs/nls';
 import { Action } from 'vs/base/common/actions';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
-import { IExperimentService } from 'vs/platform/telemetry/common/experiments';
 import { Schemas } from 'vs/base/common/network';
 import { IBackupFileService } from 'vs/workbench/services/backup/common/backup';
 import { IMessageService, Severity, CloseAction } from 'vs/platform/message/common/message';
@@ -40,7 +39,7 @@ import { IFoldersWorkbenchService } from 'vs/workbench/services/folders/common/f
 import { $ } from 'vs/base/browser/builder';
 import { ISCMService } from 'vs/workbench/services/scm/common/scm';
 import { IAuthService } from 'vs/platform/auth/common/auth';
-import { ICodeCommentsService, IThreads } from 'vs/editor/common/services/codeCommentsService';
+import { ICodeCommentsService, IThreads } from 'vs/editor/browser/services/codeCommentsService';
 import { INavService } from 'vs/workbench/services/nav/common/nav';
 import { SIDE_BAR_BACKGROUND, SIDE_BAR_BORDER, SIDE_BAR_SECTION_HEADER_BACKGROUND, SIDE_BAR_TITLE_FOREGROUND } from 'vs/workbench/common/theme';
 import { ICommandService } from 'vs/platform/commands/common/commands';
@@ -134,8 +133,8 @@ interface ExtensionSuggestion {
 const extensionPacks: ExtensionSuggestion[] = [
 	{ name: localize('welcomePage.javaScript', "JavaScript"), id: 'dbaeumer.vscode-eslint' },
 	{ name: localize('welcomePage.typeScript', "TypeScript"), id: 'eg2.tslint' },
-	// { name: localize('welcomePage.python', "Python"), id: 'donjayamanne.python' },
-	{ name: localize('welcomePage.go', "Go"), id: 'lukehoban.go' },
+	{ name: localize('welcomePage.python', "Python"), id: 'ms-python.python' },
+	// { name: localize('welcomePage.go', "Go"), id: 'lukehoban.go' },
 	{ name: localize('welcomePage.php', "PHP"), id: 'felixfbecker.php-pack' },
 	{ name: localize('welcomePage.docker', "Docker"), id: 'PeterJausovec.vscode-docker' },
 ];
@@ -266,10 +265,6 @@ class WelcomePage {
 		@IExtensionTipsService private tipsService: IExtensionTipsService,
 		@IExtensionsWorkbenchService private extensionsWorkbenchService: IExtensionsWorkbenchService,
 		@ILifecycleService lifecycleService: ILifecycleService,
-		// @ts-ignore unused injected service
-		@IThemeService private themeService: IThemeService,
-		// @ts-ignore unused injected service
-		@IExperimentService private experimentService: IExperimentService,
 		@IFoldersWorkbenchService private foldersWorkbenchService: IFoldersWorkbenchService,
 		@ITelemetryService private telemetryService: ITelemetryService,
 		@ISCMService private scmService: ISCMService,
@@ -280,6 +275,7 @@ class WelcomePage {
 		@IReviewService private reviewService: IReviewService,
 		@IOpenerService private openerService: IOpenerService,
 		@IExtensionService private extensionService: IExtensionService,
+		@IThemeService private themeService: IThemeService,
 	) {
 		this.disposables.push(lifecycleService.onShutdown(() => this.dispose()));
 
@@ -613,7 +609,7 @@ class WelcomePage {
 		const branchSpinner = document.getElementById('review-branches-spinner') as HTMLElement;
 		const repoSpinner = document.getElementById('recent-repos-spinner') as HTMLElement;
 
-		const { github, bitbucket } = this.configurationService.getConfiguration();
+		const { github, bitbucket } = this.configurationService.getValue();
 		if ((!github || !github.token) && (!bitbucket || !bitbucket.cloud || !bitbucket.cloud.triggerSetup)) {
 			$(codeHostContainer).show();
 			$(branchListContainer).hide();

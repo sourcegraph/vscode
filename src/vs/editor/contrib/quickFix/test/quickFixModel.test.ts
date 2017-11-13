@@ -5,16 +5,16 @@
 'use strict';
 
 import * as assert from 'assert';
-import { ICommonCodeEditor } from 'vs/editor/common/editorCommon';
 import URI from 'vs/base/common/uri';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { Model } from 'vs/editor/common/model/model';
 import { createTestCodeEditor } from 'vs/editor/test/browser/testCodeEditor';
 import { MarkerService } from 'vs/platform/markers/common/markerService';
-import { QuickFixOracle } from 'vs/editor/contrib/quickFix/browser/quickFixModel';
+import { QuickFixOracle } from 'vs/editor/contrib/quickFix/quickFixModel';
 import { CodeActionProviderRegistry, LanguageIdentifier } from 'vs/editor/common/modes';
 import { IDisposable } from 'vs/base/common/lifecycle';
 import { Range } from 'vs/editor/common/core/range';
+import { ICodeEditor } from 'vs/editor/browser/editorBrowser';
 
 suite('QuickFix', () => {
 
@@ -22,7 +22,7 @@ suite('QuickFix', () => {
 	let uri = URI.parse('untitled:path');
 	let model: Model;
 	let markerService: MarkerService;
-	let editor: ICommonCodeEditor;
+	let editor: ICodeEditor;
 	let reg: IDisposable;
 
 	setup(() => {

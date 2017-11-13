@@ -32,7 +32,7 @@ export class OpenRemoteSettingsAction extends Action {
 
 	public run(): TPromise<void> {
 		this.telemetryService.publicLog('RemoteSettingsOpened');
-		const config = this.configurationService.getConfiguration<IRemoteConfiguration>();
+		const config = this.configurationService.getValue<IRemoteConfiguration>();
 		if (!config.remote || !config.remote.endpoint) {
 			throw new Error('unable to open settings because remote.endpoint configuration setting is not present');
 		}

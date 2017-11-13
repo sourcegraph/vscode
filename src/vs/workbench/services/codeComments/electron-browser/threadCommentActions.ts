@@ -65,13 +65,13 @@ export class ShareContextConfigurationAction extends Action {
 	}
 
 	public async runAsync(): TPromise<any> {
-		const { remote } = this.configurationService.getConfiguration<IRemoteConfiguration>();
+		const { remote } = this.configurationService.getValue<IRemoteConfiguration>();
 		if (remote && remote.shareContext) {
 			// If the user has already enabled shareContext then we are good to go.
 			return true;
 		}
 
-		const { sharing } = this.configurationService.getConfiguration<ISharingConfiguration>();
+		const { sharing } = this.configurationService.getValue<ISharingConfiguration>();
 		if (!this.isShareLink && sharing && sharing.stableBranches) {
 			if (sharing.stableBranches.indexOf(this.branch) !== -1) {
 				// If this is a code comment, and if the user's current branch is configured to be a

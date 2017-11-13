@@ -10,11 +10,11 @@ import { ICodeEditor } from 'vs/editor/browser/editorBrowser';
 import { registerThemingParticipant, ITheme, IThemeService } from 'vs/platform/theme/common/themeService';
 import { $ } from 'vs/base/browser/builder';
 import * as dom from 'vs/base/browser/dom';
-import { peekViewBorder, peekViewResultsBackground, peekViewTitleBackground, peekViewTitleForeground, peekViewTitleInfoForeground } from 'vs/editor/contrib/referenceSearch/browser/referencesWidget';
 import { Color } from 'vs/base/common/color';
 import { textLinkActiveForeground, textLinkForeground } from 'vs/platform/theme/common/colorRegistry';
-import { PeekViewWidget } from 'vs/editor/contrib/referenceSearch/browser/peekViewWidget';
 import { Range } from 'vs/editor/common/core/range';
+import { PeekViewWidget } from 'vs/editor/contrib/referenceSearch/peekViewWidget';
+import { peekViewBorder, peekViewTitleBackground, peekViewTitleForeground, peekViewTitleInfoForeground, peekViewResultsBackground } from 'vs/editor/contrib/referenceSearch/referencesWidget';
 
 /**
  * Base class for thead widgets.

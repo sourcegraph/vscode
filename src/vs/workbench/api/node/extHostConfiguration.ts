@@ -12,7 +12,7 @@ import { ExtHostWorkspace } from 'vs/workbench/api/node/extHostWorkspace';
 import { ExtHostConfigurationShape, MainThreadConfigurationShape, IWorkspaceConfigurationChangeEventData, IConfigurationInitData } from './extHost.protocol';
 import { ConfigurationTarget as ExtHostConfigurationTarget } from './extHostTypes';
 import { IConfigurationData, ConfigurationTarget } from 'vs/platform/configuration/common/configuration';
-import { Configuration, ConfigurationModel, ConfigurationChangeEvent } from 'vs/platform/configuration/common/configurationModels';
+import { Configuration, ConfigurationChangeEvent, ConfigurationModel } from 'vs/platform/configuration/common/configurationModels';
 import { WorkspaceConfigurationChangeEvent } from 'vs/workbench/services/configuration/common/configurationModels';
 import { StrictResourceMap } from 'vs/base/common/map';
 import { ConfigurationScope } from 'vs/platform/configuration/common/configurationRegistry';
@@ -62,8 +62,8 @@ export class ExtHostConfiguration implements ExtHostConfigurationShape {
 
 	getConfiguration(section?: string, resource?: URI, extensionId?: string): vscode.WorkspaceConfiguration {
 		const config = section
-			? lookUp(this._configuration.getSection(null, { resource }, this._extHostWorkspace.workspace), section)
-			: this._configuration.getSection(null, { resource }, this._extHostWorkspace.workspace);
+			? lookUp(this._configuration.getValue(null, { resource }, this._extHostWorkspace.workspace), section)
+			: this._configuration.getValue(null, { resource }, this._extHostWorkspace.workspace);
 
 		if (section) {
 			this._validateConfigurationAccess(section, resource, extensionId);

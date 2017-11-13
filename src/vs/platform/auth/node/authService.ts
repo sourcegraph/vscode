@@ -167,7 +167,7 @@ export class AuthService extends Disposable implements IAuthService {
 	}
 
 	private currentAuthCookie(): string {
-		const config = this.configurationService.getConfiguration<IRemoteConfiguration>();
+		const config = this.configurationService.getValue<IRemoteConfiguration>();
 		return config.remote.cookie;
 	}
 
@@ -486,7 +486,7 @@ function getTelemetryData(user: UserMemento): any {
 }
 
 export function urlToSignIn(configService: IConfigurationService): URI {
-	const config = configService.getConfiguration<IRemoteConfiguration>();
+	const config = configService.getValue<IRemoteConfiguration>();
 	if (!config.remote || !config.remote.endpoint) {
 		throw new Error('unable to sign in because remote.endpoint configuration setting is not present');
 	}
@@ -498,7 +498,7 @@ export function urlToSignIn(configService: IConfigurationService): URI {
 }
 
 export function urlToSignOut(configService: IConfigurationService): URI {
-	const config = configService.getConfiguration<IRemoteConfiguration>();
+	const config = configService.getValue<IRemoteConfiguration>();
 	if (!config.remote || !config.remote.endpoint) {
 		throw new Error('unable to sign out because remote.endpoint configuration setting is not present');
 	}

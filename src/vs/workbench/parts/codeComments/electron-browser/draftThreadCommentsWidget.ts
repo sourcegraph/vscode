@@ -9,10 +9,10 @@ import { ICodeEditor } from 'vs/editor/browser/editorBrowser';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { localize } from 'vs/nls';
-import { IDraftThreadComments } from 'vs/editor/common/services/codeCommentsService';
+import { IDraftThreadComments } from 'vs/editor/browser/services/codeCommentsService';
 import { CommentInput } from 'vs/workbench/parts/codeComments/browser/commentInput';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
-import { getCommentTelemetryData } from 'vs/workbench/parts/codeComments/common/codeComments';
+import { getCommentTelemetryData } from 'vs/workbench/parts/codeComments/browser/codeComments';
 import { BaseThreadCommentsWidget } from 'vs/workbench/parts/codeComments/browser/baseThreadCommentsWidget';
 import { Range } from 'vs/editor/common/core/range';
 

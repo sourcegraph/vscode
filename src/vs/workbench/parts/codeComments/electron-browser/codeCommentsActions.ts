@@ -10,15 +10,15 @@ import { ToggleViewletAction } from 'vs/workbench/browser/viewlet';
 import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
 import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { TPromise } from 'vs/base/common/winjs.base';
-import { ICommonCodeEditor } from 'vs/editor/common/editorCommon';
-import { ServicesAccessor, registerEditorAction, EditorAction } from 'vs/editor/common/editorCommonExtensions';
-import { ICodeCommentsService, DraftThreadKind } from 'vs/editor/common/services/codeCommentsService';
+import { ICodeCommentsService, DraftThreadKind } from 'vs/editor/browser/services/codeCommentsService';
 import { CodeCommentsController } from 'vs/workbench/parts/codeComments/electron-browser/codeCommentsController';
 import { KeyCode, KeyMod } from 'vs/base/common/keyCodes';
 import { EditorContextKeys } from 'vs/editor/common/editorContextKeys';
 import { CommentsContextKeys } from 'vs/workbench/parts/codeComments/browser/commentsContextKeys';
 import { IClipboardService } from 'vs/platform/clipboard/common/clipboardService';
 import { IMessageService, Severity } from 'vs/platform/message/common/message';
+import { EditorAction, ServicesAccessor, registerEditorAction } from 'vs/editor/browser/editorExtensions';
+import { ICodeEditor } from 'vs/editor/browser/editorBrowser';
 
 /**
  * Action to open the code comments viewlet.
@@ -62,7 +62,7 @@ export class CreateCodeCommentAction extends EditorAction {
 		});
 	}
 
-	public run(accessor: ServicesAccessor, editor: ICommonCodeEditor): TPromise<any> {
+	public run(accessor: ServicesAccessor, editor: ICodeEditor): TPromise<any> {
 		const codeCommentsService = accessor.get(ICodeCommentsService);
 		const model = editor.getModel();
 		const fileComments = codeCommentsService.getFileComments(model.uri);
@@ -97,11 +97,11 @@ export class ShareSnippetAction extends EditorAction {
 		});
 	}
 
-	public run(accessor: ServicesAccessor, editor: ICommonCodeEditor): TPromise<any> {
+	public run(accessor: ServicesAccessor, editor: ICodeEditor): TPromise<any> {
 		return TPromise.wrap(this.runAsync(accessor, editor));
 	}
 
-	private async runAsync(accessor: ServicesAccessor, editor: ICommonCodeEditor): Promise<any> {
+	private async runAsync(accessor: ServicesAccessor, editor: ICodeEditor): Promise<any> {
 		const clipboardService = accessor.get(IClipboardService);
 		const codeCommentsService = accessor.get(ICodeCommentsService);
 		const messageService = accessor.get(IMessageService);

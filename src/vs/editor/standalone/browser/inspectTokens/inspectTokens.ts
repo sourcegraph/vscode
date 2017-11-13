@@ -9,10 +9,9 @@ import * as nls from 'vs/nls';
 import { Disposable } from 'vs/base/common/lifecycle';
 import { escape } from 'vs/base/common/strings';
 import { Position } from 'vs/editor/common/core/position';
-import { ICommonCodeEditor, IEditorContribution, IModel } from 'vs/editor/common/editorCommon';
-import { registerEditorAction, EditorAction, ServicesAccessor } from 'vs/editor/common/editorCommonExtensions';
+import { IEditorContribution, IModel } from 'vs/editor/common/editorCommon';
+import { registerEditorAction, registerEditorContribution, EditorAction, ServicesAccessor } from 'vs/editor/browser/editorExtensions';
 import { ICodeEditor, ContentWidgetPositionPreference, IContentWidget, IContentWidgetPosition } from 'vs/editor/browser/editorBrowser';
-import { registerEditorContribution } from 'vs/editor/browser/editorBrowserExtensions';
 import { IModeService } from 'vs/editor/common/services/modeService';
 import { TokenMetadata } from 'vs/editor/common/model/tokensBinaryEncoding';
 import { TokenizationRegistry, LanguageIdentifier, FontStyle, StandardTokenType, ITokenizationSupport, IState } from 'vs/editor/common/modes';
@@ -29,7 +28,7 @@ class InspectTokensController extends Disposable implements IEditorContribution 
 
 	private static ID = 'editor.contrib.inspectTokens';
 
-	public static get(editor: ICommonCodeEditor): InspectTokensController {
+	public static get(editor: ICodeEditor): InspectTokensController {
 		return editor.getContribution<InspectTokensController>(InspectTokensController.ID);
 	}
 
@@ -92,7 +91,7 @@ class InspectTokens extends EditorAction {
 		});
 	}
 
-	public run(accessor: ServicesAccessor, editor: ICommonCodeEditor): void {
+	public run(accessor: ServicesAccessor, editor: ICodeEditor): void {
 		let controller = InspectTokensController.get(editor);
 		if (controller) {
 			controller.launch();

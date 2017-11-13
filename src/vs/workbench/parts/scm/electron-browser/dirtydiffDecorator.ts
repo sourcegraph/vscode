@@ -28,16 +28,15 @@ import { registerColor } from 'vs/platform/theme/common/colorRegistry';
 import { localize } from 'vs/nls';
 import { Color, RGBA } from 'vs/base/common/color';
 import { ICodeEditor, IEditorMouseEvent, MouseTargetType } from 'vs/editor/browser/editorBrowser';
-import { registerEditorContribution } from 'vs/editor/browser/editorBrowserExtensions';
-import { registerEditorAction, ServicesAccessor, EditorAction, CommonEditorRegistry } from 'vs/editor/common/editorCommonExtensions';
-import { PeekViewWidget, getOuterEditor } from 'vs/editor/contrib/referenceSearch/browser/peekViewWidget';
+import { registerEditorAction, registerEditorContribution, ServicesAccessor, EditorAction } from 'vs/editor/browser/editorExtensions';
+import { PeekViewWidget, getOuterEditor } from 'vs/editor/contrib/referenceSearch/peekViewWidget';
 import { IContextKeyService, IContextKey, ContextKeyExpr, RawContextKey } from 'vs/platform/contextkey/common/contextkey';
 import { EditorContextKeys } from 'vs/editor/common/editorContextKeys';
 import { KeyCode, KeyMod } from 'vs/base/common/keyCodes';
 import { Position } from 'vs/editor/common/core/position';
 import { rot } from 'vs/base/common/numbers';
 import { KeybindingsRegistry } from 'vs/platform/keybinding/common/keybindingsRegistry';
-import { peekViewBorder, peekViewTitleBackground, peekViewTitleForeground, peekViewTitleInfoForeground } from 'vs/editor/contrib/referenceSearch/browser/referencesWidget';
+import { peekViewBorder, peekViewTitleBackground, peekViewTitleForeground, peekViewTitleInfoForeground } from 'vs/editor/contrib/referenceSearch/referencesWidget';
 import { EmbeddedDiffEditorWidget } from 'vs/editor/browser/widget/embeddedCodeEditorWidget';
 import { IDiffEditorOptions } from 'vs/editor/common/config/editorOptions';
 import { Action, IAction, ActionRunner } from 'vs/base/common/actions';
@@ -46,10 +45,10 @@ import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { basename } from 'vs/base/common/paths';
 import { MenuId, IMenuService, IMenu, MenuItemAction } from 'vs/platform/actions/common/actions';
 import { fillInActions, MenuItemActionItem } from 'vs/platform/actions/browser/menuItemActionItem';
-import { IChange, ICommonCodeEditor, IEditorModel, ScrollType, IEditorContribution, OverviewRulerLane, IModel } from 'vs/editor/common/editorCommon';
+import { IChange, IEditorModel, ScrollType, IEditorContribution, OverviewRulerLane, IModel } from 'vs/editor/common/editorCommon';
 import { sortedDiff, Splice, firstIndex } from 'vs/base/common/arrays';
 import { IMarginData } from 'vs/editor/browser/controller/mouseTarget';
-import { ICodeEditorService } from 'vs/editor/common/services/codeEditorService';
+import { ICodeEditorService } from 'vs/editor/browser/services/codeEditorService';
 
 // TODO@Joao
 // Need to subclass MenuItemActionItem in order to respect
@@ -115,12 +114,12 @@ function lineIntersectsChange(lineNumber: number, change: IChange): boolean {
 
 export class UIEditorAction extends Action {
 
-	private editor: ICommonCodeEditor;
+	private editor: ICodeEditor;
 	private action: EditorAction;
 	private instantiationService: IInstantiationService;
 
 	constructor(
-		editor: ICommonCodeEditor,
+		editor: ICodeEditor,
 		action: EditorAction,
 		cssClass: string,
 		@IKeybindingService keybindingService: IKeybindingService,
@@ -165,7 +164,7 @@ function getChangeTypeColor(theme: ITheme, changeType: ChangeType): Color {
 	}
 }
 
-function getOuterEditorFromDiffEditor(accessor: ServicesAccessor): ICommonCodeEditor {
+function getOuterEditorFromDiffEditor(accessor: ServicesAccessor): ICodeEditor {
 	const diffEditors = accessor.get(ICodeEditorService).listDiffEditors();
 
 	for (const diffEditor of diffEditors) {
@@ -373,7 +372,7 @@ export class ShowPreviousChangeAction extends EditorAction {
 		});
 	}
 
-	run(accessor: ServicesAccessor, editor: ICommonCodeEditor): void {
+	run(accessor: ServicesAccessor, editor: ICodeEditor): void {
 		const outerEditor = getOuterEditorFromDiffEditor(accessor);
 
 		if (!outerEditor) {
@@ -407,7 +406,7 @@ export class ShowNextChangeAction extends EditorAction {
 		});
 	}
 
-	run(accessor: ServicesAccessor, editor: ICommonCodeEditor): void {
+	run(accessor: ServicesAccessor, editor: ICodeEditor): void {
 		const outerEditor = getOuterEditorFromDiffEditor(accessor);
 
 		if (!outerEditor) {
@@ -431,7 +430,7 @@ registerEditorAction(ShowNextChangeAction);
 
 KeybindingsRegistry.registerCommandAndKeybindingRule({
 	id: 'closeDirtyDiff',
-	weight: CommonEditorRegistry.commandWeight(50),
+	weight: KeybindingsRegistry.WEIGHT.editorContrib(50),
 	primary: KeyCode.Escape,
 	secondary: [KeyMod.Shift | KeyCode.Escape],
 	when: ContextKeyExpr.and(isDirtyDiffVisible),
@@ -456,7 +455,7 @@ export class DirtyDiffController implements IEditorContribution {
 
 	private static ID = 'editor.contrib.dirtydiff';
 
-	static get(editor: ICommonCodeEditor): DirtyDiffController {
+	static get(editor: ICodeEditor): DirtyDiffController {
 		return editor.getContribution<DirtyDiffController>(DirtyDiffController.ID);
 	}
 

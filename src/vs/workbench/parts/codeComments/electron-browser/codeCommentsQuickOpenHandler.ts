@@ -12,7 +12,7 @@ import { QuickOpenHandler } from 'vs/workbench/browser/quickopen';
 import { distanceInWordsToNow } from 'date-fns';
 import { matchesFuzzy } from 'vs/base/common/filters';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
-import { ICodeCommentsService, IThreads, IThreadComments } from 'vs/editor/common/services/codeCommentsService';
+import { ICodeCommentsService, IThreads, IThreadComments } from 'vs/editor/browser/services/codeCommentsService';
 import { INavService } from 'vs/workbench/services/nav/common/nav';
 import URI from 'vs/base/common/uri';
 

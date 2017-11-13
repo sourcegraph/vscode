@@ -5,7 +5,7 @@
 'use strict';
 
 import { localize } from 'vs/nls';
-import { IThreads, ICodeCommentsService, Filter, IFileComments, IThreadComments, IComment, IDraftThreadComments, DraftThreadKind } from 'vs/editor/common/services/codeCommentsService';
+import { IThreads, ICodeCommentsService, Filter, IFileComments, IThreadComments, IComment, IDraftThreadComments, DraftThreadKind } from 'vs/editor/browser/services/codeCommentsService';
 import { Range } from 'vs/editor/common/core/range';
 import Event, { Emitter, anyEvent } from 'vs/base/common/event';
 import { VSDiff as Diff } from 'vs/workbench/services/codeComments/common/vsdiff';
@@ -21,7 +21,7 @@ import { TPromise } from 'vs/base/common/winjs.base';
 import { first, uniqueFilter } from 'vs/base/common/arrays';
 import { IInstantiationService, ServicesAccessor } from 'vs/platform/instantiation/common/instantiation';
 import { IModelService } from 'vs/editor/common/services/modelService';
-import { ICommonCodeEditor, IModel } from 'vs/editor/common/editorCommon';
+import { IModel } from 'vs/editor/common/editorCommon';
 import { RawTextSource } from 'vs/editor/common/model/textSource';
 import { dispose, IDisposable } from 'vs/base/common/lifecycle';
 import { StrictResourceMap } from 'vs/base/common/map';
@@ -42,6 +42,7 @@ import * as objects from 'vs/base/common/objects';
 import { IWindowsService } from 'vs/platform/windows/common/windows';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { ShareContextConfigurationAction } from 'vs/workbench/services/codeComments/electron-browser/threadCommentActions';
+import { ICodeEditor } from 'vs/editor/browser/editorBrowser';
 
 export { Event }
 
@@ -477,7 +478,7 @@ export class FileComments extends Disposable implements IFileComments {
 	/**
 	 * See documentation on IFileComments.
 	 */
-	public createDraftThread(editor: ICommonCodeEditor, kind: DraftThreadKind): DraftThreadComments {
+	public createDraftThread(editor: ICodeEditor, kind: DraftThreadKind): DraftThreadComments {
 		const draft = this.instantiationService.createInstance(DraftThreadComments, this.commentsService, this.git, editor, kind);
 		draft.onDidSubmit(thread => {
 			draft.dispose();
@@ -922,7 +923,7 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 	constructor(
 		private commentsService: CodeCommentsService,
 		private git: Git,
-		private editor: ICommonCodeEditor,
+		private editor: ICodeEditor,
 		private kind: DraftThreadKind,
 		@IMessageService messageService: IMessageService,
 		@IInstantiationService private instantiationService: IInstantiationService,
@@ -1074,7 +1075,7 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 	}
 
 	private getShareContext(): GQL.IThreadLinesInput | undefined {
-		const { remote } = this.configurationService.getConfiguration<IRemoteConfiguration>();
+		const { remote } = this.configurationService.getValue<IRemoteConfiguration>();
 		if (!remote || !remote.shareContext) {
 			return undefined;
 		}
@@ -1161,7 +1162,7 @@ export class DraftThreadComments extends Disposable implements IDraftThreadComme
 	 * Returns the range that the new comment should be attached to.
 	 * It guarantees the returned range is not empty.
 	 */
-	private getNonEmptySelection(editor: ICommonCodeEditor): Range {
+	private getNonEmptySelection(editor: ICodeEditor): Range {
 		let selection: Range = editor.getSelection();
 		if (selection.isEmpty()) {
 			// The user has not selected any text (just a cursor on a line).

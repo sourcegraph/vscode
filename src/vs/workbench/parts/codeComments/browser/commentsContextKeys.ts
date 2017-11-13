@@ -5,13 +5,13 @@
 'use strict';
 
 import { IContextKey, IContextKeyService, RawContextKey } from 'vs/platform/contextkey/common/contextkey';
-import { registerEditorContribution } from 'vs/editor/browser/editorBrowserExtensions';
 import { Disposable } from 'vs/base/common/lifecycle';
 import { IEditorContribution } from 'vs/editor/common/editorCommon';
 import { ICodeEditor } from 'vs/editor/browser/editorBrowser';
 import { ISCMService } from 'vs/workbench/services/scm/common/scm';
 import { anyEvent } from 'vs/base/common/event';
 import { IAuthService } from 'vs/platform/auth/common/auth';
+import { registerEditorContribution } from 'vs/editor/browser/editorExtensions';
 
 export namespace CommentsContextKeys {
 	/**

@@ -59,7 +59,7 @@ import { RemoteFileService } from 'vs/workbench/services/files/electron-browser/
 import { IFileService } from 'vs/platform/files/common/files';
 import { IListService, ListService } from 'vs/platform/list/browser/listService';
 import { IConfigurationResolverService } from 'vs/workbench/services/configurationResolver/common/configurationResolver';
-import { ConfigurationResolverService } from 'vs/workbench/services/configurationResolver/node/configurationResolverService';
+import { ConfigurationResolverService } from 'vs/workbench/services/configurationResolver/electron-browser/configurationResolverService';
 import { IPanelService } from 'vs/workbench/services/panel/common/panelService';
 import { ITitleService } from 'vs/workbench/services/title/common/titleService';
 import { INavService } from 'vs/workbench/services/nav/common/nav';
@@ -452,7 +452,7 @@ export class Workbench implements IPartService {
 		workbenchActionsRegistry.registerWorkbenchAction(new SyncActionDescriptor(OpenRecentAction, OpenRecentAction.ID, OpenRecentAction.LABEL, { primary: isDeveloping ? null : KeyMod.CtrlCmd | KeyCode.KEY_R, mac: { primary: KeyMod.WinCtrl | KeyCode.KEY_R } }), 'File: Open Recent...', localize('file', "File"));
 
 		// Actions for macOS native tabs management (only when enabled)
-		const windowConfig = this.configurationService.getConfiguration<IWindowConfiguration>();
+		const windowConfig = this.configurationService.getValue<IWindowConfiguration>();
 		if (windowConfig && windowConfig.window && windowConfig.window.nativeTabs) {
 			workbenchActionsRegistry.registerWorkbenchAction(new SyncActionDescriptor(ShowPreviousWindowTab, ShowPreviousWindowTab.ID, ShowPreviousWindowTab.LABEL), 'Show Previous Window Tab');
 			workbenchActionsRegistry.registerWorkbenchAction(new SyncActionDescriptor(ShowNextWindowTab, ShowNextWindowTab.ID, ShowNextWindowTab.LABEL), 'Show Next Window Tab');
@@ -865,7 +865,7 @@ export class Workbench implements IPartService {
 			return null; // not enabled when developing due to https://github.com/electron/electron/issues/3647
 		}
 
-		const windowConfig = this.configurationService.getConfiguration<IWindowSettings>();
+		const windowConfig = this.configurationService.getValue<IWindowSettings>();
 		if (windowConfig && windowConfig.window) {
 			const useNativeTabs = windowConfig.window.nativeTabs;
 			if (useNativeTabs) {
@@ -1111,7 +1111,7 @@ export class Workbench implements IPartService {
 		}
 
 		// Preserve zen mode only on reload. Real quit gets out of zen mode so novice users do not get stuck in zen mode.
-		const zenConfig = this.configurationService.getConfiguration<IZenModeSettings>('zenMode');
+		const zenConfig = this.configurationService.getValue<IZenModeSettings>('zenMode');
 		const zenModeActive = (zenConfig.restore || reason === ShutdownReason.RELOAD) && this.zenMode.active;
 		if (zenModeActive) {
 			this.storageService.store(Workbench.zenModeActiveSettingKey, true, StorageScope.WORKSPACE);
@@ -1473,7 +1473,7 @@ export class Workbench implements IPartService {
 		// Check if zen mode transitioned to full screen and if now we are out of zen mode -> we need to go out of full screen
 		let toggleFullScreen = false;
 		if (this.zenMode.active) {
-			const config = this.configurationService.getConfiguration<IZenModeSettings>('zenMode');
+			const config = this.configurationService.getValue<IZenModeSettings>('zenMode');
 			toggleFullScreen = !browser.isFullscreen() && config.fullScreen;
 			this.zenMode.transitionedToFullScreen = toggleFullScreen;
 			this.zenMode.wasNavBarVisible = this.isVisible(Parts.NAVBAR_PART);

@@ -25,11 +25,10 @@ import { IClipboardService } from 'vs/platform/clipboard/common/clipboardService
 import { IConfigurationService, ConfigurationTarget } from 'vs/platform/configuration/common/configuration';
 import { IPartService, Parts } from 'vs/workbench/services/part/common/partService';
 import { NavbarPart } from 'vs/workbench/browser/parts/navbar/navbarPart';
-import { ICodeCommentsService, DraftThreadKind } from 'vs/editor/common/services/codeCommentsService';
-import { ICommonCodeEditor } from 'vs/editor/common/editorCommon';
+import { ICodeCommentsService, DraftThreadKind } from 'vs/editor/browser/services/codeCommentsService';
 import { IOpenerService } from 'vs/platform/opener/common/opener';
 import URI from 'vs/base/common/uri';
-import { getCodeEditor } from 'vs/editor/common/services/codeEditorService';
+import { getCodeEditor } from 'vs/editor/browser/services/codeEditorService';
 
 export class FocusLocationBarAction extends Action {
 
@@ -110,7 +109,7 @@ export class ShareLocationAction extends Action {
 			return;
 		}
 
-		const codeEditor: ICommonCodeEditor = getCodeEditor(editor);
+		const codeEditor = getCodeEditor(editor);
 		if (!codeEditor) {
 			return;
 		}

@@ -1018,7 +1018,7 @@ class TaskService extends EventEmitter implements ITaskService {
 				'\t// See https://go.microsoft.com/fwlink/?LinkId=733558',
 				'\t// for the documentation about the tasks.json format',
 			].join('\n') + JSON.stringify(value, null, '\t').substr(1);
-			let editorConfig = this.configurationService.getConfiguration<any>();
+			let editorConfig = this.configurationService.getValue<any>();
 			if (editorConfig.editor.insertSpaces) {
 				content = content.replace(/(\n)(\t+)/g, (_, s1, s2) => s1 + strings.repeat(' ', s2.length * editorConfig.editor.tabSize));
 			}
@@ -1601,7 +1601,7 @@ class TaskService extends EventEmitter implements ITaskService {
 
 	private getConfiguration(workspaceFolder: IWorkspaceFolder): { config: TaskConfig.ExternalTaskRunnerConfiguration; hasParseErrors: boolean } {
 		let result = this.contextService.getWorkbenchState() !== WorkbenchState.EMPTY
-			? this.configurationService.getConfiguration<TaskConfig.ExternalTaskRunnerConfiguration>('tasks', { resource: workspaceFolder.uri })
+			? this.configurationService.getValue<TaskConfig.ExternalTaskRunnerConfiguration>('tasks', { resource: workspaceFolder.uri })
 			: undefined;
 		if (!result) {
 			return { config: undefined, hasParseErrors: false };
@@ -1988,7 +1988,7 @@ class TaskService extends EventEmitter implements ITaskService {
 				this.showQuickPick(tasks,
 					nls.localize('TaskService.pickBuildTask', 'Select the build task to run'),
 					{
-						label: nls.localize('TaskService.noBuildTask', 'No build task to run found. Configure Tasks...'),
+						label: nls.localize('TaskService.noBuildTask', 'No build task to run found. Configure Build Task...'),
 						task: null
 					},
 					true).then((task) => {
@@ -1996,7 +1996,7 @@ class TaskService extends EventEmitter implements ITaskService {
 							return;
 						}
 						if (task === null) {
-							this.runConfigureTasks();
+							this.runConfigureDefaultBuildTask();
 							return;
 						}
 						this.run(task, { attachProblemMatcher: true });
@@ -2140,7 +2140,7 @@ class TaskService extends EventEmitter implements ITaskService {
 						return undefined;
 					}
 					let content = selection.content;
-					let editorConfig = this.configurationService.getConfiguration<any>();
+					let editorConfig = this.configurationService.getValue<any>();
 					if (editorConfig.editor.insertSpaces) {
 						content = content.replace(/(\n)(\t+)/g, (_, s1, s2) => s1 + strings.repeat(' ', s2.length * editorConfig.editor.tabSize));
 					}

@@ -25,8 +25,8 @@ import { KeybindingsRegistry } from 'vs/platform/keybinding/common/keybindingsRe
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
 import { IQuickOpenService } from 'vs/platform/quickOpen/common/quickOpen';
-import { ICodeEditorService } from 'vs/editor/common/services/codeEditorService';
-import { getSelectionSearchString } from 'vs/editor/contrib/find/common/find';
+import { ICodeEditorService } from 'vs/editor/browser/services/codeEditorService';
+import { getSelectionSearchString } from 'vs/editor/contrib/find/findController';
 import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
 import { KeyMod, KeyCode } from 'vs/base/common/keyCodes';
 import { ITree } from 'vs/base/parts/tree/browser/tree';
@@ -36,7 +36,7 @@ import * as Constants from 'vs/workbench/parts/search/common/constants';
 import { registerContributions as replaceContributions } from 'vs/workbench/parts/search/browser/replaceContributions';
 import { registerContributions as searchWidgetContributions } from 'vs/workbench/parts/search/browser/searchWidget';
 import { ContextKeyExpr } from 'vs/platform/contextkey/common/contextkey';
-import { ToggleCaseSensitiveKeybinding, ToggleRegexKeybinding, ToggleWholeWordKeybinding, ShowPreviousFindTermKeybinding, ShowNextFindTermKeybinding } from 'vs/editor/contrib/find/common/findModel';
+import { ToggleCaseSensitiveKeybinding, ToggleRegexKeybinding, ToggleWholeWordKeybinding, ShowPreviousFindTermKeybinding, ShowNextFindTermKeybinding } from 'vs/editor/contrib/find/findModel';
 import { ISearchWorkbenchService, SearchWorkbenchService } from 'vs/workbench/parts/search/common/searchModel';
 import { CommandsRegistry } from 'vs/platform/commands/common/commands';
 import { SearchViewlet } from 'vs/workbench/parts/search/browser/searchViewlet';
@@ -47,6 +47,9 @@ import { OpenSymbolHandler } from 'vs/workbench/parts/search/browser/openSymbolH
 import { OpenAnythingHandler } from 'vs/workbench/parts/search/browser/openAnythingHandler';
 import { OpenAnyFolderHandler } from 'vs/workbench/parts/search/browser/openFolderHandler';
 import { ProfilePickerHandler, PROFILE_PICKER_PREFIX } from 'vs/workbench/parts/search/browser/searchProfileHandler';
+import { registerLanguageCommand } from 'vs/editor/browser/editorExtensions';
+import { getWorkspaceSymbols } from 'vs/workbench/parts/search/common/search';
+import { illegalArgument } from 'vs/base/common/errors';
 
 registerSingleton(ISearchWorkbenchService, SearchWorkbenchService);
 replaceContributions();
@@ -141,6 +144,18 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 });
 
 KeybindingsRegistry.registerCommandAndKeybindingRule({
+	id: Constants.ReplaceAllInFolderActionId,
+	weight: KeybindingsRegistry.WEIGHT.workbenchContrib(),
+	when: ContextKeyExpr.and(Constants.SearchViewletVisibleKey, Constants.ReplaceActiveKey, Constants.FolderFocusKey),
+	primary: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.Enter,
+	handler: (accessor, args: any) => {
+		const searchViewlet: SearchViewlet = <SearchViewlet>accessor.get(IViewletService).getActiveViewlet();
+		const tree: ITree = searchViewlet.getControl();
+		accessor.get(IInstantiationService).createInstance(searchActions.ReplaceAllInFolderAction, tree, tree.getFocus()).run();
+	}
+});
+
+KeybindingsRegistry.registerCommandAndKeybindingRule({
 	id: Constants.CloseReplaceWidgetActionId,
 	weight: KeybindingsRegistry.WEIGHT.workbenchContrib(),
 	when: ContextKeyExpr.and(Constants.SearchViewletVisibleKey, Constants.ReplaceInputBoxFocusedKey),
@@ -174,14 +189,11 @@ CommandsRegistry.registerCommand(searchActions.FindInFolderAction.ID, searchActi
 
 class ExplorerViewerActionContributor extends ActionBarContributor {
 	private _instantiationService: IInstantiationService;
-	// @ts-ignore unused injected service
-	private _contextService: IWorkspaceContextService;
 
 	constructor( @IInstantiationService instantiationService: IInstantiationService, @IWorkspaceContextService contextService: IWorkspaceContextService) {
 		super();
 
 		this._instantiationService = instantiationService;
-		this._contextService = contextService;
 	}
 
 	public hasSecondaryActions(context: any): boolean {
@@ -291,7 +303,8 @@ Registry.as<ViewletRegistry>(ViewletExtensions.Viewlets).registerViewlet(new Vie
 const registry = Registry.as<IWorkbenchActionRegistry>(ActionExtensions.WorkbenchActions);
 const category = nls.localize('search', "Search");
 
-registry.registerWorkbenchAction(new SyncActionDescriptor(searchActions.OpenSearchViewletAction, Constants.VIEWLET_ID, searchActions.OpenSearchViewletAction.LABEL, { primary: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KEY_F },
+// "Show Search" and "Find in Files" are redundant, but we will inevitably break keybindings if we remove one
+registry.registerWorkbenchAction(new SyncActionDescriptor(searchActions.FindInFilesAction, Constants.VIEWLET_ID, searchActions.SHOW_SEARCH_LABEL, { primary: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KEY_F },
 	ContextKeyExpr.and(Constants.SearchViewletVisibleKey.toNegated(), EditorContextKeys.focus.toNegated())), 'View: Show Search', nls.localize('view', "View"));
 registry.registerWorkbenchAction(new SyncActionDescriptor(searchActions.FindInFilesAction, Constants.FindInFilesActionId, searchActions.FindInFilesAction.LABEL, { primary: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KEY_F },
 	ContextKeyExpr.and(Constants.SearchInputBoxFocusedKey.toNegated(), EditorContextKeys.focus.toNegated())), 'Find in Files', category);
@@ -454,15 +467,10 @@ configurationRegistry.registerConfiguration({
 			'description': nls.localize('useRipgrep', "Controls whether to use ripgrep in text and file search"),
 			'default': true
 		},
-		'search.useIgnoreFilesByDefault': {
-			'type': 'boolean',
-			'description': nls.localize('useIgnoreFilesByDefault', "Controls whether to use .gitignore and .ignore files by default when searching for text in a new workspace."),
-			'default': false
-		},
 		'search.useIgnoreFiles': {
 			'type': 'boolean',
 			'description': nls.localize('useIgnoreFiles', "Controls whether to use .gitignore and .ignore files when searching for files."),
-			'default': false,
+			'default': true,
 			'scope': ConfigurationScope.RESOURCE
 		},
 		'search.quickOpen.includeSymbols': {
@@ -502,4 +510,12 @@ configurationRegistry.registerConfiguration({
 			'default': true
 		}
 	}
+});
+
+registerLanguageCommand('_executeWorkspaceSymbolProvider', function (accessor, args: { query: string; }) {
+	let { query } = args;
+	if (typeof query !== 'string') {
+		throw illegalArgument();
+	}
+	return getWorkspaceSymbols(query);
 });

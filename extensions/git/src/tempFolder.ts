@@ -39,7 +39,7 @@ async function onDidChangeWorkspaceFolders(e: vscode.WorkspaceFoldersChangeEvent
 			}
 			const relpath = path.relative(tmpRoot, removed.uri.fsPath);
 			const firstCmp = relpath.split(path.sep)[0];
-			removals.push(new Promise<void>((resolve, reject) => rimraf(path.join(tmpRoot, firstCmp), (err) => err ? reject(err) : resolve())));
+			removals.push(new Promise<void>((resolve, reject) => rimraf(path.join(tmpRoot, firstCmp), (err: Error) => err ? reject(err) : resolve())));
 		}
 	}
 	await Promise.all(removals);

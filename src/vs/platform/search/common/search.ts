@@ -208,10 +208,6 @@ export interface ISearchConfiguration extends IFilesConfiguration {
 	search: {
 		exclude: glob.IExpression;
 		useRipgrep: boolean;
-		/**
-		 * Use ignore file for text search.
-		 */
-		useIgnoreFilesByDefault: boolean;
 		profiles: ISearchProfile[];
 		/**
 		 * Use ignore file for file search.

@@ -141,6 +141,10 @@ class Extension implements IExtension {
 		return require.toUrl('../browser/media/defaultIcon.png');
 	}
 
+	get repository(): string {
+		return this.gallery && this.gallery.assets.repository.uri;
+	}
+
 	get licenseUrl(): string {
 		return this.gallery && this.gallery.assets.license && this.gallery.assets.license.uri;
 	}
@@ -595,7 +599,7 @@ export class ExtensionsWorkbenchService implements IExtensionsWorkbenchService {
 	}
 
 	private async handleEnsureInstalled(): Promise<void> {
-		const ensureInstalledExtensions = this.configurationService.getConfiguration<IExtensionsConfiguration>(ConfigurationKey).ensureInstalled;
+		const ensureInstalledExtensions = this.configurationService.getValue<IExtensionsConfiguration>(ConfigurationKey).ensureInstalled;
 		if (ensureInstalledExtensions.length === 0) {
 			return;
 		}

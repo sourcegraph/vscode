@@ -16,8 +16,7 @@ import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/edi
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import * as Constants from 'vs/workbench/parts/codeComments/common/constants';
 import { IThemeService, registerThemingParticipant } from 'vs/platform/theme/common/themeService';
-import { ICommonCodeEditor, isCommonCodeEditor } from 'vs/editor/common/editorCommon';
-import { ICodeCommentsService } from 'vs/editor/common/services/codeCommentsService';
+import { ICodeCommentsService } from 'vs/editor/browser/services/codeCommentsService';
 import URI from 'vs/base/common/uri';
 import * as date from 'date-fns';
 import { IProgressService } from 'vs/platform/progress/common/progress';
@@ -34,6 +33,7 @@ import { Button } from 'vs/base/browser/ui/button/button';
 import { attachButtonStyler } from 'vs/platform/theme/common/styler';
 import { IAuthService } from 'vs/platform/auth/common/auth';
 import { Emitter } from 'vs/base/common/event';
+import { isCodeEditor, ICodeEditor } from 'vs/editor/browser/editorBrowser';
 
 /**
  * Renders code comments in a viewlet.
@@ -156,7 +156,7 @@ export class CodeCommentsViewlet extends Viewlet {
 		this.model.uri = modelUri;
 	}
 
-	private getActiveCodeEditor(): ICommonCodeEditor | undefined {
+	private getActiveCodeEditor(): ICodeEditor | undefined {
 		const editor = this.editorService.getActiveEditor();
 		if (!editor) {
 			return undefined;
@@ -165,13 +165,13 @@ export class CodeCommentsViewlet extends Viewlet {
 		if (!control) {
 			return undefined;
 		}
-		if (!isCommonCodeEditor(control)) {
+		if (!isCodeEditor(control)) {
 			return undefined;
 		}
 		return control;
 	}
 
-	private getModelUri(editor: ICommonCodeEditor): URI | undefined {
+	private getModelUri(editor: ICodeEditor): URI | undefined {
 		const model = editor.getModel();
 		if (!model) {
 			return undefined;

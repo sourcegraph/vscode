@@ -16,22 +16,22 @@ import { Part } from 'vs/workbench/browser/part';
 import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { StandardMouseEvent } from 'vs/base/browser/mouseEvent';
-import { getCodeEditor } from 'vs/editor/common/services/codeEditorService';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { CONTEXT_BAR_BACKGROUND, CONTEXT_BAR_FOREGROUND, CONTEXT_BAR_BORDER } from 'vs/workbench/common/theme';
 import { contrastBorder } from 'vs/platform/theme/common/colorRegistry';
 import { isEmptyMarkdownString } from 'vs/base/common/htmlContent';
-import { MarkdownRenderer } from 'vs/editor/contrib/markdown/browser/markdownRenderer';
-import { ICommonCodeEditor } from 'vs/editor/common/editorCommon';
-import { IContextData } from 'vs/editor/contrib/context/common/context';
+import { IContextData } from 'vs/editor/contrib/context/browser/context';
 import { EditorContextController } from 'vs/editor/contrib/context/browser/contextController';
 import { IEditorGroupService } from 'vs/workbench/services/group/common/groupService';
 import { WorkbenchContextWidget } from 'vs/workbench/browser/parts/contextbar/contextWidgets';
 import { HideContextbarAction } from 'vs/workbench/browser/actions/toggleContextbarVisibility';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
+import { ICodeEditor } from 'vs/editor/browser/editorBrowser';
+import { MarkdownRenderer } from 'vs/editor/contrib/markdown/markdownRenderer';
+import { getCodeEditor } from 'vs/editor/browser/services/codeEditorService';
 
 interface IEditorData extends IDisposable {
-	control: ICommonCodeEditor;
+	control: ICodeEditor;
 	controller: EditorContextController;
 	markdownRenderer: MarkdownRenderer;
 	widget: WorkbenchContextWidget;
@@ -145,7 +145,7 @@ export class ContextbarPart extends Part {
 				};
 			};
 		};
-		const config = this.configurationService.getConfiguration<ContextBarConfiguration>();
+		const config = this.configurationService.getValue<ContextBarConfiguration>();
 		const enabled = !!config.workbench.contextBar.visible;
 
 		const didChange = this.enabled !== enabled;

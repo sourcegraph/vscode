@@ -230,6 +230,11 @@
         "category": "Git"
       },
       {
+        "command": "git.renameBranch",
+        "title": "%command.renameBranch%",
+        "category": "Git"
+      },
+      {
         "command": "git.merge",
         "title": "%command.merge%",
         "category": "Git"
@@ -292,6 +297,11 @@
       {
         "command": "git.ignore",
         "title": "%command.ignore%",
+        "category": "Git"
+      },
+      {
+        "command": "git.stashIncludeUntracked",
+        "title": "%command.stashIncludeUntracked%",
         "category": "Git"
       },
       {
@@ -435,6 +445,10 @@
         },
         {
           "command": "git.deleteBranch",
+          "when": "config.git.enabled && gitOpenRepositoryCount != 0"
+        },
+        {
+          "command": "git.renameBranch",
           "when": "config.git.enabled && gitOpenRepositoryCount != 0"
         },
         {
@@ -614,6 +628,11 @@
         {
           "command": "git.cleanAll",
           "group": "4_stage",
+          "when": "config.git.enabled && scmProvider == git"
+        },
+        {
+          "command": "git.stashIncludeUntracked",
+          "group": "5_stash",
           "when": "config.git.enabled && scmProvider == git"
         },
         {
@@ -957,17 +976,19 @@
   "dependencies": {
     "byline": "^5.0.0",
     "copy-paste": "^1.3.0",
+    "file-type": "^7.2.0",
     "iconv-lite": "0.4.19",
     "rimraf": "^2.6.1",
     "vscode-extension-telemetry": "0.0.8",
     "vscode-nls": "2.0.2"
   },
   "devDependencies": {
+    "@types/byline": "4.2.31",
     "@types/copy-paste": "^1.1.30",
+    "@types/file-type": "^5.2.1",
     "@types/mocha": "2.2.43",
     "@types/node": "7.0.43",
-    "@types/rimraf": "2.0.2",
-    "@types/byline": "4.2.31",
+    "@types/rimraf": "^2.0.2",
     "mocha": "^3.2.0"
   }
 }

@@ -12,17 +12,12 @@ import { IPartService, Parts } from 'vs/workbench/services/part/common/partServi
 import { KEYBINDING_CONTEXT_WEBVIEWEDITOR_FOCUS, KEYBINDING_CONTEXT_WEBVIEWEDITOR_FIND_WIDGET_INPUT_FOCUSED } from 'vs/workbench/parts/html/browser/webviewEditor';
 import { IThemeService, ITheme } from 'vs/platform/theme/common/themeService';
 import { toDisposable, Disposable } from 'vs/base/common/lifecycle';
-import { PeekViewWidget } from 'vs/editor/contrib/referenceSearch/browser/peekViewWidget';
-import { peekViewBorder, peekViewTitleBackground, peekViewTitleForeground, peekViewTitleInfoForeground } from 'vs/editor/contrib/referenceSearch/browser/referencesWidget';
 import { Color } from 'vs/base/common/color';
 import { IViewZoneEvent } from 'vs/workbench/api/node/extHost.protocol';
-import { CommonEditorRegistry } from 'vs/editor/common/editorCommonExtensions';
 import { KeybindingsRegistry } from 'vs/platform/keybinding/common/keybindingsRegistry';
 import { KeyCode, KeyMod } from 'vs/base/common/keyCodes';
 import { ServicesAccessor } from 'vs/platform/instantiation/common/instantiation';
-import { registerEditorContribution } from 'vs/editor/browser/editorBrowserExtensions';
-import { IEditorContribution, ICommonCodeEditor } from 'vs/editor/common/editorCommon';
-import { ICodeEditorService } from 'vs/editor/common/services/codeEditorService';
+import { IEditorContribution } from 'vs/editor/common/editorCommon';
 import { IOpenerService } from 'vs/platform/opener/common/opener';
 import { addDisposableListener } from 'vs/base/browser/dom';
 import Event, { Emitter } from 'vs/base/common/event';
@@ -36,6 +31,10 @@ import { Severity, IMessageService } from 'vs/platform/message/common/message';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import * as vscode from 'vscode';
+import { PeekViewWidget } from 'vs/editor/contrib/referenceSearch/peekViewWidget';
+import { peekViewBorder, peekViewTitleBackground, peekViewTitleForeground, peekViewTitleInfoForeground } from 'vs/editor/contrib/referenceSearch/referencesWidget';
+import { registerEditorContribution } from 'vs/editor/browser/editorExtensions';
+import { ICodeEditorService } from 'vs/editor/browser/services/codeEditorService';
 
 // TODO(sqs): allow creating ZoneWidgets (not PeekViewWidgets), for extensions that don't need
 // to render a header.
@@ -285,7 +284,7 @@ class TextEditorViewZoneController extends Disposable implements IEditorContribu
 
 	private static ID = 'editor.contrib.textEditorViewZone';
 
-	public static get(editor: ICommonCodeEditor): TextEditorViewZoneController {
+	public static get(editor: ICodeEditor): TextEditorViewZoneController {
 		return editor.getContribution<TextEditorViewZoneController>(TextEditorViewZoneController.ID);
 	}
 
@@ -327,7 +326,7 @@ registerEditorContribution(TextEditorViewZoneController);
 
 KeybindingsRegistry.registerCommandAndKeybindingRule({
 	id: 'closeTextEditorViewZone',
-	weight: CommonEditorRegistry.commandWeight(50),
+	weight: KeybindingsRegistry.WEIGHT.editorContrib(50),
 	primary: KeyCode.Escape,
 	secondary: [KeyMod.Shift | KeyCode.Escape],
 	when: viewZoneVisibleContextKey,

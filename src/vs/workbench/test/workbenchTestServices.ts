@@ -57,7 +57,7 @@ import { TestThemeService } from 'vs/platform/theme/test/common/testThemeService
 import { IWorkspaceIdentifier, ISingleFolderWorkspaceIdentifier, isSingleFolderWorkspaceIdentifier, IWorkspaceFolderCreationData } from 'vs/platform/workspaces/common/workspaces';
 import { IRecentlyOpened } from 'vs/platform/history/common/history';
 import { ITextResourceConfigurationService } from 'vs/editor/common/services/resourceConfiguration';
-import { IPosition } from 'vs/editor/common/core/position';
+import { IPosition, Position as EditorPosition } from 'vs/editor/common/core/position';
 import { ICommandAction } from 'vs/platform/actions/common/actions';
 import { IHashService } from 'vs/workbench/services/hash/common/hashService';
 import { notImplemented } from 'vs/base/common/errors';
@@ -264,7 +264,7 @@ export function workbenchInstantiationService(): IInstantiationService {
 		choose: (severity, message, options, cancelId): TPromise<number> => {
 			return TPromise.as(cancelId);
 		}
-	});
+	} as IChoiceService);
 
 	return instantiationService;
 }
@@ -377,15 +377,15 @@ export class TestPartService implements IPartService {
 		return true;
 	}
 
-	public hasFocus(part): boolean {
+	public hasFocus(part: Parts): boolean {
 		return false;
 	}
 
-	public isVisible(part): boolean {
+	public isVisible(part: Parts): boolean {
 		return true;
 	}
 
-	public getContainer(part): HTMLElement {
+	public getContainer(part: Parts): HTMLElement {
 		return null;
 	}
 
@@ -614,11 +614,11 @@ export class TestEditorService implements IWorkbenchEditorService {
 		this.mockLineNumber = 15;
 	}
 
-	public openEditors(inputs): Promise {
+	public openEditors(inputs: any[]): Promise {
 		return TPromise.as([]);
 	}
 
-	public replaceEditors(editors): TPromise<IEditor[]> {
+	public replaceEditors(editors: any[]): TPromise<IEditor[]> {
 		return TPromise.as([]);
 	}
 
@@ -810,6 +810,10 @@ export class TestFileService implements IFileService {
 
 	touchFile(resource: URI): TPromise<IFileStat> {
 		return TPromise.as(null);
+	}
+
+	canHandleResource(resource: URI): boolean {
+		return resource.scheme === 'file';
 	}
 
 	del(resource: URI, useTrash?: boolean): TPromise<void> {
@@ -1241,11 +1245,10 @@ export class TestTextResourceConfigurationService implements ITextResourceConfig
 		return { dispose() { } };
 	}
 
-	public getConfiguration(resource: URI, section?: string): any;
-	public getConfiguration(resource: URI, position?: IPosition, section?: string): any;
-	public getConfiguration(resource: any, position?: any, section?: any): any;
-	public getConfiguration(resource: any, position?: any, section?: any): any {
-		return this.configurationService.getConfiguration(section, { resource });
+	getValue<T>(resource: URI, arg2?: any, arg3?: any): T {
+		const position: IPosition = EditorPosition.isIPosition(arg2) ? arg2 : null;
+		const section: string = position ? (typeof arg3 === 'string' ? arg3 : void 0) : (typeof arg2 === 'string' ? arg2 : void 0);
+		return this.configurationService.getValue(section, { resource });
 	}
 }
 

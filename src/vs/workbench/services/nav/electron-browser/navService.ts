@@ -25,11 +25,10 @@ import { toResource } from 'vs/workbench/common/editor';
 import { ISCMService } from 'vs/workbench/services/scm/common/scm';
 import * as querystring from 'querystring';
 import { parseSelection } from 'vs/base/common/urlRoutes';
-import { getCodeEditor } from 'vs/editor/common/services/codeEditorService';
 import { ISelection } from 'vs/editor/common/core/selection';
 import { IMessageService } from 'vs/platform/message/common/message';
 import Severity from 'vs/base/common/severity';
-import { EDITOR_CONTRIBUTION_ID as CODE_COMMENTS_CONTRIBUTION_ID } from 'vs/editor/common/services/codeCommentsService';
+import { EDITOR_CONTRIBUTION_ID as CODE_COMMENTS_CONTRIBUTION_ID } from 'vs/editor/browser/services/codeCommentsService';
 import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
 // tslint:disable-next-line:import-patterns
 import { VIEWLET_ID as EXPLORER_VIEWLET_ID } from 'vs/workbench/parts/files/common/files';
@@ -40,6 +39,7 @@ import { first } from 'vs/base/common/arrays';
 import { MAGIC_COMPARISON_ROOT_SUFFIX } from 'vs/workbench/api/electron-browser/mainThreadSCM';
 // tslint:disable-next-line:import-patterns
 import { SCMViewlet } from 'vs/workbench/parts/scm/electron-browser/scmViewlet';
+import { getCodeEditor } from 'vs/editor/browser/services/codeEditorService';
 
 interface HandledURI {
 	repo?: string;

@@ -8,10 +8,9 @@ import { QuickOpenModel } from 'vs/base/parts/quickopen/browser/quickOpenModel';
 import { IAutoFocus } from 'vs/base/parts/quickopen/common/quickOpen';
 import * as editorCommon from 'vs/editor/common/editorCommon';
 import { ICodeEditor } from 'vs/editor/browser/editorBrowser';
-import { registerEditorContribution } from 'vs/editor/browser/editorBrowserExtensions';
 import { QuickOpenEditorWidget } from './quickOpenEditorWidget';
 import { Selection } from 'vs/editor/common/core/selection';
-import { IActionOptions, EditorAction } from 'vs/editor/common/editorCommonExtensions';
+import { registerEditorContribution, IActionOptions, EditorAction } from 'vs/editor/browser/editorExtensions';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { Range } from 'vs/editor/common/core/range';
 import { ModelDecorationOptions } from 'vs/editor/common/model/textModelWithDecorations';
@@ -26,7 +25,7 @@ export class QuickOpenController implements editorCommon.IEditorContribution {
 
 	private static ID = 'editor.controller.quickOpenController';
 
-	public static get(editor: editorCommon.ICommonCodeEditor): QuickOpenController {
+	public static get(editor: ICodeEditor): QuickOpenController {
 		return editor.getContribution<QuickOpenController>(QuickOpenController.ID);
 	}
 
@@ -153,7 +152,7 @@ export abstract class BaseEditorQuickOpenAction extends EditorAction {
 		this._inputAriaLabel = inputAriaLabel;
 	}
 
-	protected getController(editor: editorCommon.ICommonCodeEditor): QuickOpenController {
+	protected getController(editor: ICodeEditor): QuickOpenController {
 		return QuickOpenController.get(editor);
 	}
 

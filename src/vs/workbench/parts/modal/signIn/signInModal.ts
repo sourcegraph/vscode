@@ -42,7 +42,7 @@ export class SignInModal extends Modal {
 	 * Creates the modal
 	 */
 	protected createContents(container: Builder): TPromise<void> {
-		const remoteConfig = this.configurationService.getConfiguration<IRemoteConfiguration>();
+		const remoteConfig = this.configurationService.getValue<IRemoteConfiguration>();
 		if (!remoteConfig || !remoteConfig.remote || !remoteConfig.remote.endpoint) {
 			throw new Error('unable to sign in because remote.endpoint configuration setting is not present');
 		}

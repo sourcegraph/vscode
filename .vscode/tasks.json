@@ -70,7 +70,7 @@
 		},
 		{
 			"type": "shell",
-			"taskName": "Initialize dev environment",
+			"label": "Initialize dev environment",
 			"identifier": "init",
 			"command": "./scripts/npm.sh install --arch=x64 && npm run compile"
 		}

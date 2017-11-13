@@ -15,10 +15,9 @@ import { IInstantiationService } from 'vs/platform/instantiation/common/instanti
 import { ContextKeyExpr } from 'vs/platform/contextkey/common/contextkey';
 import { Range } from 'vs/editor/common/core/range';
 import * as editorCommon from 'vs/editor/common/editorCommon';
-import { ServicesAccessor, registerEditorCommand, EditorCommand } from 'vs/editor/common/editorCommonExtensions';
+import { registerEditorContribution, ServicesAccessor, registerEditorCommand, EditorCommand } from 'vs/editor/browser/editorExtensions';
 import { ICodeEditor } from 'vs/editor/browser/editorBrowser';
-import { registerEditorContribution } from 'vs/editor/browser/editorBrowserExtensions';
-import { SnippetController2 } from 'vs/editor/contrib/snippet/browser/snippetController2';
+import { SnippetController2 } from 'vs/editor/contrib/snippet/snippetController2';
 import { SmartSnippetInserter } from 'vs/workbench/parts/preferences/common/smartSnippetInserter';
 import { DefineKeybindingOverlayWidget } from 'vs/workbench/parts/preferences/browser/keybindingWidgets';
 import { FloatingClickWidget } from 'vs/workbench/parts/preferences/browser/preferencesWidgets';
@@ -39,7 +38,7 @@ export class DefineKeybindingController extends Disposable implements editorComm
 
 	private static ID = 'editor.contrib.defineKeybinding';
 
-	public static get(editor: editorCommon.ICommonCodeEditor): DefineKeybindingController {
+	public static get(editor: ICodeEditor): DefineKeybindingController {
 		return editor.getContribution<DefineKeybindingController>(DefineKeybindingController.ID);
 	}
 
@@ -370,7 +369,7 @@ class DefineKeybindingCommand extends EditorCommand {
 		});
 	}
 
-	public runEditorCommand(accessor: ServicesAccessor, editor: editorCommon.ICommonCodeEditor): void {
+	public runEditorCommand(accessor: ServicesAccessor, editor: ICodeEditor): void {
 		if (!isInterestingEditorModel(editor) || editor.getConfiguration().readOnly) {
 			return;
 		}
@@ -381,7 +380,7 @@ class DefineKeybindingCommand extends EditorCommand {
 	}
 }
 
-function isInterestingEditorModel(editor: editorCommon.ICommonCodeEditor): boolean {
+function isInterestingEditorModel(editor: ICodeEditor): boolean {
 	let model = editor.getModel();
 	if (!model) {
 		return false;

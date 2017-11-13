@@ -11,7 +11,6 @@ import { IModeService } from 'vs/editor/common/services/modeService';
 import { Range } from 'vs/editor/common/core/range';
 import * as editorCommon from 'vs/editor/common/editorCommon';
 import { ICodeEditor } from 'vs/editor/browser/editorBrowser';
-import { registerEditorContribution } from 'vs/editor/browser/editorBrowserExtensions';
 import { IDisposable, dispose } from 'vs/base/common/lifecycle';
 import { HoverProviderRegistry, HoverProvider, Hover, ContextProviderRegistry, ContextProvider, ContextItem } from 'vs/editor/common/modes';
 import { PLAINTEXT_MODE_ID } from 'vs/editor/common/modes/modesRegistry';
@@ -19,6 +18,7 @@ import { LanguageSelector } from 'vs/editor/common/modes/languageSelector';
 import { CancellationToken } from 'vs/base/common/cancellation';
 import { toThenable } from 'vs/base/common/async';
 import { IMarkdownString } from 'vs/base/common/htmlContent';
+import { registerEditorContribution } from 'vs/editor/browser/editorExtensions';
 
 /**
  * Registers hover providers as context providers.
@@ -30,7 +30,7 @@ export class ContextHoverAdapter implements editorCommon.IEditorContribution {
 	private _providerDisposables: IDisposable[];
 	private _disposables: IDisposable[];
 
-	static get(editor: editorCommon.ICommonCodeEditor): ContextHoverAdapter {
+	static get(editor: ICodeEditor): ContextHoverAdapter {
 		return editor.getContribution<ContextHoverAdapter>(ContextHoverAdapter.ID);
 	}
 

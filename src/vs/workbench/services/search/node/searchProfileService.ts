@@ -144,7 +144,7 @@ export class SearchProfileService extends Disposable implements ISearchProfileSe
 	}
 
 	private onConfigUpdated(): void {
-		const fromConfig = (this.configurationService.getConfiguration<ISearchConfiguration>().search.profiles || []);
+		const fromConfig = (this.configurationService.getValue<ISearchConfiguration>().search.profiles || []);
 		if (!arrays.equals(fromConfig, this._fromConfig)) {
 			this._fromConfig = fromConfig;
 			this.didSearchProfilesChange.fire();

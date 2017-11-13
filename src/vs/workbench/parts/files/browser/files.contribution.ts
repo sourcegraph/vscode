@@ -16,7 +16,7 @@ import { IWorkbenchContributionsRegistry, Extensions as WorkbenchExtensions } fr
 import { IEditorInputFactory, EditorInput, IFileEditorInput, IEditorInputFactoryRegistry, Extensions as EditorInputExtensions } from 'vs/workbench/common/editor';
 import { AutoSaveConfiguration, HotExitConfiguration, SUPPORTED_ENCODINGS } from 'vs/platform/files/common/files';
 import { FILE_EDITOR_INPUT_ID, VIEWLET_ID, SortOrderConfiguration } from 'vs/workbench/parts/files/common/files';
-import { FileEditorTracker } from 'vs/workbench/parts/files/common/editors/fileEditorTracker';
+import { FileEditorTracker } from 'vs/workbench/parts/files/browser/editors/fileEditorTracker';
 import { SaveErrorHandler } from 'vs/workbench/parts/files/browser/saveErrorHandler';
 import { FileEditorInput } from 'vs/workbench/parts/files/common/editors/fileEditorInput';
 import { TextFileEditor } from 'vs/workbench/parts/files/browser/editors/textFileEditor';
@@ -31,6 +31,7 @@ import * as platform from 'vs/base/common/platform';
 import { DirtyFilesTracker } from 'vs/workbench/parts/files/common/dirtyFilesTracker';
 import { ExplorerViewlet } from 'vs/workbench/parts/files/browser/explorerViewlet';
 import { IEditorRegistry, EditorDescriptor, Extensions as EditorExtensions } from 'vs/workbench/browser/editor';
+import { DataUriEditorInput } from 'vs/workbench/common/editor/dataUriEditorInput';
 
 // Viewlet Action
 export class OpenExplorerViewletAction extends ToggleViewletAction {
@@ -89,7 +90,8 @@ Registry.as<IEditorRegistry>(EditorExtensions.Editors).registerEditor(
 		nls.localize('binaryFileEditor', "Binary File Editor")
 	),
 	[
-		new SyncDescriptor<EditorInput>(FileEditorInput)
+		new SyncDescriptor<EditorInput>(FileEditorInput),
+		new SyncDescriptor<EditorInput>(DataUriEditorInput)
 	]
 );
 

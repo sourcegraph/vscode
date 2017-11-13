@@ -299,10 +299,10 @@ export class FileRenderer implements IRenderer {
 		@IConfigurationService private configurationService: IConfigurationService
 	) {
 		this.state = state;
-		this.config = this.configurationService.getConfiguration<IFilesConfiguration>();
+		this.config = this.configurationService.getValue<IFilesConfiguration>();
 		this.configListener = this.configurationService.onDidChangeConfiguration(e => {
 			if (e.affectsConfiguration('explorer')) {
-				this.config = this.configurationService.getConfiguration();
+				this.config = this.configurationService.getValue();
 			}
 		});
 	}
@@ -805,7 +805,7 @@ export class FileFilter implements IFilter {
 	public updateConfiguration(): boolean {
 		let needsRefresh = false;
 		this.contextService.getWorkspace().folders.forEach(folder => {
-			const configuration = this.configurationService.getConfiguration<IFilesConfiguration>({ resource: folder.uri });
+			const configuration = this.configurationService.getValue<IFilesConfiguration>({ resource: folder.uri });
 			const excludesConfig = (configuration && configuration.files && configuration.files.exclude) || Object.create(null);
 			needsRefresh = needsRefresh || !objects.equals(this.hiddenExpressionPerRoot.get(folder.uri.toString()), excludesConfig);
 			this.hiddenExpressionPerRoot.set(folder.uri.toString(), objects.clone(excludesConfig)); // do not keep the config, as it gets mutated under our hoods
@@ -819,7 +819,7 @@ export class FileFilter implements IFilter {
 	}
 
 	private doIsVisible(stat: FileStat): boolean {
-		if (stat instanceof NewStatPlaceholder) {
+		if (stat instanceof NewStatPlaceholder || stat.isRoot) {
 			return true; // always visible
 		}
 

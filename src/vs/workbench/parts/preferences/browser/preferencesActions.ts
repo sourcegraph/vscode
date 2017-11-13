@@ -132,8 +132,6 @@ export class OpenFolderSettingsAction extends Action {
 	constructor(
 		id: string,
 		label: string,
-		// @ts-ignore unused injected service
-		@IPreferencesService private preferencesService: IPreferencesService,
 		@IWorkspaceContextService private workspaceContextService: IWorkspaceContextService,
 		@ICommandService private commandService: ICommandService
 	) {

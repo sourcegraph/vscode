@@ -10,9 +10,9 @@ import { MainThreadWindowShape, ExtHostWindowShape, ExtHostContext, MainContext,
 import { IDisposable, dispose } from 'vs/base/common/lifecycle';
 import { extHostNamedCustomer } from 'vs/workbench/api/electron-browser/extHostCustomers';
 import * as vscode from 'vscode';
-import { WorkspaceConfigurationModel } from 'vs/workbench/services/configuration/common/configurationModels';
 import { readFile } from 'vs/base/node/pfs';
 import { toWorkspaceFolders } from 'vs/platform/workspace/common/workspace';
+import { WorkspaceConfigurationModelParser } from 'vs/workbench/services/configuration/common/configurationModels';
 
 @extHostNamedCustomer(MainContext.MainThreadWindow)
 export class MainThreadWindow implements MainThreadWindowShape {
@@ -40,7 +40,8 @@ export class MainThreadWindow implements MainThreadWindowShape {
 			let folders: vscode.WorkspaceFolder[] | undefined = undefined;
 			if (win.workspace) {
 				const contents = await readFile(win.workspace.configPath, 'utf8');
-				const model = new WorkspaceConfigurationModel(contents, win.workspace.configPath);
+				const model = new WorkspaceConfigurationModelParser(win.workspace.configPath);
+				model.parse(contents);
 				folders = toWorkspaceFolders(model.folders);
 			}
 			return {

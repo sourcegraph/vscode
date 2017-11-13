@@ -9,19 +9,19 @@ import * as nls from 'vs/nls';
 import Event, { Emitter } from 'vs/base/common/event';
 import { IDisposable, dispose, Disposable } from 'vs/base/common/lifecycle';
 import { TPromise } from 'vs/base/common/winjs.base';
-import * as editorCommon from 'vs/editor/common/editorCommon';
 import { ContextProviderRegistry } from 'vs/editor/common/modes';
 import { Range } from 'vs/editor/common/core/range';
-import { IContextData, getContextData } from '../common/context';
 import { MarkdownString } from 'vs/base/common/htmlContent';
-import { HoverOperation, IHoverComputer } from 'vs/editor/contrib/hover/browser/hoverOperation';
+import { IContextData, getContextData } from 'vs/editor/contrib/context/browser/context';
+import { ICodeEditor } from 'vs/editor/browser/editorBrowser';
+import { HoverOperation, IHoverComputer } from 'vs/editor/contrib/hover/hoverOperation';
 
 class ContextComputer implements IHoverComputer<IContextData[]> {
 
 	private _result: IContextData[];
 	private _range: Range;
 
-	constructor(private _editor: editorCommon.ICommonCodeEditor) {
+	constructor(private _editor: ICodeEditor) {
 		this._range = null;
 	}
 
@@ -84,7 +84,7 @@ export class EditorContextController extends Disposable {
 	public get onDidChange(): Event<IContextData[]> { return this._onDidChange.event; }
 
 	constructor(
-		private editor: editorCommon.ICommonCodeEditor,
+		private editor: ICodeEditor,
 	) {
 		super();
 

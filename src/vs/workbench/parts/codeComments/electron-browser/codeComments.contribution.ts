@@ -13,7 +13,7 @@ import { IWorkbenchActionRegistry, Extensions as ActionExtensions } from 'vs/wor
 import 'vs/workbench/parts/codeComments/electron-browser/codeCommentsController';
 import 'vs/workbench/parts/codeComments/browser/commentsContextKeys';
 import { registerSingleton } from 'vs/platform/instantiation/common/extensions';
-import { ICodeCommentsService } from 'vs/editor/common/services/codeCommentsService';
+import { ICodeCommentsService } from 'vs/editor/browser/services/codeCommentsService';
 import { CodeCommentsService } from 'vs/workbench/services/codeComments/electron-browser/codeCommentsService';
 import { IKeybindings } from 'vs/platform/keybinding/common/keybindingsRegistry';
 import { SyncActionDescriptor } from 'vs/platform/actions/common/actions';

@@ -5,15 +5,13 @@
 'use strict';
 
 import { TPromise } from 'vs/base/common/winjs.base';
-import { ICodeEditorService } from 'vs/editor/common/services/codeEditorService';
-import { ICommonCodeEditor, IModel, OverviewRulerLane, IDecorationOptions, IEditorContribution, TrackedRangeStickiness } from 'vs/editor/common/editorCommon';
+import { IModel, OverviewRulerLane, IDecorationOptions, IEditorContribution, TrackedRangeStickiness } from 'vs/editor/common/editorCommon';
 import { IDisposable, Disposable, dispose } from 'vs/base/common/lifecycle';
-import { ICodeCommentsService, IThreadComments, IFileComments, IDraftThreadComments, EDITOR_CONTRIBUTION_ID } from 'vs/editor/common/services/codeCommentsService';
+import { ICodeCommentsService, IThreadComments, IFileComments, IDraftThreadComments, EDITOR_CONTRIBUTION_ID } from 'vs/editor/browser/services/codeCommentsService';
 import { Schemas } from 'vs/base/common/network';
 import * as colors from 'vs/platform/theme/common/colorRegistry';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { ICodeEditor, MouseTargetType } from 'vs/editor/browser/editorBrowser';
-import { registerEditorContribution } from 'vs/editor/browser/editorBrowserExtensions';
 import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { ThreadCommentsWidget } from 'vs/workbench/parts/codeComments/electron-browser/threadCommentsWidget';
@@ -25,10 +23,11 @@ import { once } from 'vs/base/common/event';
 import { ModelDecorationOptions } from 'vs/editor/common/model/textModelWithDecorations';
 import { KeyCode, KeyMod } from 'vs/base/common/keyCodes';
 import { KeybindingsRegistry } from 'vs/platform/keybinding/common/keybindingsRegistry';
-import { ServicesAccessor, CommonEditorRegistry } from 'vs/editor/common/editorCommonExtensions';
 import { IContextKey, IContextKeyService, RawContextKey } from 'vs/platform/contextkey/common/contextkey';
-import { getOuterEditor } from 'vs/editor/contrib/referenceSearch/browser/peekViewWidget';
 import { Delayer } from 'vs/base/common/async';
+import { registerEditorContribution, ServicesAccessor } from 'vs/editor/browser/editorExtensions';
+import { getOuterEditor } from 'vs/editor/contrib/referenceSearch/peekViewWidget';
+import { ICodeEditorService } from 'vs/editor/browser/services/codeEditorService';
 
 /**
  * Decoration key for highlighting a comment range.
@@ -49,7 +48,7 @@ const GUTTER_ICON_DECORATION_OPTIONS = ModelDecorationOptions.register({
  */
 export class CodeCommentsController extends Disposable implements IEditorContribution {
 
-	public static get(editor: ICommonCodeEditor): CodeCommentsController {
+	public static get(editor: ICodeEditor): CodeCommentsController {
 		return editor.getContribution<CodeCommentsController>(EDITOR_CONTRIBUTION_ID);
 	}
 
@@ -517,7 +516,7 @@ const hasOpenWidgets = new RawContextKey<boolean>('hasOpenWidgets', false);
 
 KeybindingsRegistry.registerCommandAndKeybindingRule({
 	id: 'closeCodeComments',
-	weight: CommonEditorRegistry.commandWeight(500),
+	weight: KeybindingsRegistry.WEIGHT.editorContrib(500),
 	primary: KeyCode.Escape,
 	secondary: [KeyMod.Shift | KeyCode.Escape],
 	when: hasOpenWidgets,

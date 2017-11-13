@@ -11,10 +11,9 @@ import { Disposable } from 'vs/base/common/lifecycle';
 import { escape } from 'vs/base/common/strings';
 import { KeyCode } from 'vs/base/common/keyCodes';
 import { Position } from 'vs/editor/common/core/position';
-import { ICommonCodeEditor, IEditorContribution, IModel } from 'vs/editor/common/editorCommon';
-import { registerEditorAction, EditorAction, ServicesAccessor } from 'vs/editor/common/editorCommonExtensions';
+import { IEditorContribution, IModel } from 'vs/editor/common/editorCommon';
+import { registerEditorAction, registerEditorContribution, EditorAction, ServicesAccessor } from 'vs/editor/browser/editorExtensions';
 import { ICodeEditor, ContentWidgetPositionPreference, IContentWidget, IContentWidgetPosition } from 'vs/editor/browser/editorBrowser';
-import { registerEditorContribution } from 'vs/editor/browser/editorBrowserExtensions';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { IGrammar, StackElement, IToken } from 'vscode-textmate';
 import { ITextMateService } from 'vs/workbench/services/textMate/electron-browser/textMateService';
@@ -34,7 +33,7 @@ class InspectTMScopesController extends Disposable implements IEditorContributio
 
 	private static ID = 'editor.contrib.inspectTMScopes';
 
-	public static get(editor: ICommonCodeEditor): InspectTMScopesController {
+	public static get(editor: ICodeEditor): InspectTMScopesController {
 		return editor.getContribution<InspectTMScopesController>(InspectTMScopesController.ID);
 	}
 
@@ -111,7 +110,7 @@ class InspectTMScopes extends EditorAction {
 		});
 	}
 
-	public run(accessor: ServicesAccessor, editor: ICommonCodeEditor): void {
+	public run(accessor: ServicesAccessor, editor: ICodeEditor): void {
 		let controller = InspectTMScopesController.get(editor);
 		if (controller) {
 			controller.toggle();

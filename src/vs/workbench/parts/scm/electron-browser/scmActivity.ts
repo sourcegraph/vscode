@@ -18,7 +18,7 @@ import { IStatusbarService, StatusbarAlignment as MainThreadStatusBarAlignment }
 import { IEditorGroupService } from 'vs/workbench/services/group/common/groupService';
 import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { toResource } from 'vs/workbench/common/editor';
-import { getCodeEditor as getEditorWidget } from 'vs/editor/common/services/codeEditorService';
+import { getCodeEditor as getEditorWidget } from 'vs/editor/browser/services/codeEditorService';
 import { IEditor } from 'vs/platform/editor/common/editor';
 
 export class StatusUpdater implements IWorkbenchContribution {

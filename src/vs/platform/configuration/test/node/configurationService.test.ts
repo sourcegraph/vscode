@@ -50,7 +50,7 @@ suite('ConfigurationService - Node', () => {
 
 			const service = new ConfigurationService(new SettingsTestEnvironmentService(parseArgs(process.argv), process.execPath, userSettingsPath, orgSettingsPath));
 
-			const config = service.getConfiguration<{ foo: string }>();
+			const config = service.getValue<{ foo: string }>();
 			assert.ok(config);
 			assert.equal(config.foo, 'bar');
 
@@ -66,7 +66,7 @@ suite('ConfigurationService - Node', () => {
 
 			const service = new ConfigurationService(new SettingsTestEnvironmentService(parseArgs(process.argv), process.execPath, userSettingsPath, orgSettingsPath));
 
-			const config = service.getConfiguration<{ foo: string }>();
+			const config = service.getValue<{ foo: string }>();
 			assert.ok(config);
 			assert.equal(config.foo, 'bar');
 
@@ -83,7 +83,7 @@ suite('ConfigurationService - Node', () => {
 
 			const service = new ConfigurationService(new SettingsTestEnvironmentService(parseArgs(process.argv), process.execPath, userSettingsPath, orgSettingsPath));
 
-			const config = service.getConfiguration<{ foo: string }>();
+			const config = service.getValue<{ foo: string }>();
 			assert.ok(config);
 			assert.equal(config.foo, 'new');
 
@@ -99,7 +99,7 @@ suite('ConfigurationService - Node', () => {
 
 			const service = new ConfigurationService(new SettingsTestEnvironmentService(parseArgs(process.argv), process.execPath, userSettingsPath, orgSettingsPath));
 
-			const config = service.getConfiguration<{ testworkbench: { editor: { tabs: boolean } } }>();
+			const config = service.getValue<{ testworkbench: { editor: { tabs: boolean } } }>();
 			assert.ok(config);
 			assert.ok(config.testworkbench);
 			assert.ok(config.testworkbench.editor);
@@ -117,7 +117,7 @@ suite('ConfigurationService - Node', () => {
 
 			const service = new ConfigurationService(new SettingsTestEnvironmentService(parseArgs(process.argv), process.execPath, userSettingsPath, orgSettingsPath));
 
-			const config = service.getConfiguration<{ foo: string }>();
+			const config = service.getValue<{ foo: string }>();
 			assert.ok(config);
 
 			service.dispose();
@@ -135,7 +135,7 @@ suite('ConfigurationService - Node', () => {
 
 		const service = new ConfigurationService(new SettingsTestEnvironmentService(parseArgs(process.argv), process.execPath, userSettingsPath, orgSettingsPath));
 
-		const config = service.getConfiguration<{ foo: string }>();
+		const config = service.getValue<{ foo: string }>();
 		assert.ok(config);
 
 		service.dispose();
@@ -147,7 +147,7 @@ suite('ConfigurationService - Node', () => {
 
 			const service = new ConfigurationService(new SettingsTestEnvironmentService(parseArgs(process.argv), process.execPath, userSettingsPath, orgSettingsPath));
 
-			let config = service.getConfiguration<{ foo: string, eggs: string }>();
+			let config = service.getValue<{ foo: string, eggs: string }>();
 			assert.ok(config);
 			assert.equal(config.foo, 'bar');
 			assert.equal(config.eggs, void 0);
@@ -156,14 +156,14 @@ suite('ConfigurationService - Node', () => {
 			fs.writeFileSync(orgSettingsPath, ' { "eggs": "ham" }');
 
 			// still outdated
-			config = service.getConfiguration<{ foo: string, eggs: string }>();
+			config = service.getValue<{ foo: string, eggs: string }>();
 			assert.ok(config);
 			assert.equal(config.foo, 'bar');
 			assert.equal(config.eggs, void 0);
 
 			// force a reload to get latest
 			service.reloadConfiguration().then(() => {
-				config = service.getConfiguration<{ foo: string, eggs: string }>();
+				config = service.getValue<{ foo: string, eggs: string }>();
 				assert.ok(config);
 				assert.equal(config.foo, 'changed');
 				assert.equal(config.eggs, 'ham');
@@ -197,7 +197,7 @@ suite('ConfigurationService - Node', () => {
 		});
 
 		let serviceWithoutFile = new ConfigurationService(new SettingsTestEnvironmentService(parseArgs(process.argv), process.execPath, '__fakeUserSettings', '__fakeOrgSettings'));
-		let setting = serviceWithoutFile.getConfiguration<ITestSetting>();
+		let setting = serviceWithoutFile.getValue<ITestSetting>();
 
 		assert.ok(setting);
 		assert.equal(setting.configuration.service.testSetting, 'isSet');
@@ -207,7 +207,7 @@ suite('ConfigurationService - Node', () => {
 
 			const service = new ConfigurationService(new SettingsTestEnvironmentService(parseArgs(process.argv), process.execPath, userSettingsPath, orgSettingsPath));
 
-			let setting = service.getConfiguration<ITestSetting>();
+			let setting = service.getValue<ITestSetting>();
 
 			assert.ok(setting);
 			assert.equal(setting.configuration.service.testSetting, 'isSet');
@@ -215,7 +215,7 @@ suite('ConfigurationService - Node', () => {
 			fs.writeFileSync(userSettingsPath, '{ "configuration.service.testSetting": "isChanged" }');
 
 			service.reloadConfiguration().then(() => {
-				let setting = service.getConfiguration<ITestSetting>();
+				let setting = service.getValue<ITestSetting>();
 
 				assert.ok(setting);
 				assert.equal(setting.configuration.service.testSetting, 'isChanged');

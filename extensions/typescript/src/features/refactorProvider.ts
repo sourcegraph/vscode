@@ -106,21 +106,32 @@ export default class TypeScriptRefactorProvider implements vscode.CodeActionProv
 		commandManager.register(new SelectRefactorCommand(doRefactoringCommand));
 	}
 
-	public async provideCodeActions(
+	public async provideCodeActions() {
+		// Uses provideCodeActions2 instead
+		return [];
+	}
+
+	public async provideCodeActions2(
 		document: vscode.TextDocument,
-		range: vscode.Range,
+		_range: vscode.Range,
 		_context: vscode.CodeActionContext,
 		token: vscode.CancellationToken
-	): Promise<vscode.Command[]> {
+	): Promise<vscode.CodeAction[]> {
 		if (!this.client.apiVersion.has240Features()) {
 			return [];
 		}
 
-		const file = this.client.normalizePath(document.uri);
-		if (!file) {
+		if (!vscode.window.activeTextEditor) {
 			return [];
 		}
 
+		const editor = vscode.window.activeTextEditor;
+		const file = this.client.normalizePath(document.uri);
+		if (!file || editor.document.uri.fsPath !== document.uri.fsPath) {
+			return [];
+		}
+
+		const range = editor.selection;
 		const args: Proto.GetApplicableRefactorsRequestArgs = vsRangeToTsFileRange(file, range);
 		try {
 			const response = await this.client.execute('getApplicableRefactors', args, token);
@@ -128,26 +139,32 @@ export default class TypeScriptRefactorProvider implements vscode.CodeActionProv
 				return [];
 			}
 
-			const actions: vscode.Command[] = [];
+			const actions: vscode.CodeAction[] = [];
 			for (const info of response.body) {
 				if (info.inlineable === false) {
 					actions.push({
 						title: info.description,
-						command: SelectRefactorCommand.ID,
-						arguments: [document, file, info, range]
+						command: {
+							title: info.description,
+							command: SelectRefactorCommand.ID,
+							arguments: [document, file, info, range]
+						}
 					});
 				} else {
 					for (const action of info.actions) {
 						actions.push({
 							title: action.description,
-							command: ApplyRefactoringCommand.ID,
-							arguments: [document, file, info.name, action.name, range]
+							command: {
+								title: action.description,
+								command: ApplyRefactoringCommand.ID,
+								arguments: [document, file, info.name, action.name, range]
+							}
 						});
 					}
 				}
 			}
 			return actions;
-		} catch (err) {
+		} catch {
 			return [];
 		}
 	}
