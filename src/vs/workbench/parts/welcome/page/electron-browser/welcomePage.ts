@@ -610,7 +610,9 @@ class WelcomePage {
 		const repoSpinner = document.getElementById('recent-repos-spinner') as HTMLElement;
 
 		const { github, bitbucket } = this.configurationService.getValue();
-		if ((!github || !github.token) && (!bitbucket || !bitbucket.cloud || !bitbucket.cloud.triggerSetup)) {
+		const isGitHubConfigured = github && github.token;
+		const isBitbucketConfigured = bitbucket && bitbucket.cloud && bitbucket.cloud.username && bitbucket.cloud.appPassword;
+		if (!isGitHubConfigured && (!isBitbucketConfigured || bitbucket.cloud.triggerSetup)) {
 			$(codeHostContainer).show();
 			$(branchListContainer).hide();
 			return;
