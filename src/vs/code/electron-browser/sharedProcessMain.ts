@@ -37,8 +37,7 @@ import { WindowsChannelClient } from 'vs/platform/windows/common/windowsIpc';
 import { ipcRenderer } from 'electron';
 import { IDisposable, dispose } from 'vs/base/common/lifecycle';
 import { StorageService, inMemoryLocalStorageInstance } from 'vs/platform/storage/common/storageService';
-import { SourcegraphEventLogger } from 'vs/platform/telemetry/common/sourcegraphEventLogger';
-import { WindowLevel } from 'vs/platform/telemetry/common/analyticsConstants';
+import { SourcegraphTelemetryAppender } from 'vs/platform/telemetry/node/sourcegraphTelemetryAppender';
 import { createSharedProcessContributions } from 'vs/code/electron-browser/contrib/contributions';
 
 interface ISharedProcessInitData {
@@ -92,7 +91,7 @@ function main(server: Server, initData: ISharedProcessInitData): void {
 	instantiationService.invokeFunction(accessor => {
 		const appenders: AppInsightsAppender[] = [];
 
-		appenders.push(instantiationService.createInstance(SourcegraphEventLogger, WindowLevel.SharedProcess));
+		appenders.push(instantiationService.createInstance(SourcegraphTelemetryAppender));
 		if (product.aiConfig && product.aiConfig.asimovKey) {
 			appenders.push(new AppInsightsAppender(eventPrefix, null, product.aiConfig.asimovKey));
 		}

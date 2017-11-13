@@ -53,7 +53,6 @@ import { WorkspacesChannel } from 'vs/platform/workspaces/common/workspacesIpc';
 import { IWorkspacesMainService } from 'vs/platform/workspaces/common/workspaces';
 import { dirname, join } from 'path';
 import { touch } from 'vs/base/node/pfs';
-import { WindowLevel } from 'vs/platform/telemetry/common/analyticsConstants';
 
 export class CodeApplication {
 
@@ -301,7 +300,7 @@ export class CodeApplication {
 		// Telemtry
 		if (this.environmentService.eventLogDebug || (this.environmentService.isBuilt && !this.environmentService.isExtensionDevelopment && !this.environmentService.args['disable-telemetry'] && !!product.enableTelemetry)) {
 			const channel = getDelayedChannel<ITelemetryAppenderChannel>(this.sharedProcessClient.then(c => c.getChannel('telemetryAppender')));
-			const appender = new TelemetryAppenderClient(channel, WindowLevel.Main);
+			const appender = new TelemetryAppenderClient(channel);
 			const commonProperties = resolveCommonProperties(product.commit, pkg.version, this.environmentService.installSource)
 				// __GDPR__COMMON__ "common.machineId" : { "classification": "EndUserPseudonymizedInformation", "purpose": "FeatureInsight" }
 				.then(result => Object.defineProperty(result, 'common.machineId', {

@@ -5,14 +5,14 @@
 
 // tslint:disable-next-line:import-patterns
 import * as telligent from 'telligent-tracker';
+// tslint:disable-next-line
+import product from 'vs/platform/node/product';
 import { IEnvironmentService } from 'vs/platform/environment/common/environment';
-import { ISourcegraphEventProperties, INativeMetadata } from 'vs/platform/telemetry/common/sourcegraphEventLogger';
+import { ISourcegraphTelemetryProperties, INativeMetadata } from 'vs/platform/telemetry/node/sourcegraphTelemetryAppender';
 
 const TELLIGENT_FUNCTION_NAME = 'telligent';
-const TELLIGENT_PLATFORM = 'NativeApp';
-const DEFAULT_ENV: string = 'development';
-const PROD_ENV: string = 'production';
-const DEFAULT_APP_ID: string = 'UnknownApp';
+const APP_PLATFORM = 'NativeApp';
+const ENV: string = 'production';
 
 /**
  * TelligentWrapper should be instantiated in each process
@@ -23,31 +23,26 @@ export class TelligentWrapper {
 	constructor(
 		@IEnvironmentService private environmentService: IEnvironmentService
 	) {
-		const win = window.top;
-		// Create the initializing function
-		win[TELLIGENT_FUNCTION_NAME] = function (): void {
-			(win[TELLIGENT_FUNCTION_NAME].q = win[TELLIGENT_FUNCTION_NAME].q || []).push(arguments);
-		};
-
-
-		// Set up the initial queue, if it doesn't already exist
-		win[TELLIGENT_FUNCTION_NAME].q = telligent.Telligent((win[TELLIGENT_FUNCTION_NAME].q || []), TELLIGENT_FUNCTION_NAME);
-
-		this.telligent = win[TELLIGENT_FUNCTION_NAME];
-
 		let appId: string;
 		let env: string;
 		// TODO(Dan): will we have a separate var for Sourcegraph dev vs prod env?
-		if (!this.environmentService.isBuilt) {
-			appId = DEFAULT_APP_ID;
-			env = DEFAULT_ENV;
-		} else {
+		if (this.environmentService.isBuilt && !this.environmentService.isExtensionDevelopment && !this.environmentService.args['disable-telemetry'] && !!product.enableTelemetry) {
 			// TODO(Dan): update this once available
 			appId = 'SourcegraphEditor'; //this.environmentService.sourcegraphContext.trackingAppID;
-			env = PROD_ENV;
+			env = ENV;
 		}
 
 		if (appId && env) {
+			const win = window.top;
+			// Create the initializing function
+			win[TELLIGENT_FUNCTION_NAME] = function (): void {
+				(win[TELLIGENT_FUNCTION_NAME].q = win[TELLIGENT_FUNCTION_NAME].q || []).push(arguments);
+			};
+
+			// Set up the initial queue, if it doesn't already exist
+			win[TELLIGENT_FUNCTION_NAME].q = telligent.Telligent((win[TELLIGENT_FUNCTION_NAME].q || []), TELLIGENT_FUNCTION_NAME);
+
+			this.telligent = win[TELLIGENT_FUNCTION_NAME];
 			this.initialize(appId, env);
 		}
 	}
@@ -81,12 +76,7 @@ export class TelligentWrapper {
 		this.addStaticMetadata(property, value, 'userInfo');
 	}
 
-	/**
-	 * Track an event using generated Telligent tracker
-	 * @param eventAction User action being tracked
-	 * @param eventProps Event-level properties. Note the provided object is mutated by this method
-	 */
-	track(eventAction: string, eventProps?: ISourcegraphEventProperties): void {
+	log(eventType: string, eventProps?: ISourcegraphTelemetryProperties): void {
 		if (!this.telligent) {
 			return;
 		}
@@ -98,7 +88,7 @@ export class TelligentWrapper {
 			delete eventProps.native;
 		}
 
-		// TODO(Dan): validate white list — Does umami need one?
+		// TODO(Dan): validate white list
 		// // for an on-prem trial, we only want to collect high level usage information
 		// // if we are keeping data onsite anyways, we can collect all info
 		// if (this.environmentService.sourcegraphContext.onPrem && this.environmentService.sourcegraphContext.trackingAppID !== 'UmamiWeb') {
@@ -120,31 +110,29 @@ export class TelligentWrapper {
 		// 	return;
 		// }
 
-		this.telligent('track', eventAction, eventProps, { native: cleanPropertyNames(nativeMetadata) });
+		this.telligent('track', eventType, eventProps, { native: cleanPropertyNames(nativeMetadata) });
 	}
 
 	/**
-	 * Initialize the Telligent tracker that is used by this window and all of its child
-	 * iframes. This should only be called in the topmost window (otherwise a noisy
-	 * warning will be logged).
+	 * Initialize the telemetry library.
 	 */
 	private initialize(appId: string, env: string): void {
 		if (!this.telligent) {
 			return;
 		}
 
-		let telligentUrl = 'sourcegraph.com/.api/telemetry';
+		let url = 'sourcegraph.com/.api/telemetry';
 
-		// TODO(Dan): What do these checks look like in the native app world? What URL do we use?
-		// for clients with on-prem deployments, we use a bi-logger
+		// TODO(Dan): Update this URL.
+		// For clients with on-prem deployments, we use a bi-logger.
 		if (this.environmentService.sourcegraphContext.onPrem && this.environmentService.sourcegraphContext.trackingAppID === 'UmamiWeb') {
-			telligentUrl = `${window.top.location.host}`.concat('/.bi-logger');
+			url = `${window.top.location.host}`.concat('/.bi-logger');
 		}
 
 		try {
-			this.telligent('newTracker', 'sg', telligentUrl, {
+			this.telligent('newTracker', 'sg', url, {
 				appId: appId,
-				platform: TELLIGENT_PLATFORM,
+				platform: APP_PLATFORM,
 				encodeBase64: false,
 				env: env,
 				forceSecureTracker: true,
@@ -169,7 +157,7 @@ export class TelligentWrapper {
 
 /**
  * Remove dots (".") from field names, as they are unsupported by some data warehouses. This is
- * a problem in VSCode's commonProperties objects.
+ * related to fields generated in the commonProperties object.
  */
 function cleanPropertyNames(props: any): any {
 	let cleanProps = {};

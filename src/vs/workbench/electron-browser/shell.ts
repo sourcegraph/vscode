@@ -94,8 +94,6 @@ import { ITextMateService } from 'vs/workbench/services/textMate/electron-browse
 import { IBroadcastService, BroadcastService } from 'vs/platform/broadcast/electron-browser/broadcastService';
 import { IResourceResolverService } from 'vs/platform/resourceResolver/common/resourceResolver';
 import { ResourceResolverService } from 'vs/workbench/services/resourceResolver/common/resourceResolverService';
-import { SourcegraphEventLogger } from 'vs/platform/telemetry/common/sourcegraphEventLogger';
-import { WindowLevel } from 'vs/platform/telemetry/common/analyticsConstants';
 import { HashService } from 'vs/workbench/services/hash/node/hashService';
 import { IHashService } from 'vs/workbench/services/hash/common/hashService';
 
@@ -322,10 +320,7 @@ export class WorkbenchShell {
 			const version = pkg.version;
 
 			const config: ITelemetryServiceConfig = {
-				appender: combinedAppender(
-					instantiationService.createInstance(SourcegraphEventLogger, WindowLevel.Workbench),
-					new TelemetryAppenderClient(channel),
-				),
+				appender: combinedAppender(new TelemetryAppenderClient(channel)),
 				commonProperties: resolveWorkbenchCommonProperties(this.storageService, commit, version, this.environmentService.installSource),
 				piiPaths: [this.environmentService.appRoot, this.environmentService.extensionsPath]
 			};

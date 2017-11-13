@@ -33,16 +33,10 @@ export class EditorViewTelemetryHandler implements IWorkbenchContribution {
 		const activeEditor = this.editorService.getActiveEditor();
 		const activeResource = activeEditor ? toResource(activeEditor.input, { supportSideBySide: true, filter: 'file' }) : void 0;
 
-		let params: any = {
-			page_title: 'ViewOther'
-		};
-
+		let params: any = {};
 		if (activeResource) {
 			const uriDescriptor = telemetryURIDescriptor(activeResource, p => this.hashService.createSHA1(p));
-			params = {
-				page_title: 'ViewFile',
-				language: uriDescriptor.ext.slice(1)
-			};
+			params = { language: uriDescriptor.ext.slice(1) };
 		}
 
 		this.telemetryService.publicLog('ViewFile', params);
