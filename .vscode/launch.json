@@ -153,6 +153,20 @@
 			]
 		},
 		{
+			"type": "extensionHost",
+			"request": "launch",
+			"name": "VS Code Git Tests",
+			"runtimeExecutable": "${execPath}",
+			"args": [
+				"${workspaceFolder}/extensions/git/testWorkspace",
+				"--extensionDevelopmentPath=${workspaceFolder}/extensions/git",
+				"--extensionTestsPath=${workspaceFolder}/extensions/git/out/test"
+			],
+			"outFiles": [
+				"${workspaceFolder}/out/**/*.js"
+			]
+		},
+		{
 			"type": "node",
 			"request": "launch",
 			"name": "Unit Tests",

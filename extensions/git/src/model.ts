@@ -166,7 +166,10 @@ export class Model {
 		}
 	}
 
-	private scanRepositoryDirectory(): Promise<void> {
+	/**
+	 * Scans the git.repositoryScanDirectory for git repositories.
+	 */
+	public scanRepositoryDirectory(): Promise<void> {
 		const directoryTemplate = workspace.getConfiguration('git').get<string>('repositoryScanDirectory');
 		if (!directoryTemplate) {
 			return Promise.resolve();

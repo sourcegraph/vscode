@@ -9,6 +9,9 @@
 		"strict": true,
 		"experimentalDecorators": true
 	},
+	"exclude": [
+		".vscode-test"
+	],
 	"include": [
 		"src/**/*"
 	]

@@ -76,7 +76,7 @@ async function init(context: ExtensionContext, disposables: Disposable[]): Promi
 
 	await checkGitVersion(info);
 
-	return { git };
+	return { git, model } as IGitExtension;
 }
 
 export function activate(context: ExtensionContext): Promise<IGitExtension | void> {
