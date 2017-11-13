@@ -312,6 +312,54 @@ declare module 'vscode' {
 	}
 
 	/**
+	 * Represents a workspace.
+	 */
+	export interface WorkspaceData {
+		readonly folders: WorkspaceFolder[];
+	}
+
+	/**
+	 * Represents an open workbench window.
+	 */
+	export interface WorkbenchWindow {
+		/**
+		 * The numeric ID of the window.
+		 */
+		readonly id: number;
+
+		/**
+		 * The window's title, at the point in time when
+		 * [window.getWindows](#window.getWindows) was called).
+		 */
+		readonly title: string;
+
+		/**
+		 * The window's workspace, if any, at the point in time when
+		 * [window.getWindows](#window.getWindows) was called.
+		 */
+		readonly workspace?: WorkspaceData;
+
+		/**
+		 * Show and focus the window.
+		 */
+		showAndFocus(): Thenable<void>;
+	}
+
+	export namespace window {
+		/**
+		 * The ID of the current [workbench window](#WorkbenchWindow). It can be compared to
+		 * the ID of another [workbench window](#WorkbenchWindow) to see if that refers to
+		 * the current window.
+		 */
+		export const id: number;
+
+		/**
+		 * Retrieve the list of all open [workbench windows](#WorkbenchWindow).
+		 */
+		export function getWindows(): Thenable<WorkbenchWindow[]>;
+	}
+
+	/**
 	 * The contiguous set of modified lines in a diff.
 	 */
 	export interface LineChange {

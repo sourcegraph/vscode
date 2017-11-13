@@ -355,6 +355,7 @@ export class ExtensionHostProcessWorker {
 					userExtensionsHome: this._environmentService.extensionsPath,
 					extensionDevelopmentPath: this._environmentService.extensionDevelopmentPath,
 					extensionTestsPath: this._environmentService.extensionTestsPath,
+					windowId: this._windowService.getCurrentWindowId(),
 					// globally disable proposed api when built and not insiders developing extensions
 					enableProposedApiForAll: !this._environmentService.isBuilt || (!!this._environmentService.extensionDevelopmentPath && product.nameLong.indexOf('Insiders') >= 0),
 					enableProposedApiFor: this._environmentService.args['enable-proposed-api'] || []

@@ -7,7 +7,21 @@
 import Event, { Emitter } from 'vs/base/common/event';
 import { IThreadService } from 'vs/workbench/services/thread/common/threadService';
 import { ExtHostWindowShape, MainContext, MainThreadWindowShape } from './extHost.protocol';
-import { WindowState } from 'vscode';
+import { WindowState, WorkbenchWindow, WorkspaceData } from 'vscode';
+import { TPromise } from 'vs/base/common/winjs.base';
+
+class ExtHostWorkbenchWindow implements WorkbenchWindow {
+	constructor(
+		private _proxy: MainThreadWindowShape,
+		public readonly id: number,
+		public readonly title: string,
+		public readonly workspace?: WorkspaceData,
+	) { }
+
+	showAndFocus(): Thenable<void> {
+		return this._proxy.$showAndFocusWindow(this.id);
+	}
+}
 
 export class ExtHostWindow implements ExtHostWindowShape {
 
@@ -23,7 +37,7 @@ export class ExtHostWindow implements ExtHostWindowShape {
 	private _state = ExtHostWindow.InitialState;
 	get state(): WindowState { return this._state; }
 
-	constructor(threadService: IThreadService) {
+	constructor(threadService: IThreadService, public readonly id: number) {
 		this._proxy = threadService.get(MainContext.MainThreadWindow);
 		this._proxy.$getWindowVisibility().then(isFocused => this.$onDidChangeWindowFocus(isFocused));
 	}
@@ -35,5 +49,11 @@ export class ExtHostWindow implements ExtHostWindowShape {
 
 		this._state = { ...this._state, focused };
 		this._onDidChangeWindowState.fire(this._state);
+	}
+
+	getWindows(): TPromise<WorkbenchWindow[]> {
+		return this._proxy.$getWindows().then(windows =>
+			windows.map(win => new ExtHostWorkbenchWindow(this._proxy, win.id, win.title, win.workspace))
+		);
 	}
 }
