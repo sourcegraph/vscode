@@ -6,6 +6,7 @@
 'use strict';
 
 import { Uri } from 'vscode';
+import * as path from 'path';
 
 export function fromGitUri(uri: Uri): { path: string; ref: string; } {
 	return JSON.parse(uri.query);
@@ -44,11 +45,19 @@ export function canonicalRemote(remote: string): string | undefined {
 		authority = authority.slice(idx + 1);
 	}
 
-	const path = uri.path
+	let uriPath = uri.path
 		.replace(/\/*$/, '') // trailing slash
 		.replace(/\.(git|hg|svn)$/i, '');
 
-	const canonical = authority.toLowerCase() + path.toLowerCase();
+	// Remove leading or trailing path separator.
+	if (uriPath.startsWith(path.sep)) {
+		uriPath = uriPath.slice(1);
+	}
+	if (uriPath.endsWith(path.sep)) {
+		uriPath = uriPath.slice(0, -1);
+	}
+
+	const canonical = [authority.toLowerCase(), uriPath.toLowerCase()].join('/');
 	return canonical ? canonical : undefined;
 }
 

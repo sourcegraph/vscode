@@ -622,9 +622,14 @@ class Resolver {
 				throw new Error('Invalid git clone URL');
 			}
 		}
-		const folderRelativePath = remote;
+		let folderRelativePath = remote;
 		const homePath = os.homedir();
 		const separator = path.sep;
+
+		// Remove leading path separator.
+		if (folderRelativePath.startsWith(path.sep)) {
+			folderRelativePath = folderRelativePath.slice(1);
+		}
 
 		const pathTemplate = workspace.getConfiguration('folders').get<string>('path')!;
 		return replaceVariables(pathTemplate, { folderRelativePath, homePath, separator });
