@@ -1,6 +1,7 @@
 {
 	"command.pullRequests.quickopen": "Go to Pull Request...",
-	"config.token": "GitHub.com personal access token. Create at https://github.com/settings/tokens. Must have 'repo' scope to access private repositories.",
+	"config.token": "GitHub.com or GitHub Enterprise personal access token. Create at https://github.com/settings/tokens. Must have 'repo' scope to access private repositories.",
+	"config.url": "The URL of a GitHub instance to connect to. Default is \"https://github.com\"",
 	"config.cloneProtocol": "Protocol to use to clone a repository. Defaults to 'https'. Valid values are either 'https' or 'ssh'.",
 	"config.debug": "Enable debug logging"
 }

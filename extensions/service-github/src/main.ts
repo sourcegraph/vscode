@@ -41,11 +41,13 @@ const repoFields = [
 
 export function activate(context: vscode.ExtensionContext): void {
 	context.subscriptions.push(initializeLogger());
+	const githubURL = vscode.workspace.getConfiguration('github').get<string>('url') || 'https://github.com';
+	const githubHost = vscode.Uri.parse(githubURL).authority;
 
-	const viewer = new Viewer();
-	const github = new GitHub(viewer);
+	const viewer = new Viewer(githubHost);
+	const github = new GitHub(viewer, githubHost);
 
-	const model = new Model();
+	const model = new Model(githubURL);
 	context.subscriptions.push(model);
 
 	const checklistController = new ChecklistController(model);
@@ -62,10 +64,10 @@ export function activate(context: vscode.ExtensionContext): void {
 	});
 
 	vscode.commands.registerCommand('github.showCreateAccessTokenWalkthrough', async (skipInfoMessage) => {
-		return await showCreateGitHubTokenWalkthrough(skipInfoMessage);
+		return await showCreateGitHubTokenWalkthrough(githubURL, skipInfoMessage);
 	});
 
-	context.subscriptions.push(vscode.workspace.registerFolderCatalogProvider(vscode.Uri.parse('github://github.com'), {
+	context.subscriptions.push(vscode.workspace.registerFolderCatalogProvider(vscode.Uri.parse(`github://${githubHost}`), {
 		resolveFolder(resource: vscode.Uri): Thenable<vscode.CatalogFolder> {
 			return queryGraphQL(`
 				query($owner: String!, $name: String!) {
@@ -81,10 +83,10 @@ export function activate(context: vscode.ExtensionContext): void {
 				}
 				if (!data.repository) {
 					const errorMessage = localize('notFound', "GitHub repository not found: {0}", resource.toString());
-					await showErrorAndPromptReset(errorMessage);
+					await showErrorAndPromptReset(errorMessage, githubURL);
 					throw new Error(errorMessage);
 				}
-				return toCatalogFolder(data.repository);
+				return toCatalogFolder(data.repository, githubHost);
 			});
 		},
 		resolveLocalFolderResource(path: string): Thenable<vscode.Uri | null> {
@@ -92,7 +94,7 @@ export function activate(context: vscode.ExtensionContext): void {
 				cp.exec('git ls-remote --get-url', { cwd: path }, (error, stdout, stderr) => resolve(stdout || ''));
 			}).then(gitURL => {
 				gitURL = decodeURIComponent(gitURL.trim()).replace(/\.git$/, '');
-				const match = gitURL.match(/github.com[\/:]([^/]+)\/([^/]+)/);
+				const match = gitURL.match(new RegExp(githubHost + '[\/:]([^/]+)\/([^/]+)'));
 				if (match) {
 					return nameAndOwnerToResource(match[1], match[2]);
 				}
@@ -102,7 +104,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		async search(query: string): Promise<vscode.CatalogFolder[]> {
 			const token = checkGitHubToken();
 			if (!token) {
-				const ok = await showCreateGitHubTokenWalkthrough();
+				const ok = await showCreateGitHubTokenWalkthrough(githubURL);
 				if (!ok) {
 					return [];
 				}
@@ -128,7 +130,7 @@ export function activate(context: vscode.ExtensionContext): void {
 						return data.search.nodes;
 					})
 					.catch(async (error: any) => {
-						await showErrorAndPromptReset(error.message);
+						await showErrorAndPromptReset(error.message, githubURL);
 						throw error;
 					});
 			} else {
@@ -138,7 +140,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
 			const [viewerRepos, searchResults] = await Promise.all([
 				viewer.repositories(),
-				request.then<vscode.CatalogFolder[]>(repos => repos.map(toCatalogFolder)),
+				request.then<vscode.CatalogFolder[]>(repos => repos.map((repo: GitHubGQL.IRepository) => toCatalogFolder(repo, githubHost))),
 			]);
 			return distinct(viewerRepos.concat(searchResults), f => f.resource.toString());
 		},
@@ -147,7 +149,7 @@ export function activate(context: vscode.ExtensionContext): void {
 	vscode.commands.registerCommand('github.pullRequests.quickopen', async (sourceControl: vscode.SourceControl) => {
 		const ok = await checkGitHubToken();
 		if (!ok) {
-			showCreateGitHubTokenWalkthrough();
+			showCreateGitHubTokenWalkthrough(githubURL);
 			return;
 		}
 
@@ -184,11 +186,11 @@ export function activate(context: vscode.ExtensionContext): void {
 		}
 
 		const gitHubRemotes = sourceControl.remoteResources
-			.filter(r => r.authority.endsWith('github.com'))
+			.filter(r => r.authority.endsWith(githubHost))
 			.map(parseGitHubRepositoryFullName)
 			.filter(v => !!v) as { owner: string; name: string }[];
 		if (gitHubRemotes.length === 0) {
-			vscode.window.showErrorMessage(localize('notAGitHubRepository', "The repository does not have any github.com Git remote URLs."));
+			vscode.window.showErrorMessage(localize('notAGitHubRepository', "The repository does not have any ${0} Git remote URLs.", githubHost));
 			return;
 		}
 
@@ -231,7 +233,7 @@ export function activate(context: vscode.ExtensionContext): void {
 				return prs.concat(data && data.repository && data.repository.pullRequests.nodes || []);
 			}, []))
 			.catch(async error => {
-				await showErrorAndPromptReset(error.message);
+				await showErrorAndPromptReset(error.message, githubURL);
 				throw error;
 			});
 
@@ -288,7 +290,7 @@ export function activate(context: vscode.ExtensionContext): void {
 	vscode.commands.registerCommand('github.recent.repostories', async () => {
 		const ok = await checkGitHubToken();
 		if (!ok) {
-			showCreateGitHubTokenWalkthrough();
+			showCreateGitHubTokenWalkthrough(githubURL);
 			return;
 		}
 		// Fetch the user repos.
@@ -305,7 +307,7 @@ class Viewer {
 	private contributedRequest: Thenable<vscode.CatalogFolder[]> | null;
 	private usernameRequest: Thenable<string | null> | null;
 
-	constructor() {
+	constructor(private githubHost: string) {
 		// Pre-emptively fetch user related information
 		setTimeout(() => {
 			this.repositories();
@@ -337,7 +339,7 @@ class Viewer {
 				if (!data || !data.viewer.contributedRepositories.nodes) {
 					throw Object.assign(new Error((errors || []).map(e => e.message).join('\n')), { errors });
 				}
-				return data.viewer.contributedRepositories.nodes.map(toCatalogFolder);
+				return data.viewer.contributedRepositories.nodes.map((repo: GitHubGQL.IRepository) => toCatalogFolder(repo, this.githubHost));
 			})
 			.catch((error): vscode.CatalogFolder[] => {
 				// try again, but don't fail other requests if this fails
@@ -410,7 +412,7 @@ class Viewer {
 					...data.viewer.starredRepositories.nodes || [],
 					...data.viewer.repositories.nodes || [],
 					...([] as GitHubGQL.IRepository[]).concat(...(data.viewer.organizations.nodes || []).map(org => org.repositories.nodes || [])),
-				].map(toCatalogFolder);
+				].map((repo: GitHubGQL.IRepository) => toCatalogFolder(repo, this.githubHost));
 			})
 			.catch((error): vscode.CatalogFolder[] => {
 				// try again, but don't fail other requests if this fails
@@ -472,7 +474,7 @@ class Viewer {
 
 class GitHub {
 
-	constructor(private viewer: Viewer) { }
+	constructor(private viewer: Viewer, private host = 'github.com') { }
 
 	/**
 	 * Returns a clone URL for git for the github repository.
@@ -492,7 +494,7 @@ class GitHub {
 			user = await this.viewer.username();
 		}
 		const userAuthority = user ? `${user}@` : '';
-		const uri = vscode.Uri.parse(`git+${protocol}://${userAuthority}github.com/${data.owner}/${data.name}.git`);
+		const uri = vscode.Uri.parse(`git+${protocol}://${userAuthority}${this.host}/${data.owner}/${data.name}.git`);
 		// revision is optionally in the query
 		return resource.query ? uri.with({ query: resource.query }) : uri;
 	}
@@ -509,8 +511,8 @@ class GitHub {
 			return this.detectSSHPromise;
 		}
 		this.detectSSHPromise = new Promise<boolean>((resolve, reject) => {
-			// If we have accessed github.com via ssh before, this command should have a 0 exit code
-			cp.exec('ssh-keygen -F github.com', error => resolve(error === null));
+			// If we have accessed github via ssh before, this command should have a 0 exit code
+			cp.exec(`ssh-keygen -F ${this.host}`, error => resolve(error === null));
 		}).then(useSSH => useSSH ? 'ssh' : 'https');
 		return this.detectSSHPromise;
 	}
@@ -529,8 +531,8 @@ function resourceToNameAndOwner(resource: vscode.Uri): { owner: string, name: st
 	return { owner: parts[0], name: parts[1] };
 }
 
-function nameAndOwnerToResource(owner: string, name: string): vscode.Uri {
-	return vscode.Uri.parse(`github://github.com/repository/${owner}/${name}`);
+function nameAndOwnerToResource(owner: string, name: string, host = 'github.com'): vscode.Uri {
+	return vscode.Uri.parse(`github://${host}/repository/${owner}/${name}`);
 }
 
 /**
@@ -538,7 +540,7 @@ function nameAndOwnerToResource(owner: string, name: string): vscode.Uri {
  * of only when they close the quickopen (which probably isn't showing any results because of
  * the error).
  */
-async function showErrorAndPromptReset(error: string): Promise<void> {
+async function showErrorAndPromptReset(error: string, githubURL: string): Promise<void> {
 	await vscode.commands.executeCommand('workbench.action.closeQuickOpen');
 	await vscode.commands.executeCommand('workbench.action.closeMessages');
 
@@ -552,7 +554,7 @@ async function showErrorAndPromptReset(error: string): Promise<void> {
 			await vscode.workspace.getConfiguration('github').update('token', undefined, vscode.ConfigurationTarget.Global);
 		}
 		if (checkGitHubToken()) {
-			await showCreateGitHubTokenWalkthrough(); // will walk the user through recreating the token
+			await showCreateGitHubTokenWalkthrough(githubURL); // will walk the user through recreating the token
 		}
 	}
 }
@@ -560,16 +562,16 @@ async function showErrorAndPromptReset(error: string): Promise<void> {
 /**
  * Shows the GitHub token creation walkthrough and returns if a GitHub token was added.
  */
-async function showCreateGitHubTokenWalkthrough(skipInfoMessage?: boolean): Promise<boolean> {
+async function showCreateGitHubTokenWalkthrough(githubURL = 'https://github.com', skipInfoMessage?: boolean): Promise<boolean> {
 	// Close quickopen so the user sees our message.
 	await vscode.commands.executeCommand('workbench.action.closeQuickOpen');
 	await vscode.commands.executeCommand('workbench.action.closeMessages');
 
-	const createTokenItem: vscode.MessageItem = { title: localize('createToken', "Create Token on GitHub.com") };
+	const createTokenItem: vscode.MessageItem = { title: localize('createToken', "Create Token on GitHub") };
 	const enterTokenItem: vscode.MessageItem = { title: localize('enterToken', "Enter Token") };
 	const cancelItem: vscode.MessageItem = { title: localize('cancel', "Cancel"), isCloseAffordance: true };
 	if (skipInfoMessage) {
-		await vscode.commands.executeCommand('vscode.open', vscode.Uri.parse('https://github.com/settings/tokens/new'));
+		await vscode.commands.executeCommand('vscode.open', vscode.Uri.parse(`${githubURL}/settings/tokens/new`));
 	} else {
 		const value = await vscode.window.showInformationMessage(
 			localize('noGitHubToken', "A GitHub personal access token is required to search for repositories."),
@@ -577,7 +579,7 @@ async function showCreateGitHubTokenWalkthrough(skipInfoMessage?: boolean): Prom
 			createTokenItem, enterTokenItem, cancelItem,
 		);
 		if (value === createTokenItem) {
-			await vscode.commands.executeCommand('vscode.open', vscode.Uri.parse('https://github.com/settings/tokens/new'));
+			await vscode.commands.executeCommand('vscode.open', vscode.Uri.parse(`${githubURL}/settings/tokens/new`));
 		} else if (!value || value === cancelItem) {
 			return false;
 		}
@@ -601,14 +603,14 @@ function checkGitHubToken(): boolean {
 	return !!vscode.workspace.getConfiguration('github').get<string>('token');
 }
 
-function toCatalogFolder(repo: GitHubGQL.IRepository): vscode.CatalogFolder {
+function toCatalogFolder(repo: GitHubGQL.IRepository, githubHost: string): vscode.CatalogFolder {
 	return {
 		// These URIs are resolved by the resource resolver we register above.
-		resource: vscode.Uri.parse('').with({ scheme: GITHUB_SCHEME, authority: 'github.com', path: `/repository/${repo.nameWithOwner}` }),
+		resource: vscode.Uri.parse('').with({ scheme: GITHUB_SCHEME, authority: githubHost, path: `/repository/${repo.nameWithOwner}` }),
 		displayPath: repo.nameWithOwner,
 		displayName: repo.name,
 		genericIconClass: iconForRepo(repo),
-		cloneUrl: vscode.Uri.parse('').with({ scheme: 'https', authority: 'github.com', path: `/${repo.nameWithOwner}.git` }),
+		cloneUrl: vscode.Uri.parse('').with({ scheme: 'https', authority: githubHost, path: `/${repo.nameWithOwner}.git` }),
 		description: repo.description || undefined,
 		isPrivate: repo.isPrivate,
 		isFork: repo.isFork,

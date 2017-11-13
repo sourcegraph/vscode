@@ -6,7 +6,8 @@
 'use strict';
 
 import * as vscode from 'vscode';
-import 'isomorphic-fetch';
+import { default as fetch, RequestInit, Headers } from 'node-fetch';
+import * as https from 'https';
 import * as nls from 'vscode-nls';
 import * as cp from 'child_process';
 
@@ -22,17 +23,31 @@ export interface GraphQLQueryResponseRoot {
 }
 
 export async function queryGraphQL(query: string, variables: { [name: string]: any }): Promise<GraphQLQueryResponseRoot> {
-	const headers = new Headers({
-		'Content-Type': 'application/json; charset=utf-8',
-		'Authorization': `Bearer ${vscode.workspace.getConfiguration('github').get<string>('token')}`,
-		'User-Agent': 'GitHub GraphQL Client',
-	});
+	let githubURL = vscode.workspace.getConfiguration('github').get<string>('url');
+	let githubEnterprise = false;
+	if (githubURL) {
+		githubEnterprise = true;
+		githubURL = `${githubURL}/api`;
+	} else {
+		githubURL = 'https://api.github.com';
+	}
 
-	const resp = await fetch(`https://api.github.com/graphql`, {
+	const headers = new Headers();
+	headers.append('Content-Type', 'application/json; charset=utf-8');
+	headers.append('Authorization', `Bearer ${vscode.workspace.getConfiguration('github').get<string>('token')}`);
+	headers.append('User-Agent', 'GitHub GraphQL Client');
+	const init: RequestInit = {
 		method: 'POST',
 		headers,
 		body: JSON.stringify({ query, variables }),
-	});
+	};
+	if (githubEnterprise && vscode.Uri.parse(githubURL).scheme === 'https') {
+		init.agent = new https.Agent({
+			// GitHub Enterprise instances may use self-signed certs. To support this, disable unauthorized cert rejection.
+			rejectUnauthorized: false,
+		});
+	}
+	const resp = await fetch(`${githubURL}/graphql`, init);
 	if (resp.status < 200 || resp.status > 299) {
 		const error = await resp.json();
 		throw Object.assign(new Error(localize('apiError', "Error from GitHub: {0}", error.message)), { error });

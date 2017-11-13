@@ -46,6 +46,10 @@
           "type": "string",
           "description": "%config.token%"
         },
+        "github.url": {
+          "type": "string",
+          "description": "%config.url%"
+        },
         "github.cloneProtocol": {
           "type": "string",
           "default": "detect",

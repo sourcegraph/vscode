@@ -37,7 +37,7 @@ export class Model implements vscode.Disposable {
 
 	private disposables: vscode.Disposable[] = [];
 
-	constructor() {
+	constructor(private githubURL: string) {
 		vscode.workspace.onDidChangeWorkspaceFolders(e => this.handleWorkspaceFolderChange(e), null, this.disposables);
 
 		if (vscode.workspace.workspaceFolders) {
@@ -107,7 +107,7 @@ export class Model implements vscode.Disposable {
 		}
 
 		const worktreeDir = sourceControl.rootUri;
-		const repository = new Repository(vscode.Uri.file(gitDir), worktreeDir);
+		const repository = new Repository(vscode.Uri.file(gitDir), worktreeDir, this.githubURL);
 
 		const disposable = repository.onDidUpdate(() => this._onDidChangeRepositories.fire({
 			added: [], removed: [], changed: [repository],

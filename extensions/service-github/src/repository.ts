@@ -74,6 +74,7 @@ export class Repository implements vscode.Disposable {
 	constructor(
 		public readonly gitDir: vscode.Uri,
 		public readonly worktreeDir: vscode.Uri,
+		public readonly githubURL: string,
 	) {
 		if (path.basename(gitDir.fsPath) !== '.git') {
 			throw new Error(`bad git dir: ${gitDir.toString()}`);
@@ -247,11 +248,12 @@ export class Repository implements vscode.Disposable {
 		// TODO(sqs): get all remotes; currently only gets current remote
 		let url = await this.exec(['ls-remote', '--get-url']);
 		url = decodeURIComponent(url.trim()).replace(/\.git$/, '');
-		const match = url.match(/github.com[\/:]([^/]+)\/([^/]+)/);
+		const host = vscode.Uri.parse(this.githubURL);
+		const match = url.match(new RegExp(`${host}[\/:]([^/]+)\/([^/]+)`));
 		if (match) {
 			const [, owner, name] = match;
 			this.state.githubRemotes = [
-				{ baseUrl: 'https://github.com', name, owner }
+				{ baseUrl: this.githubURL, name, owner }
 			];
 		} else {
 			this.state.githubRemotes = [];
