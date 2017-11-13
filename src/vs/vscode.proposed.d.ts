@@ -315,8 +315,6 @@ declare module 'vscode' {
 	 * Represents a workspace.
 	 */
 	export interface WorkspaceData {
-		readonly id: string;
-		readonly configPath: string;
 		readonly folders: WorkspaceFolder[];
 	}
 

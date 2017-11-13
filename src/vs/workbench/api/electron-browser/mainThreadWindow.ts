@@ -34,29 +34,21 @@ export class MainThreadWindow implements MainThreadWindowShape {
 		return this.windowService.isFocused();
 	}
 
-	$getWindows(): TPromise<WorkbenchWindowFeatures[]> {
-		return this.windowsService.getWindows().then(windows => {
-			return TPromise.join(windows.map(win => {
-				let workspaceFolders: TPromise<vscode.WorkspaceFolder[]>;
-				if (win.workspace) {
-					workspaceFolders = readFile(win.workspace.configPath, 'utf8')
-						.then(contents => {
-							const model = new WorkspaceConfigurationModel(contents, win.workspace.configPath);
-							return toWorkspaceFolders(model.folders);
-						});
-				} else {
-					workspaceFolders = TPromise.as(null);
-				}
-				return workspaceFolders.then(folders => ({
-					id: win.id,
-					title: win.title,
-					workspace: win.workspace ? {
-						...win.workspace,
-						folders,
-					} : undefined,
-				}) as WorkbenchWindowFeatures);
-			}));
-		});
+	async $getWindows(): TPromise<WorkbenchWindowFeatures[]> {
+		const windows = await this.windowsService.getWindows();
+		return TPromise.join(windows.map(async (win) => {
+			let folders: vscode.WorkspaceFolder[] | undefined = undefined;
+			if (win.workspace) {
+				const contents = await readFile(win.workspace.configPath, 'utf8');
+				const model = new WorkspaceConfigurationModel(contents, win.workspace.configPath);
+				folders = toWorkspaceFolders(model.folders);
+			}
+			return {
+				id: win.id,
+				title: win.title,
+				workspace: win.workspace ? { folders } : undefined,
+			} as WorkbenchWindowFeatures;
+		}));
 	}
 
 	$showAndFocusWindow(windowId: number): TPromise<void> {
