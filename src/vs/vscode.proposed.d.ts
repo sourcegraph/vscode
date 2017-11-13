@@ -545,6 +545,11 @@ declare module 'vscode' {
 		readonly description?: string;
 
 		/**
+		 * The second-line detail text of the item.
+		 */
+		readonly detail?: string;
+
+		/**
 		 * The [command](#Command) which should be run when the item
 		 * is opened in the Checklist viewlet.
 		 */
@@ -554,7 +559,7 @@ declare module 'vscode' {
 		 * The [decorations](#ChecklistItemDecorations) for this checklist provider
 		 * item state.
 		 */
-		readonly decorations?: ChecklistItemDecorations;
+		readonly decorations: ChecklistItemDecorations;
 	}
 
 	/**

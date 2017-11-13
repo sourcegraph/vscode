@@ -482,6 +482,7 @@ export type ChecklistRawItem = [
 	number /*handle*/,
 	string /*name*/,
 	string /*description*/,
+	string /*detail*/,
 	string[] /*icons: light, dark*/,
 	string /*tooltip*/,
 	boolean /*strike through*/,

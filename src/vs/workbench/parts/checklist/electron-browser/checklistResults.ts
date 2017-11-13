@@ -69,7 +69,9 @@ interface ItemGroupTemplate {
 
 class ItemGroupRenderer implements IRenderer<IChecklistItemGroup, ItemGroupTemplate> {
 
-	static TEMPLATE_ID = 'item group';
+	static readonly TEMPLATE_ID = 'item group';
+	static readonly HEIGHT = 22;
+
 	get templateId(): string { return ItemGroupRenderer.TEMPLATE_ID; }
 
 	constructor(
@@ -114,6 +116,7 @@ interface ItemTemplate {
 	element: HTMLElement;
 	name: HTMLElement;
 	label: IconLabel;
+	detail: HTMLElement;
 	decorationIcon: HTMLElement;
 	actionBar: ActionBar;
 	dispose: () => void;
@@ -143,7 +146,9 @@ class MultipleSelectionActionRunner extends ActionRunner {
 
 class ItemRenderer implements IRenderer<IChecklistItem, ItemTemplate> {
 
-	static TEMPLATE_ID = 'item';
+	static readonly TEMPLATE_ID = 'item';
+	static readonly HEIGHT = 48;
+
 	get templateId(): string { return ItemRenderer.TEMPLATE_ID; }
 
 	constructor(
@@ -157,6 +162,7 @@ class ItemRenderer implements IRenderer<IChecklistItem, ItemTemplate> {
 		const element = append(container, $('.item'));
 		const name = append(element, $('.name'));
 		const label = new IconLabel(name, { supportHighlights: false });
+		const detail = append(name, $('.detail'));
 		const actionsContainer = append(element, $('.actions'));
 		const actionBar = new ActionBar(actionsContainer, {
 			actionItemProvider: this.actionItemProvider,
@@ -166,7 +172,7 @@ class ItemRenderer implements IRenderer<IChecklistItem, ItemTemplate> {
 		const decorationIcon = append(element, $('.decoration-icon'));
 
 		return {
-			element, name, label, decorationIcon, actionBar, dispose: () => {
+			element, name, label, detail, decorationIcon, actionBar, dispose: () => {
 				actionBar.dispose();
 				label.dispose();
 			}
@@ -180,6 +186,7 @@ class ItemRenderer implements IRenderer<IChecklistItem, ItemTemplate> {
 		template.label.setValue(item.name, item.description);
 		template.actionBar.clear();
 		template.actionBar.context = item;
+		template.detail.textContent = item.detail || '';
 		template.actionBar.push(menus.getItemActions(item), { icon: true, label: false });
 		toggleClass(template.name, 'strike-through', item.decorations.strikeThrough);
 		toggleClass(template.element, 'faded', item.decorations.faded);
@@ -202,7 +209,9 @@ class ItemRenderer implements IRenderer<IChecklistItem, ItemTemplate> {
 
 class ProviderListDelegate implements IDelegate<IChecklistItemGroup | IChecklistItem> {
 
-	getHeight() { return 22; }
+	getHeight(element: IChecklistItemGroup | IChecklistItem) {
+		return isChecklistItem(element) ? ItemRenderer.HEIGHT : ItemGroupRenderer.HEIGHT;
+	}
 
 	getTemplateId(element: IChecklistItemGroup | IChecklistItem) {
 		return isChecklistItem(element) ? ItemRenderer.TEMPLATE_ID : ItemGroupRenderer.TEMPLATE_ID;

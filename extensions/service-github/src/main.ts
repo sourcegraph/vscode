@@ -11,6 +11,10 @@ import * as cp from 'child_process';
 import { Model } from './model';
 import { ChecklistController } from './checklist';
 import { initialize as initializeLogger } from './log';
+// Add support for sourcemaps in stack traces during development
+if (~~process.env.VSCODE_DEV) {
+	require('source-map-support/register');
+}
 
 const localize = nls.loadMessageBundle();
 
@@ -343,7 +347,7 @@ class Viewer {
 			});
 		this.contributedRequest = request;
 		return request;
-	};
+	}
 
 	// Returns the github repositories for the current user. Best-effort, so
 	// should never be rejected. Also cached, so efficient to be repeatedly called.
@@ -416,7 +420,7 @@ class Viewer {
 			});
 		this.repoRequest = request;
 		return request;
-	};
+	}
 
 	// Returns the username of the currently logged in user. It is best-effort, so if the
 	// network request fails or there is no logged in user null is returned.

@@ -1,16 +1,15 @@
 {
+	"extends": "./node_modules/@sourcegraph/tsconfig/tsconfig.json",
 	"compilerOptions": {
 		"module": "commonjs",
 		"moduleResolution": "node",
 		"target": "ES6",
 		"outDir": "out",
-		"noErrorTruncation": true,
 		"lib": [
 			"es2016",
 			"dom"
 		],
 		"sourceMap": true,
-		"strict": true,
 		"experimentalDecorators": true
 	},
 	"exclude": [

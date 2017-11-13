@@ -2,6 +2,12 @@
   "name": "service-github",
   "version": "0.0.1",
   "dependencies": {
+    "@sourcegraph/tsconfig": {
+      "version": "2.0.0",
+      "from": "@sourcegraph/tsconfig@latest",
+      "resolved": "https://registry.npmjs.org/@sourcegraph/tsconfig/-/tsconfig-2.0.0.tgz",
+      "dev": true
+    },
     "@types/chalk": {
       "version": "0.4.31",
       "from": "@types/chalk@>=0.4.31 <0.5.0",
@@ -304,6 +310,11 @@
           "dev": true
         }
       }
+    },
+    "date-fns": {
+      "version": "1.29.0",
+      "from": "date-fns@latest",
+      "resolved": "https://registry.npmjs.org/date-fns/-/date-fns-1.29.0.tgz"
     },
     "dateformat": {
       "version": "2.2.0",
@@ -2150,7 +2161,7 @@
     },
     "source-map-support": {
       "version": "0.3.3",
-      "from": "source-map-support@>=0.3.2 <0.4.0",
+      "from": "https://registry.npmjs.org/source-map-support/-/source-map-support-0.3.3.tgz",
       "resolved": "https://registry.npmjs.org/source-map-support/-/source-map-support-0.3.3.tgz",
       "dev": true
     },

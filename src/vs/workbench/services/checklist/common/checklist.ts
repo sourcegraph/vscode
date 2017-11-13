@@ -28,9 +28,27 @@ export interface IChecklistItemCollection {
 }
 
 export interface IChecklistItem {
+
 	readonly itemGroup: IChecklistItemGroup;
+
+	/**
+	 * The name of the item.
+	 */
 	readonly name?: string;
+
+	/**
+	 * The description of the item.
+	 */
 	readonly description?: string;
+
+	/**
+	 * The second-line detail text of the item.
+	 */
+	readonly detail?: string;
+
+	/**
+	 * The decorations for this checklist provider item state.
+	 */
 	readonly decorations: IChecklistItemDecorations;
 
 	/**

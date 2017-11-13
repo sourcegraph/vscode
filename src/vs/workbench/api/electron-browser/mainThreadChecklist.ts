@@ -60,6 +60,7 @@ class MainThreadChecklistItem implements IChecklistItem {
 		private handle: number,
 		public name: string,
 		public description: string,
+		public detail: string,
 		public itemGroup: IChecklistItemGroup,
 		public decorations: IChecklistItemDecorations
 	) { }
@@ -169,7 +170,7 @@ class MainThreadChecklistProvider implements IChecklistProvider {
 
 			for (const [start, deleteCount, rawItems] of groupSlices) {
 				const items = rawItems.map(rawItem => {
-					const [handle, name, description, icons, tooltip, strikeThrough, faded] = rawItem;
+					const [handle, name, description, detail, icons, tooltip, strikeThrough, faded] = rawItem;
 					const icon = icons[0];
 					const iconDark = icons[1] || icon;
 					const decorations = {
@@ -187,6 +188,7 @@ class MainThreadChecklistProvider implements IChecklistProvider {
 						handle,
 						name,
 						description,
+						detail,
 						group,
 						decorations
 					);

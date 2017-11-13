@@ -166,12 +166,24 @@ export class Repository implements vscode.Disposable {
 								title
 								url
 								closed
+								createdAt
 								...CommentFields
 								comments(first: 100) {
 									totalCount
 									nodes {
 										id
+										createdAt
 										...CommentFields
+									}
+								}
+								reviewRequests(first: 100) {
+									nodes {
+										id
+										reviewer {
+											avatarUrl
+											login
+											url
+										}
 									}
 								}
 								reviews(first: 100) {
@@ -180,12 +192,14 @@ export class Repository implements vscode.Disposable {
 										...CommentFields
 										state
 										url
+										createdAt
 										comments(first: 100) {
 											totalCount
 											nodes {
 												...CommentFields
 												position
 												url
+												createdAt
 												replyTo {
 													id
 												}

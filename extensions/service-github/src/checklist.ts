@@ -9,21 +9,25 @@ import * as nls from 'vscode-nls';
 import * as path from 'path';
 import { dispose } from './util';
 import { Model } from './model';
+import distanceInWordsToNow = require('date-fns/distance_in_words_to_now');
+const locale = require('date-fns/locale/' + vscode.env.language);
 
 const localize = nls.loadMessageBundle();
 
 const ICONS_ROOT_PATH = path.resolve(__dirname, '../resources/icons');
 
-const getIconForStatusState = (state: GitHubGQL.IStatusStateEnum): vscode.Uri =>
-	vscode.Uri.file(path.join(ICONS_ROOT_PATH, `gh-status-icon--${state.toLowerCase()}.svg`));
+const getIcon = (icon: string) => vscode.Uri.file(path.join(ICONS_ROOT_PATH, icon));
+
+const getIconForStatusState = (state: GitHubGQL.IStatusStateEnum): vscode.Uri => getIcon(`gh-status-icon--${state.toLowerCase()}.svg`);
 
 // TODO custom icons
 const getIconForPullRequestReviewState = (state: GitHubGQL.IPullRequestReviewStateEnum): vscode.Uri | undefined => {
 	switch (state) {
-		case 'APPROVED': return vscode.Uri.file(path.join(ICONS_ROOT_PATH, `gh-status-icon--success.svg`));
-		case 'CHANGES_REQUESTED': return vscode.Uri.file(path.join(ICONS_ROOT_PATH, `gh-status-icon--failure.svg`));
-		case 'PENDING': return vscode.Uri.file(path.join(ICONS_ROOT_PATH, `gh-status-icon--pending.svg`));
-		case 'COMMENTED': return vscode.Uri.file(path.join(ICONS_ROOT_PATH, `gh-comment-icon.svg`));
+		case 'APPROVED': return getIcon(`gh-status-icon--success.svg`);
+		case 'CHANGES_REQUESTED': return getIcon(`gh-status-icon--failure.svg`);
+		case 'PENDING': return getIcon(`gh-status-icon--pending.svg`);
+		case 'COMMENTED': return getIcon(`gh-comment-icon.svg`);
+		default: return undefined;
 	}
 };
 
@@ -93,7 +97,7 @@ export class ChecklistController implements vscode.Disposable {
 
 					statusItems.push({
 						name,
-						description: context.description || undefined,
+						detail: context.description || undefined,
 						decorations: decorationsForStatusState(context.state),
 						command: createWebBrowserCommandReference(vscode.Uri.parse(context.targetUrl)),
 					});
@@ -131,7 +135,8 @@ export class ChecklistController implements vscode.Disposable {
 					}
 					commentItems.push({
 						name: comment.author && comment.author.login || '',
-						description: comment.body,
+						description: localize('commented', "commented {0}", distanceInWordsToNow(new Date(comment.createdAt), { addSuffix: true, locale })),
+						detail: comment.body,
 						decorations: {},
 						command: createWebBrowserCommandReference(url),
 					});
@@ -141,10 +146,19 @@ export class ChecklistController implements vscode.Disposable {
 					// Add each review as a checklist item
 					// Neutral reviews without a body are not worth showing as a checklist item
 					// TODO only use latest review of each author
+					const time = distanceInWordsToNow(new Date(review.createdAt), { addSuffix: true, locale });
+					let description: string;
+					switch (review.state) {
+						case 'APPROVED': description = localize('approved', "approved {0}", time); break;
+						case 'CHANGES_REQUESTED': description = localize('requestedChanges', "requested changes {0}", time); break;
+						case 'COMMENTED': description = localize('reviewed', "reviewed {0}", time); break;
+						default: continue;
+					}
 					if (review.body || review.state !== 'COMMENTED') {
 						reviewItems.push({
 							name: review.author && review.author.login || '',
-							description: review.body,
+							description,
+							detail: review.body,
 							decorations: {
 								iconPath: getIconForPullRequestReviewState(review.state),
 							},
@@ -158,18 +172,33 @@ export class ChecklistController implements vscode.Disposable {
 						}
 						commentItems.push({
 							name: comment.author && comment.author.login || '',
-							description: comment.body,
+							detail: comment.body,
+							description: localize('commented', "commented {0}", distanceInWordsToNow(new Date(comment.createdAt), { addSuffix: true, locale })),
 							decorations: {},
 							command: createWebBrowserCommandReference(vscode.Uri.parse(comment.url)),
 						});
 					}
 				}
 
+				for (const request of pr.reviewRequests.nodes || []) {
+					reviewItems.push({
+						name: request.reviewer && request.reviewer.login || '',
+						description: localize('requestedForReview', "was requested for review"),
+						detail: '',
+						decorations: {
+							iconPath: getIconForPullRequestReviewState('PENDING'),
+						},
+					});
+				}
+
 				prChecklistItemGroup.itemStates = [
 					{
 						name: `${pr.author && pr.author.login}`,
-						description: pr.body,
-						decorations: {},
+						detail: pr.body,
+						description: localize('opened', "opened {0}", distanceInWordsToNow(new Date(pr.createdAt), { addSuffix: true, locale })),
+						decorations: {
+							iconPath: getIcon('gh-pr.svg'),
+						},
 						command: createWebBrowserCommandReference(vscode.Uri.parse(pr.url)),
 					},
 					...reviewItems,

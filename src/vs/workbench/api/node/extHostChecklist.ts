@@ -111,6 +111,7 @@ class ExtHostChecklistlistItemGroup implements vscode.ChecklistItemGroup {
 
 					const name = r.name;
 					const description = r.description;
+					const detail = r.detail;
 					const iconPath = getIconPath(r.decorations);
 					const lightIconPath = r.decorations && getIconPath(r.decorations.light) || iconPath;
 					const darkIconPath = r.decorations && getIconPath(r.decorations.dark) || iconPath;
@@ -132,7 +133,7 @@ class ExtHostChecklistlistItemGroup implements vscode.ChecklistItemGroup {
 					const strikeThrough = r.decorations && !!r.decorations.strikeThrough;
 					const faded = r.decorations && !!r.decorations.faded;
 
-					return [handle, name, description, icons, tooltip, strikeThrough, faded] as ChecklistRawItem;
+					return [handle, name, description, detail, icons, tooltip, strikeThrough, faded] as ChecklistRawItem;
 				});
 
 			handlesToDelete.push(...this._handlesSnapshot.splice(start, deleteCount, ...handles));
