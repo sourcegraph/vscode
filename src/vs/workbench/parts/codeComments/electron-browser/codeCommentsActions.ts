@@ -16,9 +16,15 @@ import { KeyCode, KeyMod } from 'vs/base/common/keyCodes';
 import { EditorContextKeys } from 'vs/editor/common/editorContextKeys';
 import { CommentsContextKeys } from 'vs/workbench/parts/codeComments/browser/commentsContextKeys';
 import { IClipboardService } from 'vs/platform/clipboard/common/clipboardService';
-import { IMessageService, Severity } from 'vs/platform/message/common/message';
+import { IMessageService, Severity, CancelAction } from 'vs/platform/message/common/message';
 import { EditorAction, ServicesAccessor, registerEditorAction } from 'vs/editor/browser/editorExtensions';
 import { ICodeEditor } from 'vs/editor/browser/editorBrowser';
+import { IOpenerService } from 'vs/platform/opener/common/opener';
+import { Action } from 'vs/base/common/actions';
+import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
+import { urlToCreateOrg } from 'vs/platform/auth/node/authService';
+import { IAuthService } from 'vs/platform/auth/common/auth';
+import URI from 'vs/base/common/uri';
 
 /**
  * Action to open the code comments viewlet.
@@ -72,6 +78,70 @@ export class CreateCodeCommentAction extends EditorAction {
 	}
 }
 registerEditorAction(CreateCodeCommentAction);
+
+/**
+ * Editor action that exposes the "Comment" action to the quick open menu
+ * and to the editor context menu. This action is responsible for notifying the user
+ * that they need to 1) Sign up or sign in 2) Create or join an organization
+ * in order to use comments. This action is only exposed when CommentsContextKeys.canComment.toNegated().
+ */
+export class CodeCommentSignInAction extends EditorAction {
+	private static ID = 'workbench.action.codeCommentSignInAction';
+
+	constructor() {
+		super({
+			id: CodeCommentSignInAction.ID,
+			alias: 'Comment',
+			label: CREATE_CODE_COMMENT_ACTION_LABEL,
+			precondition: CommentsContextKeys.canComment.toNegated(),
+			kbOpts: {
+				kbExpr: EditorContextKeys.textFocus,
+				primary: KeyMod.CtrlCmd | KeyMod.Alt | KeyCode.KEY_M,
+			},
+			menuOpts: {
+				group: '1_codecomments',
+				order: 1.1,
+			}
+		});
+	}
+
+	public run(accessor: ServicesAccessor, editor: ICodeEditor): TPromise<any> {
+		const messageService = accessor.get(IMessageService);
+		const openerService = accessor.get(IOpenerService);
+		const configService = accessor.get(IConfigurationService);
+		const authService = accessor.get(IAuthService);
+		const signInAction = new Action('signIn.message', localize('signIn', "Sign in"), null, true, () => {
+			authService.showSignInFlow();
+			return TPromise.wrap(true);
+		});
+		const orgAction = new Action('close.message', localize('createOrJoin', "Create or join"), null, true, () => {
+			const url = urlToCreateOrg(configService);
+			openerService.open(url);
+			return TPromise.wrap(true);
+		});
+
+		const learnMore = new Action('learnMore.message', localize('comments.learnMore', "Learn More"), null, true, () => {
+			openerService.open(URI.parse('https://about.sourcegraph.com/products/editor/'));
+			return TPromise.wrap(true);
+		});
+
+		const message = authService.currentUser ?
+			localize('comment.joinOrgMessage', "Create or join an organization to start using code comments.") :
+			localize('comment.signInMessage', "Sign in or create an account to start using code comments.");
+		const action = authService.currentUser ? orgAction : signInAction;
+
+		messageService.show(Severity.Info, {
+			message: message, actions: [
+				action,
+				learnMore,
+				CancelAction
+			]
+		});
+
+		return TPromise.wrap(true);
+	}
+}
+registerEditorAction(CodeCommentSignInAction);
 
 /**
  * Editor action that shares the current text selection.

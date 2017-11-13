@@ -29,7 +29,7 @@ import { IOutputService, IOutputChannelRegistry, Extensions } from 'vs/workbench
 import { Registry } from 'vs/platform/registry/common/platform';
 import { first } from 'vs/base/common/arrays';
 
-export { Event }
+export { Event };
 
 
 const CHANNEL_ID = 'sourcegraphAuth';
@@ -486,24 +486,29 @@ function getTelemetryData(user: UserMemento): any {
 }
 
 export function urlToSignIn(configService: IConfigurationService): URI {
-	const config = configService.getValue<IRemoteConfiguration>();
-	if (!config.remote || !config.remote.endpoint) {
-		throw new Error('unable to sign in because remote.endpoint configuration setting is not present');
-	}
-
-	return URI.parse(config.remote.endpoint).with({
+	return getRemoteEndpoint(configService).with({
 		path: '/settings/editor-auth',
 		query: 'utm_source=editor&referrer=editor'
 	});
 }
 
+export function urlToCreateOrg(configService: IConfigurationService): URI {
+	return getRemoteEndpoint(configService).with({
+		path: '/settings/orgs/new',
+		query: 'utm_source=editor&referrer=editor'
+	});
+}
+
 export function urlToSignOut(configService: IConfigurationService): URI {
+	return getRemoteEndpoint(configService).with({
+		path: '/-/logout'
+	});
+}
+
+function getRemoteEndpoint(configService: IConfigurationService): URI {
 	const config = configService.getValue<IRemoteConfiguration>();
 	if (!config.remote || !config.remote.endpoint) {
 		throw new Error('unable to sign out because remote.endpoint configuration setting is not present');
 	}
-
-	return URI.parse(config.remote.endpoint).with({
-		path: '/-/logout'
-	});
+	return URI.parse(config.remote.endpoint);
 }
