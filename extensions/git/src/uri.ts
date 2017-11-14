@@ -49,7 +49,8 @@ export function canonicalRemote(remote: string): string | undefined {
 		.replace(/\/*$/, '') // trailing slash
 		.replace(/\.(git|hg|svn)$/i, '');
 
-	// Remove leading or trailing path separator.
+	// Remove leading or trailing path separator, which can occur
+	// when the remote is a local file system path (e.g., /tmp/foo/).
 	if (uriPath.startsWith(path.sep)) {
 		uriPath = uriPath.slice(1);
 	}

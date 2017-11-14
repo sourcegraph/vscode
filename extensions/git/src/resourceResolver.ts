@@ -626,7 +626,8 @@ class Resolver {
 		const homePath = os.homedir();
 		const separator = path.sep;
 
-		// Remove leading path separator.
+		// Remove leading path separator, which can occur when the path
+		// is a local file system path (e.g., /tmp/foo).
 		if (folderRelativePath.startsWith(path.sep)) {
 			folderRelativePath = folderRelativePath.slice(1);
 		}

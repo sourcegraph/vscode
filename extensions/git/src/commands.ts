@@ -145,7 +145,6 @@ class AddWorktreeRemoteHeadItem extends AddWorktreeItem {
 interface CommandOptions {
 	repository?: boolean;
 	diff?: boolean;
-	external?: boolean;
 }
 
 interface Command {
