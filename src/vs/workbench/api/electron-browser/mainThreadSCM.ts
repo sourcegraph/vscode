@@ -252,7 +252,7 @@ class MainThreadSCMProvider implements ISCMProvider {
 
 	executeCommand(args: string[], options?: ICommandOptions): TPromise<string> {
 		return this.proxy.$executeCommand(this.handle, args, options);
-	};
+	}
 
 	toJSON(): any {
 		return {

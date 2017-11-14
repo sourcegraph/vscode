@@ -17,7 +17,7 @@ import { IDisposable } from 'vs/base/common/lifecycle';
 
 export enum ModalIdentifiers {
 	SIGNIN
-};
+}
 
 export interface IModal {
 	readonly closeable: boolean;

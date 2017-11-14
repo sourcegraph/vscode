@@ -24,7 +24,7 @@ import { ConfigurationEditingErrorCode } from 'vs/workbench/services/configurati
 import { FileChangeType, FileChangesEvent, IFileService } from 'vs/platform/files/common/files';
 import { IWorkspaceContextService, WorkbenchState, IWorkspaceFoldersChangeEvent } from 'vs/platform/workspace/common/workspace';
 import { ConfigurationTarget, IConfigurationService } from 'vs/platform/configuration/common/configuration';
-import { workbenchInstantiationService, TestTextResourceConfigurationService, TestTextFileService } from 'vs/workbench/test/workbenchTestServices';
+import { workbenchInstantiationService, TestTextResourceConfigurationService, TestTextFileService, TestLifecycleService } from 'vs/workbench/test/workbenchTestServices';
 import { FileService } from 'vs/workbench/services/files/node/fileService';
 import { TestInstantiationService } from 'vs/platform/instantiation/test/common/instantiationServiceMock';
 import { ITextFileService } from 'vs/workbench/services/textfile/common/textfiles';
@@ -32,6 +32,7 @@ import { ITextModelService } from 'vs/editor/common/services/resolverService';
 import { TextModelResolverService } from 'vs/workbench/services/textmodelResolver/common/textModelResolverService';
 import { IJSONEditingService } from 'vs/workbench/services/configuration/common/jsonEditing';
 import { JSONEditingService } from 'vs/workbench/services/configuration/node/jsonEditingService';
+import { IWorkspaceConfigurationService } from 'vs/workbench/services/configuration/common/configuration';
 
 class SettingsTestEnvironmentService extends EnvironmentService {
 
@@ -167,7 +168,7 @@ suite('WorkspaceContextService - Workspace', () => {
 
 				return workspaceService.initialize({ id: configPath, configPath }).then(() => {
 
-					instantiationService.stub(IFileService, new FileService(<IWorkspaceContextService>workspaceService, new TestTextResourceConfigurationService(), workspaceService, { disableWatcher: true }));
+					instantiationService.stub(IFileService, new FileService(<IWorkspaceContextService>workspaceService, new TestTextResourceConfigurationService(), workspaceService, new TestLifecycleService(), { disableWatcher: true }));
 					instantiationService.stub(ITextFileService, instantiationService.createInstance(TestTextFileService));
 					instantiationService.stub(ITextModelService, <ITextModelService>instantiationService.createInstance(TextModelResolverService));
 					workspaceService.setInstantiationService(instantiationService);
@@ -296,10 +297,10 @@ suite('WorkspaceContextService - Workspace', () => {
 
 suite('WorkspaceConfigurationService - Folder', () => {
 
-	let workspaceName = `testWorkspace${uuid.generateUuid()}`, parentResource: string, workspaceDir: string, testObject: IConfigurationService, globalSettingsFile: string;
+	let workspaceName = `testWorkspace${uuid.generateUuid()}`, parentResource: string, workspaceDir: string, testObject: IWorkspaceConfigurationService, globalSettingsFile: string;
+	const configurationRegistry = <IConfigurationRegistry>Registry.as(ConfigurationExtensions.Configuration);
 
 	suiteSetup(() => {
-		const configurationRegistry = <IConfigurationRegistry>Registry.as(ConfigurationExtensions.Configuration);
 		configurationRegistry.registerConfiguration({
 			'id': '_test',
 			'type': 'object',
@@ -308,6 +309,11 @@ suite('WorkspaceConfigurationService - Folder', () => {
 					'type': 'string',
 					'default': 'isSet'
 				},
+				'configurationService.folder.executableSetting': {
+					'type': 'string',
+					'default': 'isSet',
+					isExecutable: true
+				}
 			}
 		});
 	});
@@ -328,7 +334,7 @@ suite('WorkspaceConfigurationService - Folder', () => {
 				instantiationService.stub(IEnvironmentService, environmentService);
 
 				return workspaceService.initialize(folderDir).then(() => {
-					instantiationService.stub(IFileService, new FileService(<IWorkspaceContextService>workspaceService, new TestTextResourceConfigurationService(), workspaceService, { disableWatcher: true }));
+					instantiationService.stub(IFileService, new FileService(<IWorkspaceContextService>workspaceService, new TestTextResourceConfigurationService(), workspaceService, new TestLifecycleService(), { disableWatcher: true }));
 					instantiationService.stub(ITextFileService, instantiationService.createInstance(TestTextFileService));
 					instantiationService.stub(ITextModelService, <ITextModelService>instantiationService.createInstance(TextModelResolverService));
 					workspaceService.setInstantiationService(instantiationService);
@@ -347,7 +353,7 @@ suite('WorkspaceConfigurationService - Folder', () => {
 	});
 
 	test('defaults', () => {
-		assert.deepEqual(testObject.getValue('configurationService'), { 'folder': { 'testSetting': 'isSet' } });
+		assert.deepEqual(testObject.getValue('configurationService'), { 'folder': { 'testSetting': 'isSet', 'executableSetting': 'isSet' } });
 	});
 
 	test('globals override defaults', () => {
@@ -373,6 +379,59 @@ suite('WorkspaceConfigurationService - Folder', () => {
 		fs.writeFileSync(path.join(workspaceDir, '.vscode', 'settings.json'), '{ "configurationService.folder.testSetting": "workspaceValue" }');
 		return testObject.reloadConfiguration()
 			.then(() => assert.equal(testObject.getValue('configurationService.folder.testSetting'), 'workspaceValue'));
+	});
+
+	test('workspace settings override user settings after defaults are registered ', () => {
+		fs.writeFileSync(globalSettingsFile, '{ "configurationService.folder.newSetting": "userValue" }');
+		fs.writeFileSync(path.join(workspaceDir, '.vscode', 'settings.json'), '{ "configurationService.folder.newSetting": "workspaceValue" }');
+		return testObject.reloadConfiguration()
+			.then(() => {
+
+				configurationRegistry.registerConfiguration({
+					'id': '_test',
+					'type': 'object',
+					'properties': {
+						'configurationService.folder.newSetting': {
+							'type': 'string',
+							'default': 'isSet'
+						}
+					}
+				});
+
+				assert.equal(testObject.getValue('configurationService.folder.newSetting'), 'workspaceValue');
+			});
+	});
+
+	test('executable settings are not read from workspace', () => {
+		fs.writeFileSync(globalSettingsFile, '{ "configurationService.folder.executableSetting": "userValue" }');
+		fs.writeFileSync(path.join(workspaceDir, '.vscode', 'settings.json'), '{ "configurationService.folder.executableSetting": "workspaceValue" }');
+		return testObject.reloadConfiguration()
+			.then(() => assert.equal(testObject.getValue('configurationService.folder.executableSetting'), 'userValue'));
+	});
+
+	test('get unsupported workspace settings', () => {
+		fs.writeFileSync(path.join(workspaceDir, '.vscode', 'settings.json'), '{ "configurationService.folder.executableSetting": "workspaceValue" }');
+		return testObject.reloadConfiguration()
+			.then(() => assert.deepEqual(testObject.getUnsupportedWorkspaceKeys(), ['configurationService.folder.executableSetting']));
+	});
+
+	test('get unsupported workspace settings after defaults are registered', () => {
+		fs.writeFileSync(path.join(workspaceDir, '.vscode', 'settings.json'), '{ "configurationService.folder.anotherExecutableSetting": "workspaceValue" }');
+		return testObject.reloadConfiguration()
+			.then(() => {
+				configurationRegistry.registerConfiguration({
+					'id': '_test',
+					'type': 'object',
+					'properties': {
+						'configurationService.folder.anotherExecutableSetting': {
+							'type': 'string',
+							'default': 'isSet',
+							isExecutable: true
+						}
+					}
+				});
+				assert.deepEqual(testObject.getUnsupportedWorkspaceKeys(), ['configurationService.folder.anotherExecutableSetting']);
+			});
 	});
 
 	test('workspace change triggers event', () => {
@@ -550,12 +609,12 @@ suite('WorkspaceConfigurationService - Folder', () => {
 	});
 });
 
-suite('WorkspaceConfigurationService - Update (Multiroot)', () => {
+suite('WorkspaceConfigurationService - Multiroot', () => {
 
-	let parentResource: string, workspaceContextService: IWorkspaceContextService, jsonEditingServce: IJSONEditingService, testObject: IConfigurationService;
+	let parentResource: string, workspaceContextService: IWorkspaceContextService, environmentService: IEnvironmentService, jsonEditingServce: IJSONEditingService, testObject: IWorkspaceConfigurationService;
+	const configurationRegistry = <IConfigurationRegistry>Registry.as(ConfigurationExtensions.Configuration);
 
 	suiteSetup(() => {
-		const configurationRegistry = <IConfigurationRegistry>Registry.as(ConfigurationExtensions.Configuration);
 		configurationRegistry.registerConfiguration({
 			'id': '_test',
 			'type': 'object',
@@ -568,6 +627,17 @@ suite('WorkspaceConfigurationService - Update (Multiroot)', () => {
 					'type': 'string',
 					'default': 'isSet',
 					scope: ConfigurationScope.RESOURCE
+				},
+				'configurationService.workspace.testExecutableSetting': {
+					'type': 'string',
+					'default': 'isSet',
+					isExecutable: true
+				},
+				'configurationService.workspace.testExecutableResourceSetting': {
+					'type': 'string',
+					'default': 'isSet',
+					isExecutable: true,
+					scope: ConfigurationScope.RESOURCE
 				}
 			}
 		});
@@ -579,7 +649,7 @@ suite('WorkspaceConfigurationService - Update (Multiroot)', () => {
 
 				parentResource = parentDir;
 
-				const environmentService = new SettingsTestEnvironmentService(parseArgs(process.argv), process.execPath, path.join(parentDir, 'settings.json'));
+				environmentService = new SettingsTestEnvironmentService(parseArgs(process.argv), process.execPath, path.join(parentDir, 'settings.json'));
 				const workspaceService = new WorkspaceService(environmentService);
 
 				const instantiationService = <TestInstantiationService>workbenchInstantiationService();
@@ -589,7 +659,7 @@ suite('WorkspaceConfigurationService - Update (Multiroot)', () => {
 
 				return workspaceService.initialize({ id: configPath, configPath }).then(() => {
 
-					instantiationService.stub(IFileService, new FileService(<IWorkspaceContextService>workspaceService, new TestTextResourceConfigurationService(), workspaceService, { disableWatcher: true }));
+					instantiationService.stub(IFileService, new FileService(<IWorkspaceContextService>workspaceService, new TestTextResourceConfigurationService(), workspaceService, new TestLifecycleService(), { disableWatcher: true }));
 					instantiationService.stub(ITextFileService, instantiationService.createInstance(TestTextFileService));
 					instantiationService.stub(ITextModelService, <ITextModelService>instantiationService.createInstance(TextModelResolverService));
 					workspaceService.setInstantiationService(instantiationService);
@@ -609,6 +679,89 @@ suite('WorkspaceConfigurationService - Update (Multiroot)', () => {
 			extfs.del(parentResource, os.tmpdir(), () => { }, done);
 		}
 	});
+
+	test('executable settings are not read from workspace', () => {
+		fs.writeFileSync(environmentService.appSettingsPath, '{ "configurationService.workspace.testExecutableSetting": "userValue" }');
+		return jsonEditingServce.write(workspaceContextService.getWorkspace().configuration, { key: 'settings', value: { 'configurationService.workspace.testExecutableSetting': 'workspaceValue' } }, true)
+			.then(() => testObject.reloadConfiguration())
+			.then(() => assert.equal(testObject.getValue('configurationService.workspace.testExecutableSetting'), 'userValue'));
+	});
+
+	test('executable settings are not read from workspace folder', () => {
+		fs.writeFileSync(environmentService.appSettingsPath, '{ "configurationService.workspace.testExecutableResourceSetting": "userValue" }');
+		fs.writeFileSync(workspaceContextService.getWorkspace().folders[0].toResource('.vscode/settings.json').fsPath, '{ "configurationService.workspace.testExecutableResourceSetting": "workspaceFolderValue" }');
+		return testObject.reloadConfiguration()
+			.then(() => assert.equal(testObject.getValue('configurationService.workspace.testExecutableResourceSetting', { resource: workspaceContextService.getWorkspace().folders[0].uri }), 'userValue'));
+	});
+
+	test('get unsupported workspace settings', () => {
+		fs.writeFileSync(workspaceContextService.getWorkspace().folders[0].toResource('.vscode/settings.json').fsPath, '{ "configurationService.workspace.testExecutableResourceSetting": "workspaceFolderValue" }');
+		return jsonEditingServce.write(workspaceContextService.getWorkspace().configuration, { key: 'settings', value: { 'configurationService.workspace.testExecutableSetting': 'workspaceValue' } }, true)
+			.then(() => testObject.reloadConfiguration())
+			.then(() => assert.deepEqual(testObject.getUnsupportedWorkspaceKeys(), ['configurationService.workspace.testExecutableSetting', 'configurationService.workspace.testExecutableResourceSetting']));
+	});
+
+	test('workspace settings override user settings after defaults are registered ', () => {
+		fs.writeFileSync(environmentService.appSettingsPath, '{ "configurationService.workspace.newSetting": "userValue" }');
+		return jsonEditingServce.write(workspaceContextService.getWorkspace().configuration, { key: 'settings', value: { 'configurationService.workspace.newSetting': 'workspaceValue' } }, true)
+			.then(() => testObject.reloadConfiguration())
+			.then(() => {
+				configurationRegistry.registerConfiguration({
+					'id': '_test',
+					'type': 'object',
+					'properties': {
+						'configurationService.workspace.newSetting': {
+							'type': 'string',
+							'default': 'isSet'
+						}
+					}
+				});
+				assert.equal(testObject.getValue('configurationService.workspace.newSetting'), 'workspaceValue');
+			});
+	});
+
+	test('executable settings are not read from workspace folder after defaults are registered', () => {
+		fs.writeFileSync(environmentService.appSettingsPath, '{ "configurationService.workspace.testNewExecutableResourceSetting": "userValue" }');
+		fs.writeFileSync(workspaceContextService.getWorkspace().folders[0].toResource('.vscode/settings.json').fsPath, '{ "configurationService.workspace.testNewExecutableResourceSetting": "workspaceFolderValue" }');
+		return testObject.reloadConfiguration()
+			.then(() => {
+				configurationRegistry.registerConfiguration({
+					'id': '_test',
+					'type': 'object',
+					'properties': {
+						'configurationService.workspace.testNewExecutableResourceSetting': {
+							'type': 'string',
+							'default': 'isSet',
+							isExecutable: true,
+							scope: ConfigurationScope.RESOURCE
+						}
+					}
+				});
+				assert.equal(testObject.getValue('configurationService.workspace.testNewExecutableResourceSetting', { resource: workspaceContextService.getWorkspace().folders[0].uri }), 'userValue');
+			});
+	});
+
+	test('get unsupported workspace settings after defaults are registered', () => {
+		fs.writeFileSync(workspaceContextService.getWorkspace().folders[0].toResource('.vscode/settings.json').fsPath, '{ "configurationService.workspace.testNewExecutableResourceSetting2": "workspaceFolderValue" }');
+		return jsonEditingServce.write(workspaceContextService.getWorkspace().configuration, { key: 'settings', value: { 'configurationService.workspace.testExecutableSetting': 'workspaceValue' } }, true)
+			.then(() => testObject.reloadConfiguration())
+			.then(() => {
+				configurationRegistry.registerConfiguration({
+					'id': '_test',
+					'type': 'object',
+					'properties': {
+						'configurationService.workspace.testNewExecutableResourceSetting2': {
+							'type': 'string',
+							'default': 'isSet',
+							isExecutable: true,
+							scope: ConfigurationScope.RESOURCE
+						}
+					}
+				});
+				assert.deepEqual(testObject.getUnsupportedWorkspaceKeys(), ['configurationService.workspace.testExecutableSetting', 'configurationService.workspace.testNewExecutableResourceSetting2']);
+			});
+	});
+
 
 	test('update user configuration', () => {
 		return testObject.updateValue('configurationService.workspace.testSetting', 'userValue', ConfigurationTarget.USER)

@@ -180,7 +180,7 @@ export enum SearchProfileSource {
 	Config = 'Config',
 	Workspace = 'Workspace', // Currently open workspaces
 	Server = 'Server',
-};
+}
 
 // A search profile
 export interface ISearchProfile {
@@ -233,8 +233,9 @@ export function getExcludes(configuration: ISearchConfiguration): glob.IExpressi
 	}
 
 	let allExcludes: glob.IExpression = Object.create(null);
-	allExcludes = objects.mixin(allExcludes, fileExcludes);
-	allExcludes = objects.mixin(allExcludes, searchExcludes, true);
+	// clone the config as it could be frozen
+	allExcludes = objects.mixin(allExcludes, objects.deepClone(fileExcludes));
+	allExcludes = objects.mixin(allExcludes, objects.deepClone(searchExcludes), true);
 
 	return allExcludes;
 }

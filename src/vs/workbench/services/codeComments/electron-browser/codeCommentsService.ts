@@ -44,7 +44,7 @@ import { IConfigurationService } from 'vs/platform/configuration/common/configur
 import { ShareContextConfigurationAction } from 'vs/workbench/services/codeComments/electron-browser/threadCommentActions';
 import { ICodeEditor } from 'vs/editor/browser/editorBrowser';
 
-export { Event }
+export { Event };
 
 /**
  * A unique identifier for a file.

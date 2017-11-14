@@ -64,10 +64,8 @@ export class WorkspaceSharingService implements IWorkspaceSharingService {
 			};
 			this.telemetryService.publicLog('workspace.export', getTelemetryData(storedWorkspace));
 
-			const header = localize('srcWorkspaceHeader', `// This is a Sourcegraph workspace that defines a set of related repositories
-// and associated configuration.
-//
-// To open it, you must first download Sourcegraph at https://about.sourcegraph.com/beta/201708.`);
+			const header = localize('srcWorkspaceHeader',
+				"// This is a Sourcegraph workspace that defines a set of related repositories and associated configuration. \n // To open it, you must first download Sourcegraph at https://about.sourcegraph.com/beta/201708.");
 			const content = header + '\n' + JSON.stringify(storedWorkspace, null, '\t') + '\n';
 			return this.fileService.updateContent(target, content, { encoding: 'utf8' }).then(() => { });
 		});
