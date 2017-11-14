@@ -171,6 +171,19 @@ suite('Tests Git remote repository resolver', async () => {
 		assertWorkspaceFolders([repoClone]);
 	});
 
+	suite('when remote has a same-rev clone in the current window', () => {
+		test('do nothing', async () => {
+			const [repoOrigin, repoClone] = await createTestRepository(tmpDir, 'repo', ['repo']);
+			await vscode.commands.executeCommand('_workbench.addRoots', [vscode.Uri.file(repoClone)]);
+			assertWorkspaceFolders([repoClone]);
+			await assertCurrentBranch(repoClone, 'master');
+
+			await vscode.commands.executeCommand('git.openRemoteRepository', repoOrigin + '?master');
+			assertWorkspaceFolders([repoClone]);
+			await assertCurrentBranch(repoClone, 'master');
+		});
+	});
+
 	suite('when remote has a different-rev clone in the current window', () => {
 		test('present the user with the choice to checkout the rev in the current window', async () => {
 			const [repoOrigin, repoClone] = await createTestRepository(tmpDir, 'repo', ['repo']);
