@@ -119,7 +119,7 @@ export class ResourceGlobMatcher {
 				changed = true;
 
 				this.mapRootToParsedExpression.set(folder.uri.toString(), parse(rootExcludes));
-				this.mapRootToExpressionConfig.set(folder.uri.toString(), objects.clone(rootExcludes));
+				this.mapRootToExpressionConfig.set(folder.uri.toString(), objects.deepClone(rootExcludes));
 			}
 		});
 
@@ -143,7 +143,7 @@ export class ResourceGlobMatcher {
 			changed = true;
 
 			this.mapRootToParsedExpression.set(ResourceGlobMatcher.NO_ROOT, parse(globalExcludes));
-			this.mapRootToExpressionConfig.set(ResourceGlobMatcher.NO_ROOT, objects.clone(globalExcludes));
+			this.mapRootToExpressionConfig.set(ResourceGlobMatcher.NO_ROOT, objects.deepClone(globalExcludes));
 		}
 
 		if (fromEvent && changed) {

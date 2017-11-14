@@ -68,21 +68,21 @@
 }
 
 .monaco-workbench > .part.navbar .navigate-backwards-action {
-	background: url('../../../../../editor/contrib/find/browser/images/previous.svg') center center no-repeat;
+	background: url('../../../../../editor/contrib/find/images/previous.svg') center center no-repeat;
 }
 
 .vs-dark .monaco-workbench > .part.navbar .navigate-backwards-action,
 .hc-black .monaco-workbench > .part.navbar .navigate-backwards-action {
-	background: url('../../../../../editor/contrib/find/browser/images/previous-inverse.svg') center center no-repeat;
+	background: url('../../../../../editor/contrib/find/images/previous-inverse.svg') center center no-repeat;
 }
 
 .monaco-workbench > .part.navbar .navigate-forward-action {
-	background: url('../../../../../editor/contrib/find/browser/images/next.svg') center center no-repeat;
+	background: url('../../../../../editor/contrib/find/images/next.svg') center center no-repeat;
 }
 
 .vs-dark .monaco-workbench > .part.navbar .navigate-forward-action,
 .hc-black .monaco-workbench > .part.navbar .navigate-forward-action {
-	background: url('../../../../../editor/contrib/find/browser/images/next-inverse.svg') center center no-repeat;
+	background: url('../../../../../editor/contrib/find/images/next-inverse.svg') center center no-repeat;
 }
 
 .monaco-workbench > .part.navbar .share-location-action {

@@ -147,11 +147,6 @@ export interface IWorkbenchStartedInfo {
 	restoredEditors: string[];
 }
 
-export interface IWorkbenchCallbacks {
-	onServicesCreated?: () => void;
-	onWorkbenchStarted?: (info: IWorkbenchStartedInfo) => void;
-}
-
 const Identifiers = {
 	WORKBENCH_CONTAINER: 'workbench.main.container',
 	TITLEBAR_PART: 'workbench.parts.titlebar',
@@ -218,7 +213,6 @@ export class Workbench implements IPartService {
 	private workbenchLayout: WorkbenchLayout;
 	private toDispose: IDisposable[];
 	private toShutdown: { shutdown: () => void; }[];
-	private callbacks: IWorkbenchCallbacks;
 	private navBarHidden: boolean;
 	private sideBarHidden: boolean;
 	private statusBarHidden: boolean;
@@ -294,11 +288,10 @@ export class Workbench implements IPartService {
 	 * Starts the workbench and creates the HTML elements on the container. A workbench can only be started
 	 * once. Use the shutdown function to free up resources created by the workbench on startup.
 	 */
-	public startup(callbacks?: IWorkbenchCallbacks): void {
+	public startup(): TPromise<IWorkbenchStartedInfo> {
 		this.workbenchStarted = true;
-		this.callbacks = callbacks;
 
-		// Create Workbench
+		// Create Workbench Container
 		this.createWorkbench();
 
 		// Install some global actions
@@ -306,9 +299,6 @@ export class Workbench implements IPartService {
 
 		// Services
 		this.initServices();
-		if (this.callbacks && this.callbacks.onServicesCreated) {
-			this.callbacks.onServicesCreated();
-		}
 
 		// Contexts
 		this.messagesVisibleContext = MessagesVisibleContext.bindTo(this.contextKeyService);
@@ -329,13 +319,15 @@ export class Workbench implements IPartService {
 		this.createWorkbenchLayout();
 
 		// Restore Parts
-		this.restoreParts().done(startedInfo => {
-			this.workbenchCreated = true;
+		return this.restoreParts();
+	}
 
-			if (this.callbacks && this.callbacks.onWorkbenchStarted) {
-				this.callbacks.onWorkbenchStarted(startedInfo);
-			}
-		});
+	private createWorkbench(): void {
+		this.workbenchContainer = $('.monaco-workbench-container');
+		this.workbench = $().div({
+			'class': `monaco-workbench ${isWindows ? 'windows' : isLinux ? 'linux' : 'mac'}`,
+			id: Identifiers.WORKBENCH_CONTAINER
+		}).appendTo(this.workbenchContainer);
 	}
 
 	private restoreParts(): TPromise<IWorkbenchStartedInfo> {
@@ -424,6 +416,8 @@ export class Workbench implements IPartService {
 		}
 
 		const onRestored = (error?: Error): IWorkbenchStartedInfo => {
+			this.workbenchCreated = true;
+
 			if (error) {
 				errors.onUnexpectedError(error);
 			}
@@ -703,7 +697,7 @@ export class Workbench implements IPartService {
 
 		// Set the some services to registries that have been created eagerly
 		Registry.as<IActionBarRegistry>(ActionBarExtensions.Actionbar).setInstantiationService(this.instantiationService);
-		Registry.as<IWorkbenchContributionsRegistry>(WorkbenchExtensions.Workbench).setInstantiationService(this.instantiationService);
+		Registry.as<IWorkbenchContributionsRegistry>(WorkbenchExtensions.Workbench).start(this.instantiationService, this.lifecycleService);
 		Registry.as<IEditorInputFactoryRegistry>(EditorExtensions.EditorInputFactories).setInstantiationService(this.instantiationService);
 
 		this.instantiationService.createInstance(DefaultConfigurationExportHelper);
@@ -1285,13 +1279,6 @@ export class Workbench implements IPartService {
 		);
 
 		this.toDispose.push(this.workbenchLayout);
-	}
-
-	private createWorkbench(): void {
-
-		// Create Workbench DIV Off-DOM
-		this.workbenchContainer = $('.monaco-workbench-container');
-		this.workbench = $().div({ 'class': 'monaco-workbench ' + (isWindows ? 'windows' : isLinux ? 'linux' : 'mac'), id: Identifiers.WORKBENCH_CONTAINER }).appendTo(this.workbenchContainer);
 	}
 
 	private renderWorkbench(): void {

@@ -29,7 +29,7 @@ CommandsRegistry.registerCommand('sg.modal.pushModal', (accessor: ServicesAccess
 			modalPart.pushModal(modalIdentifier);
 		}
 	}
-	)
+	);
 });
 
 /**
@@ -45,7 +45,7 @@ CommandsRegistry.registerCommand('sg.modal.popModal', (accessor: ServicesAccesso
 			modalPart.popModal();
 		}
 	}
-	)
+	);
 });
 
 /**
@@ -61,7 +61,7 @@ CommandsRegistry.registerCommand('sg.modal.clearAllModalsCommand', (accessor: Se
 			modalPart.clearAllModals();
 		}
 	}
-	)
+	);
 });
 
 Registry.as<IWorkbenchActionRegistry>(Extensions.WorkbenchActions)

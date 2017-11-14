@@ -1310,7 +1310,7 @@ export class CommandCenter {
 					window.showErrorMessage(localize('invalid branch name', 'Invalid branch name'));
 					return;
 				case GitErrorCodes.BranchAlreadyExists:
-					window.showErrorMessage(localize('branch already exists', `A branch named '${name}' already exists`));
+					window.showErrorMessage(localize('branch already exists', "A branch named '{0}' already exists", name));
 					return;
 				default:
 					throw err;

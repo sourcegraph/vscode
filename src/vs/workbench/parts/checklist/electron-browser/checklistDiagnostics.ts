@@ -16,7 +16,6 @@ import { IMarkerService } from 'vs/platform/markers/common/markers';
 import { IWorkbenchContribution } from 'vs/workbench/common/contributions';
 import { IPanelService } from 'vs/workbench/services/panel/common/panelService';
 import MarkersConstants from 'vs/workbench/parts/markers/common/constants';
-import { MarkersPanel } from 'vs/workbench/parts/markers/browser/markersPanel';
 
 function iconForSeverity(severity: Severity, inverse: boolean): URI | undefined {
 	if (severity === Severity.Ignore) {
@@ -96,7 +95,7 @@ export class DiagnosticsChecklistProvider extends Disposable implements IWorkben
 	}
 
 	private async openItem(): Promise<void> {
-		await this.panelService.openPanel(MarkersConstants.MARKERS_PANEL_ID, true) as MarkersPanel;
+		await this.panelService.openPanel(MarkersConstants.MARKERS_PANEL_ID, true);
 		// TODO update the filter input box to only show diagnostics of the clicked owner
 		// panel.updateFilter(filter);
 	}

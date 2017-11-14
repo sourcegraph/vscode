@@ -77,7 +77,7 @@ export class ConfigurationService extends Disposable implements IConfigurationSe
 		workspaceFolder: T
 		value: T
 	} {
-		return this.configuration.lookup<T>(key, {}, null);
+		return this.configuration.inspect<T>(key, {}, null);
 	}
 
 	keys(): {
@@ -110,11 +110,11 @@ export class ConfigurationService extends Disposable implements IConfigurationSe
 			const oldConfiguartion = this._configuration;
 			this.reset();
 
-			changedKeys = changedKeys.filter(key => !equals(oldConfiguartion.lookup(key, {}, null).user, this._configuration.lookup(key, {}, null).user));
+			changedKeys = changedKeys.filter(key => !equals(oldConfiguartion.inspect(key, {}, null).user, this._configuration.inspect(key, {}, null).user));
 			if (changedKeys.length) {
 				this.trigger(changedKeys, ConfigurationTarget.USER);
 			}
-			changedKeysOrg = changedKeysOrg.filter(key => !equals(oldConfiguartion.lookup(key, {}, null).organization, this._configuration.lookup(key, {}, null).organization));
+			changedKeysOrg = changedKeysOrg.filter(key => !equals(oldConfiguartion.inspect(key, {}, null).organization, this._configuration.inspect(key, {}, null).organization));
 			if (changedKeysOrg.length) {
 				this.trigger(changedKeysOrg, ConfigurationTarget.ORGANIZATION);
 			}
