@@ -11,17 +11,10 @@ import { IReviewService, IReviewProvider, IReviewItem } from './review';
 
 export class ReviewItem implements IReviewItem {
 
-	private _onDidFocus = new Emitter<void>();
-	readonly onDidFocus: Event<void> = this._onDidFocus.event;
-
 	constructor(
 		public readonly provider: IReviewProvider,
 		private disposable: IDisposable
 	) { }
-
-	focus(): void {
-		this._onDidFocus.fire();
-	}
 
 	dispose(): void {
 		this.disposable.dispose();

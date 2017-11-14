@@ -98,7 +98,6 @@ class Review implements Disposable {
 
 	private disposables: Disposable[] = [];
 	private reviewControl: ReviewControl;
-	private changesGroup: SourceControlResourceGroup;
 
 	constructor(private repository: Repository, private ref: ReviewRef) {
 		const id = ref.fullName;
@@ -110,8 +109,6 @@ class Review implements Disposable {
 			label = label.slice(ref.remote.length + 1);
 		}
 		this.reviewControl = this.register(review.createReviewControl(id, label, description, 'octicon octicon-git-branch', Uri.file(repository.root)));
-		this.changesGroup = this.register(this.reviewControl.createResourceGroup('changes', localize('changes', "Changes")));
-		this.reviewControl.onDidChangeActive(this.onDidChangeActive, this, this.disposables);
 		this.reviewControl.reviewCommand = {
 			command: 'git.review',
 			title: localize('git.review', "Review"),
@@ -134,22 +131,6 @@ class Review implements Disposable {
 	public updateFeatures(): void {
 		this.reviewControl.date = this.ref.committerDate && this.ref.committerDate.getTime();
 		this.reviewControl.author = this.ref.committerName;
-	}
-
-	private didWarnAboutLimit = false;
-	private async onDidChangeActive(): Promise<void> {
-		if (!this.reviewControl.active) {
-			return;
-		}
-		const parentBranch = 'master'; // TODO(nick): detect this smartly(tm)
-		const mergeBase = await this.repository.getMergeBase([parentBranch, this.ref.name]);
-		if (mergeBase.length !== 1 || !mergeBase[0]) {
-			throw new Error(`unable to determine merge-base for '${parentBranch} ${this.ref.name}'`);
-		}
-		const args = new ComparisonArgs(mergeBase[0]);
-		const { resources, didHitLimit } = await getResourceStatesForComparison(this.repository, args, this.didWarnAboutLimit);
-		this.didWarnAboutLimit = didHitLimit;
-		this.changesGroup.resourceStates = resources;
 	}
 
 	public dispose(): void {

@@ -5,7 +5,6 @@
 
 'use strict';
 
-import { TPromise } from 'vs/base/common/winjs.base';
 import URI from 'vs/base/common/uri';
 import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
 import Event from 'vs/base/common/event';
@@ -22,38 +21,6 @@ export interface IReviewResourceDecorations {
 	faded?: boolean;
 }
 
-export interface IReviewResourceSplice {
-	start: number;
-	deleteCount: number;
-	resources: IReviewResource[];
-}
-
-export interface IReviewResourceCollection {
-	readonly resources: IReviewResource[];
-	readonly onDidSplice: Event<IReviewResourceSplice>;
-}
-
-/**
- * e.g. a file in the changes panel
- */
-export interface IReviewResource {
-	readonly resourceGroup: IReviewResourceGroup;
-	readonly sourceUri: URI;
-	readonly decorations: IReviewResourceDecorations;
-	open(): TPromise<void>;
-}
-
-/**
- * E.g. the "changes" or "discussions" sections
- */
-export interface IReviewResourceGroup {
-	readonly provider: IReviewProvider;
-	readonly label: string;
-	readonly id: string;
-	readonly resourceCollection: IReviewResourceCollection;
-	readonly hideWhenEmpty: boolean;
-}
-
 /**
  * Examples: a branches provider, a GitHub PR provider
  */
@@ -62,10 +29,6 @@ export interface IReviewProvider extends IDisposable {
 	readonly label: string;
 	readonly description: string;
 	readonly icon: string;
-	readonly contextValue: string;
-
-	readonly resources: IReviewResourceGroup[];
-	readonly onDidChangeResources: Event<void>;
 
 	readonly rootUri: URI;
 	readonly reviewCommand?: Command;
@@ -77,14 +40,10 @@ export interface IReviewProvider extends IDisposable {
 	readonly date?: number;
 
 	readonly onDidChange: Event<void>;
-
-	active: boolean;
 }
 
 export interface IReviewItem extends IDisposable {
-	readonly onDidFocus: Event<void>;
 	readonly provider: IReviewProvider;
-	focus(): void;
 }
 
 export interface IReviewService {

@@ -6068,17 +6068,6 @@ declare module 'vscode' {
 		reviewCommand?: Command;
 
 		/**
-		 * True if the review is active in the UI.
-		 * Usually only one ReviewControl is active at a time.
-		 */
-		active: boolean;
-
-		/**
-		 * An [event](#Event) which fires when the review control becomes active.
-		 */
-		onDidChangeActive: Event<void>;
-
-		/**
 		 * The timestamp in ms of the last change on this review control.
 		 * This can be asynchronously resolved information and may change.
 		 */
@@ -6089,11 +6078,6 @@ declare module 'vscode' {
 		 * This can be asynchronously resolved information and may change.
 		 */
 		author?: string;
-
-		/**
-		 * Create a new [resource group](#SourceControlResourceGroup).
-		 */
-		createResourceGroup(id: string, label: string): SourceControlResourceGroup;
 
 		/**
 		 * Dispose this review control.

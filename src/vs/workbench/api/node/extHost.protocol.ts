@@ -460,13 +460,6 @@ export interface MainThreadReviewShape extends IDisposable {
 	$registerReviewControl(handle: number, id: string, label: string, description: string, icon: string, rootUri: string): void;
 	$updateReviewControl(handle: number, features: ReviewProviderFeatures): void;
 	$unregisterReviewControl(handle: number): void;
-
-	$registerGroup(reviewControlHandle: number, handle: number, id: string, label: string): void;
-	$updateGroup(reviewControlHandle: number, handle: number, features: ReviewGroupFeatures): void;
-	$updateGroupLabel(reviewControlHandle: number, handle: number, label: string): void;
-	$unregisterGroup(reviewControlHandle: number, handle: number): void;
-
-	$spliceResourceStates(reviewControlHandle: number, splices: SCMRawResourceSplices[]): void;
 }
 
 export interface ChecklistProviderFeatures {
@@ -736,8 +729,6 @@ export interface ExtHostSCMShape {
 }
 
 export interface ExtHostReviewShape {
-	$executeResourceCommand(reviewControlHandle: number, groupHandle: number, handle: number): TPromise<void>;
-	$setActive(reviewControlHandle: number, active: boolean): void;
 }
 
 export interface ExtHostChecklistShape {
