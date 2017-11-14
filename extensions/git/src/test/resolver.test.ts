@@ -113,6 +113,25 @@ function assertVisibleGitSCMRepositories(expected: (string | vscode.Uri)[]): voi
 	assert.deepEqual(actual, expected);
 }
 
+/**
+ * Asserts that the repository is at the expected branch.
+ *
+ * @param repoDir The Git repository directory.
+ * @param expected The expected branch name.
+ * @param message An optional message to show if the assertion fails.
+ */
+async function assertCurrentBranch(repoDir: string, expected: string, message?: string): Promise<void> {
+	await gitRefresh(repoDir);
+
+	const { model } = vscode.extensions.getExtension<{ model: Model }>('vscode.git')!.exports;
+	const repo = model.getRepository(repoDir);
+	if (!repo) {
+		throw new Error(`repository not found: ${repoDir}`);
+	}
+	const actual = repo.HEAD ? repo.HEAD.name : 'no HEAD';
+	assert.equal(actual, expected, message);
+}
+
 async function gitRefresh(repoDir: string): Promise<void> {
 	await vscode.commands.executeCommand('git.refresh', repoDir);
 }
@@ -150,6 +169,31 @@ suite('Tests Git remote repository resolver', async () => {
 
 		await vscode.commands.executeCommand('git.openRemoteRepository', repoOrigin);
 		assertWorkspaceFolders([repoClone]);
+	});
+
+	suite('when remote has a different-rev clone in the current window', () => {
+		test('present the user with the choice to checkout the rev in the current window', async () => {
+			const [repoOrigin, repoClone] = await createTestRepository(tmpDir, 'repo', ['repo']);
+
+			// Create and checkout a different branch (mybranch).
+			const branch = 'mybranch';
+			await execGit(['checkout', '--quiet', '-b', branch], { cwd: repoClone });
+			await vscode.commands.executeCommand('_workbench.addRoots', [vscode.Uri.file(repoClone)]);
+			assertWorkspaceFolders([repoClone]);
+			await assertCurrentBranch(repoClone, 'mybranch');
+
+			// Open the repository at the master (!= mybranch) branch.
+			//
+			// Triggers quickopen to select repo that must be selected from before promise resolves.
+			const openedRepo = vscode.commands.executeCommand('git.openRemoteRepository', repoOrigin + '?master');
+			await sleep(1500); // wait for quickopen to show
+			await vscode.commands.executeCommand('workbench.action.focusQuickOpen');
+			await vscode.commands.executeCommand('workbench.action.acceptSelectedQuickOpenItem'); // accept 1st choice
+			await openedRepo;
+			assertVisibleGitSCMRepositories([repoClone]);
+			assertWorkspaceFolders([repoClone]);
+			await assertCurrentBranch(repoClone, 'master');
+		});
 	});
 
 	if (FolderWalker.available()) {
