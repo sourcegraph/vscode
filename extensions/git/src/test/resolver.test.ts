@@ -14,6 +14,7 @@ import { denodeify, nfcall } from '../util';
 import * as rimraf from 'rimraf';
 import { FolderWalker } from '../globalRepositories';
 import { Model } from '../model';
+import { testGetOpenQuickPick } from '../resourceResolver';
 
 const gitCommitEnv = {
 	...process.env,
@@ -113,6 +114,67 @@ function assertVisibleGitSCMRepositories(expected: (string | vscode.Uri)[]): voi
 	assert.deepEqual(actual, expected);
 }
 
+/**
+ * Asserts that the repository is at the expected branch.
+ *
+ * @param repoDir The Git repository directory.
+ * @param expected The expected branch name.
+ * @param message An optional message to show if the assertion fails.
+ */
+async function assertCurrentBranch(repoDir: string, expected: string, message?: string): Promise<void> {
+	await gitRefresh(repoDir);
+
+	const { model } = vscode.extensions.getExtension<{ model: Model }>('vscode.git')!.exports;
+	const repo = model.getRepository(repoDir);
+	if (!repo) {
+		throw new Error(`repository not found: ${repoDir}`);
+	}
+	const actual = repo.HEAD ? repo.HEAD.name : 'no HEAD';
+	assert.equal(actual, expected, message);
+}
+
+/**
+ * Asserts that there is an open quickpick (or waits for one to be open) that has a placeholder
+ * matching the expected placeholder and items whose labels match the expected items. Each expected
+ * item element is a substring that must appear in the actual item's label, description, or detail.
+ */
+async function assertOpenQuickPick(expected: { placeHolder?: string, items?: string[] }, message: string = ''): Promise<void> {
+	if (message) {
+		message += ': ';
+	}
+
+	await waitForQuickOpen();
+	const actual = testGetOpenQuickPick();
+	if (!actual) {
+		throw new Error(`${message}no quickpick is open`);
+	}
+
+	if (typeof expected.placeHolder === 'string') {
+		assert.ok(
+			typeof actual.options.placeHolder === 'string' && actual.options.placeHolder.includes(expected.placeHolder),
+			`${message}got placeholder ${JSON.stringify(actual.options.placeHolder)}, want it to contain ${JSON.stringify(expected.placeHolder)}`
+		);
+	}
+	if (expected.items) {
+		const actualItems = actual.picks.map(pick => [pick.label, pick.description, pick.detail].filter(v => !!v).join(' | '));
+		assert.equal(actualItems.length, expected.items.length, `${message}got actual items ${JSON.stringify(actualItems)}, want ${expected.items.length} items (${JSON.stringify(expected.items)})`);
+		for (const [i, actualItem] of actualItems.entries()) {
+			assert.ok(actualItem.includes(expected.items[i]), `${message}got actual items ${JSON.stringify(actualItems)}, want item at index ${i} to contain ${JSON.stringify(expected.items[i])}`);
+		}
+	}
+}
+
+async function waitForQuickOpen(timeoutMsec: number = 5000): Promise<void> {
+	const deadline = Date.now() + timeoutMsec;
+	while (Date.now() < deadline) {
+		if (testGetOpenQuickPick()) {
+			return;
+		}
+		await sleep(Math.max(timeoutMsec / 20, 500));
+	}
+	throw new Error(`no quickopen was opened in ${timeoutMsec} msec`);
+}
+
 async function gitRefresh(repoDir: string): Promise<void> {
 	await vscode.commands.executeCommand('git.refresh', repoDir);
 }
@@ -152,8 +214,50 @@ suite('Tests Git remote repository resolver', async () => {
 		assertWorkspaceFolders([repoClone]);
 	});
 
+	suite('when remote has a same-rev clone in the current window', () => {
+		test('do nothing', async () => {
+			const [repoOrigin, repoClone] = await createTestRepository(tmpDir, 'repo', ['repo']);
+			await vscode.commands.executeCommand('_workbench.addRoots', [vscode.Uri.file(repoClone)]);
+			assertWorkspaceFolders([repoClone]);
+			await assertCurrentBranch(repoClone, 'master');
+
+			await vscode.commands.executeCommand('git.openRemoteRepository', repoOrigin + '?master');
+			assertWorkspaceFolders([repoClone]);
+			await assertCurrentBranch(repoClone, 'master');
+		});
+	});
+
+	suite('when remote has a different-rev clone in the current window', () => {
+		test('present the user with the choice to checkout the rev in the current window', async () => {
+			const [repoOrigin, repoClone] = await createTestRepository(tmpDir, 'repo', ['repo']);
+
+			// Create and checkout a different branch (mybranch).
+			const branch = 'mybranch';
+			await execGit(['checkout', '--quiet', '-b', branch], { cwd: repoClone });
+			await vscode.commands.executeCommand('_workbench.addRoots', [vscode.Uri.file(repoClone)]);
+			assertWorkspaceFolders([repoClone]);
+			await assertCurrentBranch(repoClone, 'mybranch');
+
+			// Open the repository at the master (!= mybranch) branch.
+			//
+			// Triggers quickopen to select repo that must be selected from before promise resolves.
+			const openedRepo = vscode.commands.executeCommand('git.openRemoteRepository', repoOrigin + '?master');
+			await assertOpenQuickPick({
+				// TODO(sqs): don't actually want it to be .toLowerCase(), but it doesn't really matter
+				placeHolder: `Choose a repository to stash and checkout ${repoOrigin.toLowerCase()}@master`,
+				items: [`repo | ${repoClone}`],
+			});
+			await vscode.commands.executeCommand('workbench.action.focusQuickOpen');
+			await vscode.commands.executeCommand('workbench.action.acceptSelectedQuickOpenItem'); // accept 1st choice
+			await openedRepo;
+			assertVisibleGitSCMRepositories([repoClone]);
+			assertWorkspaceFolders([repoClone]);
+			await assertCurrentBranch(repoClone, 'master');
+		});
+	});
+
 	if (FolderWalker.available()) {
-		test('when remote has a clone on disk (but not opened), add it to window and do not reclone', async () => {
+		test('when remote has a same-rev clone on disk (but not opened), add it to window and do not reclone', async () => {
 			const [repoOrigin, repoClone] = await createTestRepository(tmpDir, 'repo', ['repo']);
 			assertWorkspaceFolders([]);
 
@@ -165,7 +269,66 @@ suite('Tests Git remote repository resolver', async () => {
 			assertWorkspaceFolders([repoClone]); // NOT [tmpCloneDir(tmpDir, repoOrigin))]
 		});
 
-		test('when remote has multiple clones on disk (but not opened), ask the user which to use', async () => {
+		test('when remote has a different-rev clone on disk (but not opened), present the user with the choice to checkout the rev in the current window', async () => {
+			const [repoOrigin, repoClone] = await createTestRepository(tmpDir, 'repo', ['repo']);
+
+			// Create and checkout a different branch (mybranch).
+			const branch = 'mybranch';
+			await execGit(['checkout', '--quiet', '-b', branch], { cwd: repoClone });
+
+			// Ensure scanning has completed.
+			const { model } = vscode.extensions.getExtension<{ model: Model }>('vscode.git')!.exports;
+			await model.scanRepositoryDirectory();
+
+			// Open the repository at the master (!= mybranch) branch.
+			//
+			// Triggers quickopen to select repo that must be selected from before promise resolves.
+			const openedRepo = vscode.commands.executeCommand('git.openRemoteRepository', repoOrigin + '?master');
+			await assertOpenQuickPick({
+				// TODO(sqs): don't actually want it to be .toLowerCase(), but it doesn't really matter
+				placeHolder: `Choose a repository to stash and checkout ${repoOrigin.toLowerCase()}@master`,
+				items: [`repo | ${repoClone}`],
+			});
+			await vscode.commands.executeCommand('workbench.action.focusQuickOpen');
+			await vscode.commands.executeCommand('workbench.action.acceptSelectedQuickOpenItem'); // accept 1st choice
+			await openedRepo;
+			assertVisibleGitSCMRepositories([repoClone]);
+			assertWorkspaceFolders([repoClone]);
+			await assertCurrentBranch(repoClone, 'master');
+		});
+
+		test('when remote has 2 same-rev and 1 different-rev clones on disk (but not opened), present the user with the choice of same-rev repo', async () => {
+			const [repoOrigin, repoClone1, repoClone2, repoClone3] = await createTestRepository(tmpDir, 'repo', ['repo1', 'repo2', 'repo3']);
+
+			// Create and checkout a different branch (mybranch) in repo1.
+			const branch = 'mybranch';
+			await execGit(['checkout', '--quiet', '-b', branch], { cwd: repoClone1 });
+
+			// Ensure scanning has completed.
+			const { model } = vscode.extensions.getExtension<{ model: Model }>('vscode.git')!.exports;
+			await model.scanRepositoryDirectory();
+
+			// Open the repository at the master (!= mybranch) branch.
+			//
+			// Triggers quickopen to select repo that must be selected from before promise resolves.
+			const openedRepo = vscode.commands.executeCommand('git.openRemoteRepository', repoOrigin + '?master');
+			await assertOpenQuickPick({
+				// TODO(sqs): don't actually want it to be .toLowerCase(), but it doesn't really matter
+				placeHolder: `Choose a clone for repository ${repoOrigin.toLowerCase()}`,
+				items: [
+					`repo2 | ${repoClone2}`,
+					`repo3 | ${repoClone3}`,
+				],
+			});
+			await vscode.commands.executeCommand('workbench.action.focusQuickOpen');
+			await vscode.commands.executeCommand('workbench.action.acceptSelectedQuickOpenItem'); // accept 1st choice
+			await openedRepo;
+			assertVisibleGitSCMRepositories([repoClone2]);
+			assertWorkspaceFolders([repoClone2]);
+			await assertCurrentBranch(repoClone2, 'master');
+		});
+
+		test('when remote has multiple same-rev clones on disk (but not opened), ask the user which to use', async () => {
 			const [repoOrigin, repoClone1, repoClone2] = await createTestRepository(tmpDir, 'repo', ['repo1', 'repo2']);
 			assertWorkspaceFolders([]);
 
@@ -175,7 +338,14 @@ suite('Tests Git remote repository resolver', async () => {
 
 			// Triggers quickopen to select repo that must be selected from before promise resolves.
 			const openedRepo = vscode.commands.executeCommand('git.openRemoteRepository', repoOrigin);
-			await sleep(1500); // wait for quickopen to show
+			await assertOpenQuickPick({
+				// TODO(sqs): don't actually want it to be .toLowerCase(), but it doesn't really matter
+				placeHolder: `Choose a clone for repository ${repoOrigin.toLowerCase()}`,
+				items: [
+					`repo1 | ${repoClone1}`,
+					`repo2 | ${repoClone2}`,
+				],
+			});
 			await vscode.commands.executeCommand('workbench.action.focusQuickOpen');
 			await vscode.commands.executeCommand('workbench.action.quickOpenNavigateNext'); // select 2nd choice
 			await vscode.commands.executeCommand('workbench.action.acceptSelectedQuickOpenItem'); // accept 2nd choice

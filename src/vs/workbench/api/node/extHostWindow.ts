@@ -21,6 +21,14 @@ class ExtHostWorkbenchWindow implements WorkbenchWindow {
 	showAndFocus(): Thenable<void> {
 		return this._proxy.$showAndFocusWindow(this.id);
 	}
+
+	close(): Thenable<void> {
+		return this._proxy.$closeWindow(this.id);
+	}
+
+	toJSON(): any {
+		return { id: this.id, title: this.title, workspace: this.workspace };
+	}
 }
 
 export class ExtHostWindow implements ExtHostWindowShape {
