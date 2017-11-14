@@ -150,7 +150,11 @@ interface GitResourceAtRevision extends GitResource {
 	revision: string;
 }
 
-interface PickOptions extends QuickPickOptions {
+export interface RepoPickItem extends QuickPickItem {
+	repo: Repository;
+}
+
+export interface PickOptions extends QuickPickOptions {
 	/**
 	 * If the repos passed to pick contain workspace roots, only the workspace
 	 * roots are presented as options.
@@ -174,6 +178,14 @@ export class CancelError extends Error {
 		super('canceled');
 	}
 }
+
+/**
+ * Used by tests only. Returns the currently open quickpick menu, if any.
+ */
+export function testGetOpenQuickPick(): { picks: RepoPickItem[], options: PickOptions } | undefined {
+	return TEST_OPEN_QUICKPICK;
+}
+let TEST_OPEN_QUICKPICK: { picks: RepoPickItem[], options: PickOptions } | undefined;
 
 class Resolver {
 
@@ -423,12 +435,17 @@ class Resolver {
 			};
 		});
 
-		const pick = await window.showQuickPick(picks, options);
-		if (!pick) {
-			throw new CancelError();
+		TEST_OPEN_QUICKPICK = { picks, options };
+		try {
+			const pick = await window.showQuickPick(picks, options);
+			if (!pick) {
+				throw new CancelError();
+			}
+			this.log(localize('pick', "User picked {0} for prompt {1}", pick.repo.root, options.placeHolder));
+			return pick.repo;
+		} finally {
+			TEST_OPEN_QUICKPICK = undefined;
 		}
-		this.log(localize('pick', "User picked {0} for prompt {1}", pick.repo.root, options.placeHolder));
-		return pick.repo;
 	}
 
 	private async stashAndCheckout(repo: Repository, resource: GitResourceAtRevision): Promise<void> {
@@ -641,7 +658,7 @@ class Resolver {
  * Wraps a BaseRepository such that we retry operations when we encounter an
  * index locked error.
  */
-class Repository {
+export class Repository {
 
 	constructor(private repository: BaseRepository) { }
 

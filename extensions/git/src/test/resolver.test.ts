@@ -14,6 +14,7 @@ import { denodeify, nfcall } from '../util';
 import * as rimraf from 'rimraf';
 import { FolderWalker } from '../globalRepositories';
 import { Model } from '../model';
+import { testGetOpenQuickPick } from '../resourceResolver';
 
 const gitCommitEnv = {
 	...process.env,
@@ -132,6 +133,48 @@ async function assertCurrentBranch(repoDir: string, expected: string, message?: 
 	assert.equal(actual, expected, message);
 }
 
+/**
+ * Asserts that there is an open quickpick (or waits for one to be open) that has a placeholder
+ * matching the expected placeholder and items whose labels match the expected items. Each expected
+ * item element is a substring that must appear in the actual item's label, description, or detail.
+ */
+async function assertOpenQuickPick(expected: { placeHolder?: string, items?: string[] }, message: string = ''): Promise<void> {
+	if (message) {
+		message += ': ';
+	}
+
+	await waitForQuickOpen();
+	const actual = testGetOpenQuickPick();
+	if (!actual) {
+		throw new Error(`${message}no quickpick is open`);
+	}
+
+	if (typeof expected.placeHolder === 'string') {
+		assert.ok(
+			typeof actual.options.placeHolder === 'string' && actual.options.placeHolder.includes(expected.placeHolder),
+			`${message}got placeholder ${JSON.stringify(actual.options.placeHolder)}, want it to contain ${JSON.stringify(expected.placeHolder)}`
+		);
+	}
+	if (expected.items) {
+		const actualItems = actual.picks.map(pick => [pick.label, pick.description, pick.detail].filter(v => !!v).join(' | '));
+		assert.equal(actualItems.length, expected.items.length, `${message}got actual items ${JSON.stringify(actualItems)}, want ${expected.items.length} items (${JSON.stringify(expected.items)})`);
+		for (const [i, actualItem] of actualItems.entries()) {
+			assert.ok(actualItem.includes(expected.items[i]), `${message}got actual items ${JSON.stringify(actualItems)}, want item at index ${i} to contain ${JSON.stringify(expected.items[i])}`);
+		}
+	}
+}
+
+async function waitForQuickOpen(timeoutMsec: number = 5000): Promise<void> {
+	const deadline = Date.now() + timeoutMsec;
+	while (Date.now() < deadline) {
+		if (testGetOpenQuickPick()) {
+			return;
+		}
+		await sleep(Math.max(timeoutMsec / 20, 500));
+	}
+	throw new Error(`no quickopen was opened in ${timeoutMsec} msec`);
+}
+
 async function gitRefresh(repoDir: string): Promise<void> {
 	await vscode.commands.executeCommand('git.refresh', repoDir);
 }
@@ -199,7 +242,11 @@ suite('Tests Git remote repository resolver', async () => {
 			//
 			// Triggers quickopen to select repo that must be selected from before promise resolves.
 			const openedRepo = vscode.commands.executeCommand('git.openRemoteRepository', repoOrigin + '?master');
-			await sleep(1500); // wait for quickopen to show
+			await assertOpenQuickPick({
+				// TODO(sqs): don't actually want it to be .toLowerCase(), but it doesn't really matter
+				placeHolder: `Choose a repository to stash and checkout ${repoOrigin.toLowerCase()}@master`,
+				items: [`repo | ${repoClone}`],
+			});
 			await vscode.commands.executeCommand('workbench.action.focusQuickOpen');
 			await vscode.commands.executeCommand('workbench.action.acceptSelectedQuickOpenItem'); // accept 1st choice
 			await openedRepo;
@@ -237,7 +284,11 @@ suite('Tests Git remote repository resolver', async () => {
 			//
 			// Triggers quickopen to select repo that must be selected from before promise resolves.
 			const openedRepo = vscode.commands.executeCommand('git.openRemoteRepository', repoOrigin + '?master');
-			await sleep(1500); // wait for quickopen to show
+			await assertOpenQuickPick({
+				// TODO(sqs): don't actually want it to be .toLowerCase(), but it doesn't really matter
+				placeHolder: `Choose a repository to stash and checkout ${repoOrigin.toLowerCase()}@master`,
+				items: [`repo | ${repoClone}`],
+			});
 			await vscode.commands.executeCommand('workbench.action.focusQuickOpen');
 			await vscode.commands.executeCommand('workbench.action.acceptSelectedQuickOpenItem'); // accept 1st choice
 			await openedRepo;
@@ -261,8 +312,14 @@ suite('Tests Git remote repository resolver', async () => {
 			//
 			// Triggers quickopen to select repo that must be selected from before promise resolves.
 			const openedRepo = vscode.commands.executeCommand('git.openRemoteRepository', repoOrigin + '?master');
-			await sleep(1500); // wait for quickopen to show
-			// TODO(sqs): test that there is only 1 quickopen entry (only the same-rev repoClone2 and repoClone3, not repoClone1 too)
+			await assertOpenQuickPick({
+				// TODO(sqs): don't actually want it to be .toLowerCase(), but it doesn't really matter
+				placeHolder: `Choose a clone for repository ${repoOrigin.toLowerCase()}`,
+				items: [
+					`repo2 | ${repoClone2}`,
+					`repo3 | ${repoClone3}`,
+				],
+			});
 			await vscode.commands.executeCommand('workbench.action.focusQuickOpen');
 			await vscode.commands.executeCommand('workbench.action.acceptSelectedQuickOpenItem'); // accept 1st choice
 			await openedRepo;
@@ -281,7 +338,14 @@ suite('Tests Git remote repository resolver', async () => {
 
 			// Triggers quickopen to select repo that must be selected from before promise resolves.
 			const openedRepo = vscode.commands.executeCommand('git.openRemoteRepository', repoOrigin);
-			await sleep(1500); // wait for quickopen to show
+			await assertOpenQuickPick({
+				// TODO(sqs): don't actually want it to be .toLowerCase(), but it doesn't really matter
+				placeHolder: `Choose a clone for repository ${repoOrigin.toLowerCase()}`,
+				items: [
+					`repo1 | ${repoClone1}`,
+					`repo2 | ${repoClone2}`,
+				],
+			});
 			await vscode.commands.executeCommand('workbench.action.focusQuickOpen');
 			await vscode.commands.executeCommand('workbench.action.quickOpenNavigateNext'); // select 2nd choice
 			await vscode.commands.executeCommand('workbench.action.acceptSelectedQuickOpenItem'); // accept 2nd choice
