@@ -1,14 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="16" height="16" version="1.1" viewBox="0 0 16 16">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="12" height="13" version="1.1" viewBox="0 0 12 13">
     <title>
         gh-comment
     </title>
     <desc>
         Created using Figma
     </desc>
-    <g id="Canvas" transform="translate(-37860 3270)">
+    <g id="Canvas" transform="translate(-37396 3762)">
         <g id="gh-comment">
             <g id="Vector">
-                <use fill="#A2B0CD" transform="translate(37862 -3267.57)" xlink:href="#path0_fill"/>
+                <use fill="#424242" transform="translate(37396 -3761.57)" xlink:href="#path0_fill"/>
             </g>
         </g>
     </g>

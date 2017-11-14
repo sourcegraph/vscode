@@ -18,29 +18,36 @@ const ICONS_ROOT_PATH = path.resolve(__dirname, '../resources/icons');
 
 const getIcon = (icon: string) => vscode.Uri.file(path.join(ICONS_ROOT_PATH, icon));
 
-const getIconForStatusState = (state: GitHubGQL.IStatusStateEnum): vscode.Uri => getIcon(`gh-status-icon--${state.toLowerCase()}.svg`);
+const getIconForStatusState = (state: GitHubGQL.IStatusStateEnum): vscode.Uri => {
+	switch (state) {
+		case 'PENDING':
+			return getIcon('primitive-dot-yellow.svg');
+		case 'EXPECTED':
+			return getIcon('primitive-dot-yellow-dark.svg');
+		case 'SUCCESS':
+			return getIcon('check-green.svg');
+		case 'FAILURE':
+		case 'ERROR':
+			return getIcon('x-red.svg');
+	}
+};
 
 // TODO custom icons
-const getIconForPullRequestReviewState = (state: GitHubGQL.IPullRequestReviewStateEnum): vscode.Uri | undefined => {
+const getIconForPullRequestReviewState = (state: GitHubGQL.IPullRequestReviewStateEnum, theme: 'light' | 'dark'): vscode.Uri | undefined => {
 	switch (state) {
-		case 'APPROVED': return getIcon(`gh-status-icon--success.svg`);
-		case 'CHANGES_REQUESTED': return getIcon(`gh-status-icon--failure.svg`);
-		case 'PENDING': return getIcon(`gh-status-icon--pending.svg`);
-		case 'COMMENTED': return getIcon(`gh-comment-icon.svg`);
+		case 'APPROVED': return getIcon('check-green.svg');
+		case 'CHANGES_REQUESTED': return getIcon('x-red.svg');
+		case 'PENDING': return getIcon('primitive-dot-yellow.svg');
+		case 'COMMENTED': return getIcon(`${theme}/comment.svg`);
 		default: return undefined;
 	}
 };
 
-const createWebBrowserCommandReference = (targetUrl: vscode.Uri | undefined): vscode.Command | undefined => {
-	if (!targetUrl) {
-		return undefined;
-	}
-	return {
-		title: localize('viewInWebBrowser', "View in Web Browser..."),
-		command: 'vscode.openWebBrowser',
-		arguments: [targetUrl],
-	};
-};
+const createWebBrowserCommandReference = (targetUrl: vscode.Uri): vscode.Command | undefined => ({
+	title: localize('viewInWebBrowser', "View in Web Browser..."),
+	command: 'vscode.openWebBrowser',
+	arguments: [targetUrl],
+});
 
 /**
  * Manages the checklist providers for all active GitHub repositories.
@@ -138,7 +145,7 @@ export class ChecklistController implements vscode.Disposable {
 						description: localize('commented', "commented {0}", distanceInWordsToNow(new Date(comment.createdAt), { addSuffix: true, locale })),
 						detail: comment.body,
 						decorations: {},
-						command: createWebBrowserCommandReference(url),
+						command: url && createWebBrowserCommandReference(url),
 					});
 				}
 
@@ -160,7 +167,12 @@ export class ChecklistController implements vscode.Disposable {
 							description,
 							detail: review.body,
 							decorations: {
-								iconPath: getIconForPullRequestReviewState(review.state),
+								light: {
+									iconPath: getIconForPullRequestReviewState(review.state, 'light'),
+								},
+								dark: {
+									iconPath: getIconForPullRequestReviewState(review.state, 'dark'),
+								}
 							},
 							command: createWebBrowserCommandReference(vscode.Uri.parse(review.url)),
 						});
@@ -180,16 +192,36 @@ export class ChecklistController implements vscode.Disposable {
 					}
 				}
 
-				for (const request of pr.reviewRequests.nodes || []) {
+				for (const request of pr.reviewRequests && pr.reviewRequests.nodes || []) {
 					reviewItems.push({
 						name: request.reviewer && request.reviewer.login || '',
 						description: localize('requestedForReview', "was requested for review"),
 						detail: '',
 						decorations: {
-							iconPath: getIconForPullRequestReviewState('PENDING'),
+							light: {
+								iconPath: getIconForPullRequestReviewState('PENDING', 'light'),
+							},
+							dark: {
+								iconPath: getIconForPullRequestReviewState('PENDING', 'dark'),
+							}
 						},
 					});
 				}
+
+				const commitItems = (pr.commits.nodes || []).map((prCommit): vscode.ChecklistItem => ({
+					name: prCommit.commit.author && prCommit.commit.author.user && prCommit.commit.author.user.login || undefined,
+					description: localize('committed', "committed {0} {1}", prCommit.commit.abbreviatedOid, distanceInWordsToNow(new Date(prCommit.commit.committedDate), { addSuffix: true, locale })),
+					detail: prCommit.commit.messageHeadline,
+					decorations: {
+						light: {
+							iconPath: getIcon('light/git-commit.svg')
+						},
+						dark: {
+							iconPath: getIcon('dark/git-commit.svg')
+						}
+					},
+					command: createWebBrowserCommandReference(vscode.Uri.parse(prCommit.url))
+				}));
 
 				prChecklistItemGroup.itemStates = [
 					{
@@ -197,10 +229,16 @@ export class ChecklistController implements vscode.Disposable {
 						detail: pr.body,
 						description: localize('opened', "opened {0}", distanceInWordsToNow(new Date(pr.createdAt), { addSuffix: true, locale })),
 						decorations: {
-							iconPath: getIcon('gh-pr.svg'),
+							light: {
+								iconPath: getIcon('light/git-pull-request.svg'),
+							},
+							dark: {
+								iconPath: getIcon('dark/git-pull-request.svg'),
+							},
 						},
 						command: createWebBrowserCommandReference(vscode.Uri.parse(pr.url)),
 					},
+					...commitItems,
 					...reviewItems,
 					...commentItems
 				];

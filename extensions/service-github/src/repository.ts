@@ -169,6 +169,23 @@ export class Repository implements vscode.Disposable {
 								closed
 								createdAt
 								...CommentFields
+								commits(first: 100) {
+									totalCount
+									nodes {
+										url
+										commit {
+											committedDate
+              								abbreviatedOid
+											messageHeadline
+											author {
+												user {
+													avatarUrl
+													login
+												}
+											}
+										}
+									}
+								}
 								comments(first: 100) {
 									totalCount
 									nodes {
