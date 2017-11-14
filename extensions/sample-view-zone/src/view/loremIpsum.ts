@@ -28,6 +28,22 @@ module loremIpsum {
 
 			case 'set':
 				paragraphElement.innerText = op.value;
+
+				// Add some more elements to test the context menu.
+				//
+				// Add an image.
+				paragraphElement.appendChild(document.createTextNode(' '));
+				const image = document.createElement('img');
+				image.src = '../../../../../../extensions/sample-view-zone/resources/icons/dark/add.svg';
+				paragraphElement.appendChild(image);
+				// Add a link.
+				paragraphElement.appendChild(document.createTextNode(' '));
+				const link = document.createElement('a');
+				link.href = 'https://en.wikipedia.org/wiki/Lorem_ipsum';
+				link.innerText = 'Wikipedia';
+				link.style.color = 'var(--color)';
+				paragraphElement.appendChild(link);
+
 				resizeToFit();
 				break;
 		}
