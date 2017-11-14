@@ -229,7 +229,7 @@ declare namespace GitHubGQL {
   /**
     description: An object with an ID.
   */
-  type Node = IOrganization | IProject | IProjectColumn | IProjectCard | IIssue | IUser | IRepository | ICommitComment | IReaction | ICommit | IStatus | IStatusContext | ITree | IRef | IPullRequest | ILabel | IIssueComment | IPullRequestCommit | IMilestone | IReviewRequest | IPullRequestReview | IPullRequestReviewComment | ICommitCommentThread | IPullRequestReviewThread | IClosedEvent | IReopenedEvent | ISubscribedEvent | IUnsubscribedEvent | IMergedEvent | IReferencedEvent | ICrossReferencedEvent | IAssignedEvent | IUnassignedEvent | ILabeledEvent | IUnlabeledEvent | IMilestonedEvent | IDemilestonedEvent | IRenamedTitleEvent | ILockedEvent | IUnlockedEvent | IDeployedEvent | IDeployment | IDeploymentStatus | IHeadRefDeletedEvent | IHeadRefRestoredEvent | IHeadRefForcePushedEvent | IBaseRefForcePushedEvent | IReviewRequestedEvent | IReviewRequestRemovedEvent | IReviewDismissedEvent | ILanguage | IProtectedBranch | IPushAllowance | ITeam | IOrganizationInvitation | IReviewDismissalAllowance | IRelease | IReleaseAsset | IRepositoryTopic | ITopic | IGist | IGistComment | IOrganizationIdentityProvider | IExternalIdentity | IBlob | IBot | IBaseRefChangedEvent | IAddedToProjectEvent | ICommentDeletedEvent | IConvertedNoteToIssueEvent | IMentionedEvent | IMovedColumnsInProjectEvent | IRemovedFromProjectEvent | IRepositoryInvitation | ITag;
+  type Node = IOrganization | IProject | IProjectColumn | IProjectCard | IIssue | IUser | IRepository | ICommitComment | IReaction | ICommit | IStatus | IStatusContext | ITree | IRef | IPullRequest | ILabel | IIssueComment | IPullRequestCommit | IMilestone | IReviewRequest | ITeam | IOrganizationInvitation | IPullRequestReview | IPullRequestReviewComment | ICommitCommentThread | IPullRequestReviewThread | IClosedEvent | IReopenedEvent | ISubscribedEvent | IUnsubscribedEvent | IMergedEvent | IReferencedEvent | ICrossReferencedEvent | IAssignedEvent | IUnassignedEvent | ILabeledEvent | IUnlabeledEvent | IMilestonedEvent | IDemilestonedEvent | IRenamedTitleEvent | ILockedEvent | IUnlockedEvent | IDeployedEvent | IDeployment | IDeploymentStatus | IHeadRefDeletedEvent | IHeadRefRestoredEvent | IHeadRefForcePushedEvent | IBaseRefForcePushedEvent | IReviewRequestedEvent | IReviewRequestRemovedEvent | IReviewDismissedEvent | ILanguage | IProtectedBranch | IPushAllowance | IReviewDismissalAllowance | IRelease | IReleaseAsset | IRepositoryTopic | ITopic | IGist | IGistComment | IOrganizationIdentityProvider | IExternalIdentity | IBlob | IBot | IBaseRefChangedEvent | IAddedToProjectEvent | ICommentDeletedEvent | IConvertedNoteToIssueEvent | IMentionedEvent | IMovedColumnsInProjectEvent | IRemovedFromProjectEvent | IRepositoryInvitation | ITag;
 
   /**
     description: An object with an ID.
@@ -1480,7 +1480,7 @@ associated with a column, they will not become pending in the future.
   /**
     description: Entities that can be subscribed to for web and email notifications.
   */
-  type Subscribable = IIssue | IRepository | ICommit | IPullRequest;
+  type Subscribable = IIssue | IRepository | ICommit | IPullRequest | ITeam;
 
   /**
     description: Entities that can be subscribed to for web and email notifications.
@@ -2234,6 +2234,10 @@ associated with a column, they will not become pending in the future.
   */
     authoredByCommitter: boolean;
     /**
+    description: The datetime when this commit was authored.
+  */
+    authoredDate: any;
+    /**
     description: Fetches `git blame` information.
   */
     blame: IBlame;
@@ -2291,6 +2295,10 @@ associated with a column, they will not become pending in the future.
   */
     oid: any;
     /**
+    description: The datetime when this commit was pushed.
+  */
+    pushedDate: any | null;
+    /**
     description: The Repository this commit belongs to
   */
     repository: IRepository;
@@ -2306,6 +2314,10 @@ associated with a column, they will not become pending in the future.
     description: Status information for this commit
   */
     status: IStatus | null;
+    /**
+    description: Returns a URL to download a tarball archive for a repository.                      Note: For private repositories, these links are temporary and expire after five minutes.
+  */
+    tarballUrl: any;
     /**
     description: Commit's root Tree
   */
@@ -2330,6 +2342,10 @@ associated with a column, they will not become pending in the future.
     description: Identifies if the viewer is watching, not watching, or ignoring the repository.
   */
     viewerSubscription: ISubscriptionStateEnum;
+    /**
+    description: Returns a URL to download a zipball archive for a repository.                      Note: For private repositories, these links are temporary and expire after five minutes.
+  */
+    zipballUrl: any;
   }
 
   /**
@@ -2454,6 +2470,10 @@ associated with a column, they will not become pending in the future.
     description: Information to aid in pagination.
   */
     pageInfo: IPageInfo;
+    /**
+    description: Identifies the total count of items in the connection.
+  */
+    totalCount: number;
   }
 
   /**
@@ -3404,9 +3424,391 @@ pull request.
   */
     pullRequest: IPullRequest;
     /**
+    description: The reviewer that is requested.
+  */
+    requestedReviewer: RequestedReviewer | null;
+    /**
     description: Identifies the author associated with this review request.
   */
     reviewer: IUser | null;
+  }
+
+  /**
+    description: Types that can be requested reviewers.
+  */
+  type RequestedReviewer = IUser | ITeam;
+
+
+
+  /**
+    description: A team of users in an organization.
+  */
+  interface ITeam {
+    __typename: "Team";
+    /**
+    description: A list of teams that are ancestors of this team.
+  */
+    ancestors: ITeamConnection;
+    /**
+    description: List of child teams belonging to this team
+  */
+    childTeams: ITeamConnection;
+    /**
+    description: The slug corresponding to the organization and team.
+  */
+    combinedSlug: string;
+    /**
+    description: Identifies the date and time when the object was created.
+  */
+    createdAt: any;
+    /**
+    description: The description of the team.
+  */
+    description: string | null;
+    /**
+    description: The HTTP path for editing this team
+  */
+    editTeamResourcePath: any;
+    /**
+    description: The HTTP URL for editing this team
+  */
+    editTeamUrl: any;
+    id: string;
+    /**
+    description: A list of pending invitations for users to this team
+  */
+    invitations: IOrganizationInvitationConnection | null;
+    /**
+    description: A list of users who are members of this team.
+  */
+    members: ITeamMemberConnection;
+    /**
+    description: The HTTP path for the team' members
+  */
+    membersResourcePath: any;
+    /**
+    description: The HTTP URL for the team' members
+  */
+    membersUrl: any;
+    /**
+    description: The name of the team.
+  */
+    name: string;
+    /**
+    description: The HTTP path creating a new team
+  */
+    newTeamResourcePath: any;
+    /**
+    description: The HTTP URL creating a new team
+  */
+    newTeamUrl: any;
+    /**
+    description: The organization that owns this team.
+  */
+    organization: IOrganization;
+    /**
+    description: The parent team of the team.
+  */
+    parentTeam: ITeam | null;
+    /**
+    description: The level of privacy the team has.
+  */
+    privacy: ITeamPrivacyEnum;
+    /**
+    description: A list of repositories this team has access to.
+  */
+    repositories: ITeamRepositoryConnection;
+    /**
+    description: The HTTP path for this team's repositories
+  */
+    repositoriesResourcePath: any;
+    /**
+    description: The HTTP URL for this team's repositories
+  */
+    repositoriesUrl: any;
+    /**
+    description: The HTTP path for this team
+  */
+    resourcePath: any;
+    /**
+    description: The slug corresponding to the team.
+  */
+    slug: string;
+    /**
+    description: The HTTP path for this team's teams
+  */
+    teamsResourcePath: any;
+    /**
+    description: The HTTP URL for this team's teams
+  */
+    teamsUrl: any;
+    /**
+    description: Identifies the date and time when the object was last updated.
+  */
+    updatedAt: any;
+    /**
+    description: The HTTP URL for this team
+  */
+    url: any;
+    /**
+    description: Team is adminable by the viewer.
+  */
+    viewerCanAdminister: boolean;
+    /**
+    description: Check if the viewer is able to change their subscription status for the repository.
+  */
+    viewerCanSubscribe: boolean;
+    /**
+    description: Identifies if the viewer is watching, not watching, or ignoring the repository.
+  */
+    viewerSubscription: ISubscriptionStateEnum;
+  }
+
+  /**
+    description: The connection type for Team.
+  */
+  interface ITeamConnection {
+    __typename: "TeamConnection";
+    /**
+    description: A list of edges.
+  */
+    edges: Array<ITeamEdge> | null;
+    /**
+    description: A list of nodes.
+  */
+    nodes: Array<ITeam> | null;
+    /**
+    description: Information to aid in pagination.
+  */
+    pageInfo: IPageInfo;
+    /**
+    description: Identifies the total count of items in the connection.
+  */
+    totalCount: number;
+  }
+
+  /**
+    description: An edge in a connection.
+  */
+  interface ITeamEdge {
+    __typename: "TeamEdge";
+    /**
+    description: A cursor for use in pagination.
+  */
+    cursor: string;
+    /**
+    description: The item at the end of the edge.
+  */
+    node: ITeam | null;
+  }
+
+  /**
+    description: Ways in which team connections can be ordered.
+  */
+  interface ITeamOrder {
+    /**
+    description: The field in which to order nodes by.
+  */
+    field: ITeamOrderFieldEnum;
+    /**
+    description: The direction in which to order nodes.
+  */
+    direction: IOrderDirectionEnum;
+  }
+
+  /**
+    description: Properties by which team connections can be ordered.
+  */
+  type ITeamOrderFieldEnum = 'NAME';
+
+  /**
+    description: The connection type for OrganizationInvitation.
+  */
+  interface IOrganizationInvitationConnection {
+    __typename: "OrganizationInvitationConnection";
+    /**
+    description: A list of edges.
+  */
+    edges: Array<IOrganizationInvitationEdge> | null;
+    /**
+    description: A list of nodes.
+  */
+    nodes: Array<IOrganizationInvitation> | null;
+    /**
+    description: Information to aid in pagination.
+  */
+    pageInfo: IPageInfo;
+    /**
+    description: Identifies the total count of items in the connection.
+  */
+    totalCount: number;
+  }
+
+  /**
+    description: An edge in a connection.
+  */
+  interface IOrganizationInvitationEdge {
+    __typename: "OrganizationInvitationEdge";
+    /**
+    description: A cursor for use in pagination.
+  */
+    cursor: string;
+    /**
+    description: The item at the end of the edge.
+  */
+    node: IOrganizationInvitation | null;
+  }
+
+  /**
+    description: An Invitation for a user to an organization.
+  */
+  interface IOrganizationInvitation {
+    __typename: "OrganizationInvitation";
+    /**
+    description: The email address of the user invited to the organization.
+  */
+    email: string | null;
+    id: string;
+    /**
+    description: The type of invitation that was sent (e.g. email, user).
+  */
+    invitationType: IOrganizationInvitationTypeEnum;
+    /**
+    description: The user who was invited to the organization.
+  */
+    invitee: IUser | null;
+    /**
+    description: The user who created the invitation.
+  */
+    inviter: IUser;
+    /**
+    description: The user's pending role in the organization (e.g. member, owner).
+  */
+    role: IOrganizationInvitationRoleEnum;
+  }
+
+  /**
+    description: The possible organization invitation types.
+  */
+  type IOrganizationInvitationTypeEnum = 'USER' | 'EMAIL';
+
+  /**
+    description: The possible organization invitation roles.
+  */
+  type IOrganizationInvitationRoleEnum = 'DIRECT_MEMBER' | 'ADMIN' | 'BILLING_MANAGER' | 'REINSTATE';
+
+  /**
+    description: Defines which types of team members are included in the returned list. Can be one of IMMEDIATE, CHILD_TEAM or ALL.
+  */
+  type ITeamMembershipTypeEnum = 'IMMEDIATE' | 'CHILD_TEAM' | 'ALL';
+
+  /**
+    description: The possible team member roles; either 'maintainer' or 'member'.
+  */
+  type ITeamMemberRoleEnum = 'MAINTAINER' | 'MEMBER';
+
+  /**
+    description: The connection type for User.
+  */
+  interface ITeamMemberConnection {
+    __typename: "TeamMemberConnection";
+    /**
+    description: A list of edges.
+  */
+    edges: Array<ITeamMemberEdge> | null;
+    /**
+    description: A list of nodes.
+  */
+    nodes: Array<IUser> | null;
+    /**
+    description: Information to aid in pagination.
+  */
+    pageInfo: IPageInfo;
+    /**
+    description: Identifies the total count of items in the connection.
+  */
+    totalCount: number;
+  }
+
+  /**
+    description: Represents a user who is a member of a team.
+  */
+  interface ITeamMemberEdge {
+    __typename: "TeamMemberEdge";
+    cursor: string;
+    /**
+    description: The HTTP path to the organization's member access page.
+  */
+    memberAccessResourcePath: any;
+    /**
+    description: The HTTP URL to the organization's member access page.
+  */
+    memberAccessUrl: any;
+    node: IUser;
+    /**
+    description: The role the member has on the team.
+  */
+    role: ITeamMemberRoleEnum;
+  }
+
+  /**
+    description: The possible team privacy values.
+  */
+  type ITeamPrivacyEnum = 'SECRET' | 'VISIBLE';
+
+  /**
+    description: Ordering options for team repository connections
+  */
+  interface ITeamRepositoryOrder {
+    /**
+    description: The field to order repositories by.
+  */
+    field: ITeamRepositoryOrderFieldEnum;
+    /**
+    description: The ordering direction.
+  */
+    direction: IOrderDirectionEnum;
+  }
+
+  /**
+    description: Properties by which team repository connections can be ordered.
+  */
+  type ITeamRepositoryOrderFieldEnum = 'CREATED_AT' | 'UPDATED_AT' | 'PUSHED_AT' | 'NAME' | 'PERMISSION' | 'STARGAZERS';
+
+  /**
+    description: The connection type for Repository.
+  */
+  interface ITeamRepositoryConnection {
+    __typename: "TeamRepositoryConnection";
+    /**
+    description: A list of edges.
+  */
+    edges: Array<ITeamRepositoryEdge> | null;
+    /**
+    description: A list of nodes.
+  */
+    nodes: Array<IRepository> | null;
+    /**
+    description: Information to aid in pagination.
+  */
+    pageInfo: IPageInfo;
+    /**
+    description: Identifies the total count of items in the connection.
+  */
+    totalCount: number;
+  }
+
+  /**
+    description: Represents a team repository.
+  */
+  interface ITeamRepositoryEdge {
+    __typename: "TeamRepositoryEdge";
+    cursor: string;
+    node: IRepository;
+    /**
+    description: The permission level the team has on the repository
+  */
+    permission: IRepositoryPermissionEnum;
   }
 
   /**
@@ -4369,6 +4771,10 @@ pull request.
   interface IDeploymentStatus {
     __typename: "DeploymentStatus";
     /**
+    description: Identifies the date and time when the object was created.
+  */
+    createdAt: any;
+    /**
     description: Identifies the actor who triggered the deployment.
   */
     creator: Actor | null;
@@ -4393,6 +4799,10 @@ pull request.
     description: Identifies the current state of the deployment.
   */
     state: IDeploymentStatusStateEnum;
+    /**
+    description: Identifies the date and time when the object was last updated.
+  */
+    updatedAt: any;
   }
 
   /**
@@ -4503,11 +4913,11 @@ pull request.
     /**
     description: Identifies the after commit SHA for the 'head_ref_force_pushed' event.
   */
-    afterCommit: ICommit;
+    afterCommit: ICommit | null;
     /**
     description: Identifies the before commit SHA for the 'head_ref_force_pushed' event.
   */
-    beforeCommit: ICommit;
+    beforeCommit: ICommit | null;
     /**
     description: Identifies the date and time when the object was created.
   */
@@ -4535,11 +4945,11 @@ pull request.
     /**
     description: Identifies the after commit SHA for the 'base_ref_force_pushed' event.
   */
-    afterCommit: ICommit;
+    afterCommit: ICommit | null;
     /**
     description: Identifies the before commit SHA for the 'base_ref_force_pushed' event.
   */
-    beforeCommit: ICommit;
+    beforeCommit: ICommit | null;
     /**
     description: Identifies the date and time when the object was created.
   */
@@ -4574,9 +4984,13 @@ pull request.
   */
     pullRequest: IPullRequest;
     /**
+    description: Identifies the reviewer whose review was requested.
+  */
+    requestedReviewer: RequestedReviewer | null;
+    /**
     description: Identifies the user whose review was requested.
   */
-    subject: IUser;
+    subject: IUser | null;
   }
 
   /**
@@ -4598,9 +5012,13 @@ pull request.
   */
     pullRequest: IPullRequest;
     /**
+    description: Identifies the reviewer whose review request was removed.
+  */
+    requestedReviewer: RequestedReviewer | null;
+    /**
     description: Identifies the user whose review request was removed.
   */
-    subject: IUser;
+    subject: IUser | null;
   }
 
   /**
@@ -5035,369 +5453,6 @@ pull request.
 
 
   /**
-    description: A team of users in an organization.
-  */
-  interface ITeam {
-    __typename: "Team";
-    /**
-    description: A list of teams that are ancestors of this team.
-  */
-    ancestors: ITeamConnection;
-    /**
-    description: List of child teams belonging to this team
-  */
-    childTeams: ITeamConnection;
-    /**
-    description: The slug corresponding to the organization and team.
-  */
-    combinedSlug: string;
-    /**
-    description: Identifies the date and time when the object was created.
-  */
-    createdAt: any;
-    /**
-    description: The description of the team.
-  */
-    description: string | null;
-    /**
-    description: The HTTP path for editing this team
-  */
-    editTeamResourcePath: any;
-    /**
-    description: The HTTP URL for editing this team
-  */
-    editTeamUrl: any;
-    id: string;
-    /**
-    description: A list of pending invitations for users to this team
-  */
-    invitations: IOrganizationInvitationConnection | null;
-    /**
-    description: A list of users who are members of this team.
-  */
-    members: ITeamMemberConnection;
-    /**
-    description: The HTTP path for the team' members
-  */
-    membersResourcePath: any;
-    /**
-    description: The HTTP URL for the team' members
-  */
-    membersUrl: any;
-    /**
-    description: The name of the team.
-  */
-    name: string;
-    /**
-    description: The HTTP path creating a new team
-  */
-    newTeamResourcePath: any;
-    /**
-    description: The HTTP URL creating a new team
-  */
-    newTeamUrl: any;
-    /**
-    description: The organization that owns this team.
-  */
-    organization: IOrganization;
-    /**
-    description: The parent team of the team.
-  */
-    parentTeam: ITeam | null;
-    /**
-    description: The level of privacy the team has.
-  */
-    privacy: ITeamPrivacyEnum;
-    /**
-    description: A list of repositories this team has access to.
-  */
-    repositories: ITeamRepositoryConnection;
-    /**
-    description: The HTTP path for this team's repositories
-  */
-    repositoriesResourcePath: any;
-    /**
-    description: The HTTP URL for this team's repositories
-  */
-    repositoriesUrl: any;
-    /**
-    description: The HTTP path for this team
-  */
-    resourcePath: any;
-    /**
-    description: The slug corresponding to the team.
-  */
-    slug: string;
-    /**
-    description: The HTTP path for this team's teams
-  */
-    teamsResourcePath: any;
-    /**
-    description: The HTTP URL for this team's teams
-  */
-    teamsUrl: any;
-    /**
-    description: Identifies the date and time when the object was last updated.
-  */
-    updatedAt: any;
-    /**
-    description: The HTTP URL for this team
-  */
-    url: any;
-    /**
-    description: Team is adminable by the viewer.
-  */
-    viewerCanAdminister: boolean;
-  }
-
-  /**
-    description: The connection type for Team.
-  */
-  interface ITeamConnection {
-    __typename: "TeamConnection";
-    /**
-    description: A list of edges.
-  */
-    edges: Array<ITeamEdge> | null;
-    /**
-    description: A list of nodes.
-  */
-    nodes: Array<ITeam> | null;
-    /**
-    description: Information to aid in pagination.
-  */
-    pageInfo: IPageInfo;
-    /**
-    description: Identifies the total count of items in the connection.
-  */
-    totalCount: number;
-  }
-
-  /**
-    description: An edge in a connection.
-  */
-  interface ITeamEdge {
-    __typename: "TeamEdge";
-    /**
-    description: A cursor for use in pagination.
-  */
-    cursor: string;
-    /**
-    description: The item at the end of the edge.
-  */
-    node: ITeam | null;
-  }
-
-  /**
-    description: Ways in which team connections can be ordered.
-  */
-  interface ITeamOrder {
-    /**
-    description: The field in which to order nodes by.
-  */
-    field: ITeamOrderFieldEnum;
-    /**
-    description: The direction in which to order nodes.
-  */
-    direction: IOrderDirectionEnum;
-  }
-
-  /**
-    description: Properties by which team connections can be ordered.
-  */
-  type ITeamOrderFieldEnum = 'NAME';
-
-  /**
-    description: The connection type for OrganizationInvitation.
-  */
-  interface IOrganizationInvitationConnection {
-    __typename: "OrganizationInvitationConnection";
-    /**
-    description: A list of edges.
-  */
-    edges: Array<IOrganizationInvitationEdge> | null;
-    /**
-    description: A list of nodes.
-  */
-    nodes: Array<IOrganizationInvitation> | null;
-    /**
-    description: Information to aid in pagination.
-  */
-    pageInfo: IPageInfo;
-    /**
-    description: Identifies the total count of items in the connection.
-  */
-    totalCount: number;
-  }
-
-  /**
-    description: An edge in a connection.
-  */
-  interface IOrganizationInvitationEdge {
-    __typename: "OrganizationInvitationEdge";
-    /**
-    description: A cursor for use in pagination.
-  */
-    cursor: string;
-    /**
-    description: The item at the end of the edge.
-  */
-    node: IOrganizationInvitation | null;
-  }
-
-  /**
-    description: An Invitation for a user to an organization.
-  */
-  interface IOrganizationInvitation {
-    __typename: "OrganizationInvitation";
-    /**
-    description: The email address of the user invited to the organization.
-  */
-    email: string | null;
-    id: string;
-    /**
-    description: The type of invitation that was sent (e.g. email, user).
-  */
-    invitationType: IOrganizationInvitationTypeEnum;
-    /**
-    description: The user who was invited to the organization.
-  */
-    invitee: IUser | null;
-    /**
-    description: The user who created the invitation.
-  */
-    inviter: IUser;
-    /**
-    description: The user's pending role in the organization (e.g. member, owner).
-  */
-    role: IOrganizationInvitationRoleEnum;
-  }
-
-  /**
-    description: The possible organization invitation types.
-  */
-  type IOrganizationInvitationTypeEnum = 'USER' | 'EMAIL';
-
-  /**
-    description: The possible organization invitation roles.
-  */
-  type IOrganizationInvitationRoleEnum = 'DIRECT_MEMBER' | 'ADMIN' | 'BILLING_MANAGER' | 'REINSTATE';
-
-  /**
-    description: Defines which types of team members are included in the returned list. Can be one of IMMEDIATE, CHILD_TEAM or ALL.
-  */
-  type ITeamMembershipTypeEnum = 'IMMEDIATE' | 'CHILD_TEAM' | 'ALL';
-
-  /**
-    description: The possible team member roles; either 'maintainer' or 'member'.
-  */
-  type ITeamMemberRoleEnum = 'MAINTAINER' | 'MEMBER';
-
-  /**
-    description: The connection type for User.
-  */
-  interface ITeamMemberConnection {
-    __typename: "TeamMemberConnection";
-    /**
-    description: A list of edges.
-  */
-    edges: Array<ITeamMemberEdge> | null;
-    /**
-    description: A list of nodes.
-  */
-    nodes: Array<IUser> | null;
-    /**
-    description: Information to aid in pagination.
-  */
-    pageInfo: IPageInfo;
-    /**
-    description: Identifies the total count of items in the connection.
-  */
-    totalCount: number;
-  }
-
-  /**
-    description: Represents a user who is a member of a team.
-  */
-  interface ITeamMemberEdge {
-    __typename: "TeamMemberEdge";
-    cursor: string;
-    /**
-    description: The HTTP path to the organization's member access page.
-  */
-    memberAccessResourcePath: any;
-    /**
-    description: The HTTP URL to the organization's member access page.
-  */
-    memberAccessUrl: any;
-    node: IUser;
-    /**
-    description: The role the member has on the team.
-  */
-    role: ITeamMemberRoleEnum;
-  }
-
-  /**
-    description: The possible team privacy values.
-  */
-  type ITeamPrivacyEnum = 'SECRET' | 'VISIBLE';
-
-  /**
-    description: Ordering options for team repository connections
-  */
-  interface ITeamRepositoryOrder {
-    /**
-    description: The field to order repositories by.
-  */
-    field: ITeamRepositoryOrderFieldEnum;
-    /**
-    description: The ordering direction.
-  */
-    direction: IOrderDirectionEnum;
-  }
-
-  /**
-    description: Properties by which team repository connections can be ordered.
-  */
-  type ITeamRepositoryOrderFieldEnum = 'CREATED_AT' | 'UPDATED_AT' | 'PUSHED_AT' | 'NAME' | 'PERMISSION' | 'STARGAZERS';
-
-  /**
-    description: The connection type for Repository.
-  */
-  interface ITeamRepositoryConnection {
-    __typename: "TeamRepositoryConnection";
-    /**
-    description: A list of edges.
-  */
-    edges: Array<ITeamRepositoryEdge> | null;
-    /**
-    description: A list of nodes.
-  */
-    nodes: Array<IRepository> | null;
-    /**
-    description: Information to aid in pagination.
-  */
-    pageInfo: IPageInfo;
-    /**
-    description: Identifies the total count of items in the connection.
-  */
-    totalCount: number;
-  }
-
-  /**
-    description: Represents a team repository.
-  */
-  interface ITeamRepositoryEdge {
-    __typename: "TeamRepositoryEdge";
-    cursor: string;
-    node: IRepository;
-    /**
-    description: The permission level the team has on the repository
-  */
-    permission: IRepositoryPermissionEnum;
-  }
-
-  /**
     description: The connection type for ReviewDismissalAllowance.
   */
   interface IReviewDismissalAllowanceConnection {
@@ -5459,6 +5514,25 @@ pull request.
 
 
   /**
+    description: Ways in which lists of git refs can be ordered upon return.
+  */
+  interface IRefOrder {
+    /**
+    description: The field in which to order refs by.
+  */
+    field: IRefOrderFieldEnum;
+    /**
+    description: The direction in which to order refs by the specified field.
+  */
+    direction: IOrderDirectionEnum;
+  }
+
+  /**
+    description: Properties by which ref connections can be ordered.
+  */
+  type IRefOrderFieldEnum = 'TAG_COMMIT_DATE' | 'ALPHABETICAL';
+
+  /**
     description: The connection type for Ref.
   */
   interface IRefConnection {
@@ -5495,6 +5569,25 @@ pull request.
   */
     node: IRef | null;
   }
+
+  /**
+    description: Ways in which lists of releases can be ordered upon return.
+  */
+  interface IReleaseOrder {
+    /**
+    description: The field in which to order releases by.
+  */
+    field: IReleaseOrderFieldEnum;
+    /**
+    description: The direction in which to order releases by the specified field.
+  */
+    direction: IOrderDirectionEnum;
+  }
+
+  /**
+    description: Properties by which release connections can be ordered.
+  */
+  type IReleaseOrderFieldEnum = 'CREATED_AT' | 'NAME';
 
   /**
     description: The connection type for Release.
@@ -5745,7 +5838,9 @@ pull request.
   */
     name: string;
     /**
-    description: A list of related topics sorted with the most relevant first.
+    description: A list of related topics, including aliases of this topic, sorted with the most relevant
+first.
+
   */
     relatedTopics: Array<ITopic>;
   }
@@ -7828,6 +7923,21 @@ pull request.
     description: The affiliation type between collaborator and repository.
   */
   type IRepositoryCollaboratorAffiliationEnum = 'ALL' | 'OUTSIDE';
+
+  /**
+    description: An edge in a connection.
+  */
+  interface ITopicEdge {
+    __typename: "TopicEdge";
+    /**
+    description: A cursor for use in pagination.
+  */
+    cursor: string;
+    /**
+    description: The item at the end of the edge.
+  */
+    node: ITopic | null;
+  }
 
   /**
     description: Represents a GPG signature on a Commit or Tag.
