@@ -90,12 +90,12 @@ class WebviewContextMenuAction extends Action {
 }
 
 // Context menu actions
-const webviewUndoAction = new WebviewContextMenuAction('webview.undo', nls.localize('undo', "Undo"), (webContents: Electron.WebContents) => webContents.undo());
-const webviewRedoAction = new WebviewContextMenuAction('webview.redo', nls.localize('redo', "Redo"), (webContents: Electron.WebContents) => webContents.redo());
-const webviewCutAction = new WebviewContextMenuAction('webview.cut', nls.localize('cut', "Cut"), (webContents: Electron.WebContents) => webContents.cut());
-const webviewCopyAction = new WebviewContextMenuAction('webview.copy', nls.localize('copy', "Copy"), (webContents: Electron.WebContents) => webContents.copy());
-const webviewPasteAction = new WebviewContextMenuAction('webview.paste', nls.localize('paste', "Paste"), (webContents: Electron.WebContents) => webContents.paste());
-const webviewSelectAllAction = new WebviewContextMenuAction('webview.selectAll', nls.localize('selectAll', "Select All"), (webContents: Electron.WebContents) => webContents.selectAll());
+const webviewUndoAction = new WebviewContextMenuAction('webview.undo', nls.localize('undo', "Undo"), webContents => webContents.undo());
+const webviewRedoAction = new WebviewContextMenuAction('webview.redo', nls.localize('redo', "Redo"), webContents => webContents.redo());
+const webviewCutAction = new WebviewContextMenuAction('webview.cut', nls.localize('cut', "Cut"), webContents => webContents.cut());
+const webviewCopyAction = new WebviewContextMenuAction('webview.copy', nls.localize('copy', "Copy"), webContents => webContents.copy());
+const webviewPasteAction = new WebviewContextMenuAction('webview.paste', nls.localize('paste', "Paste"), webContents => webContents.paste());
+const webviewSelectAllAction = new WebviewContextMenuAction('webview.selectAll', nls.localize('selectAll', "Select All"), webContents => webContents.selectAll());
 const webviewCopyLinkAddressAction = new WebviewContextMenuAction('webview.copyLinkAddress', nls.localize('copyLinkAddress', "Copy Link Address"), (webContents: Electron.WebContents, params: Electron.ContextMenuParams) => {
 	if (isMacintosh) {
 		clipboard.writeBookmark(params.linkText, params.linkURL);
@@ -340,7 +340,7 @@ export class MainThreadViewZone extends PeekViewWidget {
 			contents.addListener('context-menu', (event, params) => {
 				event.preventDefault();
 
-				if (!contents || contents.isDestroyed()) {
+				if (contents.isDestroyed()) {
 					return;
 				}
 				// This any cast and undocumented Electron getOwnerBrowserWindow
@@ -357,7 +357,7 @@ export class MainThreadViewZone extends PeekViewWidget {
 							x: Math.floor(rect.left + params.x / factor),
 							y: Math.floor(rect.top + params.y / factor)
 						}),
-						getActionsContext: () => ({ webContents: contents, params }) as IContextMenuActionContext,
+						getActionsContext: () => ({ webContents: contents, params }),
 						getActions: () => TPromise.as(getContextMenuActions(this.environmentService, params)),
 					});
 				});
