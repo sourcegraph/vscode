@@ -210,7 +210,7 @@ suite('Tests Git remote repository resolver', async () => {
 	});
 
 	if (FolderWalker.available()) {
-		test('when remote has a clone on disk (but not opened), add it to window and do not reclone', async () => {
+		test('when remote has a same-rev clone on disk (but not opened), add it to window and do not reclone', async () => {
 			const [repoOrigin, repoClone] = await createTestRepository(tmpDir, 'repo', ['repo']);
 			assertWorkspaceFolders([]);
 
@@ -222,7 +222,56 @@ suite('Tests Git remote repository resolver', async () => {
 			assertWorkspaceFolders([repoClone]); // NOT [tmpCloneDir(tmpDir, repoOrigin))]
 		});
 
-		test('when remote has multiple clones on disk (but not opened), ask the user which to use', async () => {
+		test('when remote has a different-rev clone on disk (but not opened), present the user with the choice to checkout the rev in the current window', async () => {
+			const [repoOrigin, repoClone] = await createTestRepository(tmpDir, 'repo', ['repo']);
+
+			// Create and checkout a different branch (mybranch).
+			const branch = 'mybranch';
+			await execGit(['checkout', '--quiet', '-b', branch], { cwd: repoClone });
+
+			// Ensure scanning has completed.
+			const { model } = vscode.extensions.getExtension<{ model: Model }>('vscode.git')!.exports;
+			await model.scanRepositoryDirectory();
+
+			// Open the repository at the master (!= mybranch) branch.
+			//
+			// Triggers quickopen to select repo that must be selected from before promise resolves.
+			const openedRepo = vscode.commands.executeCommand('git.openRemoteRepository', repoOrigin + '?master');
+			await sleep(1500); // wait for quickopen to show
+			await vscode.commands.executeCommand('workbench.action.focusQuickOpen');
+			await vscode.commands.executeCommand('workbench.action.acceptSelectedQuickOpenItem'); // accept 1st choice
+			await openedRepo;
+			assertVisibleGitSCMRepositories([repoClone]);
+			assertWorkspaceFolders([repoClone]);
+			await assertCurrentBranch(repoClone, 'master');
+		});
+
+		test('when remote has 2 same-rev and 1 different-rev clones on disk (but not opened), present the user with the choice of same-rev repo', async () => {
+			const [repoOrigin, repoClone1, repoClone2, repoClone3] = await createTestRepository(tmpDir, 'repo', ['repo1', 'repo2', 'repo3']);
+
+			// Create and checkout a different branch (mybranch) in repo1.
+			const branch = 'mybranch';
+			await execGit(['checkout', '--quiet', '-b', branch], { cwd: repoClone1 });
+
+			// Ensure scanning has completed.
+			const { model } = vscode.extensions.getExtension<{ model: Model }>('vscode.git')!.exports;
+			await model.scanRepositoryDirectory();
+
+			// Open the repository at the master (!= mybranch) branch.
+			//
+			// Triggers quickopen to select repo that must be selected from before promise resolves.
+			const openedRepo = vscode.commands.executeCommand('git.openRemoteRepository', repoOrigin + '?master');
+			await sleep(1500); // wait for quickopen to show
+			// TODO(sqs): test that there is only 1 quickopen entry (only the same-rev repoClone2 and repoClone3, not repoClone1 too)
+			await vscode.commands.executeCommand('workbench.action.focusQuickOpen');
+			await vscode.commands.executeCommand('workbench.action.acceptSelectedQuickOpenItem'); // accept 1st choice
+			await openedRepo;
+			assertVisibleGitSCMRepositories([repoClone2]);
+			assertWorkspaceFolders([repoClone2]);
+			await assertCurrentBranch(repoClone2, 'master');
+		});
+
+		test('when remote has multiple same-rev clones on disk (but not opened), ask the user which to use', async () => {
 			const [repoOrigin, repoClone1, repoClone2] = await createTestRepository(tmpDir, 'repo', ['repo1', 'repo2']);
 			assertWorkspaceFolders([]);
 
