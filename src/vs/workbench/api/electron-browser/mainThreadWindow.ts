@@ -56,6 +56,10 @@ export class MainThreadWindow implements MainThreadWindowShape {
 		return this.windowsService.focusWindow(windowId);
 	}
 
+	$closeWindow(windowId: number): TPromise<void> {
+		return this.windowsService.closeWindow(windowId);
+	}
+
 	dispose(): void {
 		this.disposables = dispose(this.disposables);
 	}

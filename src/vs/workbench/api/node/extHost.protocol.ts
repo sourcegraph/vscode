@@ -526,6 +526,7 @@ export interface MainThreadWindowShape extends IDisposable {
 	$getWindowVisibility(): TPromise<boolean>;
 	$getWindows(): TPromise<WorkbenchWindowFeatures[]>;
 	$showAndFocusWindow(windowId: number): TPromise<void>;
+	$closeWindow(windowId: number): TPromise<void>;
 }
 
 // -- extension host

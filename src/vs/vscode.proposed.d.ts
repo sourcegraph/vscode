@@ -343,6 +343,11 @@ declare module 'vscode' {
 		 * Show and focus the window.
 		 */
 		showAndFocus(): Thenable<void>;
+
+		/**
+		 * Close the window.
+		 */
+		close(): Thenable<void>;
 	}
 
 	export namespace window {
