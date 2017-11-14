@@ -179,11 +179,8 @@ async function gitRefresh(repoDir: string): Promise<void> {
 	await vscode.commands.executeCommand('git.refresh', repoDir);
 }
 
-suite('Tests Git remote repository resolver', () => {
-	if (true) {
-		// TODO(sqs): skip tests for now, need to investigate why failing (https://travis-ci.com/sourcegraph/src/jobs/98644962).
-		return;
-	}
+suite.skip('Tests Git remote repository resolver', () => {
+	// TODO(sqs): skip tests for now, need to investigate why failing (https://travis-ci.com/sourcegraph/src/jobs/98644962).
 
 	let tmpDir: string;
 	setup(async () => {
