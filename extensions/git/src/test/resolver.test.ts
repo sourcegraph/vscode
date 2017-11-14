@@ -179,7 +179,7 @@ async function gitRefresh(repoDir: string): Promise<void> {
 	await vscode.commands.executeCommand('git.refresh', repoDir);
 }
 
-suite('Tests Git remote repository resolver', async () => {
+suite('Tests Git remote repository resolver', () => {
 	let tmpDir: string;
 	setup(async () => {
 		tmpDir = await nfcall<string>(fs.mkdtemp, path.join(os.tmpdir(), 'vscode-git-test-'));
