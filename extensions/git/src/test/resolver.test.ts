@@ -92,11 +92,11 @@ function tmpCloneDir(tmpDir: string, remote: string): string {
 	return path.join(tmpDir, remote.toLowerCase());
 }
 
-function assertWorkspaceFolders(expected: (string | vscode.Uri)[]): void {
+function assertWorkspaceFolders(expected: (string | vscode.Uri)[], message?: string): void {
 	// Omit the first root that is always present (testWorkspace).
 	const actual = vscode.workspace.workspaceFolders!.map(f => f.uri.fsPath).filter(p => path.basename(p) !== 'testWorkspace');
 	expected = expected.map(f => typeof f === 'string' ? f : f.fsPath);
-	assert.deepEqual(actual, expected);
+	assert.deepEqual(actual, expected, message);
 }
 
 /**
@@ -206,23 +206,23 @@ suite('Tests Git remote repository resolver', async () => {
 	test('when remote has a clone in the current window, do nothing', async () => {
 		const [repoOrigin, repoClone] = await createTestRepository(tmpDir, 'repo', ['repo']);
 		await vscode.commands.executeCommand('_workbench.addRoots', [vscode.Uri.file(repoClone)]);
-		assertWorkspaceFolders([repoClone]);
+		assertWorkspaceFolders([repoClone], 'before opening remote repo');
 
 		await gitRefresh(repoClone);
 
 		await vscode.commands.executeCommand('git.openRemoteRepository', repoOrigin);
-		assertWorkspaceFolders([repoClone]);
+		assertWorkspaceFolders([repoClone], 'after opening remote repo');
 	});
 
 	suite('when remote has a same-rev clone in the current window', () => {
 		test('do nothing', async () => {
 			const [repoOrigin, repoClone] = await createTestRepository(tmpDir, 'repo', ['repo']);
 			await vscode.commands.executeCommand('_workbench.addRoots', [vscode.Uri.file(repoClone)]);
-			assertWorkspaceFolders([repoClone]);
+			assertWorkspaceFolders([repoClone], 'before opening remote repo');
 			await assertCurrentBranch(repoClone, 'master');
 
 			await vscode.commands.executeCommand('git.openRemoteRepository', repoOrigin + '?master');
-			assertWorkspaceFolders([repoClone]);
+			assertWorkspaceFolders([repoClone], 'after opening remote repo');
 			await assertCurrentBranch(repoClone, 'master');
 		});
 	});
