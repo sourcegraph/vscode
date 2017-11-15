@@ -12,7 +12,6 @@ import { SearchViewlet } from 'vs/workbench/parts/search/browser/searchViewlet';
 import { IQueryOptions, IPatternInfo } from 'vs/platform/search/common/search';
 import { findInFolderResourcesCommand } from 'vs/workbench/parts/search/browser/searchActions';
 import { Builder, $ } from 'vs/base/browser/builder';
-import { SearchProfilePickerWidget } from 'vs/workbench/parts/search/browser/searchProfilePickerWidget';
 import { Match } from 'vs/workbench/parts/search/common/searchModel';
 
 /**
@@ -25,25 +24,6 @@ export class SourcegraphSearchViewlet extends SearchViewlet {
 		return 350;
 	}
 
-	/**
-	 * The "[other] repositories to include" input field.
-	 */
-	public inputRepoSelector: SearchProfilePickerWidget;
-
-	public create(parent: Builder): TPromise<void> {
-		const selected: string = this.viewletSettings['query.profile'] || '';
-		this.inputRepoSelector = this._register(this.instantiationService.createInstance(SearchProfilePickerWidget, selected));
-		this._register(this.inputRepoSelector.onWorkspacesDidChange(() => this.onQueryChanged(true)));
-
-		return super.create(parent).then(() => {
-			$(this.searchWidget.domNode).append(
-				$('div', { 'class': 'folder-container file-types' }, builder => {
-					this.inputRepoSelector.create(builder);
-				})
-			);
-		});
-	}
-
 	get onQueryDidChange(): Event<void> { return this._onQueryDidChange.event; }
 
 	public onQueryChanged(rerunQuery: boolean, preserveFocus?: boolean, noFireEvent?: boolean): void {
@@ -53,44 +33,10 @@ export class SourcegraphSearchViewlet extends SearchViewlet {
 		super.onQueryChanged(rerunQuery, preserveFocus);
 	}
 
-	public shutdown(): void {
-		if (this.inputRepoSelector) {
-			this.viewletSettings['query.profile'] = this.inputRepoSelector.selected;
-		}
-		super.shutdown();
-	}
-
 	protected onQueryChangedCreate(contentPattern: IPatternInfo, folderResources: URI[], options: IQueryOptions): void {
-		const beforeFolderCount = folderResources.length;
-		const folderResourcesComparable = folderResources.map(resource => resource.toString());
-		const profile = this.inputRepoSelector.getSelectedProfile();
-
-		if (profile.workspaces.length) {
-			// Do not include workspace roots if we've specified roots to search.
-			folderResources.length = 0;
-		}
-
-		profile.workspaces.forEach(resource => {
-			if (folderResourcesComparable.indexOf(resource) === -1) {
-				folderResources.push(URI.parse(resource));
-			}
-		});
 		this.telemetryService.publicLog('codeSearch.query', {
-			beforeFolderCount,
 			folderCount: folderResources.length,
-			profile: {
-				name: profile.name,
-				count: profile.workspaces.length,
-				source: profile.source,
-			}
 		});
-	}
-
-	/**
-	 * Sets the value of the folder resources (i.e., the workspaces/repos list).
-	 */
-	public searchInFolderResources(folderResources: string[]): void {
-		this.inputRepoSelector.workspaces = folderResources;
 	}
 
 	protected onFocus(lineMatch: any, preserveFocus?: boolean, sideBySide?: boolean, pinned?: boolean): TPromise<any> {

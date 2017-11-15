@@ -423,9 +423,6 @@ export class FindInFolderResourcesAction extends Action {
 export const findInFolderResourcesCommand = (accessor: ServicesAccessor, folderResources?: (string | URI)[], query?: string, regexp?: boolean) => {
 	const viewletService = accessor.get(IViewletService);
 	viewletService.openViewlet(Constants.VIEWLET_ID, false).then((viewlet: SourcegraphSearchViewlet) => {
-		if (folderResources) {
-			viewlet.searchInFolderResources(folderResources.map(resource => URI.isUri(resource) ? resource.toString() : resource));
-		}
 		if (regexp === true || regexp === false) {
 			viewlet.searchAndReplaceWidget.searchInput.setRegex(regexp);
 		}

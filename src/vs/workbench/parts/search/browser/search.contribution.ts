@@ -46,7 +46,6 @@ import { defaultQuickOpenContextKey } from 'vs/workbench/browser/parts/quickopen
 import { OpenSymbolHandler } from 'vs/workbench/parts/search/browser/openSymbolHandler';
 import { OpenAnythingHandler } from 'vs/workbench/parts/search/browser/openAnythingHandler';
 import { OpenAnyFolderHandler } from 'vs/workbench/parts/search/browser/openFolderHandler';
-import { ProfilePickerHandler, PROFILE_PICKER_PREFIX } from 'vs/workbench/parts/search/browser/searchProfileHandler';
 import { registerLanguageCommand } from 'vs/editor/browser/editorExtensions';
 import { getWorkspaceSymbols } from 'vs/workbench/parts/search/common/search';
 import { illegalArgument } from 'vs/base/common/errors';
@@ -279,16 +278,6 @@ export class OpenRepoAction extends QuickOpenAction {
 	}
 }
 
-const PROFILE_PICKER_ACTION_ID = 'workbench.action.search.profilePicker';
-const PROFILE_PICKER_ACTION_LABEL = nls.localize('searchProfilePickerLabel', "Pick Search Profile...");
-
-class ProfilePickerAction extends QuickOpenAction {
-
-	constructor(actionId: string, actionLabel: string, @IQuickOpenService quickOpenService: IQuickOpenService) {
-		super(actionId, actionLabel, PROFILE_PICKER_PREFIX, quickOpenService);
-	}
-}
-
 // Register Viewlet
 import 'vs/workbench/parts/search/browser/sourcegraphSearchViewlet'; // ensure it's in the synchronous bundle
 Registry.as<ViewletRegistry>(ViewletExtensions.Viewlets).registerViewlet(new ViewletDescriptor(
@@ -360,7 +349,6 @@ registry.registerWorkbenchAction(new SyncActionDescriptor(searchActions.ShowPrev
 
 registry.registerWorkbenchAction(new SyncActionDescriptor(ShowAllSymbolsAction, ACTION_ID, ACTION_LABEL, { primary: KeyMod.CtrlCmd | KeyCode.KEY_T }), 'Go to Symbol in Workspace...');
 registry.registerWorkbenchAction(new SyncActionDescriptor(OpenRepoAction, OPEN_REPO_ACTION_ID, OPEN_REPO_ACTION_LABEL, { primary: KeyMod.Alt | KeyCode.KEY_R }), 'Go to Repository...');
-registry.registerWorkbenchAction(new SyncActionDescriptor(ProfilePickerAction, PROFILE_PICKER_ACTION_ID, PROFILE_PICKER_ACTION_LABEL), 'Pick Search Profile...');
 
 // Contribute to Explorer Viewer
 const actionBarRegistry = Registry.as<IActionBarRegistry>(ActionBarExtensions.Actionbar);
@@ -404,22 +392,6 @@ Registry.as<IQuickOpenRegistry>(QuickOpenExtensions.Quickopen).registerQuickOpen
 				prefix: ALL_REPOS_PREFIX,
 				needsEditor: false,
 				description: nls.localize('openFolderDescriptionNormal', "Go to Folder or Repository")
-			}
-		]
-	)
-);
-
-Registry.as<IQuickOpenRegistry>(QuickOpenExtensions.Quickopen).registerQuickOpenHandler(
-	new QuickOpenHandlerDescriptor(
-		ProfilePickerHandler,
-		ProfilePickerHandler.ID,
-		PROFILE_PICKER_PREFIX,
-		'',
-		[
-			{
-				prefix: PROFILE_PICKER_PREFIX,
-				needsEditor: false,
-				description: nls.localize('profilePickerDescription', "Pick and update search profile")
 			}
 		]
 	)

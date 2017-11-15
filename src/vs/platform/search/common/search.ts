@@ -11,7 +11,6 @@ import * as paths from 'vs/base/common/paths';
 import * as glob from 'vs/base/common/glob';
 import { IFilesConfiguration } from 'vs/platform/files/common/files';
 import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
-import Event from 'vs/base/common/event';
 import { IDisposable } from 'vs/base/common/lifecycle';
 
 export const ID = 'searchService';
@@ -174,41 +173,10 @@ export class LineMatch implements ILineMatch {
 	}
 }
 
-// Where a search profile is from
-export enum SearchProfileSource {
-	Ephemeral = 'Ephemeral', // Created manually and not saved
-	Config = 'Config',
-	Workspace = 'Workspace', // Currently open workspaces
-	Server = 'Server',
-}
-
-// A search profile
-export interface ISearchProfile {
-	// The name of the profile.
-	name: string;
-	// A list of workspaces to search.
-	workspaces: string[];
-	// An optional description of the profile.
-	description?: string;
-	// The source of the profile
-	source?: SearchProfileSource;
-}
-
-export const ISearchProfileService = createDecorator<ISearchProfileService>('searchProfileService');
-
-export interface ISearchProfileService {
-	_serviceBrand: any;
-
-	readonly onDidSearchProfilesChange: Event<void>;
-	getSearchProfiles(): ISearchProfile[];
-	getProfileForWorkspaces(workspaces: string[]): ISearchProfile;
-}
-
 export interface ISearchConfiguration extends IFilesConfiguration {
 	search: {
 		exclude: glob.IExpression;
 		useRipgrep: boolean;
-		profiles: ISearchProfile[];
 		/**
 		 * Use ignore file for file search.
 		 */
