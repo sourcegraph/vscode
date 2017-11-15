@@ -136,8 +136,6 @@ export function createDiffEditor(domElement: HTMLElement, options?: IDiffEditorC
 }
 
 export interface IDiffNavigator {
-	revealFirst: boolean;
-
 	canNavigate(): boolean;
 	next(): void;
 	previous(): void;

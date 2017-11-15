@@ -1413,19 +1413,6 @@ export class Workbench implements IPartService {
 		this.modalPart.create(modalContainer);
 	}
 
-	public getEditorPart(): EditorPart {
-		return this.editorPart;
-	}
-
-	public getSidebarPart(): SidebarPart {
-		return this.sidebarPart;
-	}
-
-	public getPanelPart(): PanelPart {
-		return this.panelPart;
-	}
-
-
 	public getModalPart(): ModalPart {
 		if (!this.workbenchStarted) {
 			throw new Error('Workbench is not started. Call startup() first.');

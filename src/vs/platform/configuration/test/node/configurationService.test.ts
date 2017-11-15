@@ -18,6 +18,7 @@ import { EnvironmentService } from 'vs/platform/environment/node/environmentServ
 import extfs = require('vs/base/node/extfs');
 import uuid = require('vs/base/common/uuid');
 import { IConfigurationRegistry, Extensions as ConfigurationExtensions } from 'vs/platform/configuration/common/configurationRegistry';
+import { mkdirp } from 'vs/base/node/pfs';
 
 class SettingsTestEnvironmentService extends EnvironmentService {
 
@@ -39,9 +40,9 @@ suite('ConfigurationService - Node', () => {
 		const userSettingsPath = path.join(newDir, 'config.json');
 		const orgSettingsPath = path.join(newDir, 'orgConfig.json');
 
-		extfs.mkdirp(newDir, 493, (error) => {
-			callback(userSettingsPath, orgSettingsPath, (callback) => extfs.del(parentDir, os.tmpdir(), () => { }, callback));
-		});
+		const onMkdirp = error => callback(userSettingsPath, orgSettingsPath, (callback) => extfs.del(parentDir, os.tmpdir(), () => { }, callback));
+
+		mkdirp(newDir, 493).done(() => onMkdirp(null), error => onMkdirp(error));
 	}
 
 	test('simple - user settings', (done: () => void) => {
