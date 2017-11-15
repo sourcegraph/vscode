@@ -4,9 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 'use strict';
 
+import nls = require('vs/nls');
 import { ICodeEditor } from 'vs/editor/browser/editorBrowser';
 import Webview from 'vs/workbench/parts/html/browser/webview';
-import { IContextViewService } from 'vs/platform/contextview/browser/contextView';
+import { IContextViewService, IContextMenuService } from 'vs/platform/contextview/browser/contextView';
 import { IContextKey, IContextKeyService, RawContextKey } from 'vs/platform/contextkey/common/contextkey';
 import { IPartService, Parts } from 'vs/workbench/services/part/common/partService';
 import { KEYBINDING_CONTEXT_WEBVIEWEDITOR_FOCUS, KEYBINDING_CONTEXT_WEBVIEWEDITOR_FIND_WIDGET_INPUT_FOCUSED } from 'vs/workbench/parts/html/browser/webviewEditor';
@@ -23,8 +24,8 @@ import Event, { Emitter } from 'vs/base/common/event';
 import { isUndefined } from 'vs/base/common/types';
 import { ThrottledDelayer } from 'vs/base/common/async';
 import { MenuId, IMenuService, IMenu, MenuItemAction } from 'vs/platform/actions/common/actions';
-import { ActionsOrientation, IActionBarOptions } from 'vs/base/browser/ui/actionbar/actionbar';
-import { IAction, ActionRunner, IActionItem } from 'vs/base/common/actions';
+import { ActionsOrientation, IActionBarOptions, Separator } from 'vs/base/browser/ui/actionbar/actionbar';
+import { IAction, ActionRunner, IActionItem, Action } from 'vs/base/common/actions';
 import { fillInActions, MenuItemActionItem } from 'vs/platform/actions/browser/menuItemActionItem';
 import { Severity, IMessageService } from 'vs/platform/message/common/message';
 import { TPromise } from 'vs/base/common/winjs.base';
@@ -35,7 +36,9 @@ import { peekViewBorder, peekViewTitleBackground, peekViewTitleForeground, peekV
 import { registerEditorContribution } from 'vs/editor/browser/editorExtensions';
 import { ICodeEditorService } from 'vs/editor/browser/services/codeEditorService';
 import { ICommandHandler } from 'vs/platform/commands/common/commands';
-import { WebviewTag } from 'electron';
+import { WebviewTag, clipboard, shell } from 'electron';
+import { IEnvironmentService } from 'vs/platform/environment/common/environment';
+import { isMacintosh } from 'vs/base/common/platform';
 
 // TODO(sqs): allow creating ZoneWidgets (not PeekViewWidgets), for extensions that don't need
 // to render a header.
@@ -66,6 +69,95 @@ class ViewZoneActionRunner extends ActionRunner {
 	}
 }
 
+interface IContextMenuActionContext {
+	webContents: Electron.WebContents;
+	params: Electron.ContextMenuParams;
+}
+
+class WebviewContextMenuAction extends Action {
+	constructor(
+		id: string,
+		label: string,
+		private actionCallback: (webContents: Electron.WebContents, params?: Electron.ContextMenuParams) => void,
+	) {
+		super(id, label, null, true);
+	}
+
+	public run(context: IContextMenuActionContext): TPromise<any> {
+		this.actionCallback(context.webContents, context.params);
+		return TPromise.as(true);
+	}
+}
+
+// Context menu actions
+const webviewUndoAction = new WebviewContextMenuAction('webview.undo', nls.localize('undo', "Undo"), webContents => webContents.undo());
+const webviewRedoAction = new WebviewContextMenuAction('webview.redo', nls.localize('redo', "Redo"), webContents => webContents.redo());
+const webviewCutAction = new WebviewContextMenuAction('webview.cut', nls.localize('cut', "Cut"), webContents => webContents.cut());
+const webviewCopyAction = new WebviewContextMenuAction('webview.copy', nls.localize('copy', "Copy"), webContents => webContents.copy());
+const webviewPasteAction = new WebviewContextMenuAction('webview.paste', nls.localize('paste', "Paste"), webContents => webContents.paste());
+const webviewSelectAllAction = new WebviewContextMenuAction('webview.selectAll', nls.localize('selectAll', "Select All"), webContents => webContents.selectAll());
+const webviewCopyLinkAddressAction = new WebviewContextMenuAction('webview.copyLinkAddress', nls.localize('copyLinkAddress', "Copy Link Address"), (webContents: Electron.WebContents, params: Electron.ContextMenuParams) => {
+	if (isMacintosh) {
+		clipboard.writeBookmark(params.linkText, params.linkURL);
+	} else {
+		clipboard.writeText(params.linkURL);
+	}
+});
+const webviewOpenImageAction = new WebviewContextMenuAction('webview.openImage', nls.localize('openImage', "Open Image in External Window"), (webContents: Electron.WebContents, params: Electron.ContextMenuParams) => shell.openExternal(params.srcURL));
+const webviewCopyImageAddressAction = new WebviewContextMenuAction('webview.copyImageAddress', nls.localize('copyImageAddress', "Copy Image Address"), (webContents: Electron.WebContents, params: Electron.ContextMenuParams) => clipboard.writeText(params.srcURL));
+const webviewInspectElementAction = new WebviewContextMenuAction('webview.inspectElement', nls.localize('inspectElement', "Inspect Element"), (webContents: Electron.WebContents, params: Electron.ContextMenuParams) => webContents.inspectElement(params.x, params.y));
+
+function getContextMenuActions(environmentService: IEnvironmentService, params: Electron.ContextMenuParams): IAction[] {
+	webviewUndoAction.enabled = params.editFlags.canUndo;
+	webviewRedoAction.enabled = params.editFlags.canRedo;
+	webviewCutAction.enabled = params.editFlags.canCut;
+	webviewCopyAction.enabled = params.editFlags.canCopy;
+	webviewPasteAction.enabled = params.editFlags.canPaste;
+	webviewSelectAllAction.enabled = params.editFlags.canSelectAll;
+
+	const actions: IAction[] = [];
+	if (params.isEditable) {
+		actions.push(
+			webviewUndoAction,
+			webviewRedoAction,
+		);
+	}
+	if (params.isEditable || params.editFlags.canCut || params.editFlags.canCopy || params.editFlags.canPaste) {
+		actions.push(
+			new Separator(),
+			webviewCutAction,
+			webviewCopyAction,
+			webviewPasteAction,
+		);
+	}
+	if (params.linkURL) {
+		actions.push(
+			new Separator(),
+			webviewCopyLinkAddressAction,
+		);
+	}
+	if (params.hasImageContents) {
+		actions.push(
+			new Separator(),
+			webviewOpenImageAction,
+			webviewCopyImageAddressAction,
+		);
+	}
+	if (params.editFlags.canSelectAll) {
+		actions.push(
+			new Separator(),
+			webviewSelectAllAction,
+		);
+	}
+	if (!environmentService.isBuilt && !environmentService.extensionTestsPath) {
+		actions.push(
+			new Separator(),
+			webviewInspectElementAction,
+		);
+	}
+	return actions;
+}
+
 const viewZoneVisibleContextKey = new RawContextKey<boolean>('viewZoneVisible', false);
 
 export class MainThreadViewZone extends PeekViewWidget {
@@ -88,9 +180,11 @@ export class MainThreadViewZone extends PeekViewWidget {
 		id: string,
 		private contents: vscode.ViewZoneContents,
 		private _toJSON: any,
+		@IEnvironmentService private environmentService: IEnvironmentService,
 		@IPartService private partService: IPartService,
 		@IContextViewService private contextViewService: IContextViewService,
 		@IContextKeyService contextKeyService: IContextKeyService,
+		@IContextMenuService private contextMenuService: IContextMenuService,
 		@IThemeService private themeService: IThemeService,
 		@IOpenerService private openerService: IOpenerService,
 		@IMenuService private menuService: IMenuService,
@@ -229,6 +323,47 @@ export class MainThreadViewZone extends PeekViewWidget {
 				this.relayoutBody(height);
 			}
 		}));
+
+		// Context menu support
+		let loaded = false;
+		const subscription = addDisposableListener(this.webview.domNode, 'did-start-loading', () => {
+			if (loaded) {
+				return;
+			}
+			loaded = true;
+
+			const contents: Electron.WebContents = this.webview.domNode.getWebContents();
+			if (!contents) {
+				return;
+			}
+
+			contents.addListener('context-menu', (event, params) => {
+				event.preventDefault();
+
+				if (contents.isDestroyed()) {
+					return;
+				}
+				// This any cast and undocumented Electron getOwnerBrowserWindow
+				// method are used in webview.ts as well, so presumably this is
+				// necessary.
+				const window = (contents as any).getOwnerBrowserWindow();
+				if (!window || !window.webContents || window.webContents.isDestroyed()) {
+					return;
+				}
+				window.webContents.getZoomFactor(factor => {
+					const rect = this.webview.domNode.getBoundingClientRect();
+					this.contextMenuService.showContextMenu({
+						getAnchor: () => ({
+							x: Math.floor(rect.left + params.x / factor),
+							y: Math.floor(rect.top + params.y / factor)
+						}),
+						getActionsContext: () => ({ webContents: contents, params }) as IContextMenuActionContext,
+						getActions: () => TPromise.as(getContextMenuActions(this.environmentService, params)),
+					});
+				});
+			});
+		});
+		this._disposables.push(subscription);
 	}
 
 	private _applyTheme(theme: ITheme) {
