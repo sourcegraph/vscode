@@ -357,7 +357,7 @@ export class MainThreadViewZone extends PeekViewWidget {
 							x: Math.floor(rect.left + params.x / factor),
 							y: Math.floor(rect.top + params.y / factor)
 						}),
-						getActionsContext: () => ({ webContents: contents, params }),
+						getActionsContext: () => ({ webContents: contents, params }) as IContextMenuActionContext,
 						getActions: () => TPromise.as(getContextMenuActions(this.environmentService, params)),
 					});
 				});
