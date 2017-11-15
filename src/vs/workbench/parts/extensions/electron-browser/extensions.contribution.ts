@@ -39,6 +39,7 @@ import { KeymapExtensions, BetterMergeDisabled, EnablePublishedTSLintExtension }
 import { adoptToGalleryExtensionId } from 'vs/platform/extensionManagement/common/extensionManagementUtil';
 import { GalleryExtensionsHandler, ExtensionsHandler } from 'vs/workbench/parts/extensions/browser/extensionsQuickOpen';
 import { EditorDescriptor, IEditorRegistry, Extensions as EditorExtensions } from 'vs/workbench/browser/editor';
+import { LifecyclePhase } from 'vs/platform/lifecycle/common/lifecycle';
 
 // Singletons
 registerSingleton(IExtensionGalleryService, ExtensionGalleryService);
@@ -46,10 +47,10 @@ registerSingleton(IExtensionTipsService, ExtensionTipsService);
 registerSingleton(IExtensionsWorkbenchService, ExtensionsWorkbenchService);
 
 const workbenchRegistry = Registry.as<IWorkbenchContributionsRegistry>(WorkbenchExtensions.Workbench);
-workbenchRegistry.registerWorkbenchContribution(StatusUpdater);
-workbenchRegistry.registerWorkbenchContribution(KeymapExtensions);
-workbenchRegistry.registerWorkbenchContribution(BetterMergeDisabled);
-workbenchRegistry.registerWorkbenchContribution(EnablePublishedTSLintExtension);
+workbenchRegistry.registerWorkbenchContribution(StatusUpdater, LifecyclePhase.Running);
+workbenchRegistry.registerWorkbenchContribution(KeymapExtensions, LifecyclePhase.Running);
+workbenchRegistry.registerWorkbenchContribution(BetterMergeDisabled, LifecyclePhase.Running);
+workbenchRegistry.registerWorkbenchContribution(EnablePublishedTSLintExtension, LifecyclePhase.Running);
 
 Registry.as<IOutputChannelRegistry>(OutputExtensions.OutputChannels)
 	.registerChannel(ExtensionsChannelId, ExtensionsLabel);

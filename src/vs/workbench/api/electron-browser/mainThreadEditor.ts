@@ -13,7 +13,7 @@ import { Range, IRange } from 'vs/editor/common/core/range';
 import { Selection, ISelection } from 'vs/editor/common/core/selection';
 import { SnippetController2 } from 'vs/editor/contrib/snippet/snippetController2';
 import { EndOfLine, TextEditorLineNumbersStyle, TextEditorRevealType } from 'vs/workbench/api/node/extHostTypes';
-import { TextEditorCursorStyle, cursorStyleToString } from 'vs/editor/common/config/editorOptions';
+import { TextEditorCursorStyle, cursorStyleToString, RenderLineNumbersType } from 'vs/editor/common/config/editorOptions';
 import { ICursorSelectionChangedEvent } from 'vs/editor/common/controller/cursorEvents';
 import { IViewZoneEvent, ExtHostEditorsShape, IResolvedTextEditorConfiguration, ISelectionChangeEvent, ITextEditorConfigurationUpdate, IApplyEditsOptions, IUndoStopOptions } from 'vs/workbench/api/node/extHost.protocol';
 import { MainThreadViewZone } from 'vs/workbench/api/electron-browser/mainThreadViewZone';
@@ -299,12 +299,16 @@ export class MainThreadTextEditor {
 			let codeEditorOpts = codeEditor.getConfiguration();
 			cursorStyle = codeEditorOpts.viewInfo.cursorStyle;
 
-			if (codeEditorOpts.viewInfo.renderRelativeLineNumbers) {
-				lineNumbers = TextEditorLineNumbersStyle.Relative;
-			} else if (codeEditorOpts.viewInfo.renderLineNumbers) {
-				lineNumbers = TextEditorLineNumbersStyle.On;
-			} else {
-				lineNumbers = TextEditorLineNumbersStyle.Off;
+			switch (codeEditorOpts.viewInfo.renderLineNumbers) {
+				case RenderLineNumbersType.Off:
+					lineNumbers = TextEditorLineNumbersStyle.Off;
+					break;
+				case RenderLineNumbersType.Relative:
+					lineNumbers = TextEditorLineNumbersStyle.Relative;
+					break;
+				default:
+					lineNumbers = TextEditorLineNumbersStyle.On;
+					break;
 			}
 		}
 

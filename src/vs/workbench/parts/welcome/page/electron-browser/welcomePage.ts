@@ -27,7 +27,7 @@ import { IMessageService, Severity, CloseAction } from 'vs/platform/message/comm
 import { getInstalledExtensions, IExtensionStatus, onExtensionChanged, isKeymapExtension } from 'vs/workbench/parts/extensions/electron-browser/extensionsUtils';
 import { IExtensionEnablementService, IExtensionManagementService, IExtensionGalleryService, IExtensionTipsService } from 'vs/platform/extensionManagement/common/extensionManagement';
 import { used } from 'vs/workbench/parts/welcome/page/electron-browser/sg_welcome_page';
-import { ILifecycleService, StartupKind, LifecyclePhase } from 'vs/platform/lifecycle/common/lifecycle';
+import { ILifecycleService, StartupKind } from 'vs/platform/lifecycle/common/lifecycle';
 import { IDisposable, dispose } from 'vs/base/common/lifecycle';
 import { IThemeService, registerThemingParticipant } from 'vs/platform/theme/common/themeService';
 import { registerColor, focusBorder, textLinkForeground, textLinkActiveForeground, foreground, descriptionForeground, contrastBorder, activeContrastBorder, welcomeButtonBackground, inputBackground, inputBorder, inputForeground, buttonBackground as editorButtonBackground, buttonHoverBackground as editorButtonHoverBackground } from 'vs/platform/theme/common/colorRegistry';
@@ -72,10 +72,7 @@ export class WelcomePageContribution implements IWorkbenchContribution {
 	) {
 		const enabled = isWelcomePageEnabled(configurationService);
 		if (enabled && lifecycleService.startupKind !== StartupKind.ReloadedWindow) {
-			TPromise.join([
-				backupFileService.hasBackups(),
-				lifecycleService.when(LifecyclePhase.Running)
-			]).then(([hasBackups]) => {
+			backupFileService.hasBackups().then(hasBackups => {
 				const activeInput = editorService.getActiveEditorInput();
 				if (!activeInput && !hasBackups) {
 					return instantiationService.createInstance(WelcomePage)

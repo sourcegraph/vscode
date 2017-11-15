@@ -524,7 +524,7 @@ suite('FileService', () => {
 
 	test('resolveFile', function (done: () => void) {
 		service.resolveFile(uri.file(testDir), { resolveTo: [uri.file(path.join(testDir, 'deep'))] }).done(r => {
-			assert.equal(r.children.length, 6);
+			assert.equal(r.children.length, 7);
 
 			const deep = utils.getByName(r, 'deep');
 			assert.equal(deep.children.length, 4);
@@ -540,7 +540,7 @@ suite('FileService', () => {
 		]).then(res => {
 			const r1 = res[0].stat;
 
-			assert.equal(r1.children.length, 6);
+			assert.equal(r1.children.length, 7);
 
 			const deep = utils.getByName(r1, 'deep');
 			assert.equal(deep.children.length, 4);
@@ -623,6 +623,33 @@ suite('FileService', () => {
 				});
 			});
 		}, error => onError(error, done));
+	});
+
+	test('resolveContent - large file', function (done: () => void) {
+		const resource = uri.file(path.join(testDir, 'lorem.txt'));
+
+		service.resolveContent(resource).done(c => {
+			assert.ok(c.value.length > 64000);
+
+			done();
+		}, error => onError(error, done));
+	});
+
+	test('Files are intermingled #38331', function () {
+		let resource1 = uri.file(path.join(testDir, 'lorem.txt'));
+		let resource2 = uri.file(path.join(testDir, 'some_utf16le.css'));
+		let value1: string;
+		let value2: string;
+		// load in sequence and keep data
+		return service.resolveContent(resource1).then(c => value1 = c.value).then(() => {
+			return service.resolveContent(resource2).then(c => value2 = c.value);
+		}).then(() => {
+			// load in parallel in expect the same result
+			return TPromise.join([
+				service.resolveContent(resource1).then(c => assert.equal(c.value, value1)),
+				service.resolveContent(resource2).then(c => assert.equal(c.value, value2))
+			]);
+		});
 	});
 
 	test('resolveContent - FILE_IS_BINARY', function (done: () => void) {

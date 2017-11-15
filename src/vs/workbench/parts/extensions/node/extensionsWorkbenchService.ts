@@ -179,12 +179,17 @@ class Extension implements IExtension {
 		}
 	}
 
+	get preview(): boolean {
+		return this.gallery ? this.gallery.preview : false;
+	}
+
 	getManifest(): TPromise<IExtensionManifest> {
 		if (this.gallery) {
 			if (this.gallery.assets.manifest) {
 				return this.galleryService.getManifest(this.gallery);
 			}
 			this.telemetryService.publicLog('extensions:NotFoundManifest', this.telemetryData);
+			return TPromise.wrapError<IExtensionManifest>(new Error('not available'));
 		}
 
 		return TPromise.as(this.local.manifest);

@@ -21,6 +21,7 @@ import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/edi
 import { ISCMService } from 'vs/workbench/services/scm/common/scm';
 import { StatusUpdater, StatusBarController } from './scmActivity';
 import { SCMViewlet } from 'vs/workbench/parts/scm/electron-browser/scmViewlet';
+import { LifecyclePhase } from 'vs/platform/lifecycle/common/lifecycle';
 
 class OpenSCMViewletAction extends ToggleViewletAction {
 
@@ -33,7 +34,7 @@ class OpenSCMViewletAction extends ToggleViewletAction {
 }
 
 Registry.as<IWorkbenchContributionsRegistry>(WorkbenchExtensions.Workbench)
-	.registerWorkbenchContribution(DirtyDiffWorkbenchController);
+	.registerWorkbenchContribution(DirtyDiffWorkbenchController, LifecyclePhase.Running);
 
 const viewletDescriptor = new ViewletDescriptor(
 	SCMViewlet,
@@ -47,10 +48,10 @@ Registry.as<ViewletRegistry>(ViewletExtensions.Viewlets)
 	.registerViewlet(viewletDescriptor);
 
 Registry.as(WorkbenchExtensions.Workbench)
-	.registerWorkbenchContribution(StatusUpdater);
+	.registerWorkbenchContribution(StatusUpdater, LifecyclePhase.Running);
 
 Registry.as(WorkbenchExtensions.Workbench)
-	.registerWorkbenchContribution(StatusBarController);
+	.registerWorkbenchContribution(StatusBarController, LifecyclePhase.Running);
 
 // Register Action to Open Viewlet
 Registry.as<IWorkbenchActionRegistry>(WorkbenchActionExtensions.WorkbenchActions).registerWorkbenchAction(
