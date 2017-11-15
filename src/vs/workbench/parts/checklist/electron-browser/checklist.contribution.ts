@@ -18,6 +18,7 @@ import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/edi
 import { ChecklistViewlet } from 'vs/workbench/parts/checklist/electron-browser/checklistViewlet';
 import { StatusUpdater } from './checklistActivity';
 import { DiagnosticsChecklistProvider } from './checklistDiagnostics';
+import { LifecyclePhase } from 'vs/platform/lifecycle/common/lifecycle';
 
 class OpenChecklistViewletAction extends ToggleViewletAction {
 
@@ -41,8 +42,8 @@ Registry.as<ViewletRegistry>(ViewletExtensions.Viewlets)
 	.registerViewlet(viewletDescriptor);
 
 const workbenchRegistry = Registry.as<IWorkbenchContributionsRegistry>(WorkbenchExtensions.Workbench);
-workbenchRegistry.registerWorkbenchContribution(StatusUpdater);
-workbenchRegistry.registerWorkbenchContribution(DiagnosticsChecklistProvider);
+workbenchRegistry.registerWorkbenchContribution(StatusUpdater, LifecyclePhase.Running);
+workbenchRegistry.registerWorkbenchContribution(DiagnosticsChecklistProvider, LifecyclePhase.Running);
 
 // Register Action to Open Viewlet
 Registry.as<IWorkbenchActionRegistry>(WorkbenchActionExtensions.WorkbenchActions).registerWorkbenchAction(

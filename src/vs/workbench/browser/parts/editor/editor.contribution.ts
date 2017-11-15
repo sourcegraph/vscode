@@ -43,6 +43,7 @@ import { isMacintosh } from 'vs/base/common/platform';
 import { IWorkbenchContributionsRegistry, Extensions as WorkbenchExtensions } from 'vs/workbench/common/contributions';
 import { EditorViewTelemetryHandler } from 'vs/workbench/browser/parts/editor/editorTelemetry';
 import { GroupOnePicker, GroupTwoPicker, GroupThreePicker, AllEditorsPicker } from 'vs/workbench/browser/parts/editor/editorPicker';
+import { LifecyclePhase } from 'vs/platform/lifecycle/common/lifecycle';
 
 // Register String Editor
 Registry.as<IEditorRegistry>(EditorExtensions.Editors).registerEditor(
@@ -418,5 +419,6 @@ if (isMacintosh) {
 
 // Register File Editor Tracker
 Registry.as<IWorkbenchContributionsRegistry>(WorkbenchExtensions.Workbench).registerWorkbenchContribution(
-	EditorViewTelemetryHandler
+	EditorViewTelemetryHandler,
+	LifecyclePhase.Running,
 );
