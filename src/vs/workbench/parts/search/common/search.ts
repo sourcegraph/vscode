@@ -8,7 +8,7 @@
 import { TPromise } from 'vs/base/common/winjs.base';
 import { onUnexpectedError } from 'vs/base/common/errors';
 import { IDisposable } from 'vs/base/common/lifecycle';
-import { ISearchConfiguration, ISearchProfile } from 'vs/platform/search/common/search';
+import { ISearchConfiguration } from 'vs/platform/search/common/search';
 import glob = require('vs/base/common/glob');
 import { SymbolInformation } from 'vs/editor/common/modes';
 import { IEditorGroupService } from 'vs/workbench/services/group/common/groupService';
@@ -71,7 +71,6 @@ export interface IWorkbenchSearchConfiguration extends ISearchConfiguration {
 		},
 		exclude: glob.IExpression,
 		useRipgrep: boolean,
-		profiles: ISearchProfile[],
 		/**
 		 * Use ignore file for file search.
 		 */
