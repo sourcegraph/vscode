@@ -115,12 +115,6 @@ function getContextMenuActions(environmentService: IEnvironmentService, params: 
 	webviewPasteAction.enabled = params.editFlags.canPaste;
 	webviewSelectAllAction.enabled = params.editFlags.canSelectAll;
 
-	const addSeparator = () => {
-		if (actions.length > 0 && !(actions[actions.length - 1] instanceof Separator)) {
-			actions.push(new Separator());
-		}
-	};
-
 	const actions: IAction[] = [];
 	if (params.isEditable) {
 		actions.push(
@@ -129,29 +123,37 @@ function getContextMenuActions(environmentService: IEnvironmentService, params: 
 		);
 	}
 	if (params.isEditable || params.editFlags.canCut || params.editFlags.canCopy || params.editFlags.canPaste) {
-		addSeparator();
 		actions.push(
+			new Separator(),
 			webviewCutAction,
 			webviewCopyAction,
 			webviewPasteAction,
 		);
 	}
 	if (params.linkURL) {
-		addSeparator();
-		actions.push(webviewCopyLinkAddressAction);
+		actions.push(
+			new Separator(),
+			webviewCopyLinkAddressAction,
+		);
 	}
 	if (params.hasImageContents) {
-		addSeparator();
-		actions.push(webviewOpenImageAction);
-		actions.push(webviewCopyImageAddressAction);
+		actions.push(
+			new Separator(),
+			webviewOpenImageAction,
+			webviewCopyImageAddressAction,
+		);
 	}
 	if (params.editFlags.canSelectAll) {
-		addSeparator();
-		actions.push(webviewSelectAllAction);
+		actions.push(
+			new Separator(),
+			webviewSelectAllAction,
+		);
 	}
 	if (!environmentService.isBuilt && !environmentService.extensionTestsPath) {
-		addSeparator();
-		actions.push(webviewInspectElementAction);
+		actions.push(
+			new Separator(),
+			webviewInspectElementAction,
+		);
 	}
 	return actions;
 }
@@ -341,6 +343,9 @@ export class MainThreadViewZone extends PeekViewWidget {
 				if (!contents || contents.isDestroyed()) {
 					return;
 				}
+				// This any cast and undocumented Electron getOwnerBrowserWindow
+				// method are used in webview.ts as well, so presumably this is
+				// necessary.
 				const window = (contents as any).getOwnerBrowserWindow();
 				if (!window || !window.webContents || window.webContents.isDestroyed()) {
 					return;
