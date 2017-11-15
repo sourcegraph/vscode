@@ -5,7 +5,7 @@
 'use strict';
 
 import { localize } from 'vs/nls';
-import { CREATE_CODE_COMMENT_ACTION_LABEL, SHARE_SNIPPET_ACTION_LABEL, VIEWLET_ID } from 'vs/workbench/parts/codeComments/common/constants';
+import { CREATE_CODE_COMMENT_ACTION_LABEL, SHARE_SNIPPET_ACTION_LABEL, VIEWLET_ID, CREATE_COMMENT_ACTION_ID } from 'vs/workbench/parts/codeComments/common/constants';
 import { ToggleViewletAction } from 'vs/workbench/browser/viewlet';
 import { IViewletService } from 'vs/workbench/services/viewlet/browser/viewlet';
 import { IWorkbenchEditorService } from 'vs/workbench/services/editor/common/editorService';
@@ -49,7 +49,7 @@ export class OpenCodeCommentsViewletAction extends ToggleViewletAction {
  */
 export class CreateCodeCommentAction extends EditorAction {
 
-	private static ID = 'workbench.action.createCodeComment';
+	private static ID = CREATE_COMMENT_ACTION_ID;
 
 	constructor() {
 		super({

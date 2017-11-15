@@ -7,6 +7,7 @@
 import { localize } from 'vs/nls';
 
 export const VIEWLET_ID = 'workbench.view.codeComments';
+export const CREATE_COMMENT_ACTION_ID = 'editor.action.createCodeComment';
 export const CREATE_CODE_COMMENT_ACTION_LABEL = localize('createCodeCommentActionLabel', "Comment");
 export const SHARE_SNIPPET_ACTION_LABEL = localize('shareActionLabel', "Share Snippet");
 

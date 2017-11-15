@@ -16,7 +16,7 @@ import { registerSingleton } from 'vs/platform/instantiation/common/extensions';
 import { ICodeCommentsService } from 'vs/editor/browser/services/codeCommentsService';
 import { CodeCommentsService } from 'vs/workbench/services/codeComments/electron-browser/codeCommentsService';
 import { IKeybindings } from 'vs/platform/keybinding/common/keybindingsRegistry';
-import { SyncActionDescriptor } from 'vs/platform/actions/common/actions';
+import { SyncActionDescriptor, MenuId, MenuRegistry } from 'vs/platform/actions/common/actions';
 import { KeyMod, KeyCode } from 'vs/base/common/keyCodes';
 import { OpenCodeCommentsViewletAction } from 'vs/workbench/parts/codeComments/electron-browser/codeCommentsActions';
 import { CodeCommentsViewlet } from 'vs/workbench/parts/codeComments/electron-browser/codeCommentsViewlet';
@@ -53,7 +53,7 @@ actionRegistry.registerWorkbenchAction(
 
 export class CodeCommentsQuickOpenAction extends QuickOpenAction {
 	public static readonly ID = 'workbench.action.comments';
-	public static readonly LABEL = localize('comments', "Comments");
+	public static readonly LABEL = Constants.CommentsLabel;
 
 	constructor(actionId: string, actionLabel: string, @IQuickOpenService quickOpenService: IQuickOpenService) {
 		super(actionId, actionLabel, CodeCommentsQuickOpenHandler.PREFIX, quickOpenService);
@@ -69,6 +69,11 @@ actionRegistry.registerWorkbenchAction(new SyncActionDescriptor(CodeCommentsQuic
 		CodeCommentsQuickOpenHandler.ID,
 		CodeCommentsQuickOpenHandler.PREFIX,
 		'reviewItemsPicker',
-		localize('comments', "Comments")
+		Constants.CommentsLabel
 	)
 );
+
+MenuRegistry.appendMenuItem(MenuId.EditorTitle, {
+	command: { id: Constants.CREATE_COMMENT_ACTION_ID, title: Constants.CREATE_CODE_COMMENT_ACTION_LABEL },
+	group: 'navigation',
+});
