@@ -1,0 +1,64 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Sourcegraph. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+body {
+	/* Reset the padding so our comment dividers can we full width */
+	padding: 0;
+}
+
+.comment {
+	padding: 16px 20px;
+}
+
+form {
+	padding: 16px 20px 8px 20px;
+}
+
+.header {
+	display: flex;
+}
+
+.author {
+	flex-grow: 1;
+}
+
+.timeAgo {
+	flex-shrink: 0;
+}
+
+.contents {
+	white-space: pre-wrap;
+}
+
+.border {
+	border-top: 1px solid var(--peek-view-border);
+}
+
+textarea {
+	width: 100%;
+	padding: 8px 12px;
+	overflow: hidden;
+}
+
+textarea:focus {
+	border: none;
+}
+
+.submit {
+	display: flex;
+	margin-top: 8px;
+}
+
+.hint {
+	flex-grow: 1;
+}
+
+button,
+input[type="submit"] {
+	flex-grow: 0;
+	flex-shrink: 0;
+	padding: 8px 16px;
+	margin-left: 8px;
+}

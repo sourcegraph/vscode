@@ -10,11 +10,12 @@ import { TPromise } from 'vs/base/common/winjs.base';
 import { IDisposable, dispose } from 'vs/base/common/lifecycle';
 import Event, { Emitter } from 'vs/base/common/event';
 import { addDisposableListener, addClass } from 'vs/base/browser/dom';
-import { editorBackground, editorForeground } from 'vs/platform/theme/common/colorRegistry';
+import { editorBackground, editorForeground, buttonForeground, buttonBackground, buttonHoverBackground, contrastBorder, inputForeground, inputBackground, focusBorder } from 'vs/platform/theme/common/colorRegistry';
 import { ITheme, LIGHT, DARK } from 'vs/platform/theme/common/themeService';
 import { WebviewFindWidget } from './webviewFindWidget';
 import { IContextViewService } from 'vs/platform/contextview/browser/contextView';
 import { IContextKey } from 'vs/platform/contextkey/common/contextkey';
+import { peekViewBorder } from 'vs/editor/contrib/referenceSearch/referencesWidget';
 
 export declare interface WebviewElement extends HTMLElement {
 	src: string;
@@ -278,7 +279,7 @@ export default class Webview {
 	}
 
 	style(theme: ITheme): void {
-		const { fontFamily, fontWeight, fontSize } = window.getComputedStyle(this._styleElement); // TODO@theme avoid styleElement
+		const { fontFamily, fontWeight, fontSize, lineHeight } = window.getComputedStyle(this._styleElement); // TODO@theme avoid styleElement
 
 		let value = `
 		:root {
@@ -287,6 +288,8 @@ export default class Webview {
 			--font-family: ${fontFamily};
 			--font-weight: ${fontWeight};
 			--font-size: ${fontSize};
+			--line-height: ${lineHeight};
+			--peek-view-border: ${theme.getColor(peekViewBorder)};
 		}
 		body {
 			background-color: var(--background-color);
@@ -294,6 +297,7 @@ export default class Webview {
 			font-family: var(--font-family);
 			font-weight: var(--font-weight);
 			font-size: var(--font-size);
+			line-height: var(--line-height);
 			margin: 0;
 			padding: 0 20px;
 		}
@@ -302,11 +306,47 @@ export default class Webview {
 			max-width: 100%;
 			max-height: 100%;
 		}
+
+		button,
+		input[type="button"],
+		input[type="submit"],
+		input[type="reset"] {
+			font: inherit;
+			cursor: pointer;
+			color: ${theme.getColor(buttonForeground)};
+			background-color: ${theme.getColor(buttonBackground)};
+			border: 1px solid ${theme.getColor(contrastBorder) || 'transparent'};
+			outline: none;
+		}
+
+		button.secondary,
+		input[type="button"].secondary,
+		input[type="submit"].secondary,
+		input[type="reset"].secondary {
+			background-color: ${theme.getColor(editorBackground)};
+		}
+
+		button:hover,
+		input[type="button"]:hover,
+		input[type="submit"]:hover,
+		input[type="reset"]:hover {
+			background-color: ${theme.getColor(buttonHoverBackground)};
+		}
+
+		textarea {
+			font: inherit;
+			color: ${theme.getColor(inputForeground)};
+			background-color: ${theme.getColor(inputBackground)};
+			border: none;
+			box-sizing: border-box;
+			resize: none;
+		}
+
 		a:focus,
 		input:focus,
 		select:focus,
 		textarea:focus {
-			outline: 1px solid -webkit-focus-ring-color;
+			outline: 1px solid ${theme.getColor(focusBorder)};
 			outline-offset: -1px;
 		}
 		::-webkit-scrollbar {

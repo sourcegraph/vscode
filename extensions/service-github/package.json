@@ -21,6 +21,11 @@
         "command": "github.pullRequests.quickopen",
         "title": "%command.pullRequests.quickopen%",
         "category": "GitHub"
+      },
+      {
+        "command": "github.pullRequests.composeLineComment",
+        "title": "%command.pullRequests.composeLineComment%",
+        "category": "GitHub"
       }
     ],
     "menus": {
@@ -28,6 +33,17 @@
         {
           "command": "github.pullRequests.quickopen",
           "when": "config.git.enabled && gitOpenRepositoryCount != 0"
+        },
+        {
+          "command": "github.pullRequests.composeLineComment",
+          "when": "githubCanComposeLineComment"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "github.pullRequests.composeLineComment",
+          "when": "githubCanComposeLineComment",
+          "group": "1_github"
         }
       ],
       "scm/title": [

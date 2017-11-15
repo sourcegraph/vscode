@@ -11,6 +11,8 @@ import * as cp from 'child_process';
 import { Model } from './model';
 import { ChecklistController } from './checklist';
 import { initialize as initializeLogger } from './log';
+import { DraftLineCommentManager } from './viewZone';
+import { pickPullRequest } from './pullRequests';
 // Add support for sourcemaps in stack traces during development
 if (~~process.env.VSCODE_DEV) {
 	require('source-map-support/register');
@@ -40,6 +42,7 @@ const repoFields = [
 ].join('\n');
 
 export function activate(context: vscode.ExtensionContext): void {
+	const outputChannel = vscode.window.createOutputChannel('GitHub');
 	context.subscriptions.push(initializeLogger());
 	const githubURL = vscode.workspace.getConfiguration('github').get<string>('url') || 'https://github.com';
 	const githubHost = vscode.Uri.parse(githubURL).authority;
@@ -52,6 +55,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
 	const checklistController = new ChecklistController(model);
 	context.subscriptions.push(checklistController);
+	context.subscriptions.push(new DraftLineCommentManager(model, outputChannel));
 
 	context.subscriptions.push(vscode.workspace.registerResourceResolutionProvider(GITHUB_SCHEME, {
 		async resolveResource(resource: vscode.Uri): Promise<vscode.Uri> {
@@ -164,22 +168,6 @@ export function activate(context: vscode.ExtensionContext): void {
 			return;
 		}
 
-		type Ref = {
-			name: string;
-			repository: { nameWithOwner: string };
-			target: { oid: string };
-		};
-
-		type PullRequest = {
-			number: number;
-			title: string;
-			author: { login: string };
-			updatedAt: string;
-			baseRef: Ref;
-			headRef: Ref;
-			isCrossRepository: boolean;
-		};
-
 		if (!sourceControl.remoteResources) {
 			vscode.window.showErrorMessage(localize('noRemotes', "Unable to determine remote repository for the selected local repository."));
 			return;
@@ -194,7 +182,7 @@ export function activate(context: vscode.ExtensionContext): void {
 			return;
 		}
 
-		const pullRequests = Promise.all(gitHubRemotes.map(parts => queryGraphQL(`
+		const pullRequests = await Promise.all(gitHubRemotes.map(parts => queryGraphQL(`
 			query($owner: String!, $name: String!) {
 				repository(owner: $owner, name: $name) {
 					nameWithOwner
@@ -237,42 +225,29 @@ export function activate(context: vscode.ExtensionContext): void {
 				throw error;
 			});
 
-		interface PullRequestItem extends vscode.QuickPickItem {
-			pullRequest: GitHubGQL.IPullRequest;
-		}
-		const choice = await vscode.window.showQuickPick(pullRequests.then(pullRequests => pullRequests
-			.filter(pullRequest => !!pullRequest.headRef) // The head repo can be deleted for a PR
-			.map(pullRequest => ({
-				label: `$(git-pull-request) ${pullRequest.title}`,
-				description: `#${pullRequest.number}`,
-				detail: `${pullRequest.headRef && pullRequest.headRef.name} — @${pullRequest.author && pullRequest.author.login}`,
-				pullRequest,
-			}))
-		));
-
-		if (!choice) {
+		const pullRequest = await pickPullRequest(pullRequests);
+		if (!pullRequest) {
 			return;
 		}
-
-		if (!choice.pullRequest.headRef) {
+		if (!pullRequest.headRef) {
 			throw new Error('No headRef');
 		}
 
-		if (!choice.pullRequest.baseRef) {
-			throw new Error('No headRef');
+		if (!pullRequest.baseRef) {
+			throw new Error('No baseRef');
 		}
 
-		await Promise.all([choice.pullRequest.baseRef, choice.pullRequest.headRef].map(async ref => {
+		await Promise.all([pullRequest.baseRef, pullRequest.headRef].map(async ref => {
 			const [name, owner] = ref.repository.nameWithOwner.split('/');
 			const cloneURL = await github.cloneURL(nameAndOwnerToResource(name, owner));
 			await vscode.commands.executeCommand('git.fetchCommitFromRemoteRef', sourceControl, cloneURL, ref.name, ref.target.oid);
 		}));
 
 		// Set head revision
-		const setRevisionArgs = (setRevisionCommand.arguments || []).concat(choice.pullRequest.headRef.target.oid);
+		const setRevisionArgs = (setRevisionCommand.arguments || []).concat(pullRequest.headRef.target.oid);
 		await vscode.commands.executeCommand(setRevisionCommand.command, ...setRevisionArgs);
 
-		const mergeBase = (await vscode.commands.executeCommand('git.mergeBase', sourceControl, choice.pullRequest.baseRef.target.oid, 'HEAD') as string[])[0].slice(0, 7);
+		const mergeBase = (await vscode.commands.executeCommand('git.mergeBase', sourceControl, pullRequest.baseRef.target.oid, 'HEAD') as string[])[0].slice(0, 7);
 
 		// Open comparison against merge base
 		await vscode.commands.executeCommand('git.openComparison', sourceControl, mergeBase);

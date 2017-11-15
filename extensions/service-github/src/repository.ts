@@ -8,6 +8,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { debounce, throttle } from './decorators';
 import { queryGraphQL, dispose, filterEvent, eventToPromise, timeout, execGit, toDisposable } from './util';
+import { commentFieldsFragment, pullRequestReviewFieldsFragment } from './graphql';
 
 export interface GitHubRemote {
 	/**
@@ -52,7 +53,7 @@ export interface RepositoryState {
 	status?: GitHubGQL.IStatus;
 
 	/**
-	 * The pull request for this branch if exists
+	 * The pulls requests associated with this branch.
 	 */
 	pullRequests?: GitHubGQL.IPullRequest[];
 }
@@ -129,8 +130,8 @@ export class Repository implements vscode.Disposable {
 		}
 	}
 
-	private async exec(args: string[]): Promise<string> {
-		return execGit(args, this.worktreeDir.fsPath);
+	public async exec(args: string[], stdin?: string): Promise<string> {
+		return execGit(args, this.worktreeDir.fsPath, stdin);
 	}
 
 	private async update(): Promise<void> {
@@ -167,7 +168,17 @@ export class Repository implements vscode.Disposable {
 								title
 								url
 								closed
-								createdAt
+								isCrossRepository
+								baseRef {
+									target {
+										oid
+									}
+								}
+								headRef {
+									target {
+										oid
+									}
+								}
 								...CommentFields
 								commits(first: 100) {
 									totalCount
@@ -190,7 +201,6 @@ export class Repository implements vscode.Disposable {
 									totalCount
 									nodes {
 										id
-										createdAt
 										...CommentFields
 									}
 								}
@@ -207,36 +217,15 @@ export class Repository implements vscode.Disposable {
 								reviews(first: 100) {
 									totalCount
 									nodes {
-										...CommentFields
-										state
-										url
-										createdAt
-										comments(first: 100) {
-											totalCount
-											nodes {
-												...CommentFields
-												position
-												url
-												createdAt
-												replyTo {
-													id
-												}
-											}
-										}
+										...PullRequestReviewFields
 									}
 								}
 							}
 						}
 					}
 				}
-				fragment CommentFields on Comment {
-					body
-					author {
-						avatarUrl
-						login
-						url
-					}
-				}
+				${commentFieldsFragment}
+				${pullRequestReviewFieldsFragment}
 			`, {
 					owner: this.currentGitHubRemote.owner,
 					name: this.currentGitHubRemote.name,

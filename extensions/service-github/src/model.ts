@@ -45,6 +45,18 @@ export class Model implements vscode.Disposable {
 		}
 	}
 
+	public repositoryForResource(resource: vscode.Uri): Repository | undefined {
+		let folder = resource.toString();
+		while (folder.length > 0 && folder !== '.') {
+			const repository = this._repositoriesByWorkspaceFolder.get(folder);
+			if (repository) {
+				return repository.repository;
+			}
+			folder = path.dirname(folder);
+		}
+		return undefined;
+	}
+
 	@throttle
 	private async handleWorkspaceFolderChange(e: vscode.WorkspaceFoldersChangeEvent): Promise<void> {
 		const change: ModelChangeEvent = {

@@ -750,6 +750,11 @@ declare module 'vscode' {
 		 * A view zone is a full horizontal rectangle that 'pushes' text down. The editor reserves
 		 * space for zones when rendering.
 		 *
+		 * To debug the content of a view zone (which is rendered inside of an embedded web view):
+		 * 1. Open your JS console
+		 * 2. Get a reference to the webview node that you want to inspect and call `.openDevTools()` on it.
+		 *     e.g. `$('webview').openDevTools()`
+		 *
 		 * @param id An `id` for the view zone. Multiple view zones with the same `id` are allowed.
 		 * @param contents The contents of the view zone.
 		 * @return The view zone.

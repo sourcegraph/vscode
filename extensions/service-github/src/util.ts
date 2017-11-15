@@ -10,6 +10,7 @@ import { default as fetch, RequestInit, Headers } from 'node-fetch';
 import * as https from 'https';
 import * as nls from 'vscode-nls';
 import * as cp from 'child_process';
+import * as util from 'util';
 
 const localize = nls.loadMessageBundle();
 
@@ -17,12 +18,25 @@ export function timeout(millis: number): Promise<void> {
 	return new Promise(c => setTimeout(c, millis));
 }
 
-export interface GraphQLQueryResponseRoot {
+export interface QueryResult {
 	data?: GitHubGQL.IQuery;
 	errors?: GitHubGQL.IGraphQLResponseError[];
 }
 
-export async function queryGraphQL(query: string, variables: { [name: string]: any }): Promise<GraphQLQueryResponseRoot> {
+export interface MutationResult {
+	data?: GitHubGQL.IMutation;
+	errors?: GitHubGQL.IGraphQLResponseError[];
+}
+
+export async function queryGraphQL(query: string, variables: { [name: string]: any }): Promise<QueryResult> {
+	return requestGraphQL(query, variables) as QueryResult;
+}
+
+export async function mutateGraphQL(query: string, variables: { [name: string]: any }): Promise<MutationResult> {
+	return requestGraphQL(query, variables) as MutationResult;
+}
+
+export async function requestGraphQL(query: string, variables: { [name: string]: any }): Promise<GitHubGQL.IGraphQLResponseRoot> {
 	let githubURL = vscode.workspace.getConfiguration('github').get<string>('url');
 	let githubEnterprise = false;
 	if (githubURL) {
@@ -67,8 +81,11 @@ export function distinct<V, K>(array: V[], key: (v: V) => K): V[] {
 	});
 }
 
-export const execGit = (args: string[], cwd: string): Promise<string> => new Promise<string>((resolve, reject) => {
-	cp.execFile('git', args, { cwd, encoding: 'utf8' }, (err, stdout, stderr) => err ? reject(err) : resolve(stdout.trim()));
+export const execGit = (args: string[], cwd: string, stdin?: string): Promise<string> => new Promise<string>((resolve, reject) => {
+	const child = cp.execFile('git', args, { cwd, encoding: 'utf8' }, (err, stdout, stderr) => err ? reject(err) : resolve(stdout.trim()));
+	if (stdin !== undefined) {
+		child.stdin.end(stdin, 'utf8');
+	}
 });
 
 export interface IDisposable {

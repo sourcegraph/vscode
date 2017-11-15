@@ -16,7 +16,6 @@ import { Color } from 'vs/base/common/color';
 import { IViewZoneEvent } from 'vs/workbench/api/node/extHost.protocol';
 import { KeybindingsRegistry } from 'vs/platform/keybinding/common/keybindingsRegistry';
 import { KeyCode, KeyMod } from 'vs/base/common/keyCodes';
-import { ServicesAccessor } from 'vs/platform/instantiation/common/instantiation';
 import { IEditorContribution } from 'vs/editor/common/editorCommon';
 import { IOpenerService } from 'vs/platform/opener/common/opener';
 import { addDisposableListener } from 'vs/base/browser/dom';
@@ -35,6 +34,8 @@ import { PeekViewWidget } from 'vs/editor/contrib/referenceSearch/peekViewWidget
 import { peekViewBorder, peekViewTitleBackground, peekViewTitleForeground, peekViewTitleInfoForeground } from 'vs/editor/contrib/referenceSearch/referencesWidget';
 import { registerEditorContribution } from 'vs/editor/browser/editorExtensions';
 import { ICodeEditorService } from 'vs/editor/browser/services/codeEditorService';
+import { ICommandHandler } from 'vs/platform/commands/common/commands';
+import { WebviewTag } from 'electron';
 
 // TODO(sqs): allow creating ZoneWidgets (not PeekViewWidgets), for extensions that don't need
 // to render a header.
@@ -117,6 +118,14 @@ export class MainThreadViewZone extends PeekViewWidget {
 		this.create();
 	}
 
+	public get focused(): boolean {
+		return this.focusContextKey.get();
+	}
+
+	public get webviewTag(): WebviewTag {
+		return this.webview.domNode as WebviewTag;
+	}
+
 	/**
 	 * Handles an event from the extension host.
 	 */
@@ -197,6 +206,7 @@ export class MainThreadViewZone extends PeekViewWidget {
 				insertCss: 'body { overflow: hidden; }',
 			},
 		);
+		this.webview.ready.then(w => w.focus());
 
 		// Set initial width to eliminate a height computation roundtrip.
 		this.webview.domNode.style.width = this._getWidth() + 'px';
@@ -310,6 +320,16 @@ class TextEditorViewZoneController extends Disposable implements IEditorContribu
 		this.viewZoneVisibleContextKey.set(true);
 	}
 
+	public getFocusedViewZone(): MainThreadViewZone {
+		let focusedViewZone: MainThreadViewZone;
+		this.viewZones.forEach(viewZone => {
+			if (viewZone.focused) {
+				focusedViewZone = viewZone;
+			}
+		});
+		return focusedViewZone;
+	}
+
 	public unregister(viewZone: MainThreadViewZone): void {
 		this.viewZones.delete(viewZone);
 	}
@@ -330,18 +350,60 @@ KeybindingsRegistry.registerCommandAndKeybindingRule({
 	primary: KeyCode.Escape,
 	secondary: [KeyMod.Shift | KeyCode.Escape],
 	when: viewZoneVisibleContextKey,
-	handler: (accessor: ServicesAccessor) => {
+	handler: getTextEditorViewZoneHandler(controller => controller.close()),
+});
+
+KeybindingsRegistry.registerCommandAndKeybindingRule({
+	id: 'textEditorViewZoneSelectAll',
+	weight: KeybindingsRegistry.WEIGHT.editorContrib(),
+	handler: getTextEditorViewZoneHandler(controller => {
+		controller.getFocusedViewZone().webviewTag.selectAll();
+	}),
+	when: KEYBINDING_CONTEXT_WEBVIEWEDITOR_FOCUS,
+	primary: KeyMod.CtrlCmd | KeyCode.KEY_A
+});
+
+KeybindingsRegistry.registerCommandAndKeybindingRule({
+	id: 'textEditorViewZoneCut',
+	weight: KeybindingsRegistry.WEIGHT.editorContrib(),
+	handler: getTextEditorViewZoneHandler(controller => {
+		controller.getFocusedViewZone().webviewTag.cut();
+	}),
+	when: KEYBINDING_CONTEXT_WEBVIEWEDITOR_FOCUS,
+	primary: KeyMod.CtrlCmd | KeyCode.KEY_X
+});
+
+KeybindingsRegistry.registerCommandAndKeybindingRule({
+	id: 'textEditorViewZoneCopy',
+	weight: KeybindingsRegistry.WEIGHT.editorContrib(),
+	handler: getTextEditorViewZoneHandler(controller => {
+		controller.getFocusedViewZone().webviewTag.copy();
+	}),
+	when: KEYBINDING_CONTEXT_WEBVIEWEDITOR_FOCUS,
+	primary: KeyMod.CtrlCmd | KeyCode.KEY_C
+});
+
+KeybindingsRegistry.registerCommandAndKeybindingRule({
+	id: 'textEditorViewZonePaste',
+	weight: KeybindingsRegistry.WEIGHT.editorContrib(),
+	handler: getTextEditorViewZoneHandler(controller => {
+		controller.getFocusedViewZone().webviewTag.paste();
+	}),
+	when: KEYBINDING_CONTEXT_WEBVIEWEDITOR_FOCUS,
+	primary: KeyMod.CtrlCmd | KeyCode.KEY_V
+});
+
+
+function getTextEditorViewZoneHandler(handler: (controller: TextEditorViewZoneController) => void): ICommandHandler {
+	return accessor => {
 		const editor = accessor.get(ICodeEditorService).getFocusedCodeEditor();
 		if (!editor) {
 			return;
 		}
-
 		const controller = TextEditorViewZoneController.get(editor);
-
 		if (!controller) {
 			return;
 		}
-
-		controller.close();
-	}
-});
+		handler(controller);
+	};
+}
