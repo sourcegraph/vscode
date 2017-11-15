@@ -194,7 +194,7 @@ export class Resource implements SourceControlResourceState {
 		return { strikeThrough, faded, tooltip, light, dark, letter, color, source: 'git.resource' /*todo@joh*/ };
 	}
 
-	get letter(): string | undefined {
+	get letter(): string {
 		switch (this.type) {
 			case Status.INDEX_MODIFIED:
 			case Status.MODIFIED:
@@ -206,6 +206,7 @@ export class Resource implements SourceControlResourceState {
 			case Status.DELETED:
 				return 'D';
 			case Status.INDEX_RENAMED:
+			case Status.RENAMED:
 				return 'R';
 			case Status.UNTRACKED:
 				return 'U';
@@ -221,12 +222,10 @@ export class Resource implements SourceControlResourceState {
 			case Status.BOTH_ADDED:
 			case Status.BOTH_MODIFIED:
 				return 'C';
-			default:
-				return undefined;
 		}
 	}
 
-	get color(): ThemeColor | undefined {
+	get color(): ThemeColor {
 		switch (this.type) {
 			case Status.INDEX_MODIFIED:
 			case Status.MODIFIED:
@@ -237,6 +236,7 @@ export class Resource implements SourceControlResourceState {
 			case Status.ADDED:
 			case Status.INDEX_ADDED: // todo@joh - special color?
 			case Status.INDEX_RENAMED: // todo@joh - special color?
+			case Status.RENAMED:
 			case Status.UNTRACKED:
 				return new ThemeColor('gitDecoration.untrackedResourceForeground');
 			case Status.IGNORED:
@@ -251,8 +251,6 @@ export class Resource implements SourceControlResourceState {
 			case Status.BOTH_ADDED:
 			case Status.BOTH_MODIFIED:
 				return new ThemeColor('gitDecoration.conflictingResourceForeground');
-			default:
-				return undefined;
 		}
 	}
 
