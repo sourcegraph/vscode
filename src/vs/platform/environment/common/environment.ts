@@ -116,6 +116,9 @@ export interface IEnvironmentService {
 	disableUpdates: boolean;
 	disableCrashReporter: boolean;
 
+	settingsSearchUrl: string;
+
+	// Sourcegraph specific
 	sourcegraphContext: JSContext;
 	eventLogDebug: boolean;
 }

@@ -12,9 +12,8 @@ import { Builder, $ } from 'vs/base/browser/builder';
 import * as DOM from 'vs/base/browser/dom';
 import { Part } from 'vs/workbench/browser/part';
 import { RunOnceScheduler } from 'vs/base/common/async';
-import { IAction, Action } from 'vs/base/common/actions';
+import { IAction, Action, IRunEvent } from 'vs/base/common/actions';
 import { prepareActions } from 'vs/workbench/browser/actions';
-import { EventType as BaseEventType } from 'vs/base/common/events';
 import { chain } from 'vs/base/common/event';
 import { domEvent } from 'vs/base/browser/event';
 import { StandardKeyboardEvent } from 'vs/base/browser/keyboardEvent';
@@ -221,7 +220,7 @@ export class NavbarPart extends Part implements INavBarService, INavBarPart {
 		this.navigationActionsToolbar.setActions(primaryActions)();
 
 		// Action Run Handling
-		this.toUnbind.push(this.navigationActionsToolbar.actionRunner.addListener(BaseEventType.RUN, e => this.didRunAction(e)));
+		this.toUnbind.push(this.navigationActionsToolbar.actionRunner.onDidRun(e => this.didRunAction(e)));
 	}
 
 	private createLocationActionsToolbar(container: HTMLElement): void {
@@ -246,10 +245,10 @@ export class NavbarPart extends Part implements INavBarService, INavBarPart {
 		this.locationActionsToolbar.setActions(primaryActions, secondaryActions)();
 
 		// Action Run Handling
-		this.toUnbind.push(this.locationActionsToolbar.actionRunner.addListener(BaseEventType.RUN, e => this.didRunAction(e)));
+		this.toUnbind.push(this.locationActionsToolbar.actionRunner.onDidRun(e => this.didRunAction(e)));
 	}
 
-	private didRunAction(e: any): void {
+	private didRunAction(e: IRunEvent): void {
 		// Check for Error
 		if (e.error && !errors.isPromiseCanceledError(e.error)) {
 			this.messageService.show(Severity.Error, e.error);

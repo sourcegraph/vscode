@@ -39,13 +39,6 @@ import { CursorChangeReason } from 'vs/editor/common/controller/cursorEvents';
 import { IMessageService } from 'vs/platform/message/common/message';
 import { IResourceResolverService } from 'vs/platform/resourceResolver/common/resourceResolver';
 
-/**
- * @internal
- */
-export function setupServices(overrides: IEditorOverrideServices): any {
-	return StaticServices.init(overrides);
-}
-
 function withAllStandaloneServices<T extends editorCommon.IEditor>(domElement: HTMLElement, override: IEditorOverrideServices, callback: (services: DynamicStandaloneServices) => T): T {
 	let services = new DynamicStandaloneServices(domElement, override);
 

@@ -56,7 +56,6 @@ import { IWorkspaceEditingService } from 'vs/workbench/services/workspace/common
 import { getPathLabel } from 'vs/base/common/labels';
 import { extractResources } from 'vs/workbench/browser/editor';
 import { ActionBar, ActionItem } from 'vs/base/browser/ui/actionbar/actionbar';
-import { EventType } from 'vs/base/common/events';
 import { RemoveRootFolderAction } from 'vs/workbench/browser/actions/workspaceActions';
 import { ISCMService, ISCMRepository } from 'vs/workbench/services/scm/common/scm';
 import { ICommandService } from 'vs/platform/commands/common/commands';
@@ -339,7 +338,8 @@ export class FileRenderer implements IRenderer {
 				return undefined; // fall back to default
 			},
 		});
-		actions.addListener(EventType.RUN, ({ error }) => error && this.messageService.show(Severity.Error, error));
+		// TODO returns a disposable
+		actions.onDidRun(({ error }) => error && this.messageService.show(Severity.Error, error));
 
 		return { label, actions, container };
 	}

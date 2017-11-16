@@ -991,7 +991,7 @@ export interface ITokenizationRegistry {
 	setColorMap(colorMap: Color[]): void;
 
 	getColorMap(): Color[];
-	getDefaultForeground(): Color;
+
 	getDefaultBackground(): Color;
 }
 
