@@ -1,5 +1,14 @@
 # URI handling spec
 
+## NOTES
+
+My (@sqs) work so far has been the following (along with recommended TODOs for @felixfbecker):
+
+1. I added tests in extensions/git/src/test/resolver.test.ts for the current git behavior. These were flaky on CI, so I skipped them for now on master. Adding more sleeps on the branch `test-git-resolver2` makes them pass. TODO: Make these tests reliable. We will need the (similar) tests for the new behavior to be reliable, so this is worth getting right.
+2. I worked on the uri-handling branch. See those commit messages. I also added the first impl and test for *cross-window* resolution in a commit on that branch.
+
+---------
+
 External applications (such as a web browser) need to open the following things in the editor:
 
 - a specific branch of a repository diffed against another revision (for code review); and
