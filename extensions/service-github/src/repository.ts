@@ -6,7 +6,6 @@
 
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { debounce } from './decorators';
 import { queryGraphQL, dispose, execGit } from './util';
 import { commentFieldsFragment, pullRequestReviewFieldsFragment } from './graphql';
 import { clearTimeout } from 'timers';
@@ -117,7 +116,6 @@ export class Repository implements vscode.Disposable {
 		}, this.updateInterval);
 	}
 
-	@debounce(1000)
 	private async update(): Promise<void> {
 		// Make sure update gets called at least every updateInterval seconds.
 		// If update gets called for other reasons, we reschedule the next update.
