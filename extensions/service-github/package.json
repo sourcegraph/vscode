@@ -26,6 +26,33 @@
         "command": "github.pullRequests.composeLineComment",
         "title": "%command.pullRequests.composeLineComment%",
         "category": "GitHub"
+      },
+      {
+        "command": "github.pullRequest.approve",
+        "title": "%command.pullRequest.approve%",
+        "category": "GitHub",
+        "icon": {
+          "light": "resources/icons/light/check.svg",
+          "dark": "resources/icons/dark/check.svg"
+        }
+      },
+      {
+        "command": "github.pullRequest.requestChanges",
+        "title": "%command.pullRequest.requestChanges%",
+        "category": "GitHub",
+        "icon": {
+          "light": "resources/icons/light/x.svg",
+          "dark": "resources/icons/dark/x.svg"
+        }
+      },
+      {
+        "command": "github.pullRequest.comment",
+        "title": "%command.pullRequest.comment%",
+        "category": "GitHub",
+        "icon": {
+          "light": "resources/icons/light/comment.svg",
+          "dark": "resources/icons/dark/comment.svg"
+        }
       }
     ],
     "menus": {
@@ -51,6 +78,20 @@
           "command": "github.pullRequests.quickopen",
           "group": "github",
           "when": "config.git.enabled && scmProvider == git"
+        }
+      ],
+      "checklist/itemGroup/context": [
+        {
+          "command": "github.pullRequest.approve",
+          "group": "github"
+        },
+        {
+          "command": "github.pullRequest.comment",
+          "group": "github"
+        },
+        {
+          "command": "github.pullRequest.requestChanges",
+          "group": "github"
         }
       ]
     },

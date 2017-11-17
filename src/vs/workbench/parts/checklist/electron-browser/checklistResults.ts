@@ -333,7 +333,7 @@ export class ChecklistResultsWidget extends Widget {
 			const menus = this.instantiationService.createInstance(ChecklistMenus, provider);
 			actions = menus.getItemContextActions(element);
 		} else {
-			const provider = (e.element as IChecklistItem).itemGroup.provider;
+			const provider = (e.element as IChecklistItemGroup).provider;
 			const menus = this.instantiationService.createInstance(ChecklistMenus, provider);
 			actions = menus.getItemGroupContextActions(element);
 		}

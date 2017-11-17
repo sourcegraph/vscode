@@ -32,6 +32,7 @@ export class DiagnosticsChecklistProvider extends Disposable implements IWorkben
 	private static ID = 'vs.checklist.diagnosticsProvider';
 
 	private group: IChecklistItemGroup;
+	public items: IChecklistItemGroup[];
 
 	private didChange = new Emitter<void>();
 
@@ -41,9 +42,6 @@ export class DiagnosticsChecklistProvider extends Disposable implements IWorkben
 		@IPanelService private panelService: IPanelService,
 	) {
 		super();
-
-		this._register(this.markerService.onMarkerChanged(resources => this.update()));
-		this._register(this.checkService.registerChecklistProvider(this));
 		this.group = {
 			id: 'diagnostics',
 			label: localize('diagnostics', "Diagnostics"),
@@ -54,6 +52,9 @@ export class DiagnosticsChecklistProvider extends Disposable implements IWorkben
 				items: [],
 			},
 		};
+		this.items = [this.group];
+		this._register(this.checkService.registerChecklistProvider(this));
+		this._register(this.markerService.onMarkerChanged(resources => this.update()));
 		this.update();
 	}
 
@@ -103,7 +104,6 @@ export class DiagnosticsChecklistProvider extends Disposable implements IWorkben
 	get id(): string { return 'diagnostics'; }
 	get label(): string { return localize('diagnostics', "Diagnostics"); }
 	get contextValue(): any { return this; }
-	get items(): IChecklistItemGroup[] { return [this.group]; }
 
 	get onDidChange(): Event<void> { return this.didChange.event; }
 	get onDidChangeItems(): Event<void> { return this.didChange.event; }

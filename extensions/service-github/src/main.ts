@@ -5,7 +5,7 @@
 'use strict';
 
 import * as vscode from 'vscode';
-import { queryGraphQL, distinct } from './util';
+import { queryGraphQL, distinct, mutateGraphQL } from './util';
 import * as nls from 'vscode-nls';
 import * as cp from 'child_process';
 import { Model } from './model';
@@ -70,6 +70,44 @@ export function activate(context: vscode.ExtensionContext): void {
 	vscode.commands.registerCommand('github.showCreateAccessTokenWalkthrough', async (skipInfoMessage) => {
 		return await showCreateGitHubTokenWalkthrough(githubURL, skipInfoMessage);
 	});
+
+	const createPRActionCommand = (event: GitHubGQL.IPullRequestReviewEventEnum) => async (checklistItemGroup: vscode.ChecklistItemGroup) => {
+		try {
+			const pr = checklistController.prs.get(checklistItemGroup);
+			if (!pr) {
+				throw new Error('Could not find PR for ChecklistItemGroup');
+			}
+			const body = await vscode.window.showInputBox({ placeHolder: localize('github.leaveAComment', "Leave a comment") });
+			if (body === undefined) {
+				return;
+			}
+			const { errors } = await mutateGraphQL(`
+				mutation SubmitReview($pullRequestId: ID!, $body: String!, $event: PullRequestReviewEvent) {
+					addPullRequestReview(input: {
+						pullRequestId: $pullRequestId,
+						event: $event,
+						body: $body
+					}) {
+						pullRequestReview {
+							id
+						}
+					}
+				}
+			`, {
+					pullRequestId: pr.id,
+					body,
+					event
+				});
+			if (errors) {
+				throw Object.assign(new Error(errors.map((e: any) => e.message).join('\n')), { errors });
+			}
+		} catch (err) {
+			vscode.window.showErrorMessage(err.message);
+		}
+	};
+	vscode.commands.registerCommand('github.pullRequest.approve', createPRActionCommand('APPROVE'));
+	vscode.commands.registerCommand('github.pullRequest.comment', createPRActionCommand('COMMENT'));
+	vscode.commands.registerCommand('github.pullRequest.requestChanges', createPRActionCommand('REQUEST_CHANGES'));
 
 	context.subscriptions.push(vscode.workspace.registerFolderCatalogProvider(vscode.Uri.parse(`github://${githubHost}`), {
 		resolveFolder(resource: vscode.Uri): Thenable<vscode.CatalogFolder> {

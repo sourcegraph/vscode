@@ -1,6 +1,9 @@
 {
 	"command.pullRequests.quickopen": "Go to Pull Request...",
 	"command.pullRequests.composeLineComment": "Comment on Pull Request",
+	"command.pullRequest.approve": "Approve",
+	"command.pullRequest.requestChanges": "Request Changes",
+	"command.pullRequest.comment": "Comment",
 	"config.token": "GitHub.com or GitHub Enterprise personal access token. Create at https://github.com/settings/tokens. Must have 'repo' scope to access private repositories.",
 	"config.url": "The URL of a GitHub instance to connect to. Default is \"https://github.com\"",
 	"config.cloneProtocol": "Protocol to use to clone a repository. Defaults to 'https'. Valid values are either 'https' or 'ssh'.",

@@ -67,6 +67,12 @@ export class ChecklistController implements vscode.Disposable {
 	 */
 	private prChecklistItemGroups = new Map<string, vscode.ChecklistItemGroup>();
 
+	private _prs = new Map<vscode.ChecklistItemGroup, GitHubGQL.IPullRequest>();
+	/**
+	 * Map from ChecklistItemGroup to GitHub PR (reverse of `prChecklistItemGroups`)
+	 */
+	public prs: ReadonlyMap<vscode.ChecklistItemGroup, GitHubGQL.IPullRequest> = this._prs;
+
 	private disposables: vscode.Disposable[] = [];
 
 	constructor(
@@ -125,6 +131,7 @@ export class ChecklistController implements vscode.Disposable {
 					prChecklistItemGroup = this.provider.createItemGroup('githubPR', `GitHub PR #${pr.number} ${pr.title}`);
 					this.disposables.push(prChecklistItemGroup);
 					this.prChecklistItemGroups.set(pr.url, prChecklistItemGroup);
+					this._prs.set(prChecklistItemGroup, pr);
 				}
 
 				const reviewItems: vscode.ChecklistItem[] = [];
@@ -251,6 +258,7 @@ export class ChecklistController implements vscode.Disposable {
 			if (!nextPrUrls.has(prUrl)) {
 				group.dispose();
 				this.prChecklistItemGroups.delete(prUrl);
+				this._prs.delete(group);
 			}
 		}
 

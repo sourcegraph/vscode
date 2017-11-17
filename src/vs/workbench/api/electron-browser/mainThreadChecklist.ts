@@ -34,7 +34,7 @@ class MainThreadChecklistlistItemGroup implements IChecklistItemGroup {
 	get hideWhenEmpty(): boolean { return this.features.hideWhenEmpty; }
 
 	constructor(
-		private sourceControlHandle: number,
+		private providerHandle: number,
 		private handle: number,
 		public provider: IChecklistProvider,
 		public features: ChecklistItemGroupFeatures,
@@ -45,7 +45,7 @@ class MainThreadChecklistlistItemGroup implements IChecklistItemGroup {
 	toJSON(): any {
 		return {
 			$mid: 94,
-			sourceControlHandle: this.sourceControlHandle,
+			providerHandle: this.providerHandle,
 			groupHandle: this.handle
 		};
 	}
@@ -55,7 +55,7 @@ class MainThreadChecklistItem implements IChecklistItem {
 
 	constructor(
 		private proxy: ExtHostChecklistShape,
-		private sourceControlHandle: number,
+		private providerHandle: number,
 		private groupHandle: number,
 		private handle: number,
 		public name: string,
@@ -66,13 +66,13 @@ class MainThreadChecklistItem implements IChecklistItem {
 	) { }
 
 	open(): TPromise<void> {
-		return this.proxy.$executeItemCommand(this.sourceControlHandle, this.groupHandle, this.handle);
+		return this.proxy.$executeItemCommand(this.providerHandle, this.groupHandle, this.handle);
 	}
 
 	toJSON(): any {
 		return {
 			$mid: 93,
-			sourceControlHandle: this.sourceControlHandle,
+			providerHandle: this.providerHandle,
 			groupHandle: this.groupHandle,
 			handle: this.handle
 		};
@@ -276,8 +276,8 @@ export class MainThreadChecklist implements MainThreadChecklistShape {
 		delete this._providerDisposables[handle];
 	}
 
-	$registerGroup(sourceControlHandle: number, groupHandle: number, id: string, label: string): void {
-		const entry = this._providerDisposables[sourceControlHandle];
+	$registerGroup(providerHandle: number, groupHandle: number, id: string, label: string): void {
+		const entry = this._providerDisposables[providerHandle];
 
 		if (!entry) {
 			return;
@@ -287,8 +287,8 @@ export class MainThreadChecklist implements MainThreadChecklistShape {
 		provider.$registerGroup(groupHandle, id, label);
 	}
 
-	$updateGroup(sourceControlHandle: number, groupHandle: number, features: ChecklistItemGroupFeatures): void {
-		const entry = this._providerDisposables[sourceControlHandle];
+	$updateGroup(providerHandle: number, groupHandle: number, features: ChecklistItemGroupFeatures): void {
+		const entry = this._providerDisposables[providerHandle];
 
 		if (!entry) {
 			return;
@@ -298,8 +298,8 @@ export class MainThreadChecklist implements MainThreadChecklistShape {
 		provider.$updateGroup(groupHandle, features);
 	}
 
-	$updateGroupLabel(sourceControlHandle: number, groupHandle: number, label: string): void {
-		const entry = this._providerDisposables[sourceControlHandle];
+	$updateGroupLabel(providerHandle: number, groupHandle: number, label: string): void {
+		const entry = this._providerDisposables[providerHandle];
 
 		if (!entry) {
 			return;
@@ -309,8 +309,8 @@ export class MainThreadChecklist implements MainThreadChecklistShape {
 		provider.$updateGroupLabel(groupHandle, label);
 	}
 
-	$spliceItemStates(sourceControlHandle: number, splices: ChecklistRawItemSplices[]): void {
-		const entry = this._providerDisposables[sourceControlHandle];
+	$spliceItemStates(providerHandle: number, splices: ChecklistRawItemSplices[]): void {
+		const entry = this._providerDisposables[providerHandle];
 
 		if (!entry) {
 			return;
@@ -320,8 +320,8 @@ export class MainThreadChecklist implements MainThreadChecklistShape {
 		provider.$spliceGroupResourceStates(splices);
 	}
 
-	$unregisterGroup(sourceControlHandle: number, handle: number): void {
-		const entry = this._providerDisposables[sourceControlHandle];
+	$unregisterGroup(providerHandle: number, handle: number): void {
+		const entry = this._providerDisposables[providerHandle];
 
 		if (!entry) {
 			return;
