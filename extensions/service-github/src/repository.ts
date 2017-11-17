@@ -6,9 +6,10 @@
 
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { debounce, throttle } from './decorators';
-import { queryGraphQL, dispose, filterEvent, eventToPromise, timeout, execGit, toDisposable } from './util';
+import { debounce } from './decorators';
+import { queryGraphQL, dispose, execGit } from './util';
 import { commentFieldsFragment, pullRequestReviewFieldsFragment } from './graphql';
+import { clearTimeout } from 'timers';
 
 export interface GitHubRemote {
 	/**
@@ -91,44 +92,12 @@ export class Repository implements vscode.Disposable {
 		};
 		const watcher = vscode.workspace.createFileSystemWatcher(pattern);
 		this.disposables.push(watcher);
-		watcher.onDidChange(this.onGitDirChanged, this, this.disposables);
-		watcher.onDidCreate(this.onGitDirChanged, this, this.disposables);
-		watcher.onDidDelete(this.onGitDirChanged, this, this.disposables);
+		watcher.onDidChange(this.update, this, this.disposables);
+		watcher.onDidCreate(this.update, this, this.disposables);
+		watcher.onDidDelete(this.update, this, this.disposables);
 
-		// Periodically refresh to pick up remote changes, too (e.g., Travis CI
-		// finishing and updating a commit status).
-		const handle = setInterval(() => this.eventuallyUpdateAndWait(), 60 * 1000);
-		this.disposables.push(toDisposable(() => clearInterval(handle)));
-
+		this.disposables.push(vscode.window.onDidChangeWindowState(e => e.focused && this.update()));
 		this.update();
-	}
-
-	private onGitDirChanged(): void {
-		this.eventuallyUpdateAndWait();
-	}
-
-	@debounce(1000)
-	private eventuallyUpdateAndWait(): void {
-		this.updateAndWait();
-	}
-
-	@throttle
-	private async updateAndWait(): Promise<void> {
-		await this.whenFocused();
-		await this.update();
-		await timeout(5000);
-	}
-
-	private async whenFocused(): Promise<void> {
-		while (true) {
-			if (!vscode.window.state.focused) {
-				const onDidFocusWindow = filterEvent(vscode.window.onDidChangeWindowState, e => e.focused);
-				await eventToPromise(onDidFocusWindow);
-				continue;
-			}
-
-			return;
-		}
 	}
 
 	public async execGit(args: string[], stdin?: string): Promise<string> {
@@ -136,7 +105,24 @@ export class Repository implements vscode.Disposable {
 		return execGit(args, this.worktreeDir.fsPath, stdin);
 	}
 
+	private updateTimeout: NodeJS.Timer | undefined;
+	private updateInterval = 60 * 1000;
+
+	private rescheduleNextUpdate() {
+		if (this.updateTimeout) {
+			clearTimeout(this.updateTimeout);
+		}
+		this.updateTimeout = setTimeout(() => {
+			this.update();
+		}, this.updateInterval);
+	}
+
+	@debounce(1000)
 	private async update(): Promise<void> {
+		// Make sure update gets called at least every updateInterval seconds.
+		// If update gets called for other reasons, we reschedule the next update.
+		this.rescheduleNextUpdate();
+
 		await this.updateRemotes();
 
 		const [commitID, branchName] = await Promise.all([
@@ -245,6 +231,12 @@ export class Repository implements vscode.Disposable {
 			this.state.pullRequests = repository && repository.pullRequests && repository.pullRequests.nodes || undefined;
 		}
 
+		const prs = this.state.pullRequests || [];
+		if (prs.length) {
+			this.outputChannel.appendLine(`updated open pull requests for ${branchName} in ${this.worktreeDir.fsPath}: ${(this.state.pullRequests || []).map(pr => '#' + pr.number).join(', ')}`);
+		} else {
+			this.outputChannel.appendLine(`no open pull requests for ${branchName} in ${this.worktreeDir.fsPath}`);
+		}
 		this._onDidUpdate.fire();
 	}
 
