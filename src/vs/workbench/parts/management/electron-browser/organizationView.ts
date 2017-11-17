@@ -91,7 +91,7 @@ export class OrganizationView extends ViewsViewletPanel {
 			const manageOrganizationsButton = new Button(manageOrgRow);
 			attachButtonStyler(manageOrganizationsButton, this.themeService);
 			manageOrganizationsButton.label = nls.localize('management.organization.addOrg', "Add organization");
-			this.disposables.push(manageOrganizationsButton.addListener('click', () => {
+			this.disposables.push(manageOrganizationsButton.onDidClick(() => {
 				this.createOrgAction.run();
 			}));
 			return;
@@ -119,7 +119,7 @@ export class OrganizationView extends ViewsViewletPanel {
 			const inviteButton = new Button(buttonContainer);
 			attachButtonStyler(inviteButton, this.themeService);
 			inviteButton.label = nls.localize('management.organization.invite', 'Invite');
-			this.disposables.push(inviteButton.addListener('click', () => {
+			this.disposables.push(inviteButton.onDidClick(() => {
 				this.telemetryService.publicLog('InviteOrgMemberClicked');
 				window.open(`https://sourcegraph.com/settings/team/${name}`);
 			}));

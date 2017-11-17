@@ -317,13 +317,13 @@ export class SearchViewlet extends Viewlet {
 	}
 
 	private trackInputBox(inputFocusTracker: dom.IFocusTracker, contextKey?: IContextKey<boolean>): void {
-		this.toUnbind.push(inputFocusTracker.addFocusListener(() => {
+		this.toUnbind.push(inputFocusTracker.onDidFocus(() => {
 			this.inputBoxFocused.set(true);
 			if (contextKey) {
 				contextKey.set(true);
 			}
 		}));
-		this.toUnbind.push(inputFocusTracker.addBlurListener(() => {
+		this.toUnbind.push(inputFocusTracker.onDidBlur(() => {
 			this.inputBoxFocused.set(this.searchWidget.searchInputHasFocus()
 				|| this.searchWidget.replaceInputHasFocus()
 				|| this.inputPatternIncludes.inputHasFocus()
@@ -524,7 +524,7 @@ export class SearchViewlet extends Viewlet {
 				}
 			}));
 
-			this.toUnbind.push(this.tree.addListener('focus', (e: IFocusEvent) => {
+			this.toUnbind.push(this.tree.onDidChangeFocus((e: IFocusEvent) => {
 				const focus = e.focus;
 				this.firstMatchFocused.set(this.tree.getNavigator().first() === focus);
 				this.fileMatchOrMatchFocused.set(true);
@@ -533,7 +533,7 @@ export class SearchViewlet extends Viewlet {
 				this.matchFocused.set(focus instanceof Match);
 			}));
 
-			this.toUnbind.push(this.tree.onDOMBlur(e => {
+			this.toUnbind.push(this.tree.onDidBlur(e => {
 				this.firstMatchFocused.reset();
 				this.fileMatchOrMatchFocused.reset();
 				this.fileMatchFocused.reset();

@@ -213,7 +213,7 @@ export class CodeCommentsViewlet extends Viewlet {
 		const signInButton = new Button(section);
 		attachButtonStyler(signInButton, this.themeService);
 		signInButton.label = localize('signInButtonLabel', 'Sign in to Sourcegraph');
-		signInButton.addListener('click', () => {
+		signInButton.onDidClick(() => {
 			this.telemetryService.publicLog('codeComments.signupButtonClicked');
 			this.authService.showSignInFlow();
 		});

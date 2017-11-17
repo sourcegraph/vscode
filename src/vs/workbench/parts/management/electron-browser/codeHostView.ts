@@ -83,7 +83,7 @@ export class CodeHostView extends ViewsViewletPanel {
 		const container = $('div').padding(5, 0, 0, 0).appendTo(section);
 		const button = new Button(container);
 		attachButtonStyler(button, this.themeService);
-		button.addListener('click', () => {
+		button.onDidClick(() => {
 			this.telemetryService.publicLog('management.addGitHubTokenClicked');
 			this.commandService.executeCommand('github.showCreateAccessTokenWalkthrough', true);
 		});
@@ -96,7 +96,7 @@ export class CodeHostView extends ViewsViewletPanel {
 		const button = new Button(container);
 		attachButtonStyler(button, this.themeService);
 
-		button.addListener('click', () => {
+		button.onDidClick(() => {
 			this.telemetryService.publicLog('management.addBitbucketAppClicked');
 			this.commandService.executeCommand('bitbucket.showBitbucketAppPasswordWalkthrough', true);
 		});

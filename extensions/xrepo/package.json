@@ -36,6 +36,7 @@
   },
   "devDependencies": {
     "@sourcegraph/tsconfig": "^1.0.1",
-    "@types/mz": "0.0.32"
+    "@types/mz": "0.0.32",
+    "@types/node": "7.0.48"
   }
 }
