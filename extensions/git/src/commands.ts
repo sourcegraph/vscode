@@ -1685,7 +1685,7 @@ export class CommandCenter {
 	 * Generates a shareable link to the compare provider between the current branch and a selectable base branch.
 	 * The user is prompted to pick the base branch and the link if copied to the clipboard.
 	 *
-	 * Example: https://about.sourcegraph.com/open/#open?repo=https%3A%2F%2Fgithub.com%2Fsourcegraph%2Fdocs-private&revision=foo&baseRevision=bar&vcs=git
+	 * Example: https://sourcegraph.com/open?repo=https%3A%2F%2Fgithub.com%2Fsourcegraph%2Fdocs-private&revision=foo&baseRevision=bar&vcs=git
 	 */
 	@command('git.shareDiff', { repository: true })
 	async shareDiff(repository: Repository): Promise<void> {
@@ -1778,7 +1778,7 @@ export class CommandCenter {
 		openParams.set('revision', repository.HEAD.name);
 		openParams.set('baseRevision', baseBranch);
 		openParams.set('vcs', 'git');
-		const url = 'https://about.sourcegraph.com/open#open?' + openParams;
+		const url = 'https://sourcegraph.com/open?' + openParams;
 		// Copy to clipboard
 		await new Promise((resolve, reject) => copy(url, err => err ? reject(err) : resolve()));
 		window.showInformationMessage(localize('copied link', "Copied link to clipboard!"));
@@ -1829,7 +1829,7 @@ export class CommandCenter {
 		openParams.set('revision', revision);
 		openParams.set('baseRevision', baseBranch);
 		openParams.set('vcs', 'git');
-		const url = 'https://about.sourcegraph.com/open#open?' + openParams;
+		const url = 'https://sourcegraph.com/open?' + openParams;
 		await commands.executeCommand('workbench.nav.open', url);
 	}
 

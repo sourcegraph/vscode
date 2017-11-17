@@ -12,7 +12,6 @@ import * as paths from 'vs/base/common/paths';
 import { Schemas } from 'vs/base/common/network';
 import types = require('vs/base/common/types');
 import { Disposable } from 'vs/base/common/lifecycle';
-import product from 'vs/platform/node/product';
 import Event, { Emitter } from 'vs/base/common/event';
 import { INavService } from 'vs/workbench/services/nav/common/nav';
 import { IEditorInput, IResourceInput } from 'vs/platform/editor/common/editor';
@@ -109,14 +108,6 @@ export class NavService extends Disposable implements INavService {
 				},
 			} as IResourceInput);
 			return;
-		}
-
-		// Extract the non-shareable URI from a shareable about.sourcegraph.com URL.
-		//
-		// TODO(sqs): these static about.sourcegraph.com share URLs were removed, but we'll
-		// keep this in for a couple weeks for backcompat.
-		if (location.scheme === 'https' && location.authority === 'about.sourcegraph.com' && location.path.indexOf('/open') === 0) {
-			location = URI.parse(`${product.urlProtocol}:${decodeURIComponent(location.fragment)}`);
 		}
 
 		// Without this, a %2B in the querystring will be decoded into a
