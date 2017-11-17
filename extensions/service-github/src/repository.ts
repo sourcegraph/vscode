@@ -76,6 +76,7 @@ export class Repository implements vscode.Disposable {
 		public readonly gitDir: vscode.Uri,
 		public readonly worktreeDir: vscode.Uri,
 		public readonly githubURL: string,
+		public readonly outputChannel: vscode.OutputChannel,
 	) {
 		if (path.basename(gitDir.fsPath) !== '.git') {
 			throw new Error(`bad git dir: ${gitDir.toString()}`);
@@ -130,7 +131,8 @@ export class Repository implements vscode.Disposable {
 		}
 	}
 
-	public async exec(args: string[], stdin?: string): Promise<string> {
+	public async execGit(args: string[], stdin?: string): Promise<string> {
+		this.outputChannel.appendLine(`git ${args.join(' ')}`);
 		return execGit(args, this.worktreeDir.fsPath, stdin);
 	}
 
@@ -138,8 +140,8 @@ export class Repository implements vscode.Disposable {
 		await this.updateRemotes();
 
 		const [commitID, branchName] = await Promise.all([
-			this.exec(['rev-parse', 'HEAD']),
-			this.exec(['symbolic-ref', '--short', 'HEAD'])
+			this.execGit(['rev-parse', 'HEAD']),
+			this.execGit(['symbolic-ref', '--short', 'HEAD'])
 		]);
 		if (this.state.commit !== commitID) {
 			this.state.commit = commitID;
@@ -252,7 +254,7 @@ export class Repository implements vscode.Disposable {
 
 	private async updateRemotes(): Promise<void> {
 		// TODO(sqs): get all remotes; currently only gets current remote
-		let url = await this.exec(['ls-remote', '--get-url']);
+		let url = await this.execGit(['ls-remote', '--get-url']);
 		url = decodeURIComponent(url.trim()).replace(/\.git$/, '');
 		const host = vscode.Uri.parse(this.githubURL).authority;
 		const match = url.match(new RegExp(`${host}[\/:]([^/]+)\/([^/]+)`));

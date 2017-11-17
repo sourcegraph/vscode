@@ -71,14 +71,14 @@ export class DraftLineCommentManager {
 	}
 
 	private getPullRequestsForResource(resource: vscode.Uri): GitHubGQL.IPullRequest[] {
-		const repository = this.model.repositoryForResource(resource);
+		const repository = this.model.getRepositoryForResource(resource);
 		const prs = repository && repository.state.pullRequests && repository.state.pullRequests || [];
 		return prs.filter(pr => !pr.isCrossRepository);
 	}
 
 	private async composeLineComment(textEditor: vscode.TextEditor): Promise<void> {
 		const file = textEditor.document.uri;
-		const repository = this.model.repositoryForResource(file);
+		const repository = this.model.getRepositoryForResource(file);
 		if (!repository) {
 			vscode.window.showErrorMessage(localize('noRepository', "No repository for {0}", file.toString()));
 			return;
@@ -107,7 +107,7 @@ export class DraftLineCommentManager {
 
 		// Step 1: Convert the line number in the current editor state to a line number in a known revision.
 		const line = textEditor.selection.active.line + 1;
-		const lineStdout = await repository.exec([
+		const lineStdout = await repository.execGit([
 			'blame', '-p',
 			'-L', `${line},${line}`,
 			'--contents', '-',
@@ -127,7 +127,7 @@ export class DraftLineCommentManager {
 		} else {
 			// Step 2: Convert the line number in the known revision to a line number at the PR's head commit.
 			// This just makes it less likely that the comment will be immediately outdated.
-			const headStdout = await repository.exec([
+			const headStdout = await repository.execGit([
 				'blame', '-p',
 				'-L', `${lineBlame.originalLine},${lineBlame.originalLine}`,
 				'--reverse', `${lineBlame.commitId}..${pr.headRef.target.oid}`,
@@ -143,7 +143,7 @@ export class DraftLineCommentManager {
 
 		// Now we need to find the position in the diff to send to GitHub.
 		// We don't pre-filter the diffs output in case the file was involved in a rename.
-		const prDiff = await repository.exec(['diff', pr.baseRef.target.oid, pr.headRef.target.oid]);
+		const prDiff = await repository.execGit(['diff', pr.baseRef.target.oid, pr.headRef.target.oid]);
 		const fileDiffLines = diffLinesForFile(prDiff, headBlame.filename);
 		if (!fileDiffLines) {
 			vscode.window.showErrorMessage(localize('fileNotInPR', "{0} is not in PR #{1}", headBlame.filename, pr.number));

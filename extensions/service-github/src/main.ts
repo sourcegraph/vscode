@@ -50,7 +50,7 @@ export function activate(context: vscode.ExtensionContext): void {
 	const viewer = new Viewer(githubHost);
 	const github = new GitHub(viewer, githubHost);
 
-	const model = new Model(githubURL);
+	const model = new Model(githubURL, outputChannel);
 	context.subscriptions.push(model);
 
 	const checklistController = new ChecklistController(model);

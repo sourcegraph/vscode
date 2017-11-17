@@ -243,7 +243,7 @@ export class Delayer<T> {
  * when a new task is submitted.
  *
  * This is useful if new tasks render the result of the pending task irrelevant,
- * especially if the pending task is and expensive multi-part operation.
+ * especially if the pending task is an expensive multi-part operation.
  */
 export class InterruptibleDelayer<T> {
 
