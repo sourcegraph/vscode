@@ -25,9 +25,6 @@ export function execFile(file: string, args?: string[], options?: cp.ExecFileOpt
 		if (err) {
 			return reject(err);
 		}
-
-		const stdOutStr = typeof stdout === 'string' ? stdout : stdout.toString();
-		const stdErrStr = typeof stderr === 'string' ? stderr : stderr.toString();
-		return resolve([stdOutStr, stdErrStr]);
+		return resolve([stdout, stderr]);
 	}));
 }

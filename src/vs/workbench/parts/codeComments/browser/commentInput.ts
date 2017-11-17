@@ -78,7 +78,7 @@ export class CommentInput extends Disposable {
 					const inviteButton = new Button(buttonContainer);
 					inviteButton.getElement().style.textAlign = 'left';
 					inviteButton.label = localize('comment.inviteOrgMember', "Invite a member to your organization");
-					this.disposables.push(inviteButton.addListener('click', () => {
+					this.disposables.push(inviteButton.onDidClick(() => {
 						this.commandService.executeCommand(OPEN_INVITE_ACTION_ID);
 					}));
 					attachButtonStyler(inviteButton, this.themeService, {
@@ -98,13 +98,13 @@ export class CommentInput extends Disposable {
 					buttonBackground: editorBackground,
 				});
 				this.disposable(this.secondaryButton);
-				this.disposable(this.secondaryButton.addListener('click', () => this.didClickSecondaryButton.fire()));
+				this.disposable(this.secondaryButton.onDidClick(() => this.didClickSecondaryButton.fire()));
 
 				this.submitButton = new Button(div.getContainer());
 				this.submitButton.label = localize('submitComment', "Comment");
 				attachButtonStyler(this.submitButton, this.themeService);
 				this.disposable(this.submitButton);
-				this.disposable(this.submitButton.addListener('click', () => this.handleSubmit()));
+				this.disposable(this.submitButton.onDidClick(() => this.handleSubmit()));
 			});
 		});
 	}

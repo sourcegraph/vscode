@@ -141,7 +141,7 @@ export class ThreadCommentsWidget extends BaseThreadCommentsWidget {
 						const shareButton = new Button(buttonContainer);
 						const label = localize('comment.share', 'Share');
 						shareButton.label = label;
-						this._disposables.push(shareButton.addListener('click', () => {
+						this._disposables.push(shareButton.onDidClick(() => {
 							this.codeCommentsService.shareComment(comment.id).then(sharedURL => {
 								this._clipboardService.writeText(sharedURL);
 								shareButton.label = localize('comment.share.copied-to-clipboard', 'Copied to clipboard!');

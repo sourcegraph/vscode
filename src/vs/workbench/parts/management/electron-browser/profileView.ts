@@ -81,7 +81,7 @@ export class ProfileView extends ViewsViewletPanel {
 			const signoutButton = new Button(buttonContainer);
 			attachButtonStyler(signoutButton, this.themeService);
 			signoutButton.label = nls.localize('management.profile.signoutLabel', 'Sign out');
-			signoutButton.addListener('click', () => {
+			signoutButton.onDidClick(() => {
 				this.authService.signOut();
 			});
 			return;
@@ -95,7 +95,7 @@ export class ProfileView extends ViewsViewletPanel {
 		const signoutButton = new Button(buttonContainer);
 		signoutButton.label = nls.localize('management.profile.signInLabel', 'Sign in to Sourcegraph');
 		attachButtonStyler(signoutButton, this.themeService);
-		signoutButton.addListener('click', () => {
+		signoutButton.onDidClick(() => {
 			this.authService.showSignInFlow();
 		});
 	}

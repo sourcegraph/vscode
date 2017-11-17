@@ -10,7 +10,10 @@
 			"dom"
 		],
 		"sourceMap": true,
-		"experimentalDecorators": true
+		"experimentalDecorators": true,
+		"typeRoots": [
+			"./node_modules/@types"
+		]
 	},
 	"exclude": [
 		"node_modules"

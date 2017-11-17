@@ -454,7 +454,7 @@ class WelcomePage {
 		button.label = localize('welcomePage.addGitHubToken', "Add GitHub token");
 		attachButtonStyler(button, this.themeService);
 
-		this.disposables.push(button.addListener('click', () => {
+		this.disposables.push(button.onDidClick(() => {
 			this.commandService.executeCommand('github.showCreateAccessTokenWalkthrough');
 		}));
 	}
@@ -472,7 +472,7 @@ class WelcomePage {
 		button.label = localize('welcomePage.addBitbuckAppPassword', "Add Bitbucket app password");
 		attachButtonStyler(button, this.themeService);
 
-		this.disposables.push(button.addListener('click', () => {
+		this.disposables.push(button.onDidClick(() => {
 			this.commandService.executeCommand('bitbucket.showBitbucketAppPasswordWalkthrough');
 		}));
 	}

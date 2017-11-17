@@ -6,7 +6,6 @@
 
 import { IDisposable, toDisposable, combinedDisposable, empty as EmptyDisposable } from 'vs/base/common/lifecycle';
 import CallbackList from 'vs/base/common/callbackList';
-import { EventEmitter } from 'vs/base/common/eventEmitter';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { once as onceFn } from 'vs/base/common/functional';
 
@@ -26,6 +25,7 @@ namespace Event {
 export default Event;
 
 export interface EmitterOptions {
+	guaranteeEventOrder?: boolean;
 	onFirstListenerAdd?: Function;
 	onFirstListenerDidAdd?: Function;
 	onListenerDidAdd?: Function;
@@ -58,6 +58,7 @@ export class Emitter<T> {
 	private static _noop = function () { };
 
 	private _event: Event<T>;
+	private _deliveryQueue: T[] = [];
 	private _callbacks: CallbackList;
 	private _disposed: boolean;
 
@@ -119,13 +120,31 @@ export class Emitter<T> {
 	 * subscribers
 	 */
 	fire(event?: T): any {
-		if (this._callbacks) {
+		if (!this._callbacks) {
+			return;
+		}
+		if (this._options && this._options.guaranteeEventOrder) {
+			// enqueue event object and kick off
+			// event deliver when this is the first
+			// object in the queue
+			if (this._deliveryQueue.push(event) === 1) {
+				this._inOrderDelivery();
+			}
+		} else {
 			this._callbacks.invoke.call(this._callbacks, event);
 		}
 	}
 
+	private _inOrderDelivery(): any {
+		for (let i = 0; !this._disposed && i < this._deliveryQueue.length; i++) {
+			this._callbacks.invoke.call(this._callbacks, this._deliveryQueue[i]);
+		}
+		this._deliveryQueue.length = 0;
+	}
+
 	dispose() {
 		if (this._callbacks) {
+			this._deliveryQueue.length = 0;
 			this._callbacks.dispose();
 			this._callbacks = undefined;
 			this._disposed = true;
@@ -192,40 +211,6 @@ export class EventMultiplexer<T> implements IDisposable {
 	dispose(): void {
 		this.emitter.dispose();
 	}
-}
-
-/**
- * Creates an Event which is backed-up by the event emitter. This allows
- * to use the existing eventing pattern and is likely using less memory.
- * Sample:
- *
- * 	class Document {
- *
- *		private _eventbus = new EventEmitter();
- *
- *		public onDidChange = fromEventEmitter(this._eventbus, 'changed');
- *
- *		// getter-style
- *		// get onDidChange(): Event<(value:string)=>any> {
- *		// 	cache fromEventEmitter result and return
- *		// }
- *
- *		private _doIt() {
- *			// ...
- *			this._eventbus.emit('changed', value)
- *		}
- *	}
- */
-export function fromEventEmitter<T>(emitter: EventEmitter, eventType: string): Event<T> {
-	return function (listener: (e: T) => any, thisArgs?: any, disposables?: IDisposable[]): IDisposable {
-		const result = emitter.addListener(eventType, function () {
-			listener.apply(thisArgs, arguments);
-		});
-		if (Array.isArray(disposables)) {
-			disposables.push(result);
-		}
-		return result;
-	};
 }
 
 export function fromCallback<T>(fn: (handler: (e: T) => void) => IDisposable): Event<T> {
@@ -532,7 +517,7 @@ export function echo<T>(event: Event<T>, nextTick = false, buffer: T[] = []): Ev
 export class Relay<T> implements IDisposable {
 
 	private emitter = new Emitter<T>();
-	readonly output: Event<T> = this.emitter.event;
+	readonly event: Event<T> = this.emitter.event;
 
 	private disposable: IDisposable = EmptyDisposable;
 

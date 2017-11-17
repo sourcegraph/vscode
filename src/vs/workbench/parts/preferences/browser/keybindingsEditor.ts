@@ -132,8 +132,8 @@ export class KeybindingsEditor extends BaseEditor implements IKeybindingsEditor 
 		this.createBody(keybindingsEditorElement);
 
 		const focusTracker = this._register(DOM.trackFocus(parentElement));
-		this._register(focusTracker.addFocusListener(() => this.keybindingsEditorContextKey.set(true)));
-		this._register(focusTracker.addBlurListener(() => this.keybindingsEditorContextKey.reset()));
+		this._register(focusTracker.onDidFocus(() => this.keybindingsEditorContextKey.set(true)));
+		this._register(focusTracker.onDidBlur(() => this.keybindingsEditorContextKey.reset()));
 	}
 
 	setInput(input: KeybindingsEditorInput): TPromise<void> {
@@ -332,10 +332,10 @@ export class KeybindingsEditor extends BaseEditor implements IKeybindingsEditor 
 			{ identityProvider: e => e.id, keyboardSupport: false, mouseSupport: true, ariaLabel: localize('keybindingsLabel', "Keybindings") }));
 		this._register(this.keybindingsList.onContextMenu(e => this.onContextMenu(e)));
 		this._register(this.keybindingsList.onFocusChange(e => this.onFocusChange(e)));
-		this._register(this.keybindingsList.onDOMFocus(() => {
+		this._register(this.keybindingsList.onDidFocus(() => {
 			DOM.addClass(this.keybindingsList.getHTMLElement(), 'focused');
 		}));
-		this._register(this.keybindingsList.onDOMBlur(() => {
+		this._register(this.keybindingsList.onDidBlur(() => {
 			DOM.removeClass(this.keybindingsList.getHTMLElement(), 'focused');
 			this.keybindingFocusContextKey.reset();
 		}));

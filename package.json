@@ -1,7 +1,6 @@
 {
   "name": "src-oss-dev",
   "version": "1.19.0",
-  "electronVersion": "1.7.9",
   "distro": "HEAD",
   "author": {
     "name": "Sourcegraph"
@@ -23,7 +22,6 @@
   },
   "dependencies": {
     "applicationinsights": "0.17.1",
-    "chokidar": "bpasero/chokidar#vscode",
     "date-fns": "^1.28.5",
     "fast-plist": "0.1.2",
     "gc-signals": "^0.0.1",
@@ -43,6 +41,7 @@
     "semver": "4.3.6",
     "telligent-tracker": "0.1.3",
     "v8-profiler": "jrieken/v8-profiler#vscode",
+    "vscode-chokidar": "1.6.2",
     "vscode-debugprotocol": "1.24.0",
     "vscode-ripgrep": "0.6.0-patch.0.2",
     "vscode-textmate": "^3.2.0",
@@ -70,7 +69,7 @@
     "express": "^4.13.1",
     "flatpak-bundler": "^0.1.1",
     "glob": "^5.0.13",
-    "graphql": "^0.10.0",
+    "graphql": "^0.11.7",
     "gulp": "^3.8.9",
     "gulp-atom-electron": "^1.11.0",
     "gulp-azure-storage": "^0.7.0",
@@ -89,7 +88,7 @@
     "gulp-replace": "^0.5.4",
     "gulp-shell": "^0.5.2",
     "gulp-sourcemaps": "^1.11.0",
-    "gulp-tsb": "2.0.4",
+    "gulp-tsb": "2.0.5",
     "gulp-tslint": "^8.1.2",
     "gulp-uglify": "^3.0.0",
     "gulp-util": "^3.0.6",
@@ -120,7 +119,7 @@
     "underscore": "^1.8.2",
     "vinyl": "^0.4.5",
     "vinyl-fs": "^2.4.3",
-    "vsce": "^1.25.1",
+    "vsce": "1.33.2",
     "vscode-nls-dev": "^2.0.1"
   },
   "repository": {
@@ -132,9 +131,11 @@
   },
   "optionalDependencies": {
     "@sourcegraph/icons": "^1.7.0",
-    "windows-process-tree": "0.1.6",
     "windows-foreground-love": "0.1.0",
     "windows-mutex": "^0.2.0",
-    "fsevents": "0.3.8"
+    "windows-process-tree": "0.1.6"
+  },
+  "resolutions": {
+    "graphql": "0.11.7"
   }
 }

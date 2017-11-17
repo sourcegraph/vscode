@@ -48,7 +48,7 @@ export class UpdateView extends ViewsViewletPanel {
 		const updateButton = new Button(buttonContainer);
 		updateButton.label = nls.localize('miRestartToUpdate', 'Restart to update');
 		attachButtonStyler(updateButton, this.themeService);
-		updateButton.addListener('click', () => {
+		updateButton.onDidClick(() => {
 			this.telemetryService.publicLog('workbenchActionExecuted', { id: 'RestartToUpdate', from: 'managementViewlet' });
 			this.updateService.quitAndInstall();
 		});
