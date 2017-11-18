@@ -12,6 +12,7 @@ import { Discussion, MessageFromWebView, MessageFromExtension, DiscussionComment
 import { pickPullRequest } from './pullRequests';
 import { mutateGraphQL } from './util';
 import { pullRequestReviewFieldsFragment, commentFieldsFragment } from './graphql';
+import { Repository } from './repository';
 
 const localize = nls.loadMessageBundle();
 
@@ -189,7 +190,7 @@ export class DraftLineCommentManager {
 			position,
 		};
 
-		const discussionViewZone = new DiscussionViewZone(pr, draftDiscussion, this.outputChannel, textEditor);
+		const discussionViewZone = new DiscussionViewZone(pr, draftDiscussion, this.outputChannel, repository, textEditor);
 		this.disposables.push(discussionViewZone);
 		discussionViewZone.onDidClose(() => {
 			const idx = this.disposables.indexOf(discussionViewZone);
@@ -225,6 +226,7 @@ class DiscussionViewZone implements vscode.Disposable {
 		private pr: GitHubGQL.IPullRequest,
 		private state: Discussion | DraftDiscussion,
 		private outputChannel: vscode.OutputChannel,
+		private repository: Repository,
 		editor: vscode.TextEditor,
 	) {
 		this.viewZone = editor.createViewZone('discussion', {
@@ -330,6 +332,9 @@ class DiscussionViewZone implements vscode.Disposable {
 				type: 'submitCommentSuccess',
 				discussion
 			});
+
+			// Update the PR.
+			this.repository.update();
 		} catch (e) {
 			vscode.window.showErrorMessage(e.message);
 			this.postMessage({ type: 'submitCommentError', message: e.message });
@@ -378,6 +383,9 @@ class DiscussionViewZone implements vscode.Disposable {
 				type: 'submitCommentSuccess',
 				discussion
 			});
+
+			// Update the PR so the gutter icon appears.
+			this.repository.update();
 		} catch (e) {
 			vscode.window.showErrorMessage(e.message);
 			this.postMessage(<SubmitCommentErrorMessage>{ type: 'submitCommentError', message: e.message });

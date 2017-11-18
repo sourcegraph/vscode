@@ -116,7 +116,7 @@ export class Repository implements vscode.Disposable {
 		}, this.updateInterval);
 	}
 
-	private async update(): Promise<void> {
+	public async update(): Promise<void> {
 		// Make sure update gets called at least every updateInterval seconds.
 		// If update gets called for other reasons, we reschedule the next update.
 		this.rescheduleNextUpdate();
@@ -127,107 +127,105 @@ export class Repository implements vscode.Disposable {
 			this.execGit(['rev-parse', 'HEAD']),
 			this.execGit(['symbolic-ref', '--short', 'HEAD'])
 		]);
-		if (this.state.commit !== commitID) {
-			this.state.commit = commitID;
-			if (!this.currentGitHubRemote) {
-				return;
-			}
-			const { data, errors } = await queryGraphQL(`
-				query($owner: String!, $name: String!, $oid: GitObjectID, $branchName: String) {
-					repository(owner: $owner, name: $name) {
-						object(oid: $oid) {
-							... on Commit {
-								status {
+		this.state.commit = commitID;
+		if (!this.currentGitHubRemote) {
+			return;
+		}
+		const { data, errors } = await queryGraphQL(`
+			query($owner: String!, $name: String!, $oid: GitObjectID, $branchName: String) {
+				repository(owner: $owner, name: $name) {
+					object(oid: $oid) {
+						... on Commit {
+							status {
+								state
+								contexts {
 									state
-									contexts {
-										state
-										targetUrl
-										description
-										context
-									}
+									targetUrl
+									description
+									context
 								}
 							}
 						}
-						pullRequests(first: 1, headRefName: $branchName) {
-							nodes {
-								number
-								title
-								url
-								closed
-								isCrossRepository
-								baseRef {
-									target {
-										oid
-									}
+					}
+					pullRequests(first: 1, headRefName: $branchName) {
+						nodes {
+							number
+							title
+							url
+							closed
+							isCrossRepository
+							baseRef {
+								target {
+									oid
 								}
-								headRef {
-									target {
-										oid
-									}
+							}
+							headRef {
+								target {
+									oid
 								}
-								...CommentFields
-								commits(first: 100) {
-									totalCount
-									nodes {
-										url
-										commit {
-											committedDate
-              								abbreviatedOid
-											messageHeadline
-											author {
-												user {
-													avatarUrl
-													login
-												}
+							}
+							...CommentFields
+							commits(first: 100) {
+								totalCount
+								nodes {
+									url
+									commit {
+										committedDate
+										abbreviatedOid
+										messageHeadline
+										author {
+											user {
+												avatarUrl
+												login
 											}
 										}
 									}
 								}
-								comments(first: 100) {
-									totalCount
-									nodes {
-										id
-										...CommentFields
+							}
+							comments(first: 100) {
+								totalCount
+								nodes {
+									id
+									...CommentFields
+								}
+							}
+							reviewRequests(first: 100) {
+								nodes {
+									id
+									reviewer {
+										avatarUrl
+										login
+										url
 									}
 								}
-								reviewRequests(first: 100) {
-									nodes {
-										id
-										reviewer {
-											avatarUrl
-											login
-											url
-										}
-									}
-								}
-								reviews(first: 100) {
-									totalCount
-									nodes {
-										...PullRequestReviewFields
-									}
+							}
+							reviews(first: 100) {
+								totalCount
+								nodes {
+									...PullRequestReviewFields
 								}
 							}
 						}
 					}
 				}
-				${commentFieldsFragment}
-				${pullRequestReviewFieldsFragment}
-			`, {
-					owner: this.currentGitHubRemote.owner,
-					name: this.currentGitHubRemote.name,
-					oid: this.state.commit,
-					branchName,
-				});
-
-			if (!data) {
-				throw Object.assign(new Error((errors || []).map(e => e.message).join('\n')), { errors });
 			}
+			${commentFieldsFragment}
+			${pullRequestReviewFieldsFragment}
+		`, {
+				owner: this.currentGitHubRemote.owner,
+				name: this.currentGitHubRemote.name,
+				oid: this.state.commit,
+				branchName,
+			});
 
-			const repository = data && data.repository;
-			const commit = repository && repository.object && (repository.object as GitHubGQL.ICommit);
-			this.state.status = commit && commit.status || undefined;
-			this.state.pullRequests = repository && repository.pullRequests && repository.pullRequests.nodes || undefined;
+		if (!data) {
+			throw Object.assign(new Error((errors || []).map(e => e.message).join('\n')), { errors });
 		}
+
+		const repository = data && data.repository;
+		const commit = repository && repository.object && (repository.object as GitHubGQL.ICommit);
+		this.state.status = commit && commit.status || undefined;
+		this.state.pullRequests = repository && repository.pullRequests && repository.pullRequests.nodes || undefined;
 
 		const prs = this.state.pullRequests || [];
 		if (prs.length) {
