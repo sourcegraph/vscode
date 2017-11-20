@@ -51,7 +51,7 @@ export interface IUser {
 	/**
 	 * id is the Sourcegraph unique ID for a user.
 	 */
-	readonly id: number;
+	readonly sourcegraphID: number;
 
 	/**
 	 * auth0ID is the Auth0 unique ID for a user

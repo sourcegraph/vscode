@@ -148,7 +148,7 @@ export class AuthService extends Disposable implements IAuthService {
 			const orgMemberships = user.orgMemberships;
 			await this.setCurrentUser({
 				memento: true,
-				id: user.sourcegraphID,
+				sourcegraphID: user.sourcegraphID,
 				auth0ID: user.auth0ID,
 				username: user.username,
 				email: user.email,
@@ -383,7 +383,6 @@ function getSettingsBlob(settings: IOrgSettings): string {
 }
 
 const userGraphQLRequest = `
-	id
 	auth0ID
 	sourcegraphID
 	username
@@ -409,7 +408,7 @@ interface UserMemento {
 	// This property is to prevent us from accidentally using a User as a UserMemento
 	readonly memento: true;
 
-	readonly id: number;
+	readonly sourcegraphID: number;
 	readonly auth0ID: string;
 	readonly username: string;
 	readonly email: string;
@@ -420,7 +419,7 @@ interface UserMemento {
 }
 
 class User extends Disposable implements IUser {
-	public readonly id: number;
+	public readonly sourcegraphID: number;
 	public readonly auth0ID: string;
 	public readonly username: string;
 	public readonly email: string;
@@ -430,7 +429,7 @@ class User extends Disposable implements IUser {
 
 	constructor(user: UserMemento, @ITelemetryService private telemetryService: ITelemetryService) {
 		super();
-		this.id = user.id;
+		this.sourcegraphID = user.sourcegraphID;
 		this.auth0ID = user.auth0ID;
 		this.username = user.username;
 		this.email = user.email;
@@ -455,7 +454,7 @@ class User extends Disposable implements IUser {
 	public toMemento(): UserMemento {
 		return {
 			memento: true,
-			id: this.id,
+			sourcegraphID: this.sourcegraphID,
 			auth0ID: this.auth0ID,
 			username: this.username,
 			email: this.email,
@@ -475,7 +474,10 @@ function getTelemetryData(user: UserMemento): any {
 	return {
 		auth: {
 			user: {
-				id: user.id,
+				// TODO(dadler): either make telemetry read the sourcegraphID field
+				// not 'id', or switch to using the graphql ID type as the user ID
+				// and make this field's value user.id not user.sourcegraphID.
+				id: user.sourcegraphID,
 				auth0_id: user.auth0ID,
 				username: user.username,
 				email: user.email,
