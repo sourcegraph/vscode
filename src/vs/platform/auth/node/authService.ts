@@ -149,7 +149,7 @@ export class AuthService extends Disposable implements IAuthService {
 			await this.setCurrentUser({
 				memento: true,
 				id: user.sourcegraphID,
-				auth0Id: user.id,
+				auth0Id: user.auth0ID,
 				username: user.username,
 				email: user.email,
 				displayName: user.displayName,
