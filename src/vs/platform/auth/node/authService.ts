@@ -384,6 +384,7 @@ function getSettingsBlob(settings: IOrgSettings): string {
 
 const userGraphQLRequest = `
 	id
+	auth0ID
 	sourcegraphID
 	username
 	avatarURL
