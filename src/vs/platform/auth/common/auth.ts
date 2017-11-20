@@ -54,9 +54,9 @@ export interface IUser {
 	readonly id: number;
 
 	/**
-	 * auth0Id is the Auth0 unique ID for a user
+	 * auth0ID is the Auth0 unique ID for a user
 	 */
-	readonly auth0Id: string;
+	readonly auth0ID: string;
 
 	/**
 	 * avatarUrl is the URL to the user's profile avatar.

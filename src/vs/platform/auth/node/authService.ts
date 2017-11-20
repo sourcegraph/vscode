@@ -149,7 +149,7 @@ export class AuthService extends Disposable implements IAuthService {
 			await this.setCurrentUser({
 				memento: true,
 				id: user.sourcegraphID,
-				auth0Id: user.auth0ID,
+				auth0ID: user.auth0ID,
 				username: user.username,
 				email: user.email,
 				displayName: user.displayName,
@@ -409,7 +409,7 @@ interface UserMemento {
 	readonly memento: true;
 
 	readonly id: number;
-	readonly auth0Id: string;
+	readonly auth0ID: string;
 	readonly username: string;
 	readonly email: string;
 	readonly displayName: string;
@@ -420,7 +420,7 @@ interface UserMemento {
 
 class User extends Disposable implements IUser {
 	public readonly id: number;
-	public readonly auth0Id: string;
+	public readonly auth0ID: string;
 	public readonly username: string;
 	public readonly email: string;
 	public readonly avatarUrl: string | undefined;
@@ -430,7 +430,7 @@ class User extends Disposable implements IUser {
 	constructor(user: UserMemento, @ITelemetryService private telemetryService: ITelemetryService) {
 		super();
 		this.id = user.id;
-		this.auth0Id = user.auth0Id;
+		this.auth0ID = user.auth0ID;
 		this.username = user.username;
 		this.email = user.email;
 		this.avatarUrl = user.avatarUrl;
@@ -455,7 +455,7 @@ class User extends Disposable implements IUser {
 		return {
 			memento: true,
 			id: this.id,
-			auth0Id: this.auth0Id,
+			auth0ID: this.auth0ID,
 			username: this.username,
 			email: this.email,
 			avatarUrl: this.avatarUrl,
@@ -475,7 +475,7 @@ function getTelemetryData(user: UserMemento): any {
 		auth: {
 			user: {
 				id: user.id,
-				auth0_id: user.auth0Id,
+				auth0_id: user.auth0ID,
 				username: user.username,
 				email: user.email,
 				orgMemberships: user.orgMemberships,
